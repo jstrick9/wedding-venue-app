@@ -1,0 +1,880 @@
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { 
+  PlacedTable, 
+  PlacedFixture, 
+  Venue, 
+  Guest, 
+  Layout,
+  TableSpec,
+  FixtureType,
+  Guideline,
+  LayoutTemplate,
+  User,
+  DecorItem,
+  DecorCategoryDef,
+  DecorArrangement,
+  DecorPackage,
+  ChairSpec
+} from '../types';
+import { 
+  defaultVenues, 
+  defaultTableSpecs, 
+  defaultFixtureTypes, 
+  defaultGuidelines,
+  defaultLayoutTemplates,
+  defaultUsers,
+  defaultLinenColors,
+  LinenColor,
+  defaultChairSpecs,
+  loadFromStorage, 
+  saveToStorage 
+} from '../data/venueData';
+
+// Position type
+export interface Position {
+  x: number;
+  y: number;
+}
+
+// Validation warning type
+export interface ValidationWarning {
+  id: string;
+  type: 'overlap' | 'capacity' | 'spacing' | 'accessibility';
+  message: string;
+  itemIds: string[];
+}
+
+// Saved layout type (user layouts)
+export interface SavedLayout {
+  id: string;
+  name: string;
+  venueId: string;
+  tables: PlacedTable[];
+  fixtures: PlacedFixture[];
+  guests: Guest[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+}
+
+// Storage keys
+const STORAGE_KEYS = {
+  VENUES: 'spm_venues',
+  TABLE_SPECS: 'spm_tableSpecs',
+  FIXTURE_TYPES: 'spm_fixtureTypes',
+  GUIDELINES: 'spm_guidelines',
+  TEMPLATES: 'spm_templates',
+  USERS: 'spm_users',
+  SAVED_LAYOUTS: 'spm_savedLayouts',
+  CONFIG: 'spm_config',
+  LINEN_COLORS: 'spm_linenColors',
+  DECOR_ITEMS: 'spm_decor_catalog',
+  DECOR_CATEGORIES: 'spm_decor_categories',
+  DECOR_ARRANGEMENTS: 'spm_decor_arrangements',
+  DECOR_PACKAGES: 'spm_decor_packages'
+};
+
+// Safe fallback venue so the app never crashes when there are no venues configured yet.
+const FALLBACK_VENUE: Venue = {
+  id: 'setup-venue',
+  name: 'New Venue',
+  category: 'reception',
+  width: 60,
+  height: 40,
+  capacity: 150,
+  color: '#FFFFFF',
+  borderColor: '#4A1942',
+  borderWidth: 2,
+  pattern: 'solid',
+  shape: 'rectangle',
+  isMaster: true,
+  canvasWidth: 100,
+  canvasHeight: 80,
+  venueX: 20,
+  venueY: 20,
+  exteriorPadding: { top: 20, right: 20, bottom: 20, left: 20 }
+};
+
+// Data access functions
+export function getVenues(): Venue[] {
+  const venues = loadFromStorage(STORAGE_KEYS.VENUES, defaultVenues) as Venue[];
+  return venues.length > 0 ? venues : [FALLBACK_VENUE];
+}
+
+export function setVenues(venues: Venue[]): void {
+  saveToStorage(STORAGE_KEYS.VENUES, venues);
+  // Dispatch event to notify listeners
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'venues' } }));
+}
+
+export function getTableSpecs(): TableSpec[] {
+  return loadFromStorage(STORAGE_KEYS.TABLE_SPECS, defaultTableSpecs);
+}
+
+export function setTableSpecs(specs: TableSpec[]): void {
+  saveToStorage(STORAGE_KEYS.TABLE_SPECS, specs);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'tableSpecs' } }));
+}
+
+export function getFixtureTypes(): FixtureType[] {
+  return loadFromStorage(STORAGE_KEYS.FIXTURE_TYPES, defaultFixtureTypes);
+}
+
+export function setFixtureTypes(types: FixtureType[]): void {
+  saveToStorage(STORAGE_KEYS.FIXTURE_TYPES, types);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'fixtureTypes' } }));
+}
+
+export function getGuidelines(): Guideline[] {
+  return loadFromStorage(STORAGE_KEYS.GUIDELINES, defaultGuidelines);
+}
+
+export function setGuidelines(guidelines: Guideline[]): void {
+  saveToStorage(STORAGE_KEYS.GUIDELINES, guidelines);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'guidelines' } }));
+}
+
+export function getTemplates(): LayoutTemplate[] {
+  return loadFromStorage(STORAGE_KEYS.TEMPLATES, defaultLayoutTemplates);
+}
+
+export function setTemplates(templates: LayoutTemplate[]): void {
+  saveToStorage(STORAGE_KEYS.TEMPLATES, templates);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'templates' } }));
+}
+
+export function getUsers(): User[] {
+  return loadFromStorage(STORAGE_KEYS.USERS, defaultUsers);
+}
+
+export function setUsers(users: User[]): void {
+  saveToStorage(STORAGE_KEYS.USERS, users);
+}
+
+export function getSavedLayouts(): SavedLayout[] {
+  return loadFromStorage(STORAGE_KEYS.SAVED_LAYOUTS, []);
+}
+
+export function setSavedLayouts(layouts: SavedLayout[]): void {
+  saveToStorage(STORAGE_KEYS.SAVED_LAYOUTS, layouts);
+}
+
+export function getChairSpecs(): ChairSpec[] {
+  return loadFromStorage('spm_chairSpecs', defaultChairSpecs);
+}
+
+export function setChairSpecs(specs: ChairSpec[]): void {
+  saveToStorage('spm_chairSpecs', specs);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'chairSpecs' } }));
+}
+
+export function getLinenColors(): LinenColor[] {
+  return loadFromStorage(STORAGE_KEYS.LINEN_COLORS, defaultLinenColors);
+}
+
+export function setLinenColors(colors: LinenColor[]): void {
+  saveToStorage(STORAGE_KEYS.LINEN_COLORS, colors);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'linenColors' } }));
+}
+
+export function getDecorItems(): DecorItem[] {
+  const items = loadFromStorage(STORAGE_KEYS.DECOR_ITEMS, []) as DecorItem[];
+  return Array.isArray(items) ? items : [];
+}
+
+export function setDecorItems(items: DecorItem[]): void {
+  saveToStorage(STORAGE_KEYS.DECOR_ITEMS, items);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorItems' } }));
+}
+
+export function getDecorCategories(): DecorCategoryDef[] {
+  return loadFromStorage(STORAGE_KEYS.DECOR_CATEGORIES, []) as DecorCategoryDef[];
+}
+
+export function setDecorCategories(categories: DecorCategoryDef[]): void {
+  saveToStorage(STORAGE_KEYS.DECOR_CATEGORIES, categories);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorCategories' } }));
+}
+
+export function getDecorArrangements(): DecorArrangement[] {
+  return loadFromStorage(STORAGE_KEYS.DECOR_ARRANGEMENTS, []) as DecorArrangement[];
+}
+
+export function setDecorArrangements(arrangements: DecorArrangement[]): void {
+  saveToStorage(STORAGE_KEYS.DECOR_ARRANGEMENTS, arrangements);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorArrangements' } }));
+}
+
+export function getDecorPackages(): DecorPackage[] {
+  return loadFromStorage(STORAGE_KEYS.DECOR_PACKAGES, []) as DecorPackage[];
+}
+
+export function setDecorPackages(packages: DecorPackage[]): void {
+  saveToStorage(STORAGE_KEYS.DECOR_PACKAGES, packages);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorPackages' } }));
+}
+
+export function resetToDefaults(): void {
+  saveToStorage(STORAGE_KEYS.VENUES, defaultVenues);
+  saveToStorage(STORAGE_KEYS.TABLE_SPECS, defaultTableSpecs);
+  saveToStorage(STORAGE_KEYS.FIXTURE_TYPES, defaultFixtureTypes);
+  saveToStorage(STORAGE_KEYS.GUIDELINES, defaultGuidelines);
+  saveToStorage(STORAGE_KEYS.TEMPLATES, defaultLayoutTemplates);
+  saveToStorage(STORAGE_KEYS.USERS, defaultUsers);
+  saveToStorage(STORAGE_KEYS.LINEN_COLORS, defaultLinenColors);
+  saveToStorage(STORAGE_KEYS.DECOR_ITEMS, []);
+  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'all' } }));
+}
+
+// Create initial layout
+function createInitialLayout(venueId: string): Layout {
+  return {
+    id: `layout-${Date.now()}`,
+    name: 'Untitled Layout',
+    venueId,
+    tables: [],
+    fixtures: [],
+    decor: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+// Main hook
+export function useLayoutState(initialVenueId: string = 'setup-venue') {
+  const [venues, setVenuesState] = useState<Venue[]>(() => getVenues());
+  const [currentVenue, setCurrentVenue] = useState<Venue>(() => {
+    const allVenues = getVenues();
+    return allVenues.find(v => v.id === initialVenueId) || allVenues[0] || FALLBACK_VENUE;
+  });
+  const [layout, setLayout] = useState<Layout>(() => {
+    const allVenues = getVenues();
+    const initialVenue = allVenues.find(v => v.id === initialVenueId) || allVenues[0] || FALLBACK_VENUE;
+    return createInitialLayout(initialVenue.id);
+  });
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+  
+  // Track venue change for reset
+  const venueChangeCallback = useRef<(() => void) | null>(null);
+  
+  // Set venue change callback
+  const setOnVenueChange = useCallback((callback: () => void) => {
+    venueChangeCallback.current = callback;
+  }, []);
+
+  // Listen for data changes from AdminPanel
+  useEffect(() => {
+    const handleDataChange = (event: CustomEvent) => {
+      const { type } = event.detail;
+      
+      if (type === 'venues' || type === 'all') {
+        const allVenues = getVenues();
+        setVenuesState(allVenues);
+        
+        // Update current venue if it still exists
+        const updatedVenue = allVenues.find(v => v.id === currentVenue.id);
+        if (updatedVenue) {
+          setCurrentVenue(updatedVenue);
+        } else {
+          // Current venue was deleted or missing, switch to a safe first venue
+          setCurrentVenue(allVenues[0] || FALLBACK_VENUE);
+        }
+      }
+    };
+
+    window.addEventListener('spm_data_changed', handleDataChange as EventListener);
+    return () => window.removeEventListener('spm_data_changed', handleDataChange as EventListener);
+  }, [currentVenue.id]);
+
+  // Refresh venues from storage
+  const refreshVenues = useCallback(() => {
+    const allVenues = getVenues();
+    setVenuesState(allVenues);
+    const updated = allVenues.find(v => v.id === currentVenue.id);
+    if (updated) {
+      setCurrentVenue(updated);
+    } else {
+      setCurrentVenue(allVenues[0] || FALLBACK_VENUE);
+    }
+  }, [currentVenue.id]);
+
+  // Change venue - ROBUST VERSION: Always works regardless of admin changes
+  const changeVenue = useCallback((venueId: string) => {
+    try {
+      // Always get fresh data from storage
+      const allVenues = getVenues();
+      
+      const venue = allVenues.find(v => v.id === venueId);
+      
+      if (!venue) {
+        console.error('Venue not found:', venueId);
+        return;
+      }
+      
+      // Update state in correct order
+      setVenuesState([...allVenues]); // Create new array reference
+      setCurrentVenue({ ...venue }); // Create new object reference
+      
+      // If venue has a master layout, load it; otherwise start with empty layout
+      const masterTables = venue.masterLayout?.tables || [];
+      const masterFixtures = venue.masterLayout?.fixtures || [];
+      
+      const newLayout = {
+        id: `layout-${Date.now()}`,
+        name: 'Untitled Layout',
+        venueId,
+        tables: masterTables.map(t => ({ 
+          ...t, 
+          id: `table-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` 
+        })),
+        fixtures: masterFixtures.map(f => ({ 
+          ...f, 
+          id: `fixture-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` 
+        })),
+        decor: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      setLayout(newLayout);
+      setSelectedId(null);
+      setWarnings([]);
+      
+      // Call the venue change callback for zoom reset
+      if (venueChangeCallback.current) {
+        setTimeout(() => {
+          try {
+            venueChangeCallback.current?.();
+          } catch (err) {
+            console.error('Error in venue change callback:', err);
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Error changing venue:', error);
+    }
+  }, []);
+
+  // Add table
+  const addTable = useCallback((specId: string, position: Position) => {
+    const specs = getTableSpecs();
+    const spec = specs.find(s => s.id === specId);
+    if (!spec) return;
+
+    const tableCount = layout.tables.filter(t => t.specId === specId).length;
+    const newTable: PlacedTable = {
+      id: `table-${Date.now()}`,
+      type: 'table',
+      specId,
+      x: position.x,
+      y: position.y,
+      rotation: 0,
+      label: `${spec.name.split(' ')[0]} ${tableCount + 1}`,
+      guests: [],
+      hasLinen: spec.isSeatingType ? false : true,
+      linenColor: 'white',
+      showChairs: spec.isSeatingType ? true : true,
+      chairType: spec.defaultChairType || 'white-plastic',
+      chairCount: spec.capacity,
+      chairLayout: spec.defaultChairLayout || 'all-sides'
+    };
+
+    setLayout(prev => ({
+      ...prev,
+      tables: [...prev.tables, newTable],
+      updatedAt: new Date().toISOString()
+    }));
+    setSelectedId(newTable.id);
+  }, [layout.tables]);
+
+  // Add fixture
+  const addFixture = useCallback((specId: string, position: Position, isExterior?: boolean) => {
+    const fixtures = getFixtureTypes();
+    const spec = fixtures.find(f => f.id === specId);
+    if (!spec) return;
+
+    const fixtureCount = layout.fixtures.filter(f => f.specId === specId).length;
+    const newFixture: PlacedFixture = {
+      id: `fixture-${Date.now()}`,
+      type: 'fixture',
+      specId,
+      x: position.x,
+      y: position.y,
+      rotation: 0,
+      label: fixtureCount > 0 ? `${spec.name} ${fixtureCount + 1}` : spec.name,
+      isExterior: isExterior || spec.isExterior
+    };
+
+    setLayout(prev => ({
+      ...prev,
+      fixtures: [...prev.fixtures, newFixture],
+      updatedAt: new Date().toISOString()
+    }));
+    setSelectedId(newFixture.id);
+  }, [layout.fixtures]);
+
+  // Update table
+  const updateTable = useCallback((id: string, updates: Partial<PlacedTable>) => {
+    setLayout(prev => ({
+      ...prev,
+      tables: prev.tables.map(t => t.id === id ? { ...t, ...updates } : t),
+      updatedAt: new Date().toISOString()
+    }));
+  }, []);
+
+  // Update fixture
+  const updateFixture = useCallback((id: string, updates: Partial<PlacedFixture>) => {
+    setLayout(prev => ({
+      ...prev,
+      fixtures: prev.fixtures.map(f => f.id === id ? { ...f, ...updates } : f),
+      updatedAt: new Date().toISOString()
+    }));
+  }, []);
+
+  // Add decor
+  const addDecor = useCallback((decorItemId: string, position: Position, parentId?: string, parentType: any = 'canvas') => {
+    const items = getDecorItems();
+    const spec = items.find(i => i.id === decorItemId);
+    if (!spec) return;
+
+    const newDecor: any = {
+      id: `decor-${Date.now()}`,
+      decorItemId,
+      x: position.x,
+      y: position.y,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      zIndex: 100 + layout.decor.length,
+      parentType,
+      parentId
+    };
+
+    setLayout(prev => ({
+      ...prev,
+      decor: [...prev.decor, newDecor],
+      updatedAt: new Date().toISOString()
+    }));
+    setSelectedId(newDecor.id);
+  }, [layout.decor]);
+
+  // Update decor
+  const updateDecor = useCallback((id: string, updates: Partial<any>) => {
+    setLayout(prev => ({
+      ...prev,
+      decor: prev.decor.map(d => d.id === id ? { ...d, ...updates } : d),
+      updatedAt: new Date().toISOString()
+    }));
+  }, []);
+
+  // Remove item
+  const removeItem = useCallback((id: string) => {
+    setLayout(prev => ({
+      ...prev,
+      tables: prev.tables.filter(t => t.id !== id),
+      fixtures: prev.fixtures.filter(f => f.id !== id),
+      decor: prev.decor.filter(d => d.id !== id),
+      updatedAt: new Date().toISOString()
+    }));
+    if (selectedId === id) {
+      setSelectedId(null);
+    }
+  }, [selectedId]);
+
+  // Duplicate item
+  const duplicateItem = useCallback((id: string) => {
+    const table = layout.tables.find(t => t.id === id);
+    if (table) {
+      const newTable: PlacedTable = {
+        ...table,
+        id: `table-${Date.now()}`,
+        x: table.x + 3,
+        y: table.y + 3,
+        label: `${table.label} Copy`,
+        guests: []
+      };
+      setLayout(prev => ({
+        ...prev,
+        tables: [...prev.tables, newTable],
+        updatedAt: new Date().toISOString()
+      }));
+      setSelectedId(newTable.id);
+      return;
+    }
+
+    const fixture = layout.fixtures.find(f => f.id === id);
+    if (fixture) {
+      const newFixture: PlacedFixture = {
+        ...fixture,
+        id: `fixture-${Date.now()}`,
+        x: fixture.x + 3,
+        y: fixture.y + 3,
+        label: `${fixture.label} Copy`
+      };
+      setLayout(prev => ({
+        ...prev,
+        fixtures: [...prev.fixtures, newFixture],
+        updatedAt: new Date().toISOString()
+      }));
+      setSelectedId(newFixture.id);
+    }
+  }, [layout.tables, layout.fixtures]);
+
+  // Add guest
+  const addGuest = useCallback((name: string, group?: string, tableId?: string): string => {
+    const newGuest: Guest = {
+      id: `guest-${Date.now()}`,
+      name,
+      group,
+      tableId,
+      rsvpStatus: 'pending'
+    };
+    setGuests(prev => [...prev, newGuest]);
+    
+    // If tableId provided, assign guest to table
+    if (tableId) {
+      setLayout(prev => ({
+        ...prev,
+        tables: prev.tables.map(t => 
+          t.id === tableId 
+            ? { ...t, guests: [...t.guests, newGuest.id] }
+            : t
+        ),
+        updatedAt: new Date().toISOString()
+      }));
+    }
+    
+    return newGuest.id;
+  }, []);
+
+  // Update guest
+  const updateGuest = useCallback((id: string, updates: Partial<Guest>) => {
+    setGuests(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+  }, []);
+
+  // Remove guest
+  const removeGuest = useCallback((id: string) => {
+    setGuests(prev => prev.filter(g => g.id !== id));
+    // Also remove from any tables
+    setLayout(prev => ({
+      ...prev,
+      tables: prev.tables.map(t => ({
+        ...t,
+        guests: t.guests.filter(gId => gId !== id)
+      })),
+      updatedAt: new Date().toISOString()
+    }));
+  }, []);
+
+  // Assign guest to table
+  const assignGuestToTable = useCallback((guestId: string, tableId: string | null) => {
+    // Update guest record
+    setGuests(prev => prev.map(g => 
+      g.id === guestId ? { ...g, tableId: tableId || undefined } : g
+    ));
+    
+    // Update table assignments
+    setLayout(prev => ({
+      ...prev,
+      tables: prev.tables.map(t => {
+        if (tableId && t.id === tableId) {
+          // Add to new table
+          return { ...t, guests: [...t.guests.filter(id => id !== guestId), guestId] };
+        } else {
+          // Remove from old table
+          return { ...t, guests: t.guests.filter(id => id !== guestId) };
+        }
+      }),
+      updatedAt: new Date().toISOString()
+    }));
+  }, []);
+
+  // Assign guest to lodging room fixture or legacy venue room
+  const assignGuestToRoom = useCallback((guestId: string, roomId: string | null) => {
+    // Update guest record
+    setGuests(prev => prev.map(g =>
+      g.id === guestId
+        ? { ...g, roomId: roomId || undefined, tableId: undefined }
+        : g
+    ));
+
+    // Update room-style lodging fixtures
+    setLayout(prev => ({
+      ...prev,
+      tables: prev.tables.map(t => ({
+        ...t,
+        guests: t.guests.filter(id => id !== guestId)
+      })),
+      fixtures: prev.fixtures.map(f => {
+        const spec = getFixtureTypes().find(s => s.id === f.specId);
+        const isRoomFixture = spec?.category === 'lodging' && (spec?.lodgingType === 'rooms' || spec?.isRoom);
+        if (!isRoomFixture) return f;
+        const currentGuests = f.guests || [];
+        if (roomId && f.id === roomId) {
+          return { ...f, guests: [...currentGuests.filter(id => id !== guestId), guestId] };
+        }
+        return { ...f, guests: currentGuests.filter(id => id !== guestId) };
+      }),
+      updatedAt: new Date().toISOString()
+    }));
+  }, []);
+
+  // Import guests from CSV
+  const importGuestsFromCSV = useCallback((csvText: string) => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return;
+    
+    const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
+    const nameIndex = headers.findIndex(h => h.includes('name'));
+    const groupIndex = headers.findIndex(h => h.includes('group') || h.includes('party'));
+    
+    if (nameIndex === -1) {
+      alert('CSV must have a "name" column');
+      return;
+    }
+    
+    const newGuests: Guest[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      const name = values[nameIndex];
+      if (name) {
+        newGuests.push({
+          id: `guest-${Date.now()}-${i}`,
+          name,
+          group: groupIndex >= 0 ? values[groupIndex] : undefined,
+          rsvpStatus: 'pending' as const
+        });
+      }
+    }
+    
+    setGuests(prev => [...prev, ...newGuests]);
+  }, []);
+
+  // Export guests to CSV
+  const exportGuestsToCSV = useCallback(() => {
+    const headers = ['Name', 'Group', 'Table', 'Dietary Restrictions', 'Accessibility', 'RSVP'];
+    const rows = guests.map(g => {
+      const table = layout.tables.find(t => t.guests.includes(g.id));
+      return [
+        g.name,
+        g.group || '',
+        table?.label || 'Unassigned',
+        g.dietaryRestrictions || '',
+        g.accessibility ? 'Yes' : 'No',
+        g.rsvpStatus || 'pending'
+      ].join(',');
+    });
+    
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'guest-list.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [guests, layout.tables]);
+
+  // Clear layout
+  const clearLayout = useCallback(() => {
+    if (confirm('Clear all tables and fixtures from this layout?')) {
+      setLayout(prev => ({
+        ...prev,
+        tables: [],
+        fixtures: [],
+        updatedAt: new Date().toISOString()
+      }));
+      setSelectedId(null);
+    }
+  }, []);
+
+  // Save layout
+  const saveLayout = useCallback((name: string) => {
+    const savedLayouts = getSavedLayouts();
+    const newLayout: SavedLayout = {
+      id: `saved-${Date.now()}`,
+      name,
+      venueId: currentVenue.id,
+      tables: layout.tables,
+      fixtures: layout.fixtures,
+      guests,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setSavedLayouts([...savedLayouts, newLayout]);
+    return newLayout.id;
+  }, [currentVenue.id, layout.tables, layout.fixtures, guests]);
+
+  // Load layout
+  const loadLayout = useCallback((layoutId: string) => {
+    const savedLayouts = getSavedLayouts();
+    const savedLayout = savedLayouts.find(l => l.id === layoutId);
+    if (savedLayout) {
+      // First change to the venue
+      const allVenues = getVenues();
+      const venue = allVenues.find(v => v.id === savedLayout.venueId);
+      if (venue) {
+        setCurrentVenue(venue);
+        setVenuesState(allVenues);
+      }
+      
+      // Then load the layout
+      setLayout({
+        id: `layout-${Date.now()}`,
+        name: savedLayout.name,
+        venueId: savedLayout.venueId,
+        tables: savedLayout.tables,
+        fixtures: savedLayout.fixtures,
+        decor: (savedLayout as any).decor || [],
+        createdAt: savedLayout.createdAt,
+        updatedAt: new Date().toISOString()
+      });
+      setGuests(savedLayout.guests || []);
+      setSelectedId(null);
+      
+      // Trigger venue change callback for zoom reset
+      if (venueChangeCallback.current) {
+        setTimeout(() => venueChangeCallback.current?.(), 100);
+      }
+    }
+  }, []);
+
+  // Delete saved layout
+  const deleteSavedLayout = useCallback((layoutId: string) => {
+    const savedLayouts = getSavedLayouts();
+    setSavedLayouts(savedLayouts.filter(l => l.id !== layoutId));
+  }, []);
+
+  // Load template
+  const loadTemplate = useCallback((template: LayoutTemplate) => {
+    // Change to the template's venue first
+    const allVenues = getVenues();
+    const venue = allVenues.find(v => v.id === template.venueId);
+    
+    if (venue) {
+      setCurrentVenue(venue);
+      setVenuesState(allVenues);
+      
+      setLayout({
+        id: `layout-${Date.now()}`,
+        name: template.name,
+        venueId: template.venueId,
+        tables: (template.tables || []).map(t => ({ 
+          ...t, 
+          id: `table-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          guests: [] as string[]
+        })),
+        fixtures: (template.fixtures || []).map(f => ({ 
+          ...f, 
+          id: `fixture-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` 
+        })),
+        decor: (template as any).decor || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      setSelectedId(null);
+      
+      // Trigger venue change callback for zoom reset
+      if (venueChangeCallback.current) {
+        setTimeout(() => venueChangeCallback.current?.(), 100);
+      }
+    }
+  }, []);
+
+  // Save current layout as master layout for venue
+  const saveMasterLayout = useCallback(() => {
+    const allVenues = getVenues();
+    const updatedVenues = allVenues.map(v => {
+      if (v.id === currentVenue.id) {
+        return {
+          ...v,
+          isMaster: true,
+          masterLayout: {
+            tables: layout.tables,
+            fixtures: layout.fixtures,
+            decor: layout.decor,
+            savedAt: new Date().toISOString()
+          }
+        };
+      }
+      return v;
+    });
+    
+    setVenues(updatedVenues);
+    setVenuesState(updatedVenues);
+    const updatedVenue = updatedVenues.find(v => v.id === currentVenue.id);
+    if (updatedVenue) {
+      setCurrentVenue(updatedVenue);
+    }
+  }, [currentVenue.id, layout.tables, layout.fixtures]);
+
+  // Clear master layout for venue
+  const clearMasterLayout = useCallback(() => {
+    const allVenues = getVenues();
+    const updatedVenues = allVenues.map(v => {
+      if (v.id === currentVenue.id) {
+        const { masterLayout, ...rest } = v;
+        return rest;
+      }
+      return v;
+    });
+    
+    setVenues(updatedVenues);
+    setVenuesState(updatedVenues);
+    const updatedVenue = updatedVenues.find(v => v.id === currentVenue.id);
+    if (updatedVenue) {
+      setCurrentVenue(updatedVenue);
+    }
+  }, [currentVenue.id]);
+
+  return {
+    // State
+    venues,
+    currentVenue,
+    layout,
+    guests,
+    selectedId,
+    warnings,
+    
+    // Setters
+    setSelectedId,
+    setOnVenueChange,
+    
+    // Actions
+    changeVenue,
+    refreshVenues,
+    addTable,
+    addFixture,
+    addDecor,
+    updateTable,
+    updateFixture,
+    updateDecor,
+    removeItem,
+    duplicateItem,
+    addGuest,
+    updateGuest,
+    removeGuest,
+    assignGuestToTable,
+    assignGuestToRoom,
+    importGuestsFromCSV,
+    exportGuestsToCSV,
+    clearLayout,
+    saveLayout,
+    loadLayout,
+    deleteSavedLayout,
+    loadTemplate,
+    saveMasterLayout,
+    clearMasterLayout,
+    getDecorItems,
+    setDecorItems,
+    getDecorCategories,
+    setDecorCategories,
+    getDecorArrangements,
+    setDecorArrangements,
+    getDecorPackages,
+    setDecorPackages,
+  };
+}
