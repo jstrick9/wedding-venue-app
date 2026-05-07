@@ -14,6 +14,7 @@ import {
   DecorItem,
   DecorPackage
 } from '../types';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 // Default spacing settings
 export const defaultSpacingSettings: SpacingSettings = {
@@ -27,7 +28,7 @@ export const defaultSpacingSettings: SpacingSettings = {
 
 // Get/Set spacing settings
 export function getSpacingSettings(): SpacingSettings {
-  const stored = localStorage.getItem('spm_spacing_settings');
+  const stored = localStorage.getItem(STORAGE_KEYS.SPACING_SETTINGS);
   if (stored) {
     try {
       return JSON.parse(stored);
@@ -39,13 +40,13 @@ export function getSpacingSettings(): SpacingSettings {
 }
 
 export function setSpacingSettings(settings: SpacingSettings): void {
-  localStorage.setItem('spm_spacing_settings', JSON.stringify(settings));
+  localStorage.setItem(STORAGE_KEYS.SPACING_SETTINGS, JSON.stringify(settings));
   window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'spacing' } }));
 }
 
 // Get/Set alignment settings
 export function getAlignmentSettings(): AlignmentSettings {
-  const stored = localStorage.getItem('spm_alignment_settings');
+  const stored = localStorage.getItem(STORAGE_KEYS.ALIGNMENT_SETTINGS);
   if (stored) {
     try {
       return JSON.parse(stored);
@@ -57,7 +58,7 @@ export function getAlignmentSettings(): AlignmentSettings {
 }
 
 export function setAlignmentSettings(settings: AlignmentSettings): void {
-  localStorage.setItem('spm_alignment_settings', JSON.stringify(settings));
+  localStorage.setItem(STORAGE_KEYS.ALIGNMENT_SETTINGS, JSON.stringify(settings));
   window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'alignment' } }));
 }
 
@@ -75,7 +76,7 @@ export const defaultChairSpecs: ChairSpec[] = [
 
 // Get chair specs
 export function getChairSpecs(): ChairSpec[] {
-  const stored = localStorage.getItem('spm_chair_specs');
+  const stored = localStorage.getItem(STORAGE_KEYS.CHAIR_SPECS_PRIMARY);
   if (stored) {
     try {
       return JSON.parse(stored);
@@ -87,7 +88,7 @@ export function getChairSpecs(): ChairSpec[] {
 }
 
 export function setChairSpecs(specs: ChairSpec[]): void {
-  localStorage.setItem('spm_chair_specs', JSON.stringify(specs));
+  localStorage.setItem(STORAGE_KEYS.CHAIR_SPECS_PRIMARY, JSON.stringify(specs));
   window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'chairs' } }));
 }
 
@@ -107,7 +108,7 @@ export const defaultWallStyles: WallStyle[] = [
 
 // Get wall styles
 export function getWallStyles(): WallStyle[] {
-  const stored = localStorage.getItem('spm_wall_styles');
+  const stored = localStorage.getItem(STORAGE_KEYS.WALL_STYLES);
   if (stored) {
     try {
       return JSON.parse(stored);
@@ -119,7 +120,7 @@ export function getWallStyles(): WallStyle[] {
 }
 
 export function setWallStyles(styles: WallStyle[]): void {
-  localStorage.setItem('spm_wall_styles', JSON.stringify(styles));
+  localStorage.setItem(STORAGE_KEYS.WALL_STYLES, JSON.stringify(styles));
   window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'wallStyles' } }));
 }
 
@@ -172,7 +173,7 @@ export const defaultIndoorFeatureTemplates: IndoorFeatureTemplate[] = [
 
 // Get indoor feature templates (default + custom)
 export function getIndoorFeatureTemplates(): IndoorFeatureTemplate[] {
-  const stored = localStorage.getItem('spm_indoor_feature_templates');
+  const stored = localStorage.getItem(STORAGE_KEYS.INDOOR_FEATURE_TEMPLATES);
   if (stored) {
     try {
       const custom = JSON.parse(stored) as IndoorFeatureTemplate[];
@@ -187,7 +188,7 @@ export function getIndoorFeatureTemplates(): IndoorFeatureTemplate[] {
 export function setIndoorFeatureTemplates(templates: IndoorFeatureTemplate[]): void {
   // Only save custom templates (filter out defaults)
   const customTemplates = templates.filter(t => t.isCustom);
-  localStorage.setItem('spm_indoor_feature_templates', JSON.stringify(customTemplates));
+  localStorage.setItem(STORAGE_KEYS.INDOOR_FEATURE_TEMPLATES, JSON.stringify(customTemplates));
   window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'indoorTemplates' } }));
 }
 
@@ -262,7 +263,7 @@ export const defaultOutdoorFeatureTemplates: OutdoorFeatureTemplate[] = [
 
 // Get outdoor feature templates (default + custom)
 export function getOutdoorFeatureTemplates(): OutdoorFeatureTemplate[] {
-  const stored = localStorage.getItem('spm_outdoor_feature_templates');
+  const stored = localStorage.getItem(STORAGE_KEYS.OUTDOOR_FEATURE_TEMPLATES);
   if (stored) {
     try {
       const custom = JSON.parse(stored) as OutdoorFeatureTemplate[];
@@ -277,7 +278,7 @@ export function getOutdoorFeatureTemplates(): OutdoorFeatureTemplate[] {
 export function setOutdoorFeatureTemplates(templates: OutdoorFeatureTemplate[]): void {
   // Only save custom templates (filter out defaults)
   const customTemplates = templates.filter(t => t.isCustom);
-  localStorage.setItem('spm_outdoor_feature_templates', JSON.stringify(customTemplates));
+  localStorage.setItem(STORAGE_KEYS.OUTDOOR_FEATURE_TEMPLATES, JSON.stringify(customTemplates));
   window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'outdoorTemplates' } }));
 }
 
@@ -338,7 +339,7 @@ export const defaultUsers: User[] = [
     password: 'spm2024',
     role: 'admin',
     name: 'Administrator',
-    email: 'admin@sevenpathsmanor.com',
+    email: 'weddings@sevenpathsmanor.com',
     phone: '',
     imageUrl: '',
     jobTitle: 'System Administrator',
@@ -1175,11 +1176,11 @@ export const defaultDecorPackages: DecorPackage[] = [
 ];
 
 export function getDecorPackages(): any[] {
-  return loadFromStorage('spm_decor_packages', defaultDecorPackages);
+  return loadFromStorage(STORAGE_KEYS.DECOR_PACKAGES, defaultDecorPackages);
 }
 
 export function setDecorPackages(packages: any[]): void {
-  saveToStorage('spm_decor_packages', packages);
+  saveToStorage(STORAGE_KEYS.DECOR_PACKAGES, packages);
   window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorPackages' } }));
 }
 
