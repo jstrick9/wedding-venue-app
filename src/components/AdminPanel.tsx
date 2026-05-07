@@ -26,6 +26,7 @@ import {
 } from '../hooks/useLayoutState';
 import { getConfig, setConfig, Config } from '../config';
 import { AdminDecorSection } from './AdminDecorSection';
+import { canAccessAdminPanel } from '../utils/permissions';
 import { 
   getDecorCategories, 
   setDecorCategories, 
@@ -324,6 +325,7 @@ function PatternColorPicker({ pattern, patternColors, onChange }: PatternColorPi
 
 export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: AdminPanelProps) {
   const { createUser, deleteUser, getAllUsers, user } = useAuth();
+  const canAccessThisPanel = canAccessAdminPanel(user);
   const EVENT_ROLES_STORAGE_KEY = 'spm_event_roles';
   const EVENT_QUESTIONS_STORAGE_KEY = 'spm_event_questions';
   const DEFAULT_EVENT_ROLES = [
@@ -365,7 +367,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
     preferredCommunication: [] as ('call' | 'text' | 'email')[],
     eventRole: '',
     eventName: '',
-    userRole: 'shared' as 'admin' | 'master' | 'shared' | 'read-only' | 'staff',
+    userRole: 'master' as 'admin' | 'master' | 'shared' | 'read-only' | 'staff',
     isMasterUser: false,
     parentUserId: undefined as string | undefined,
     allowSharedAccess: false,
@@ -900,7 +902,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
     input.click();
   };
 
-  const handleCreateUser = () => {
+  const handleCreateUser = async () => {
     const usernameFromEmail = (newUser.email || '').trim().toLowerCase();
     const normalizedDraft = {
       ...newUser,
@@ -935,10 +937,22 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
     const legacyRole = mapUserRoleToLegacyRole(normalizedDraft.userRole);
     // Use email as username when available.
     const effectiveUsername = usernameFromEmail || normalizedDraft.username;
-    createUser(effectiveUsername, normalizedDraft.password || '', normalizedDraft.name || '', legacyRole);
+
+    const created = await createUser(
+      effectiveUsername,
+      normalizedDraft.password || '',
+      normalizedDraft.name || '',
+      legacyRole,
+      normalizedDraft.email || '',
+    );
+
+    if (!created) {
+      alert('Unable to create user. The username may already exist.');
+      return;
+    }
 
     // Backfill extended fields on the newly created user record
-    const updatedUsers = getAllUsers().map(u =>
+    const updatedUsers = getAllUsers().map((u) =>
       u.username.toLowerCase() === effectiveUsername.toLowerCase()
         ? {
             ...u,
@@ -952,16 +966,19 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
             isMasterUser: normalizedDraft.isMasterUser || false,
             parentUserId: normalizedDraft.parentUserId,
             allowSharedAccess: normalizedDraft.allowSharedAccess || false,
-            sharedUserLimit: normalizedDraft.allowSharedAccess ? normalizedDraft.sharedUserLimit : 0,
+            sharedUserLimit: normalizedDraft.allowSharedAccess
+              ? normalizedDraft.sharedUserLimit
+              : 0,
             userStatus: normalizedDraft.userStatus || 'active',
             eventDate: normalizedDraft.eventDate || '',
             // backward-compat mirrors
             phone: normalizedDraft.contactPhoneNumber || '',
             jobTitle: normalizedDraft.eventRole || '',
-            department: normalizedDraft.eventName || ''
+            department: normalizedDraft.eventName || '',
           }
-        : u
+        : u,
     );
+
     handleSaveUsers(updatedUsers);
     setNewUser({
       username: '',
@@ -975,7 +992,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
       preferredCommunication: [],
       eventRole: '',
       eventName: '',
-      userRole: 'shared',
+      userRole: 'master',
       isMasterUser: false,
       parentUserId: undefined,
       allowSharedAccess: false,
@@ -1172,6 +1189,26 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
       height: Number(height.toFixed(2)),
     };
   };
+
+  if (!canAccessThisPanel) {
+  return (
+    <div className="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg rounded-xl bg-white shadow-xl p-6">
+        <h2 className="text-xl font-semibold text-red-700">Access denied</h2>
+        <p className="mt-2 text-sm text-gray-600">
+          You do not have permission to access the admin panel.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm text-white"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+   );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4" style={{ zIndex: 10000 }}>
@@ -8418,7 +8455,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
                             preferredCommunication: [],
                             eventRole: '',
                             eventName: '',
-                            userRole: 'shared',
+                            userRole: 'master',
                             isMasterUser: false,
                             parentUserId: undefined,
                             allowSharedAccess: false,

@@ -1,29 +1,37 @@
 // src/components/GuestPortal.tsx
 import React, { useEffect, useMemo, useState } from 'react';
+import SafeImage from './SafeImage';
 import {
   Venue,
   LodgingFloor,
   LodgingRoom,
-  Guest,
   RSVPSubmission,
+  GuestPortalConfig,
+  GuestPortalGuestRecord,
 } from '../types';
-
-interface GuestPortalConfig {
-  eventTitle: string;
-  eventStartDate: string; // ISO
-  eventEndDate?: string;  // ISO
-  isMultiDay?: boolean;
-  heroImageUrl?: string;
-  welcomeMessage?: string;
-  rsvpMessage?: string;
-  portalPassword?: string;
-  showMap?: boolean;
-  showSchedule?: boolean;
-  showWayfinding?: boolean;
-  showRSVP?: boolean;
-  showLodging?: boolean;
-  enabledVenueCategories?: string[];
-}
+import {
+  clearGuestPortalSession,
+  findGuestInEvent,
+  getGuestPortalConfig,
+  getPortalGuests,
+  getPortalGuestsForEvent,
+  getPortalRSVPSubmissions,
+  getPortalRSVPSubmissionsForEvent,
+  getPortalVenues,
+  isGuestPortalEventActive,
+  loadGuestPortalSession,
+  normalizeEventKey,
+  saveGuestPortalSession,
+  setPortalRSVPSubmissions,
+} from '../utils/guestPortal';
+import { verifySecret } from '../utils/auth';
+import {
+  guestCanAccessLodging,
+  guestCanAccessPortal,
+  guestCanSubmitRSVP,
+  guestCanViewMap,
+  guestCanViewSchedule,
+} from '../utils/guestAccess';
 
 interface GuestPortalProps {
   guestToken?: string;
@@ -32,25 +40,11 @@ interface GuestPortalProps {
 
 type TabId = 'home' | 'map' | 'schedule' | 'wayfinding' | 'rsvp' | 'lodging';
 
-interface StoredRSVPSubmission extends RSVPSubmission {
-  id: string;
-}
-
-interface GuestRecord extends Guest {
-  token?: string;
-  roomId?: string;
-  tableId?: string;
-}
-
 interface PortalData {
   venues: Venue[];
-  guests: GuestRecord[];
-  submissions: StoredRSVPSubmission[];
+  guests: GuestPortalGuestRecord[];
+  submissions: RSVPSubmission[];
 }
-
-const PORTAL_CONFIG_KEY = 'spm_portal_config';
-const RSVP_SUBMISSIONS_KEY = 'spm_rsvp_submissions';
-const PORTAL_AUTH_KEY = 'spm_portal_auth';
 
 const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) => {
   const [config, setConfig] = useState<GuestPortalConfig | null>(null);
@@ -59,91 +53,166 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     guests: [],
     submissions: [],
   });
+
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [isAuthed, setIsAuthed] = useState(false);
+
+  const [eventInput, setEventInput] = useState('');
+  const [guestIdentifier, setGuestIdentifier] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  const [activeEventName, setActiveEventName] = useState('');
+  const [resolvedGuestId, setResolvedGuestId] = useState<string | null>(null);
+
   const [isSubmittingRSVP, setIsSubmittingRSVP] = useState(false);
-  const [rsvpSuccess, setRsvpSuccess] = useState<StoredRSVPSubmission | null>(null);
+  const [rsvpSuccess, setRsvpSuccess] = useState<RSVPSubmission | null>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-  const [selectedWayfindingFrom, setSelectedWayfindingFrom] = useState<string | 'entrance'>('entrance');
+  const [selectedWayfindingFrom, setSelectedWayfindingFrom] = useState<string | 'entrance'>(
+    'entrance',
+  );
   const [selectedWayfindingTo, setSelectedWayfindingTo] = useState<string | ''>('');
   const [wayfindingResult, setWayfindingResult] = useState<string[] | null>(null);
 
-  // Identify guest from token
-  const identifiedGuest = useMemo(() => {
-    if (!guestToken || !portalData.guests.length) return undefined;
-    return portalData.guests.find(g => g.token === guestToken);
-  }, [guestToken, portalData.guests]);
-
-  // Load config + data
   useEffect(() => {
     try {
-      const rawConfig = localStorage.getItem(PORTAL_CONFIG_KEY);
-      if (rawConfig) {
-        setConfig(JSON.parse(rawConfig));
-      }
+      const loadedConfig = getGuestPortalConfig();
+      setConfig(loadedConfig);
 
-      const rawSubmissions = localStorage.getItem(RSVP_SUBMISSIONS_KEY);
-      if (rawSubmissions) {
-        const parsed = JSON.parse(rawSubmissions) as StoredRSVPSubmission[];
-        // We assume venues + guests are embedded in each submission payload or separately stored;
-        // for now, treat this as RSVP-only storage and rely on other app parts to hydrate venues/guests if needed.
-        setPortalData(prev => ({
-          ...prev,
-          submissions: parsed,
-        }));
+      const venues = getPortalVenues();
+      const guests = getPortalGuests();
+      const submissions = getPortalRSVPSubmissions();
+
+      setPortalData({
+        venues,
+        guests,
+        submissions,
+      });
+
+      if (loadedConfig && isGuestPortalEventActive(loadedConfig)) {
+        const session = loadGuestPortalSession(loadedConfig, loadedConfig.eventTitle);
+        if (session) {
+          setIsAuthed(true);
+          setActiveEventName(loadedConfig.eventTitle || '');
+          setResolvedGuestId(session.guestId || null);
+          setEventInput(loadedConfig.eventTitle || '');
+        } else {
+          clearGuestPortalSession();
+        }
+      } else {
+        clearGuestPortalSession();
       }
     } catch {
       // ignore
     }
-
-    const auth = sessionStorage.getItem(PORTAL_AUTH_KEY);
-    if (auth === 'true') {
-      setIsAuthed(true);
-    }
   }, []);
 
-  // Derived: event dates, countdown
   const eventStartDate = config?.eventStartDate ? new Date(config.eventStartDate) : null;
   const eventEndDate = config?.eventEndDate ? new Date(config.eventEndDate) : null;
   const today = new Date();
+
   const daysUntilEvent = eventStartDate
-    ? Math.max(0, Math.ceil((eventStartDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(
+        0,
+        Math.ceil((eventStartDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
+      )
     : null;
 
   const isMultiDay = !!config?.isMultiDay && !!eventEndDate && !!eventStartDate;
-
-  // RSVP deadline (optional: use eventStartDate as deadline)
   const rsvpDeadline = eventStartDate;
   const rsvpClosed = rsvpDeadline ? today > rsvpDeadline : false;
 
-  // Guest's existing RSVP
+  const scopedGuests = useMemo(() => {
+    if (!activeEventName) return portalData.guests;
+    return getPortalGuestsForEvent(activeEventName);
+  }, [activeEventName, portalData.guests]);
+
+  const scopedSubmissions = useMemo(() => {
+    if (!activeEventName) return portalData.submissions;
+    return getPortalRSVPSubmissionsForEvent(activeEventName);
+  }, [activeEventName, portalData.submissions]);
+
+  const identifiedGuest = useMemo(() => {
+    if (resolvedGuestId) {
+      return scopedGuests.find((g) => g.id === resolvedGuestId);
+    }
+
+    if (guestToken) {
+      return scopedGuests.find((g) => g.token === guestToken);
+    }
+
+    return undefined;
+  }, [resolvedGuestId, guestToken, scopedGuests]);
+
   const guestRSVP = useMemo(() => {
     if (!identifiedGuest) return undefined;
-    return portalData.submissions.find(s => s.guestId === identifiedGuest.id);
-  }, [identifiedGuest, portalData.submissions]);
+    return scopedSubmissions.find((s) => s.guestId === identifiedGuest.id);
+  }, [identifiedGuest, scopedSubmissions]);
 
-  // Simple password gate
-  const needsPasswordGate = !!config?.portalPassword && !isAuthed;
+  const activeEventLabel = activeEventName || config?.eventTitle || '';
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const requiresPortalPassword = !!(
+    config?.portalPassword || (config as any)?.portalPasswordHash
+  );
+
+  const needsEventScopedSignIn = !isAuthed;
+
+  const handleGuestPortalSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!config?.portalPassword) {
-      setIsAuthed(true);
-      sessionStorage.setItem(PORTAL_AUTH_KEY, 'true');
+
+    setPasswordError('');
+
+    if (!config) {
+      setPasswordError('Guest portal is not configured.');
       return;
     }
-    if (passwordInput.trim() === config.portalPassword) {
-      setIsAuthed(true);
-      sessionStorage.setItem(PORTAL_AUTH_KEY, 'true');
-      setPasswordError('');
-    } else {
-      setPasswordError('Incorrect password. Please try again.');
+
+    if (!isGuestPortalEventActive(config)) {
+      setPasswordError('This guest portal is no longer available.');
+      return;
     }
+
+    const enteredEventKey = normalizeEventKey(eventInput);
+    const configuredEventKey = normalizeEventKey(config.eventTitle || '');
+
+    if (!enteredEventKey || enteredEventKey !== configuredEventKey) {
+      setPasswordError('Event not found or not available.');
+      return;
+    }
+
+    const guest = findGuestInEvent(config.eventTitle, guestIdentifier);
+
+    if (!guest || !guestCanAccessPortal(guest, config.eventTitle)) {
+      setPasswordError('Guest not found for this event.');
+      return;
+    }
+
+    if (requiresPortalPassword) {
+      const trimmedPassword = passwordInput.trim();
+
+      if (config.portalPasswordHash && config.portalPasswordSalt) {
+        const isValid = await verifySecret(trimmedPassword, {
+          hash: config.portalPasswordHash,
+          salt: config.portalPasswordSalt,
+        });
+
+        if (!isValid) {
+          setPasswordError('Incorrect password. Please try again.');
+          return;
+        }
+      } else if (config.portalPassword && trimmedPassword !== config.portalPassword) {
+        setPasswordError('Incorrect password. Please try again.');
+        return;
+      }
+    }
+
+    setIsAuthed(true);
+    setActiveEventName(config.eventTitle || eventInput.trim());
+    setResolvedGuestId(guest.id);
+    saveGuestPortalSession(config, guest.token, config.eventTitle, guest.id);
+    setPasswordError('');
   };
 
-  // RSVP form state
   const [rsvpForm, setRsvpForm] = useState({
     fullName: '',
     email: '',
@@ -159,11 +228,18 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     notes: '',
   });
 
-  // Prefill RSVP form when guest identified or existing RSVP
+  useEffect(() => {
+    if (config && !isGuestPortalEventActive(config)) {
+      clearGuestPortalSession();
+      setIsAuthed(false);
+      setResolvedGuestId(null);
+    }
+  }, [config]);
+
   useEffect(() => {
     if (!identifiedGuest && !guestRSVP) return;
 
-    setRsvpForm(prev => ({
+    setRsvpForm((prev) => ({
       ...prev,
       fullName: guestRSVP?.fullName || identifiedGuest?.name || prev.fullName,
       email: guestRSVP?.email || identifiedGuest?.email || prev.email,
@@ -181,7 +257,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
   }, [identifiedGuest, guestRSVP]);
 
   const handleRSVPChange = (field: keyof typeof rsvpForm, value: any) => {
-    setRsvpForm(prev => ({ ...prev, [field]: value }));
+    setRsvpForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleRSVPSubmit = (e: React.FormEvent) => {
@@ -190,18 +266,28 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
     setIsSubmittingRSVP(true);
 
-    const newSubmission: StoredRSVPSubmission = {
+    const eventName = activeEventName || config?.eventTitle || '';
+    const eventKey = normalizeEventKey(eventName);
+
+    const newSubmission: RSVPSubmission = {
       id: guestRSVP?.id || `rsvp-${Date.now()}`,
       guestId: identifiedGuest?.id || `guest-${Date.now()}`,
+      eventName,
+      eventKey,
       fullName: rsvpForm.fullName.trim(),
       email: rsvpForm.email.trim(),
       phone: rsvpForm.phone.trim(),
       attending: rsvpForm.attending === 'yes',
       attendingDays: rsvpForm.attending === 'yes' ? rsvpForm.attendingDays : [],
       mealChoice: rsvpForm.attending === 'yes' ? rsvpForm.mealChoice : undefined,
-      plusOneName: rsvpForm.plusOne && rsvpForm.attending === 'yes' ? rsvpForm.plusOneName.trim() : undefined,
+      plusOneName:
+        rsvpForm.plusOne && rsvpForm.attending === 'yes'
+          ? rsvpForm.plusOneName.trim()
+          : undefined,
       plusOneMealChoice:
-        rsvpForm.plusOne && rsvpForm.attending === 'yes' ? rsvpForm.plusOneMealChoice : undefined,
+        rsvpForm.plusOne && rsvpForm.attending === 'yes'
+          ? rsvpForm.plusOneMealChoice
+          : undefined,
       dietaryNotes: rsvpForm.dietaryNotes.trim() || undefined,
       specialNeeds: rsvpForm.specialNeeds.trim() || undefined,
       notes: rsvpForm.notes.trim() || undefined,
@@ -209,17 +295,16 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     };
 
     const updatedSubmissions = guestRSVP
-      ? portalData.submissions.map(s => (s.id === guestRSVP.id ? newSubmission : s))
+      ? portalData.submissions.map((s) => (s.id === guestRSVP.id ? newSubmission : s))
       : [newSubmission, ...portalData.submissions];
 
-    setPortalData(prev => ({ ...prev, submissions: updatedSubmissions }));
-    localStorage.setItem(RSVP_SUBMISSIONS_KEY, JSON.stringify(updatedSubmissions));
+    setPortalData((prev) => ({ ...prev, submissions: updatedSubmissions }));
+    setPortalRSVPSubmissions(updatedSubmissions);
 
     setRsvpSuccess(newSubmission);
     setIsSubmittingRSVP(false);
   };
 
-  // Simple ICS generator for schedule items
   const handleAddToCalendar = (item: {
     id: string;
     title: string;
@@ -229,13 +314,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     endTime?: string;
   }) => {
     const dtStart = new Date(item.startTime);
-    const dtEnd = item.endTime ? new Date(item.endTime) : new Date(dtStart.getTime() + 60 * 60 * 1000);
+    const dtEnd = item.endTime
+      ? new Date(item.endTime)
+      : new Date(dtStart.getTime() + 60 * 60 * 1000);
 
     const formatICSDate = (d: Date) =>
-      d
-        .toISOString()
-        .replace(/[-:]/g, '')
-        .replace(/\.\d{3}Z$/, 'Z');
+      d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 
     const ics = [
       'BEGIN:VCALENDAR',
@@ -264,38 +348,41 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     URL.revokeObjectURL(url);
   };
 
-  // Wayfinding stub: simple placeholder directions
   const handleGetDirections = () => {
     if (!selectedWayfindingTo) {
       setWayfindingResult(['Please select a destination.']);
       return;
     }
-    const fromLabel = selectedWayfindingFrom === 'entrance' ? 'Entrance' : selectedWayfindingFrom;
+
+    const fromLabel =
+      selectedWayfindingFrom === 'entrance' ? 'Entrance' : selectedWayfindingFrom;
     const toLabel = selectedWayfindingTo;
+
     setWayfindingResult([
       `Start at ${fromLabel}.`,
       `Walk straight towards ${toLabel}.`,
-      `Follow on-site signage for final guidance.`,
+      'Follow on-site signage for final guidance.',
     ]);
   };
 
-  // Lodging helpers
   const lodgingVenues = useMemo(
-    () => portalData.venues.filter(v => v.category === 'lodging'),
-    [portalData.venues]
+    () => portalData.venues.filter((v) => v.category === 'lodging'),
+    [portalData.venues],
   );
 
   const guestRoomInfo = useMemo(() => {
     if (!identifiedGuest || !identifiedGuest.roomId) return null;
+
     const roomId = identifiedGuest.roomId;
     let foundVenue: Venue | null = null;
     let foundFloor: LodgingFloor | null = null;
     let foundRoom: LodgingRoom | null = null;
 
     for (const v of lodgingVenues) {
-      if (!v.lodgingFloors) continue;
-      for (const f of v.lodgingFloors) {
-        const r = f.rooms.find(room => room.id === roomId);
+      if (!v.floors) continue;
+
+      for (const f of v.floors) {
+        const r = f.rooms.find((room) => room.id === roomId);
         if (r) {
           foundVenue = v;
           foundFloor = f;
@@ -303,6 +390,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           break;
         }
       }
+
       if (foundRoom) break;
     }
 
@@ -310,17 +398,20 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     return { venue: foundVenue, floor: foundFloor, room: foundRoom };
   }, [identifiedGuest, lodgingVenues]);
 
-  // Layout: mobile-first container
   const renderHomeTab = () => {
     return (
       <div className="space-y-4 pb-24">
-        {/* Hero */}
         {config?.heroImageUrl && (
           <div className="relative w-full h-48 rounded-xl overflow-hidden shadow">
-            <img
+            <SafeImage
               src={config.heroImageUrl}
-              alt={config.eventTitle || 'Event'}
+              alt={config.eventTitle || 'Event hero image'}
               className="w-full h-full object-cover"
+              fallback={
+                <div className="w-full h-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-500 text-sm">
+                  Hero image unavailable
+                </div>
+              }
             />
             <div className="absolute inset-0 bg-black/40 flex items-end">
               <div className="p-4 text-white">
@@ -343,13 +434,13 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           </div>
         )}
 
-        {/* Greeting */}
         <div className="bg-white rounded-xl shadow p-4 space-y-2">
           {identifiedGuest && (
             <p className="text-sm text-gray-700">
               Welcome, <span className="font-semibold">{identifiedGuest.name}</span>!
             </p>
           )}
+
           {config?.welcomeMessage && (
             <div className="prose prose-sm max-w-none text-gray-800">
               {config.welcomeMessage.split('\n').map((line, idx) => (
@@ -357,6 +448,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               ))}
             </div>
           )}
+
           {daysUntilEvent !== null && (
             <p className="text-sm text-indigo-600 font-medium">
               {daysUntilEvent === 0
@@ -366,7 +458,6 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           )}
         </div>
 
-        {/* Multi-day summary */}
         {isMultiDay && eventStartDate && eventEndDate && (
           <div className="bg-white rounded-xl shadow p-4">
             <h2 className="text-sm font-semibold text-gray-800 mb-2">Event Days</h2>
@@ -376,9 +467,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           </div>
         )}
 
-        {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3">
-          {config?.showMap && (
+          {config?.showMap && guestCanViewMap(identifiedGuest, activeEventLabel) && (
             <button
               type="button"
               onClick={() => setActiveTab('map')}
@@ -388,7 +478,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               <span className="text-sm font-medium text-gray-800">View Map</span>
             </button>
           )}
-          {config?.showRSVP && (
+
+          {config?.showRSVP && guestCanSubmitRSVP(identifiedGuest, activeEventLabel) && (
             <button
               type="button"
               onClick={() => setActiveTab('rsvp')}
@@ -398,7 +489,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               <span className="text-sm font-medium text-gray-800">RSVP Now</span>
             </button>
           )}
-          {config?.showSchedule && (
+
+          {config?.showSchedule && guestCanViewSchedule(identifiedGuest, activeEventLabel) && (
             <button
               type="button"
               onClick={() => setActiveTab('schedule')}
@@ -408,6 +500,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               <span className="text-sm font-medium text-gray-800">View Schedule</span>
             </button>
           )}
+
           {config?.showWayfinding && (
             <button
               type="button"
@@ -420,7 +513,6 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           )}
         </div>
 
-        {/* Personalized table/room */}
         {identifiedGuest && (identifiedGuest.tableId || identifiedGuest.roomId) && (
           <div className="bg-white rounded-xl shadow p-4 space-y-2">
             <h2 className="text-sm font-semibold text-gray-800">Your Details</h2>
@@ -452,14 +544,13 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     }
 
     const enabledCategories = config.enabledVenueCategories || [];
-
-    const venuesToShow = portalData.venues.filter(v =>
-      enabledCategories.length ? enabledCategories.includes(v.category) : true
+    const venuesToShow = portalData.venues.filter((v) =>
+      enabledCategories.length ? enabledCategories.includes(v.category) : true,
     );
 
     return (
       <div className="space-y-4 pb-24">
-        {venuesToShow.map(venue => (
+        {venuesToShow.map((venue) => (
           <div key={venue.id} className="bg-white rounded-xl shadow p-4 mt-2">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-semibold text-gray-800">{venue.name}</h2>
@@ -467,8 +558,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                 {venue.category}
               </span>
             </div>
+
             <div className="relative w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-500">
-              {/* Placeholder for static SVG floor plan */}
               <span>Floor plan preview coming from saved layout (read-only).</span>
               {identifiedGuest?.tableId && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -479,6 +570,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                 </div>
               )}
             </div>
+
             <div className="flex items-center justify-between mt-3">
               <div className="flex gap-2">
                 <button
@@ -500,6 +592,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                   Reset
                 </button>
               </div>
+
               <button
                 type="button"
                 className="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white"
@@ -530,7 +623,6 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       );
     }
 
-    // Placeholder schedule items; in a real app, these would come from config or submissions
     const scheduleItems: {
       id: string;
       title: string;
@@ -553,14 +645,16 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       );
     }
 
-    const days = isMultiDay ? Array.from(new Set(scheduleItems.map(i => i.dayIndex || 0))) : [0];
+    const days = isMultiDay
+      ? Array.from(new Set(scheduleItems.map((i) => i.dayIndex || 0)))
+      : [0];
 
     const itemsForDay = (dayIdx: number) =>
       scheduleItems
-        .filter(i => (isMultiDay ? (i.dayIndex || 0) === dayIdx : true))
+        .filter((i) => (isMultiDay ? (i.dayIndex || 0) === dayIdx : true))
         .sort(
           (a, b) =>
-            new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
         );
 
     return (
@@ -585,7 +679,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
         )}
 
         <div className="space-y-3 mt-2">
-          {itemsForDay(selectedDayIndex).map(item => (
+          {itemsForDay(selectedDayIndex).map((item) => (
             <div
               key={item.id}
               className="bg-white rounded-xl shadow p-4 flex flex-col gap-1"
@@ -605,12 +699,15 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                   </p>
                   <p
                     className={`text-sm ${
-                      item.isHighlight ? 'font-semibold text-indigo-700' : 'font-medium text-gray-800'
+                      item.isHighlight
+                        ? 'font-semibold text-indigo-700'
+                        : 'font-medium text-gray-800'
                     }`}
                   >
                     {item.title}
                   </p>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => handleAddToCalendar(item)}
@@ -619,6 +716,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                   Add to Calendar
                 </button>
               </div>
+
               {item.location && (
                 <p className="text-xs text-gray-600">Location: {item.location}</p>
               )}
@@ -630,9 +728,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
           {itemsForDay(selectedDayIndex).length === 0 && (
             <div className="bg-white rounded-xl shadow p-4">
-              <p className="text-sm text-gray-700">
-                No schedule items for this day yet.
-              </p>
+              <p className="text-sm text-gray-700">No schedule items for this day yet.</p>
             </div>
           )}
         </div>
@@ -651,16 +747,13 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       );
     }
 
-    // Placeholder: no wayfinding points configured
     const hasWayfindingPoints = false;
 
     if (!hasWayfindingPoints) {
       return (
         <div className="pb-24">
           <div className="bg-white rounded-xl shadow p-4 mt-4">
-            <p className="text-sm text-gray-700">
-              Wayfinding map coming soon!
-            </p>
+            <p className="text-sm text-gray-700">Wayfinding map coming soon!</p>
           </div>
         </div>
       );
@@ -679,25 +772,27 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               <select
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 value={selectedWayfindingFrom}
-                onChange={e =>
+                onChange={(e) =>
                   setSelectedWayfindingFrom(
-                    e.target.value === 'entrance' ? 'entrance' : e.target.value
+                    e.target.value === 'entrance' ? 'entrance' : e.target.value,
                   )
                 }
               >
                 <option value="entrance">Entrance</option>
               </select>
             </div>
+
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-gray-700">To</label>
               <select
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 value={selectedWayfindingTo}
-                onChange={e => setSelectedWayfindingTo(e.target.value)}
+                onChange={(e) => setSelectedWayfindingTo(e.target.value)}
               >
                 <option value="">Select destination</option>
               </select>
             </div>
+
             <button
               type="button"
               onClick={handleGetDirections}
@@ -709,9 +804,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
           {wayfindingResult && (
             <div className="mt-4 bg-indigo-50 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-semibold text-indigo-800">
-                Directions
-              </p>
+              <p className="text-xs font-semibold text-indigo-800">Directions</p>
               <ul className="text-xs text-indigo-900 list-disc list-inside space-y-1">
                 {wayfindingResult.map((step, idx) => (
                   <li key={idx}>{step}</li>
@@ -739,9 +832,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       return (
         <div className="pb-24">
           <div className="bg-white rounded-xl shadow p-4 mt-4 space-y-2">
-            <p className="text-sm font-semibold text-gray-800">
-              RSVP period has closed.
-            </p>
+            <p className="text-sm font-semibold text-gray-800">RSVP period has closed.</p>
             {rsvpDeadline && (
               <p className="text-sm text-gray-700">
                 The RSVP deadline was{' '}
@@ -762,9 +853,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       return (
         <div className="pb-24">
           <div className="bg-white rounded-xl shadow p-4 mt-4 space-y-3 relative overflow-hidden">
-            {/* Simple confetti-like effect */}
             <div className="absolute -top-4 -left-4 w-16 h-16 bg-pink-200 rounded-full opacity-60" />
             <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-indigo-200 rounded-full opacity-60" />
+
             <div className="relative space-y-2">
               <p className="text-sm font-semibold text-gray-800">
                 Thank you for your RSVP!
@@ -773,17 +864,20 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                 We&apos;ve recorded your response for{' '}
                 <span className="font-medium">{rsvpSuccess.fullName}</span>.
               </p>
+
               <div className="text-xs text-gray-700 space-y-1">
                 <p>
                   <span className="font-semibold">Attending:</span>{' '}
                   {rsvpSuccess.attending ? 'Yes' : 'No'}
                 </p>
+
                 {rsvpSuccess.attending && rsvpSuccess.mealChoice && (
                   <p>
                     <span className="font-semibold">Meal:</span>{' '}
                     {rsvpSuccess.mealChoice}
                   </p>
                 )}
+
                 {rsvpSuccess.plusOneName && (
                   <p>
                     <span className="font-semibold">Plus One:</span>{' '}
@@ -791,6 +885,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                   </p>
                 )}
               </div>
+
               <button
                 type="button"
                 onClick={() => setRsvpSuccess(null)}
@@ -819,39 +914,53 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">
-              Full Name<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              value={rsvpForm.fullName}
-              onChange={e => handleRSVPChange('fullName', e.target.value)}
-              required
-            />
+	    <label
+  					htmlFor="guest-rsvp-full-name"
+  					className="text-xs font-medium text-gray-700"
+	    >
+  					Full Name<span className="text-red-500">*</span>
+	          </label>
+	    <input
+  					id="guest-rsvp-full-name"
+  					type="text"
+  					className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+  					value={rsvpForm.fullName}
+  					onChange={(e) => handleRSVPChange('fullName', e.target.value)}
+  					required
+	           />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">
-              Email<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              value={rsvpForm.email}
-              onChange={e => handleRSVPChange('email', e.target.value)}
-              required
-            />
+	    <label
+  					htmlFor="guest-rsvp-email"
+  					className="text-xs font-medium text-gray-700"
+	    >
+  					Email<span className="text-red-500">*</span>
+	    </label>
+	          <input
+  					id="guest-rsvp-email"
+  					type="email"
+  					className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+  					value={rsvpForm.email}
+  					onChange={(e) => handleRSVPChange('email', e.target.value)}
+  					required
+	          />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">Phone</label>
-            <input
-              type="tel"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              value={rsvpForm.phone}
-              onChange={e => handleRSVPChange('phone', e.target.value)}
-            />
+	    <label
+  					htmlFor="guest-rsvp-phone"
+  					className="text-xs font-medium text-gray-700"
+	    >
+  					Phone
+	          </label>
+	          <input
+  					id="guest-rsvp-phone"
+  					type="tel"
+  					className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+  					value={rsvpForm.phone}
+  					onChange={(e) => handleRSVPChange('phone', e.target.value)}
+	    />
           </div>
 
           <div className="space-y-2">
@@ -892,19 +1001,18 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                     Which days will you attend?
                   </label>
                   <div className="flex flex-col gap-2">
-                    {/* Placeholder: in a real app, map over event days */}
                     <label className="inline-flex items-center gap-2 text-xs text-gray-700">
                       <input
                         type="checkbox"
                         className="rounded border-gray-300"
                         checked={rsvpForm.attendingDays.includes('day1')}
-                        onChange={e => {
+                        onChange={(e) => {
                           const checked = e.target.checked;
                           handleRSVPChange(
                             'attendingDays',
                             checked
                               ? Array.from(new Set([...rsvpForm.attendingDays, 'day1']))
-                              : rsvpForm.attendingDays.filter(d => d !== 'day1')
+                              : rsvpForm.attendingDays.filter((d) => d !== 'day1'),
                           );
                         }}
                       />
@@ -915,14 +1023,18 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               )}
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-700">
-                  Meal choice
-                </label>
-                <select
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  value={rsvpForm.mealChoice}
-                  onChange={e => handleRSVPChange('mealChoice', e.target.value)}
-                >
+		<label
+  						htmlFor="guest-rsvp-meal-choice"
+  						className="text-xs font-medium text-gray-700"
+		>
+  						Meal choice
+		</label>
+		<select
+  						id="guest-rsvp-meal-choice"
+  						className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+  						value={rsvpForm.mealChoice}
+  						onChange={(e) => handleRSVPChange('mealChoice', e.target.value)}
+		>
                   <option value="standard">Standard</option>
                   <option value="vegetarian">Vegetarian</option>
                   <option value="vegan">Vegan</option>
@@ -938,10 +1050,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                     type="checkbox"
                     className="rounded border-gray-300"
                     checked={rsvpForm.plusOne}
-                    onChange={e => handleRSVPChange('plusOne', e.target.checked)}
+                    onChange={(e) => handleRSVPChange('plusOne', e.target.checked)}
                   />
                   Bringing a plus one?
                 </label>
+
                 {rsvpForm.plusOne && (
                   <div className="space-y-2 mt-2">
                     <input
@@ -949,14 +1062,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                       placeholder="Plus one full name"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                       value={rsvpForm.plusOneName}
-                      onChange={e =>
-                        handleRSVPChange('plusOneName', e.target.value)
-                      }
+                      onChange={(e) => handleRSVPChange('plusOneName', e.target.value)}
                     />
                     <select
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                       value={rsvpForm.plusOneMealChoice}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleRSVPChange('plusOneMealChoice', e.target.value)
                       }
                     >
@@ -972,42 +1083,50 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-700">
-                  Dietary restrictions or allergies
-                </label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[60px]"
-                  value={rsvpForm.dietaryNotes}
-                  onChange={e =>
-                    handleRSVPChange('dietaryNotes', e.target.value)
-                  }
-                />
+		<label
+  						htmlFor="guest-rsvp-dietary-notes"
+  						className="text-xs font-medium text-gray-700"
+		>
+  						Dietary restrictions or allergies
+		</label>
+		<textarea
+  						id="guest-rsvp-dietary-notes"
+  						className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[60px]"
+  						value={rsvpForm.dietaryNotes}
+  						onChange={(e) => handleRSVPChange('dietaryNotes', e.target.value)}
+		/>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-700">
-                  Accessibility or special needs
-                </label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[60px]"
-                  value={rsvpForm.specialNeeds}
-                  onChange={e =>
-                    handleRSVPChange('specialNeeds', e.target.value)
-                  }
-                />
+		<label
+  						htmlFor="guest-rsvp-special-needs"
+  						className="text-xs font-medium text-gray-700"
+		>
+  						Accessibility or special needs
+		</label>
+		<textarea
+  						id="guest-rsvp-special-needs"
+  						className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[60px]"
+  						value={rsvpForm.specialNeeds}
+  						onChange={(e) => handleRSVPChange('specialNeeds', e.target.value)}
+		/>
               </div>
             </>
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">
-              Message to the couple
-            </label>
-            <textarea
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[60px]"
-              value={rsvpForm.notes}
-              onChange={e => handleRSVPChange('notes', e.target.value)}
-            />
+            <label
+  					htmlFor="guest-rsvp-notes"
+  					className="text-xs font-medium text-gray-700"
+	    >
+  					Message to the couple
+	    </label>
+	          <textarea
+  					id="guest-rsvp-notes"
+  					className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[60px]"
+  					value={rsvpForm.notes}
+ 					 onChange={(e) => handleRSVPChange('notes', e.target.value)}
+	           />
           </div>
 
           <button
@@ -1037,9 +1156,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       return (
         <div className="pb-24">
           <div className="bg-white rounded-xl shadow p-4 mt-4">
-            <p className="text-sm text-gray-700">
-              Lodging details will be shared soon.
-            </p>
+            <p className="text-sm text-gray-700">Lodging details will be shared soon.</p>
           </div>
         </div>
       );
@@ -1061,7 +1178,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           </div>
         )}
 
-        {lodgingVenues.map(venue => (
+        {lodgingVenues.map((venue) => (
           <div key={venue.id} className="bg-white rounded-xl shadow p-4 mt-2 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-800">{venue.name}</h2>
@@ -1082,7 +1199,6 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               )}
             </div>
 
-            {/* Room list placeholder */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-gray-800">Rooms</p>
               <p className="text-xs text-gray-600">
@@ -1114,7 +1230,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     }
   };
 
-  const renderPasswordGate = () => {
+  const renderSignInGate = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
         <header className="px-4 pt-4 pb-2 flex items-center justify-between">
@@ -1125,29 +1241,76 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           >
             Exit
           </button>
-          <h1 className="text-sm font-semibold text-gray-800">
-            Guest Portal
-          </h1>
+          <h1 className="text-sm font-semibold text-gray-800">Guest Portal</h1>
           <div className="w-10" />
         </header>
+
         <main className="flex-1 flex items-center justify-center px-4 pb-16">
           <form
-            onSubmit={handlePasswordSubmit}
-            className="w-full max-w-sm bg-white rounded-xl shadow p-4 space-y-3"
+            onSubmit={(e) => {
+              void handleGuestPortalSignIn(e);
+            }}
+            className="w-full max-w-sm bg-white rounded-xl shadow p-4 space-y-4"
           >
-            <p className="text-sm font-semibold text-gray-800">
-              Enter portal password
-            </p>
-            <input
-              type="password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              value={passwordInput}
-              onChange={e => setPasswordInput(e.target.value)}
-              autoFocus
-            />
+              		<p className="text-xs text-gray-600 leading-relaxed">
+              				Enter your wedding event name and the guest email or name used for that event to access RSVP, schedule, lodging, and directions.
+            			</p>
+
+            <div>
+              <label
+                htmlFor="guest-portal-event"
+                className="text-sm font-semibold text-gray-800 block mb-1"
+              >
+                Event Name or Code
+              </label>
+              <input
+                id="guest-portal-event"
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                value={eventInput}
+                onChange={(e) => setEventInput(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="guest-portal-guest-identifier"
+                className="text-sm font-semibold text-gray-800 block mb-1"
+              >
+                Guest Email or Name
+              </label>
+              <input
+                id="guest-portal-guest-identifier"
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                value={guestIdentifier}
+                onChange={(e) => setGuestIdentifier(e.target.value)}
+              />
+            </div>
+
+            {requiresPortalPassword && (
+              <div>
+                <label
+                  htmlFor="guest-portal-password"
+                  className="text-sm font-semibold text-gray-800 block mb-1"
+                >
+                  Enter portal password
+                </label>
+                <input
+                  id="guest-portal-password"
+                  type="password"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                />
+              </div>
+            )}
+
             {passwordError && (
               <p className="text-xs text-red-600">{passwordError}</p>
             )}
+
             <button
               type="submit"
               className="w-full mt-1 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
@@ -1163,9 +1326,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
   if (!config) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
-        <p className="text-sm text-gray-700">
-          Guest portal is not configured yet.
-        </p>
+        <p className="text-sm text-gray-700">Guest portal is not configured yet.</p>
         <button
           type="button"
           onClick={onExitPortal}
@@ -1177,19 +1338,44 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     );
   }
 
-  if (needsPasswordGate) {
-    return renderPasswordGate();
+  if (!isGuestPortalEventActive(config)) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
+        <p className="text-sm font-semibold text-gray-800">
+          This guest portal is no longer available.
+        </p>
+        <p className="mt-2 text-sm text-gray-600 text-center">
+          Guest access automatically ends the day after the event.
+        </p>
+        <button
+          type="button"
+          onClick={onExitPortal}
+          className="mt-4 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
+        >
+          Exit
+        </button>
+      </div>
+    );
+  }
+
+  if (needsEventScopedSignIn) {
+    return renderSignInGate();
   }
 
   const showMapTab = !!config.showMap;
   const showScheduleTab = !!config.showSchedule;
   const showWayfindingTab = !!config.showWayfinding;
   const showRSVPTab = !!config.showRSVP;
-  const showLodgingTab = !!config.showLodging && lodgingVenues.length > 0;
+     const showLodgingTab =
+           !!config.showLodging &&
+    	 lodgingVenues.length > 0 &&
+    	   guestCanAccessLodging(
+      	   	identifiedGuest,
+      	   	activeEventName || config.eventTitle || '',
+     );
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Top bar (desktop / general) */}
       <header className="px-4 pt-4 pb-2 flex items-center justify-between">
         <button
           type="button"
@@ -1204,7 +1390,6 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
         <div className="w-10" />
       </header>
 
-      {/* Desktop top nav (optional) */}
       <nav className="hidden md:flex px-4 pb-2 gap-2 text-xs">
         <button
           type="button"
@@ -1217,6 +1402,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
         >
           🏠 Home
         </button>
+
         {showMapTab && (
           <button
             type="button"
@@ -1230,6 +1416,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             🗺️ Venue Map
           </button>
         )}
+
         {showScheduleTab && (
           <button
             type="button"
@@ -1243,6 +1430,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             📅 Schedule
           </button>
         )}
+
         {showWayfindingTab && (
           <button
             type="button"
@@ -1256,6 +1444,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             🧭 Getting Around
           </button>
         )}
+
         {showRSVPTab && (
           <button
             type="button"
@@ -1269,6 +1458,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             📝 RSVP
           </button>
         )}
+
         {showLodgingTab && (
           <button
             type="button"
@@ -1284,12 +1474,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
         )}
       </nav>
 
-      {/* Main content */}
       <main className="flex-1 px-4 pt-2 pb-20 md:pb-6 overflow-y-auto">
         {renderContent()}
       </main>
 
-      {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 md:hidden bg-white border-t border-gray-200 shadow-sm">
         <div className="flex justify-around py-1">
           <button

@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { Sidebar } from './Sidebar';
 import { setTableSpecs, setFixtureTypes } from '../hooks/useLayoutState';
 
-function renderSidebar(isAdmin: boolean, currentVenueCategory: string) {
+function renderSidebar(currentUser: any, isAdmin: boolean, currentVenueCategory: string) {
   return render(
     <Sidebar
-      width={360}
+      width={280}
       collapsed={false}
       onWidthChange={() => undefined}
       onCollapsedChange={() => undefined}
@@ -22,6 +22,7 @@ function renderSidebar(isAdmin: boolean, currentVenueCategory: string) {
       currentDragItem={null}
       onClearLayout={() => undefined}
       isAdmin={isAdmin}
+      currentUser={currentUser}
       onViewImage={() => undefined}
       layoutCategories={[] as any}
       currentVenueCategory={currentVenueCategory}
@@ -39,14 +40,14 @@ function renderSidebar(isAdmin: boolean, currentVenueCategory: string) {
 }
 
 describe('Sidebar cross-role visibility for category-restricted items', () => {
-  it('shows only category-matching table and venue fixture to guest/basic users', async () => {
+  it('shows only category-matching table and visible venue fixture to basic users', async () => {
     const user = userEvent.setup();
 
     setTableSpecs([
       {
         id: 'tbl-rec',
         name: 'Reception Table',
-        shape: 'round',
+        shape: 'rectangle',
         width: 6,
         height: 6,
         capacity: 10,
@@ -56,7 +57,7 @@ describe('Sidebar cross-role visibility for category-restricted items', () => {
       {
         id: 'tbl-cer',
         name: 'Ceremony Table',
-        shape: 'round',
+        shape: 'rectangle',
         width: 6,
         height: 6,
         capacity: 10,
@@ -76,6 +77,7 @@ describe('Sidebar cross-role visibility for category-restricted items', () => {
         color: '#cccccc',
         icon: '🎉',
         visibleToUsers: true,
+        isSelectable: true,
         venueCategories: ['reception'],
       } as any,
       {
@@ -88,16 +90,26 @@ describe('Sidebar cross-role visibility for category-restricted items', () => {
         color: '#cccccc',
         icon: '🚫',
         visibleToUsers: false,
+        isSelectable: true,
         venueCategories: ['reception'],
       } as any,
     ]);
 
-    renderSidebar(false, 'reception');
+    renderSidebar(
+      {
+        id: 'u1',
+        role: 'basic',
+        name: 'Basic User',
+        isActive: true,
+      },
+      false,
+      'reception',
+    );
 
     expect(screen.getByText('Reception Table')).toBeInTheDocument();
     expect(screen.queryByText('Ceremony Table')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Venue/i }));
+    await user.click(screen.getByTitle('Venue'));
     expect(screen.getByText('Reception Fixture')).toBeInTheDocument();
     expect(screen.queryByText('Hidden Fixture')).not.toBeInTheDocument();
   });
@@ -109,7 +121,7 @@ describe('Sidebar cross-role visibility for category-restricted items', () => {
       {
         id: 'tbl-rec',
         name: 'Reception Table',
-        shape: 'round',
+        shape: 'rectangle',
         width: 6,
         height: 6,
         capacity: 10,
@@ -119,7 +131,7 @@ describe('Sidebar cross-role visibility for category-restricted items', () => {
       {
         id: 'tbl-cer',
         name: 'Ceremony Table',
-        shape: 'round',
+        shape: 'rectangle',
         width: 6,
         height: 6,
         capacity: 10,
@@ -139,6 +151,7 @@ describe('Sidebar cross-role visibility for category-restricted items', () => {
         color: '#cccccc',
         icon: '🎉',
         visibleToUsers: true,
+        isSelectable: true,
         venueCategories: ['reception'],
       } as any,
       {
@@ -151,16 +164,26 @@ describe('Sidebar cross-role visibility for category-restricted items', () => {
         color: '#cccccc',
         icon: '🚫',
         visibleToUsers: false,
+        isSelectable: true,
         venueCategories: ['reception'],
       } as any,
     ]);
 
-    renderSidebar(true, 'reception');
+    renderSidebar(
+      {
+        id: 'u2',
+        role: 'admin',
+        name: 'Admin User',
+        isActive: true,
+      },
+      true,
+      'reception',
+    );
 
     expect(screen.getByText('Reception Table')).toBeInTheDocument();
     expect(screen.getByText('Ceremony Table')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Venue/i }));
+    await user.click(screen.getByTitle('Venue'));
     expect(screen.getByText('Reception Fixture')).toBeInTheDocument();
     expect(screen.getByText('Hidden Fixture')).toBeInTheDocument();
   });

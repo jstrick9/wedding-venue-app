@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SafeImage from './SafeImage';
 
 interface ImageItem {
   id: string;
@@ -17,7 +18,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
   images = [],
   onChange,
   maxImages = 4,
-  itemName = 'item'
+  itemName = 'item',
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
@@ -32,10 +33,11 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      
+
       if (file.size > 5 * 1024 * 1024) {
         alert('Image must be less than 5MB');
         return;
@@ -46,17 +48,18 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
         const newImage: ImageItem = {
           id: `img-${Date.now()}`,
           url: reader.result as string,
-          label: `Image ${images.length + 1}`
+          label: `Image ${images.length + 1}`,
         };
         onChange([...images, newImage]);
       };
       reader.readAsDataURL(file);
     };
+
     input.click();
   };
 
   const handleRemoveImage = (id: string) => {
-    onChange(images.filter(img => img.id !== id));
+    onChange(images.filter((img) => img.id !== id));
     if (previewImage?.id === id) {
       setPreviewImage(null);
       setZoom(1);
@@ -64,165 +67,224 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
   };
 
   const handleLabelChange = (id: string, label: string) => {
-    onChange(images.map(img => img.id === id ? { ...img, label } : img));
+    onChange(images.map((img) => (img.id === id ? { ...img, label } : img)));
   };
 
   const imageCount = images.length;
 
   return (
     <>
-    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-      <div
-        className="flex items-center justify-between cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <label className="text-xs font-medium text-blue-700 flex items-center gap-1">
-          📷 Image Gallery ({imageCount}/{maxImages})
-        </label>
-        <div className="flex items-center gap-2">
-          {imageCount > 0 && (
-            <div className="flex -space-x-2">
-              {images.slice(0, 3).map(img => (
-                    <img
-                  key={img.id}
+      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+        <div
+          className="flex items-center justify-between cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <label className="text-xs font-medium text-blue-700 flex items-center gap-1">
+            📷 Image Gallery ({imageCount}/{maxImages})
+          </label>
+
+          <div className="flex items-center gap-2">
+            {imageCount > 0 && (
+              <div className="flex -space-x-2">
+                {images.slice(0, 3).map((img) => (
+                  <div
+                    key={img.id}
+                    className="w-8 h-8 rounded overflow-hidden border border-white/50"
+                  >
+                    <SafeImage
                       src={img.url}
-                  alt={img.label}
-                  className="w-6 h-6 rounded border-2 border-white object-cover"
-                />
-              ))}
-              {imageCount > 3 && (
-                <div className="w-6 h-6 rounded border-2 border-white bg-blue-200 flex items-center justify-center text-xs font-medium text-blue-700">
-                  +{imageCount - 3}
-                </div>
-              )}
-            </div>
-          )}
-          <span className="text-blue-600">{isExpanded ? '▲' : '▼'}</span>
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className="mt-3 space-y-3">
-          {/* Upload Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleImageUpload();
-            }}
-            disabled={imageCount >= maxImages}
-            className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-              imageCount >= maxImages
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-            }`}
-          >
-            📷 {imageCount >= maxImages ? 'Maximum Images Reached' : `Add Image (${imageCount}/${maxImages})`}
-          </button>
-
-          {/* Image Grid */}
-          {images.length > 0 && (
-            <div className="grid grid-cols-2 gap-2">
-              {images.map((img, index) => (
-                <div key={img.id} className="bg-white rounded-lg border border-blue-200 overflow-hidden">
-                  <div className="relative aspect-square">
-                     <img
-                      src={img.url} 
-                      alt={img.label}
-                       className="w-full h-full object-cover cursor-zoom-in"
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         setPreviewImage(img);
-                         setZoom(1);
-                       }}
+                      alt={img.label || 'Preview image'}
+                      className="w-full h-full object-cover"
+                      fallback={
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200 text-[10px] text-gray-500">
+                          ?
+                        </div>
+                      }
                     />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveImage(img.id);
-                      }}
-                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600 transition-colors shadow"
-                    >
-                      ✕
-                    </button>
-                    <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
-                      {index + 1}
+                  </div>
+                ))}
+
+                {imageCount > 3 && (
+                  <div className="w-6 h-6 rounded border-2 border-white bg-blue-200 flex items-center justify-center text-xs font-medium text-blue-700">
+                    +{imageCount - 3}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <span className="text-blue-600">{isExpanded ? '▲' : '▼'}</span>
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div className="mt-3 space-y-3">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleImageUpload();
+              }}
+              disabled={imageCount >= maxImages}
+              className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                imageCount >= maxImages
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              }`}
+            >
+              📷{' '}
+              {imageCount >= maxImages
+                ? 'Maximum Images Reached'
+                : `Add Image (${imageCount}/${maxImages})`}
+            </button>
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {images.map((img, index) => (
+                  <div
+                    key={img.id}
+                    className="bg-white rounded-lg border border-blue-200 overflow-hidden"
+                  >
+                    <div className="relative aspect-square">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewImage(img);
+                          setZoom(1);
+                        }}
+                        className="w-full h-full"
+                      >
+                        <SafeImage
+                          src={img.url}
+                          alt={img.label || 'Gallery image'}
+                          className="w-full h-full object-cover cursor-pointer"
+                          fallback={
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-xs text-gray-400 cursor-pointer">
+                              Broken image
+                            </div>
+                          }
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveImage(img.id);
+                        }}
+                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600 transition-colors shadow"
+                      >
+                        ✕
+                      </button>
+
+                      <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+
+                    <div className="p-2">
+                      <input
+                        type="text"
+                        value={img.label}
+                        onChange={(e) => handleLabelChange(img.id, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="Image label..."
+                        className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
                   </div>
-                   <div className="p-2">
-                    <input
-                      type="text"
-                      value={img.label}
-                      onChange={(e) => handleLabelChange(img.id, e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="Image label..."
-                      className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {images.length === 0 && (
-            <div className="text-center py-4 text-sm text-blue-600">
-              <p>No images uploaded for this {itemName}</p>
-              <p className="text-xs text-blue-400 mt-1">Upload up to {maxImages} images with labels</p>
+            {images.length === 0 && (
+              <div className="text-center py-4 text-sm text-blue-600">
+                <p>No images uploaded for this {itemName}</p>
+                <p className="text-xs text-blue-400 mt-1">
+                  Upload up to {maxImages} images with labels
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => {
+            setPreviewImage(null);
+            setZoom(1);
+          }}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-3 border-b">
+              <div>
+                <div className="font-semibold text-gray-800">
+                  {previewImage.label || 'Image Preview'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Zoom: {Math.round(zoom * 100)}%
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
+                  className="px-2 py-1 rounded border text-sm hover:bg-gray-50"
+                >
+                  −
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setZoom(1)}
+                  className="px-2 py-1 rounded border text-xs hover:bg-gray-50"
+                >
+                  100%
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.min(4, z + 0.25))}
+                  className="px-2 py-1 rounded border text-sm hover:bg-gray-50"
+                >
+                  +
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewImage(null);
+                    setZoom(1);
+                  }}
+                  className="px-3 py-1 rounded bg-gray-800 text-white text-sm hover:bg-gray-700"
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          )}
+
+            <div className="overflow-auto max-h-[calc(90vh-64px)] bg-gray-100 p-4">
+              <div style={{ transform: `scale(${zoom})` }}>
+                <SafeImage
+                  src={previewImage.url}
+                  alt={previewImage.label || 'Image preview'}
+                  className="max-w-full max-h-[70vh] object-contain"
+                  fallback={
+                    <div className="w-[320px] h-[220px] max-w-full flex items-center justify-center bg-gray-100 text-gray-500 border border-gray-200 rounded">
+                      Preview unavailable
+                    </div>
+                  }
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
-    </div>
-
-    {previewImage && (
-      <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4" onClick={() => { setPreviewImage(null); setZoom(1); }}>
-        <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between p-3 border-b">
-            <div>
-              <div className="font-semibold text-gray-800">{previewImage.label || 'Image Preview'}</div>
-              <div className="text-xs text-gray-500">Zoom: {Math.round(zoom * 100)}%</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
-                className="px-2 py-1 rounded border text-sm hover:bg-gray-50"
-              >
-                −
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoom(1)}
-                className="px-2 py-1 rounded border text-xs hover:bg-gray-50"
-              >
-                100%
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoom((z) => Math.min(4, z + 0.25))}
-                className="px-2 py-1 rounded border text-sm hover:bg-gray-50"
-              >
-                +
-              </button>
-              <button
-                type="button"
-                onClick={() => { setPreviewImage(null); setZoom(1); }}
-                className="px-3 py-1 rounded bg-gray-800 text-white text-sm hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-          <div className="overflow-auto max-h-[calc(90vh-64px)] bg-gray-100 p-4">
-            <img
-              src={previewImage.url}
-              alt={previewImage.label}
-              className="mx-auto rounded shadow"
-              style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-            />
-          </div>
-        </div>
-      </div>
-    )}
     </>
   );
 };

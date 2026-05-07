@@ -1,8 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { Venue } from '../types';
+import { Venue, User } from '../types';
 import { SavedLayout } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
 import { layoutCategories } from '../data/venueData';
+import {
+  canAccessAdminPanel,
+  canAccessOperationsPanel,
+  canManageGuests,
+  canPrintLayouts,
+} from '../utils/permissions';
+import ModalDialog from './ModalDialog';
+import Logo from './Logo';
 
 export interface HeaderProps {
   currentVenue: Venue;
@@ -27,6 +35,7 @@ export interface HeaderProps {
   onDeleteSavedLayout: (id: string) => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
+  currentUser?: User | null;
 }
 
 export function Header({
@@ -51,7 +60,8 @@ export function Header({
   onLoadSavedLayout,
   onDeleteSavedLayout,
   mobileMenuOpen,
-  setMobileMenuOpen
+  setMobileMenuOpen,
+  currentUser,
 }: HeaderProps) {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -59,26 +69,37 @@ export function Header({
   const [showMenu, setShowMenu] = useState(false);
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
   const [showVenueFilter, setShowVenueFilter] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
   const venueDropdownRef = useRef<HTMLDivElement>(null);
   const venueFilterRef = useRef<HTMLDivElement>(null);
-  
+
   const config = getConfig();
 
-  // Close menus when clicking outside
+  const canOpenAdmin = canAccessAdminPanel(currentUser);
+  const canOpenOperations = canAccessOperationsPanel(currentUser);
+  const canOpenGuests = canManageGuests(currentUser);
+  const canPrint = canPrintLayouts(currentUser);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowMenu(false);
       }
-      if (venueDropdownRef.current && !venueDropdownRef.current.contains(event.target as Node)) {
+      if (
+        venueDropdownRef.current &&
+        !venueDropdownRef.current.contains(event.target as Node)
+      ) {
         setShowVenueDropdown(false);
       }
-      if (venueFilterRef.current && !venueFilterRef.current.contains(event.target as Node)) {
+      if (
+        venueFilterRef.current &&
+        !venueFilterRef.current.contains(event.target as Node)
+      ) {
         setShowVenueFilter(false);
       }
     }
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -91,28 +112,26 @@ export function Header({
     }
   };
 
-  // Handle venue selection - ROBUST VERSION
   const handleVenueSelect = (venueId: string) => {
-    // Close dropdown immediately
     setShowVenueDropdown(false);
     setMobileMenuOpen(false);
-    
-    // Only change if different
+
     if (venueId !== currentVenue.id) {
-      // Use setTimeout to ensure dropdown is closed first
       setTimeout(() => {
         onChangeVenue(venueId);
       }, 10);
     }
   };
 
-  const categoryInfo = layoutCategories.find(c => c.id === currentVenue.category);
+  const categoryInfo = layoutCategories.find((c) => c.id === currentVenue.category);
 
   const toggleVenueCategory = (categoryId: string) => {
     if (!onChangeVenueCategories) return;
+
     const next = selectedVenueCategories.includes(categoryId)
-      ? selectedVenueCategories.filter(id => id !== categoryId)
+      ? selectedVenueCategories.filter((id) => id !== categoryId)
       : [...selectedVenueCategories, categoryId];
+
     onChangeVenueCategories(next);
   };
 
@@ -120,42 +139,49 @@ export function Header({
     onChangeVenueCategories?.([]);
   };
 
-  // Filter venues for display - basic users only see master venues
-  const visibleVenues = venues.filter(v => isAdmin || v.isMaster !== false);
-  const filteredVenues = selectedVenueCategories.length > 0
-    ? visibleVenues.filter(v => selectedVenueCategories.includes(v.category))
-    : visibleVenues;
+  const visibleVenues = venues.filter((v) => isAdmin || v.isMaster !== false);
+  const filteredVenues =
+    selectedVenueCategories.length > 0
+      ? visibleVenues.filter((v) => selectedVenueCategories.includes(v.category))
+      : visibleVenues;
 
   return (
     <>
-      <header 
-        className="text-white shadow-lg" 
-        style={{ 
-          zIndex: 100, 
+      <header
+        className="text-white shadow-lg"
+        style={{
+          zIndex: 100,
           position: 'relative',
           background: `linear-gradient(to right, ${config.primaryColor}, ${config.primaryDark})`,
-          color: config.headerTextColor
+          color: config.headerTextColor,
         }}
       >
         <div className="flex items-center justify-between px-2 md:px-4 py-2 gap-2">
-          {/* Logo and Title */}
           <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
             {config.logoUrl ? (
-              <img src={config.logoUrl} alt="" className="h-8 md:h-10 w-auto rounded flex-shrink-0" />
+              <Logo
+                url={config.logoUrl}
+                size="md"
+                className="rounded flex-shrink-0"
+              />
             ) : (
               <span className="text-xl md:text-2xl flex-shrink-0">💒</span>
             )}
+
             <div className="hidden sm:block min-w-0">
-              <h1 className="font-bold text-sm md:text-lg leading-tight text-white truncate">{config.venueName}</h1>
+              <h1 className="font-bold text-sm md:text-lg leading-tight text-white truncate">
+                {config.venueName}
+              </h1>
               <div className="flex items-center gap-1 md:gap-2 text-xs text-white/70">
                 <span className="hidden lg:inline">Wedding Layout Planner</span>
                 <span className="lg:hidden">Layout Planner</span>
+
                 {config.websiteUrl && (
                   <>
                     <span className="hidden md:inline">•</span>
-                    <a 
-                      href={config.websiteUrl} 
-                      target="_blank" 
+                    <a
+                      href={config.websiteUrl}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="hover:text-white transition-colors hidden md:flex items-center gap-1"
                     >
@@ -163,10 +189,11 @@ export function Header({
                     </a>
                   </>
                 )}
+
                 {config.supportEmail && (
                   <>
                     <span className="hidden md:inline">•</span>
-                    <a 
+                    <a
                       href={`mailto:${config.supportEmail}`}
                       className="hover:text-white transition-colors hidden md:flex items-center gap-1"
                     >
@@ -178,10 +205,13 @@ export function Header({
             </div>
           </div>
 
-          {/* Venue Selector - Desktop - Custom Dropdown */}
           <div className="hidden md:flex items-center gap-2 flex-shrink min-w-0">
-            <div ref={venueDropdownRef} className="flex items-center gap-2 bg-white/10 rounded-lg px-2 py-1.5">
+            <div
+              ref={venueDropdownRef}
+              className="flex items-center gap-2 bg-white/10 rounded-lg px-2 py-1.5"
+            >
               <span className="text-white/70 text-xs whitespace-nowrap">Venue:</span>
+
               <div className="relative">
                 <button
                   type="button"
@@ -192,26 +222,30 @@ export function Header({
                   }}
                   className="bg-white/20 text-white font-medium border-none outline-none cursor-pointer rounded px-2 py-1 flex items-center gap-1 hover:bg-white/30 transition-colors max-w-[180px] lg:max-w-[250px] xl:max-w-[300px]"
                 >
-                  <span className="truncate text-sm">
-                    {currentVenue.name}
-                  </span>
+                  <span className="truncate text-sm">{currentVenue.name}</span>
                   <span className="text-xs text-white/70 whitespace-nowrap hidden lg:inline">
                     ({currentVenue.width}'×{currentVenue.height}')
                   </span>
-                  {isAdmin && !currentVenue.isMaster && <span className="text-xs text-yellow-300 whitespace-nowrap">[Draft]</span>}
-                  <span className="text-xs ml-1 flex-shrink-0">{showVenueDropdown ? '▲' : '▼'}</span>
+                  {isAdmin && !currentVenue.isMaster && (
+                    <span className="text-xs text-yellow-300 whitespace-nowrap">
+                      [Draft]
+                    </span>
+                  )}
+                  <span className="text-xs ml-1 flex-shrink-0">
+                    {showVenueDropdown ? '▲' : '▼'}
+                  </span>
                 </button>
-                
-                {/* Custom Dropdown */}
+
                 {showVenueDropdown && (
-                  <div 
+                  <div
                     className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl py-1 min-w-[280px] max-h-[400px] overflow-y-auto"
                     style={{ zIndex: 99999 }}
                   >
                     <div className="px-3 py-2 bg-gray-100 text-gray-600 text-xs font-medium border-b">
                       Select a Venue ({filteredVenues.length} available)
                     </div>
-                    {filteredVenues.map(v => (
+
+                    {filteredVenues.map((v) => (
                       <button
                         key={v.id}
                         type="button"
@@ -221,19 +255,26 @@ export function Header({
                           handleVenueSelect(v.id);
                         }}
                         className={`w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors flex items-center justify-between border-b border-gray-100 last:border-b-0 ${
-                          v.id === currentVenue.id ? 'bg-purple-100 text-purple-700' : 'text-gray-800'
+                          v.id === currentVenue.id
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'text-gray-800'
                         }`}
                       >
                         <div>
                           <div className="font-medium flex items-center gap-2">
                             {v.name}
-                            {isAdmin && !v.isMaster && <span className="text-xs text-orange-600">[Draft]</span>}
-                            {v.isMaster && <span className="text-xs text-green-600">★</span>}
+                            {isAdmin && !v.isMaster && (
+                              <span className="text-xs text-orange-600">[Draft]</span>
+                            )}
+                            {v.isMaster && (
+                              <span className="text-xs text-green-600">★</span>
+                            )}
                           </div>
                           <div className="text-xs text-gray-500">
                             {v.width}' × {v.height}' • {v.capacity} guests
                           </div>
                         </div>
+
                         {v.id === currentVenue.id && (
                           <span className="text-purple-600 text-lg">✓</span>
                         )}
@@ -243,6 +284,7 @@ export function Header({
                 )}
               </div>
             </div>
+
             <div className="relative" ref={venueFilterRef}>
               <button
                 type="button"
@@ -262,10 +304,16 @@ export function Header({
                   </span>
                 )}
               </button>
+
               {showVenueFilter && (
-                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl p-3 min-w-[280px]" style={{ zIndex: 99999 }}>
+                <div
+                  className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl p-3 min-w-[280px]"
+                  style={{ zIndex: 99999 }}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-semibold text-gray-800">Filter by Venue Category</div>
+                    <div className="text-sm font-semibold text-gray-800">
+                      Filter by Venue Category
+                    </div>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -277,9 +325,11 @@ export function Header({
                       Clear all
                     </button>
                   </div>
+
                   <div className="grid grid-cols-2 gap-2">
-                    {layoutCategories.map(category => {
+                    {layoutCategories.map((category) => {
                       const active = selectedVenueCategories.includes(category.id);
+
                       return (
                         <button
                           key={category.id}
@@ -298,7 +348,9 @@ export function Header({
                             <span>{category.icon}</span>
                             <span>{category.name}</span>
                           </div>
-                          <div className="text-[11px] opacity-70 mt-0.5">{category.description}</div>
+                          <div className="text-[11px] opacity-70 mt-0.5">
+                            {category.description}
+                          </div>
                         </button>
                       );
                     })}
@@ -306,6 +358,7 @@ export function Header({
                 </div>
               )}
             </div>
+
             {categoryInfo && (
               <span className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1 whitespace-nowrap flex-shrink-0">
                 <span>{categoryInfo.icon}</span>
@@ -314,10 +367,8 @@ export function Header({
             )}
           </div>
 
-          {/* Right Side Actions */}
           <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Operations Button - Desktop */}
-            {(isAdmin || isStaff) && onOpenOperations && (
+            {canOpenOperations && onOpenOperations && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -332,8 +383,7 @@ export function Header({
               </button>
             )}
 
-            {/* Admin Panel Button - Desktop - Always visible for admins */}
-            {isAdmin && onShowAdmin && (
+            {canOpenAdmin && onShowAdmin && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -347,8 +397,7 @@ export function Header({
                 <span className="lg:hidden">Admin</span>
               </button>
             )}
-            
-            {/* Menu Button - Desktop */}
+
             <div className="hidden md:block relative" ref={menuRef}>
               <button
                 type="button"
@@ -361,80 +410,86 @@ export function Header({
                 <span>☰</span>
                 <span className="hidden lg:inline">Menu</span>
               </button>
-              
+
               {showMenu && (
-                <div 
+                <div
                   className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl py-1 min-w-[200px]"
                   style={{ zIndex: 99999 }}
                 >
                   <button
                     type="button"
-                    onClick={(e) => { 
+                    onClick={(e) => {
                       e.preventDefault();
-                      onShowTemplates(); 
-                      setShowMenu(false); 
+                      onShowTemplates();
+                      setShowMenu(false);
                     }}
                     className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     📋 Templates
                   </button>
-                  {!isAdmin && (
+
+                  {canOpenGuests && (
                     <button
                       type="button"
-                      onClick={(e) => { 
+                      onClick={(e) => {
                         e.preventDefault();
-                        onShowGuests(); 
-                        setShowMenu(false); 
+                        onShowGuests();
+                        setShowMenu(false);
                       }}
                       className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
                       👥 Guest List
                     </button>
                   )}
+
                   <hr className="my-1" />
+
                   <button
                     type="button"
-                    onClick={(e) => { 
+                    onClick={(e) => {
                       e.preventDefault();
-                      setShowSaveModal(true); 
-                      setShowMenu(false); 
+                      setShowSaveModal(true);
+                      setShowMenu(false);
                     }}
                     className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     💾 Save Layout
                   </button>
+
                   <button
                     type="button"
-                    onClick={(e) => { 
+                    onClick={(e) => {
                       e.preventDefault();
-                      setShowLoadModal(true); 
-                      setShowMenu(false); 
+                      setShowLoadModal(true);
+                      setShowMenu(false);
                     }}
                     className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                   >
                     📂 Load Layout
                   </button>
+
                   {isAdmin && onSaveMasterLayout && (
                     <>
                       <hr className="my-1" />
                       <button
                         type="button"
-                        onClick={(e) => { 
+                        onClick={(e) => {
                           e.preventDefault();
-                          onSaveMasterLayout(); 
-                          setShowMenu(false); 
+                          onSaveMasterLayout();
+                          setShowMenu(false);
                         }}
                         className="w-full text-left px-4 py-2 text-green-700 hover:bg-green-50 flex items-center gap-2"
                       >
                         👑 Save as Master Layout
                       </button>
+
                       {currentVenue.masterLayout && onClearMasterLayout && (
                         <button
                           type="button"
-                          onClick={(e) => { 
+                          onClick={(e) => {
                             e.preventDefault();
-                            onClearMasterLayout(); 
-                            setShowMenu(false); 
+                            onClearMasterLayout();
+                            setShowMenu(false);
                           }}
                           className="w-full text-left px-4 py-2 text-red-700 hover:bg-red-50 flex items-center gap-2"
                         >
@@ -443,28 +498,35 @@ export function Header({
                       )}
                     </>
                   )}
+
                   <hr className="my-1" />
-                  <button
-                    type="button"
-                    onClick={(e) => { 
-                      e.preventDefault();
-                      onPrint(); 
-                      setShowMenu(false); 
-                    }}
-                    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                  >
-                    🖨️ Print Layout
-                  </button>
+
+                  {canPrint && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onPrint();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      🖨️ Print Layout
+                    </button>
+                  )}
+
                   <hr className="my-1" />
+
                   <div className="px-4 py-2 text-xs text-gray-500">
-                    Signed in as: {userName} ({isAdmin ? 'Admin' : 'User'})
+                    Signed in as: {userName} ({isAdmin ? 'Admin' : isStaff ? 'Staff' : 'User'})
                   </div>
+
                   <button
                     type="button"
-                    onClick={(e) => { 
+                    onClick={(e) => {
                       e.preventDefault();
-                      onLogout(); 
-                      setShowMenu(false); 
+                      onLogout();
+                      setShowMenu(false);
                     }}
                     className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2"
                   >
@@ -474,7 +536,6 @@ export function Header({
               )}
             </div>
 
-            {/* Mobile Menu Button */}
             <button
               type="button"
               onClick={(e) => {
@@ -488,19 +549,21 @@ export function Header({
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div 
+          <div
             className="md:hidden bg-[#3d1a45] border-t border-white/20 max-h-[80vh] overflow-y-auto"
             style={{ zIndex: 99998 }}
           >
-            {/* Mobile Venue Selector */}
             <div className="p-4 border-b border-white/10 space-y-3">
               <div>
-                <label className="text-white/70 text-xs font-medium block mb-2">FILTER VENUE CATEGORIES</label>
+                <label className="text-white/70 text-xs font-medium block mb-2">
+                  FILTER VENUE CATEGORIES
+                </label>
+
                 <div className="grid grid-cols-2 gap-2">
-                  {layoutCategories.map(category => {
+                  {layoutCategories.map((category) => {
                     const active = selectedVenueCategories.includes(category.id);
+
                     return (
                       <button
                         key={category.id}
@@ -510,7 +573,9 @@ export function Header({
                           toggleVenueCategory(category.id);
                         }}
                         className={`rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                          active ? 'bg-white text-[#4A1942]' : 'bg-white/10 text-white/90 hover:bg-white/20'
+                          active
+                            ? 'bg-white text-[#4A1942]'
+                            : 'bg-white/10 text-white/90 hover:bg-white/20'
                         }`}
                       >
                         <div className="font-medium flex items-center gap-1">
@@ -521,6 +586,7 @@ export function Header({
                     );
                   })}
                 </div>
+
                 {selectedVenueCategories.length > 0 && (
                   <button
                     type="button"
@@ -534,102 +600,126 @@ export function Header({
                   </button>
                 )}
               </div>
+
               <div>
-                <label className="text-white/70 text-xs font-medium block mb-2">SELECT VENUE</label>
+                <label className="text-white/70 text-xs font-medium block mb-2">
+                  SELECT VENUE
+                </label>
+
                 <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                {filteredVenues.map(v => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleVenueSelect(v.id);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center justify-between ${
-                      v.id === currentVenue.id 
-                        ? 'bg-white/30 text-white' 
-                        : 'bg-white/10 text-white/90 hover:bg-white/20'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-medium text-sm">
-                        {v.name}
-                        {isAdmin && !v.isMaster && <span className="text-orange-300 ml-1 text-xs">[Draft]</span>}
+                  {filteredVenues.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleVenueSelect(v.id);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center justify-between ${
+                        v.id === currentVenue.id
+                          ? 'bg-white/30 text-white'
+                          : 'bg-white/10 text-white/90 hover:bg-white/20'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-medium text-sm">
+                          {v.name}
+                          {isAdmin && !v.isMaster && (
+                            <span className="text-orange-300 ml-1 text-xs">[Draft]</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-white/60">
+                          {v.width}' × {v.height}' • {v.capacity} guests
+                        </div>
                       </div>
-                      <div className="text-xs text-white/60">
-                        {v.width}' × {v.height}' • {v.capacity} guests
-                      </div>
+
+                      {v.id === currentVenue.id && <span className="text-lg">✓</span>}
+                    </button>
+                  ))}
+
+                  {filteredVenues.length === 0 && (
+                    <div className="px-3 py-3 text-sm text-white/70 bg-white/5 rounded-lg">
+                      No venues match the selected categories.
                     </div>
-                    {v.id === currentVenue.id && <span className="text-lg">✓</span>}
-                  </button>
-                ))}
-                {filteredVenues.length === 0 && (
-                  <div className="px-3 py-3 text-sm text-white/70 bg-white/5 rounded-lg">
-                    No venues match the selected categories.
-                  </div>
-                )}
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Mobile Menu Actions */}
             <div className="p-4 space-y-2">
-              {isAdmin && onShowAdmin && (
+              {canOpenAdmin && onShowAdmin && (
                 <button
                   type="button"
-                  onClick={(e) => { 
+                  onClick={(e) => {
                     e.preventDefault();
-                    onShowAdmin(); 
-                    setMobileMenuOpen(false); 
+                    onShowAdmin();
+                    setMobileMenuOpen(false);
                   }}
                   className="w-full py-3 px-4 bg-white/20 hover:bg-white/30 rounded-lg text-left font-medium"
                 >
                   ⚙️ Admin Panel
                 </button>
               )}
-              
+
+              {canOpenOperations && onOpenOperations && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onOpenOperations();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full py-3 px-4 bg-white/20 hover:bg-white/30 rounded-lg text-left font-medium"
+                >
+                  📋 Operations
+                </button>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={(e) => { 
+                  onClick={(e) => {
                     e.preventDefault();
-                    onShowTemplates(); 
-                    setMobileMenuOpen(false); 
+                    onShowTemplates();
+                    setMobileMenuOpen(false);
                   }}
                   className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
                 >
                   📋 Templates
                 </button>
-                {!isAdmin && (
+
+                {canOpenGuests && (
                   <button
                     type="button"
-                    onClick={(e) => { 
+                    onClick={(e) => {
                       e.preventDefault();
-                      onShowGuests(); 
-                      setMobileMenuOpen(false); 
+                      onShowGuests();
+                      setMobileMenuOpen(false);
                     }}
                     className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
                   >
                     👥 Guests
                   </button>
                 )}
+
                 <button
                   type="button"
-                  onClick={(e) => { 
+                  onClick={(e) => {
                     e.preventDefault();
-                    setShowSaveModal(true); 
-                    setMobileMenuOpen(false); 
+                    setShowSaveModal(true);
+                    setMobileMenuOpen(false);
                   }}
                   className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
                 >
                   💾 Save
                 </button>
+
                 <button
                   type="button"
-                  onClick={(e) => { 
+                  onClick={(e) => {
                     e.preventDefault();
-                    setShowLoadModal(true); 
-                    setMobileMenuOpen(false); 
+                    setShowLoadModal(true);
+                    setMobileMenuOpen(false);
                   }}
                   className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
                 >
@@ -640,10 +730,10 @@ export function Header({
               {isAdmin && onSaveMasterLayout && (
                 <button
                   type="button"
-                  onClick={(e) => { 
+                  onClick={(e) => {
                     e.preventDefault();
-                    onSaveMasterLayout(); 
-                    setMobileMenuOpen(false); 
+                    onSaveMasterLayout();
+                    setMobileMenuOpen(false);
                   }}
                   className="w-full py-3 px-4 bg-green-600/80 hover:bg-green-600 rounded-lg text-center"
                 >
@@ -651,28 +741,30 @@ export function Header({
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={(e) => { 
-                  e.preventDefault();
-                  onPrint(); 
-                  setMobileMenuOpen(false); 
-                }}
-                className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
-              >
-                🖨️ Print Layout
-              </button>
+              {canPrint && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onPrint();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
+                >
+                  🖨️ Print Layout
+                </button>
+              )}
 
               <div className="pt-2 border-t border-white/20 mt-2">
                 <div className="text-white/60 text-xs mb-2 px-2">
-                  Signed in as: {userName} ({isAdmin ? 'Admin' : 'User'})
+                  Signed in as: {userName} ({isAdmin ? 'Admin' : isStaff ? 'Staff' : 'User'})
                 </div>
                 <button
                   type="button"
-                  onClick={(e) => { 
+                  onClick={(e) => {
                     e.preventDefault();
-                    onLogout(); 
-                    setMobileMenuOpen(false); 
+                    onLogout();
+                    setMobileMenuOpen(false);
                   }}
                   className="w-full py-3 px-4 bg-red-500/80 hover:bg-red-500 rounded-lg text-center"
                 >
@@ -684,32 +776,29 @@ export function Header({
         )}
       </header>
 
-      {/* Save Layout Modal */}
       {showSaveModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
-          style={{ zIndex: 99999 }}
-          onClick={() => setShowSaveModal(false)}
+        <ModalDialog
+          title="Save Layout"
+          description="Save the current layout so you can return to it later."
+          onClose={() => setShowSaveModal(false)}
+          className="max-w-md"
         >
-          <div 
-            className="bg-white rounded-xl p-6 w-full max-w-md"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-bold text-gray-800 mb-4">💾 Save Layout</h3>
+          <div className="space-y-4">
             <input
               type="text"
               placeholder="Enter layout name..."
               value={layoutName}
               onChange={(e) => setLayoutName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
               autoFocus
             />
-            <div className="flex gap-3">
+
+            <div className="flex gap-3 justify-end">
               <button
                 type="button"
                 onClick={() => setShowSaveModal(false)}
-                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
               >
                 Cancel
               </button>
@@ -717,32 +806,28 @@ export function Header({
                 type="button"
                 onClick={handleSave}
                 disabled={!layoutName.trim()}
-                className="flex-1 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save Layout
               </button>
             </div>
           </div>
-        </div>
+        </ModalDialog>
       )}
 
-      {/* Load Layout Modal */}
       {showLoadModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
-          style={{ zIndex: 99999 }}
-          onClick={() => setShowLoadModal(false)}
+        <ModalDialog
+          title="Load Layout"
+          description="Choose one of your previously saved layouts."
+          onClose={() => setShowLoadModal(false)}
+          className="max-w-md"
         >
-          <div 
-            className="bg-white rounded-xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-bold text-gray-800 mb-4">📂 Load Layout</h3>
+          <div className="space-y-4">
             {savedLayouts.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No saved layouts found.</p>
             ) : (
-              <div className="space-y-2">
-                {savedLayouts.map(layout => (
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                {savedLayouts.map((layout) => (
                   <div
                     key={layout.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
@@ -750,10 +835,11 @@ export function Header({
                     <div>
                       <div className="font-medium text-gray-800">{layout.name}</div>
                       <div className="text-xs text-gray-500">
-                        {layout.tables?.length || 0} tables, {layout.fixtures?.length || 0} fixtures •{' '}
-                        {new Date(layout.createdAt).toLocaleDateString()}
+                        {layout.tables?.length || 0} tables, {layout.fixtures?.length || 0}{' '}
+                        fixtures • {new Date(layout.createdAt).toLocaleDateString()}
                       </div>
                     </div>
+
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -777,15 +863,18 @@ export function Header({
                 ))}
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => setShowLoadModal(false)}
-              className="w-full mt-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
-            >
-              Close
-            </button>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowLoadModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
           </div>
-        </div>
+        </ModalDialog>
       )}
     </>
   );

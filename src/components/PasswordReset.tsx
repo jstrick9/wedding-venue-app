@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getConfig } from '../config';
 import { getUsers, setUsers } from '../hooks/useLayoutState';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { createPasswordRecord, createSecretRecord, verifySecret } from '../utils/auth';
 
 interface PasswordResetProps {
   onClose: () => void;
@@ -22,11 +24,20 @@ interface PasswordStrength {
   };
 }
 
+interface StoredResetCodeRecord {
+  codeHash: string;
+  codeSalt: string;
+  username: string;
+  expiry: string;
+}
+
 const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => {
   const config = getConfig();
+
   const [step, setStep] = useState<ResetStep>('request');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [resolvedUsername, setResolvedUsername] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -41,44 +52,46 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [userSecurityQuestion, setUserSecurityQuestion] = useState('');
 
-  // Timer for code expiry
   useEffect(() => {
-    if (codeExpiry) {
-      const interval = setInterval(() => {
-        const remaining = Math.max(0, Math.floor((codeExpiry.getTime() - Date.now()) / 1000));
-        setTimeRemaining(remaining);
-        if (remaining === 0) {
-          setGeneratedCode('');
-          setError('Verification code has expired. Please request a new one.');
-        }
-      }, 1000);
-      return () => clearInterval(interval);
-    }
+    if (!codeExpiry) return;
+
+    const interval = window.setInterval(() => {
+      const remaining = Math.max(
+        0,
+        Math.floor((codeExpiry.getTime() - Date.now()) / 1000),
+      );
+      setTimeRemaining(remaining);
+
+      if (remaining === 0) {
+        setGeneratedCode('');
+        setError('Verification code has expired. Please request a new one.');
+      }
+    }, 1000);
+
+    return () => window.clearInterval(interval);
   }, [codeExpiry]);
 
-  // Timer for resend cooldown
   useEffect(() => {
-    if (resendCooldown > 0) {
-      const interval = setInterval(() => {
-        setResendCooldown(prev => Math.max(0, prev - 1));
-      }, 1000);
-      return () => clearInterval(interval);
-    }
+    if (resendCooldown <= 0) return;
+
+    const interval = window.setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => window.clearInterval(interval);
   }, [resendCooldown]);
 
-  // Generate a random 6-digit code
   const generateCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
-  // Calculate password strength
   const getPasswordStrength = (password: string): PasswordStrength => {
     const requirements = {
       length: password.length >= 8,
       uppercase: /[A-Z]/.test(password),
       lowercase: /[a-z]/.test(password),
       number: /[0-9]/.test(password),
-      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+      special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
     };
 
     const score = Object.values(requirements).filter(Boolean).length;
@@ -108,109 +121,142 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
 
   const passwordStrength = getPasswordStrength(newPassword);
 
-  // Handle request reset code
   const handleRequestCode = async () => {
     setError('');
     setLoading(true);
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     const users = getUsers();
-    const user = users.find(u => 
-      u.username.toLowerCase() === username.toLowerCase() ||
-      (u.email && u.email.toLowerCase() === email.toLowerCase())
-    );
+    const normalizedUsername = username.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!user) {
+    const matchedUser = users.find(
+      (u) =>
+        u.username.toLowerCase() === normalizedUsername ||
+        (u.email && u.email.toLowerCase() === normalizedEmail),
+    ) as
+      | (typeof users[number] & {
+          securityQuestion?: string;
+          securityAnswer?: string;
+        })
+      | undefined;
+
+    if (!matchedUser) {
       setError('No account found with that username or email.');
       setLoading(false);
       return;
     }
 
-    // Check if user has security question set (optional feature)
-    const userWithSecurity = user as { securityQuestion?: string };
-    if (userWithSecurity.securityQuestion) {
-      setUserSecurityQuestion(userWithSecurity.securityQuestion);
+    setResolvedUsername(matchedUser.username);
+
+    if (matchedUser.securityQuestion) {
+      setUserSecurityQuestion(matchedUser.securityQuestion);
+    } else {
+      setUserSecurityQuestion('');
     }
 
-    // Generate and "send" the code
     const code = generateCode();
     setGeneratedCode(code);
-    
-    // Set expiry to 10 minutes from now
+
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
     setCodeExpiry(expiry);
     setTimeRemaining(600);
 
-    // Store the code temporarily
-    localStorage.setItem('spm_reset_code', JSON.stringify({
-      code,
-      username: user.username,
-      expiry: expiry.toISOString()
-    }));
+    const secretRecord = await createSecretRecord(code);
+
+    const storedRecord: StoredResetCodeRecord = {
+      codeHash: secretRecord.hash,
+      codeSalt: secretRecord.salt,
+      username: matchedUser.username,
+      expiry: expiry.toISOString(),
+    };
+
+    localStorage.setItem(
+      STORAGE_KEYS.PASSWORD_RESET_CODE,
+      JSON.stringify(storedRecord),
+    );
 
     setLoading(false);
     setStep('verify');
-    setResendCooldown(60); // 60 second cooldown before resend
+    setResendCooldown(60);
   };
 
-  // Handle resend code
   const handleResendCode = async () => {
     if (resendCooldown > 0) return;
-    
+
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     const code = generateCode();
     setGeneratedCode(code);
-    
+
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
     setCodeExpiry(expiry);
     setTimeRemaining(600);
-    
-    localStorage.setItem('spm_reset_code', JSON.stringify({
-      code,
-      username,
-      expiry: expiry.toISOString()
-    }));
-    
+
+    const secretRecord = await createSecretRecord(code);
+
+    const storedRecord: StoredResetCodeRecord = {
+      codeHash: secretRecord.hash,
+      codeSalt: secretRecord.salt,
+      username: (resolvedUsername || username).trim(),
+      expiry: expiry.toISOString(),
+    };
+
+    localStorage.setItem(
+      STORAGE_KEYS.PASSWORD_RESET_CODE,
+      JSON.stringify(storedRecord),
+    );
+
     setResendCooldown(60);
     setVerificationCode('');
     setError('');
     setLoading(false);
   };
 
-  // Handle verify code
-  const handleVerifyCode = () => {
+  const handleVerifyCode = async () => {
     setError('');
-    
-    const stored = localStorage.getItem('spm_reset_code');
+
+    const stored = localStorage.getItem(STORAGE_KEYS.PASSWORD_RESET_CODE);
     if (!stored) {
       setError('No reset code found. Please request a new one.');
       return;
     }
 
-    const { code, expiry } = JSON.parse(stored);
-    
-    if (new Date(expiry) < new Date()) {
+    const parsed = JSON.parse(stored) as StoredResetCodeRecord;
+
+    if (new Date(parsed.expiry) < new Date()) {
       setError('Verification code has expired. Please request a new one.');
-      localStorage.removeItem('spm_reset_code');
+      localStorage.removeItem(STORAGE_KEYS.PASSWORD_RESET_CODE);
       return;
     }
 
-    if (verificationCode !== code) {
+    const valid = await verifySecret(verificationCode, {
+      hash: parsed.codeHash,
+      salt: parsed.codeSalt,
+    });
+
+    if (!valid) {
       setError('Invalid verification code. Please try again.');
       return;
     }
 
-    // If user has security question, verify it (optional feature)
     if (userSecurityQuestion && securityAnswer) {
       const users = getUsers();
-      const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-      const userWithSecurity = user as { securityAnswer?: string } | undefined;
-      if (userWithSecurity && userWithSecurity.securityAnswer && 
-          userWithSecurity.securityAnswer.toLowerCase() !== securityAnswer.toLowerCase()) {
+      const effectiveUsername = (resolvedUsername || username).trim().toLowerCase();
+      const matchedUser = users.find(
+        (u) => u.username.toLowerCase() === effectiveUsername,
+      ) as
+        | (typeof users[number] & {
+            securityAnswer?: string;
+          })
+        | undefined;
+
+      if (
+        matchedUser?.securityAnswer &&
+        matchedUser.securityAnswer.toLowerCase() !== securityAnswer.toLowerCase()
+      ) {
         setError('Incorrect security answer. Please try again.');
         return;
       }
@@ -219,11 +265,9 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
     setStep('reset');
   };
 
-  // Handle password reset
   const handleResetPassword = async () => {
     setError('');
 
-    // Validate password
     if (newPassword.length < 8) {
       setError('Password must be at least 8 characters long.');
       return;
@@ -240,32 +284,50 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
     }
 
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // Update the user's password
     const users = getUsers();
-    const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
-    
+    const storedResetRaw = localStorage.getItem(STORAGE_KEYS.PASSWORD_RESET_CODE);
+    const storedReset = storedResetRaw
+      ? (JSON.parse(storedResetRaw) as { username?: string })
+      : null;
+
+    const effectiveUsername = (
+      resolvedUsername ||
+      storedReset?.username ||
+      username
+    )
+      .trim()
+      .toLowerCase();
+
+    const userIndex = users.findIndex(
+      (u) => u.username.toLowerCase() === effectiveUsername,
+    );
+
     if (userIndex === -1) {
       setError('User not found. Please try again.');
       setLoading(false);
       return;
     }
 
-    users[userIndex] = {
+    const passwordRecord = await createPasswordRecord(newPassword);
+
+    (users as any[])[userIndex] = {
       ...users[userIndex],
-      password: newPassword,
-      updatedAt: new Date().toISOString()
+      password: '',
+      ...passwordRecord,
+      sessionVersion: (((users[userIndex] as any).sessionVersion) ?? 1) + 1,
+      passwordResetCompletedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     setUsers(users);
-    localStorage.removeItem('spm_reset_code');
-    
+    localStorage.removeItem(STORAGE_KEYS.PASSWORD_RESET_CODE);
+
     setLoading(false);
     setStep('success');
   };
 
-  // Format time remaining
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -274,28 +336,28 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div 
+      <div
         className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
         style={{ maxHeight: 'calc(100vh - 32px)' }}
       >
-        {/* Header */}
-        <div 
+        <div
           className="p-4 text-white text-center relative"
-          style={{ 
-            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'} 0%, ${config.primaryDark || '#3d1536'} 100%)`
+          style={{
+            background: `linear-gradient(135deg, ${
+              config.primaryColor || '#4A1942'
+            } 0%, ${config.primaryDark || '#3d1536'} 100%)`,
           }}
         >
           <button
             onClick={onClose}
             className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
             aria-label="Close"
+            type="button"
           >
             ✕
           </button>
-          
-          <div className="text-3xl mb-2">
-            {step === 'success' ? '✅' : '🔐'}
-          </div>
+
+          <div className="text-3xl mb-2">{step === 'success' ? '✅' : '🔐'}</div>
           <h2 className="text-xl font-bold">
             {step === 'request' && 'Reset Your Password'}
             {step === 'verify' && 'Verify Your Identity'}
@@ -303,22 +365,22 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
             {step === 'success' && 'Password Reset Complete!'}
           </h2>
           <p className="text-sm opacity-80 mt-1">
-            {step === 'request' && 'Enter your username or email to receive a reset code'}
+            {step === 'request' &&
+              'Enter your username or email to receive a reset code'}
             {step === 'verify' && 'Enter the verification code sent to you'}
             {step === 'reset' && 'Choose a strong password to secure your account'}
             {step === 'success' && 'Your password has been successfully updated'}
           </p>
         </div>
 
-        {/* Progress Steps */}
         {step !== 'success' && (
           <div className="flex justify-center gap-2 p-3 bg-gray-50 border-b">
             {['request', 'verify', 'reset'].map((s, idx) => (
               <div key={s} className="flex items-center">
-                <div 
+                <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-                    step === s 
-                      ? 'bg-purple-600 text-white' 
+                    step === s
+                      ? 'bg-purple-600 text-white'
                       : ['request', 'verify', 'reset'].indexOf(step) > idx
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-200 text-gray-500'
@@ -327,20 +389,23 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                   {['request', 'verify', 'reset'].indexOf(step) > idx ? '✓' : idx + 1}
                 </div>
                 {idx < 2 && (
-                  <div className={`w-8 h-1 mx-1 rounded ${
-                    ['request', 'verify', 'reset'].indexOf(step) > idx
-                      ? 'bg-green-500'
-                      : 'bg-gray-200'
-                  }`} />
+                  <div
+                    className={`w-8 h-1 mx-1 rounded ${
+                      ['request', 'verify', 'reset'].indexOf(step) > idx
+                        ? 'bg-green-500'
+                        : 'bg-gray-200'
+                    }`}
+                  />
                 )}
               </div>
             ))}
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 250px)' }}>
-          {/* Error Message */}
+        <div
+          className="p-4 overflow-y-auto"
+          style={{ maxHeight: 'calc(100vh - 250px)' }}
+        >
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2">
               <span>⚠️</span>
@@ -348,22 +413,26 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
             </div>
           )}
 
-          {/* Step 1: Request Code */}
           {step === 'request' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password-reset-username"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Username
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">👤</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    👤
+                  </span>
                   <input
+                    id="password-reset-username"
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     placeholder="Enter your username"
-                    autoFocus
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
               </div>
@@ -375,17 +444,23 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password-reset-email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Email Address
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">📧</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    📧
+                  </span>
                   <input
+                    id="password-reset-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     placeholder="Enter your email"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   />
                 </div>
               </div>
@@ -404,6 +479,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 onClick={handleRequestCode}
                 disabled={loading || (!username && !email)}
                 className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                type="button"
               >
                 {loading ? (
                   <>
@@ -411,18 +487,14 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                     Sending Code...
                   </>
                 ) : (
-                  <>
-                    📤 Send Verification Code
-                  </>
+                  <>📤 Send Verification Code</>
                 )}
               </button>
             </div>
           )}
 
-          {/* Step 2: Verify Code */}
           {step === 'verify' && (
             <div className="space-y-4">
-              {/* Demo Code Display */}
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <div className="flex items-center gap-2 text-amber-800 font-medium mb-1">
                   <span>🔔</span>
@@ -438,21 +510,30 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 </p>
               </div>
 
-              {/* Timer */}
               <div className="flex items-center justify-center gap-2 text-gray-600">
                 <span>⏱️</span>
-                <span>Code expires in: <strong className={timeRemaining < 60 ? 'text-red-600' : ''}>{formatTime(timeRemaining)}</strong></span>
+                <span>
+                  Code expires in:{' '}
+                  <strong className={timeRemaining < 60 ? 'text-red-600' : ''}>
+                    {formatTime(timeRemaining)}
+                  </strong>
+                </span>
               </div>
 
-              {/* Code Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password-reset-code"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Verification Code
                 </label>
                 <input
+                  id="password-reset-code"
                   type="text"
                   value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) =>
+                    setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                  }
                   className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="000000"
                   maxLength={6}
@@ -460,13 +541,14 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 />
               </div>
 
-              {/* Security Question (if set) */}
               {userSecurityQuestion && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     🔒 Security Question
                   </label>
-                  <p className="text-sm text-gray-600 mb-2 italic">"{userSecurityQuestion}"</p>
+                  <p className="text-sm text-gray-600 mb-2 italic">
+                    "{userSecurityQuestion}"
+                  </p>
                   <input
                     type="text"
                     value={securityAnswer}
@@ -477,17 +559,16 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 </div>
               )}
 
-              {/* Resend Code */}
               <div className="text-center">
                 <button
                   onClick={handleResendCode}
                   disabled={resendCooldown > 0 || loading}
                   className="text-sm text-purple-600 hover:text-purple-800 disabled:text-gray-400 transition-colors"
+                  type="button"
                 >
-                  {resendCooldown > 0 
+                  {resendCooldown > 0
                     ? `Resend code in ${resendCooldown}s`
-                    : '🔄 Resend verification code'
-                  }
+                    : '🔄 Resend verification code'}
                 </button>
               </div>
 
@@ -499,13 +580,15 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                     setError('');
                   }}
                   className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  type="button"
                 >
                   ← Back
                 </button>
                 <button
-                  onClick={handleVerifyCode}
+                  onClick={() => void handleVerifyCode()}
                   disabled={verificationCode.length !== 6}
                   className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors"
+                  type="button"
                 >
                   Verify Code →
                 </button>
@@ -513,7 +596,6 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
             </div>
           )}
 
-          {/* Step 3: Reset Password */}
           {step === 'reset' && (
             <div className="space-y-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-700 text-sm flex items-center gap-2">
@@ -521,14 +603,19 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 <span>Identity verified! Now create your new password.</span>
               </div>
 
-              {/* New Password */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password-reset-new-password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   New Password
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    🔒
+                  </span>
                   <input
+                    id="password-reset-new-password"
                     type={showNewPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -546,20 +633,24 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 </div>
               </div>
 
-              {/* Password Strength */}
               {newPassword && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full transition-all duration-300 ${passwordStrength.color}`}
                         style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
                       />
                     </div>
-                    <span className={`text-xs font-medium ${
-                      passwordStrength.score <= 2 ? 'text-red-600' : 
-                      passwordStrength.score === 3 ? 'text-yellow-600' : 'text-green-600'
-                    }`}>
+                    <span
+                      className={`text-xs font-medium ${
+                        passwordStrength.score <= 2
+                          ? 'text-red-600'
+                          : passwordStrength.score === 3
+                            ? 'text-yellow-600'
+                            : 'text-green-600'
+                      }`}
+                    >
                       {passwordStrength.label}
                     </span>
                   </div>
@@ -584,20 +675,25 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 </div>
               )}
 
-              {/* Confirm Password */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password-reset-confirm-password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    🔒
+                  </span>
                   <input
+                    id="password-reset-confirm-password"
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className={`w-full pl-10 pr-12 py-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 ${
-                      confirmPassword && confirmPassword !== newPassword 
-                        ? 'border-red-300 focus:border-red-500' 
+                      confirmPassword && confirmPassword !== newPassword
+                        ? 'border-red-300 focus:border-red-500'
                         : confirmPassword && confirmPassword === newPassword
                           ? 'border-green-300 focus:border-green-500'
                           : 'border-gray-300 focus:border-purple-500'
@@ -612,6 +708,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                     {showConfirmPassword ? '🙈' : '👁️'}
                   </button>
                 </div>
+
                 {confirmPassword && confirmPassword !== newPassword && (
                   <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
                 )}
@@ -629,13 +726,22 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                     setError('');
                   }}
                   className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  type="button"
                 >
                   ← Back
                 </button>
+
                 <button
-                  onClick={handleResetPassword}
-                  disabled={loading || !newPassword || !confirmPassword || newPassword !== confirmPassword || passwordStrength.score < 3}
+                  onClick={() => void handleResetPassword()}
+                  disabled={
+                    loading ||
+                    !newPassword ||
+                    !confirmPassword ||
+                    newPassword !== confirmPassword ||
+                    passwordStrength.score < 3
+                  }
                   className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                  type="button"
                 >
                   {loading ? (
                     <>
@@ -643,22 +749,19 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                       Updating...
                     </>
                   ) : (
-                    <>
-                      🔐 Reset Password
-                    </>
+                    <>🔐 Reset Password</>
                   )}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 4: Success */}
           {step === 'success' && (
             <div className="space-y-4 text-center">
               <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
                 <span className="text-4xl">🎉</span>
               </div>
-              
+
               <div>
                 <h3 className="text-lg font-bold text-gray-800">Password Updated!</h3>
                 <p className="text-gray-600 text-sm mt-1">
@@ -681,6 +784,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                   onClose();
                 }}
                 className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+                type="button"
               >
                 ✓ Return to Sign In
               </button>
@@ -688,15 +792,14 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
           )}
         </div>
 
-        {/* Footer */}
         {step !== 'success' && (
           <div className="p-3 bg-gray-50 border-t text-center text-xs text-gray-500">
             Need help? Contact{' '}
-            <a 
-              href={`mailto:${config.supportEmail || 'support@sevenpathsmanor.com'}`}
+            <a
+              href={`mailto:${config.supportEmail || 'weddings@sevenpathsmanor.com'}`}
               className="text-purple-600 hover:underline"
             >
-              {config.supportEmail || 'support@sevenpathsmanor.com'}
+              {config.supportEmail || 'weddings@sevenpathsmanor.com'}
             </a>
           </div>
         )}

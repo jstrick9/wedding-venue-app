@@ -5,6 +5,7 @@ import {
 } from '../types';
 import { getConfig } from '../config';
 import EmojiPicker from './EmojiPicker';
+import { canAccessOperationsPanel, canManageOperationsData } from '../utils/permissions';
 
 interface Props {
   onClose: () => void;
@@ -29,14 +30,36 @@ const PRIORITIES: StaffTaskPriority[] = ['low', 'medium', 'high', 'critical'];
 const StaffOperationsPanel: React.FC<Props> = ({ 
   onClose, 
   currentUser, 
-  isAdmin: _isAdmin, 
+  isAdmin, 
   venueId, 
   eventName,
   users,
   venues
 }) => {
   const config = getConfig();
+  const canAccessPanel = canAccessOperationsPanel(currentUser);
+  const canMutateOperations = canManageOperationsData(currentUser);
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'areas' | 'shifts' | 'checklists' | 'export'>('overview');
+
+  if (!canAccessPanel) {
+    return (
+      <div className="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4">
+        <div className="w-full max-w-lg rounded-xl bg-white shadow-xl p-6">
+          <h2 className="text-xl font-semibold text-red-700">Access denied</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            You do not have permission to access staff operations.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm text-white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   // Data State
   const [tasks, setTasks] = useState<StaffTask[]>([]);
@@ -88,6 +111,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
   // --- Handlers ---
   const handleAddTask = (phase: StaffTaskPhase) => {
+    if (!canMutateOperations) return;
     const newTask: StaffTask = {
       id: `task-${Date.now()}`,
       title: 'New Task',
@@ -106,6 +130,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
   };
 
   const handleUpdateTask = (id: string, updates: Partial<StaffTask>) => {
+    if (!canMutateOperations) return;
     const newTasks = tasks.map(t => {
       if (t.id === id) {
         const updated = { ...t, ...updates, updatedAt: new Date().toISOString(), updatedBy: currentUser.id };
@@ -121,6 +146,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
   };
 
   const handleDeleteTask = (id: string) => {
+    if (!canMutateOperations) return;
     if (confirm('Delete this task?')) {
       saveTasks(tasks.filter(t => t.id !== id));
       setSelectedId(null);
@@ -128,6 +154,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
   };
 
   const handleAddArea = () => {
+    if (!canMutateOperations) return;
     const newArea: StaffArea = {
       id: `area-${Date.now()}`,
       name: 'New Operational Area',
@@ -141,10 +168,12 @@ const StaffOperationsPanel: React.FC<Props> = ({
   };
 
   const handleUpdateArea = (id: string, updates: Partial<StaffArea>) => {
+    if (!canMutateOperations) return;
     saveAreas(areas.map(a => a.id === id ? { ...a, ...updates } : a));
   };
 
   const handleDeleteArea = (id: string) => {
+    if (!canMutateOperations) return;
     if (confirm('Delete this area?')) {
       saveAreas(areas.filter(a => a.id !== id));
       setSelectedAreaId(null);
@@ -152,6 +181,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
   };
 
   const handleAddShift = () => {
+    if (!canMutateOperations) return;
     const now = new Date();
     const end = new Date(now.getTime() + 4 * 60 * 60 * 1000); // +4 hours
     const newShift: StaffShift = {
@@ -168,10 +198,12 @@ const StaffOperationsPanel: React.FC<Props> = ({
   };
 
   const handleUpdateShift = (id: string, updates: Partial<StaffShift>) => {
+    if (!canMutateOperations) return;
     saveShifts(shifts.map(s => s.id === id ? { ...s, ...updates } : s));
   };
 
   const handleDeleteShift = (id: string) => {
+    if (!canMutateOperations) return;
     if (confirm('Delete this shift?')) {
       saveShifts(shifts.filter(s => s.id !== id));
       setSelectedShiftId(null);
@@ -256,7 +288,15 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <button onClick={() => setTaskView('kanban')} className={`px-4 py-2 rounded-lg text-sm font-medium ${taskView === 'kanban' ? 'bg-purple-600 text-white' : 'bg-white border text-gray-600'}`} style={taskView === 'kanban' ? { backgroundColor: config.primaryColor } : {}}>Kanban</button>
             <button onClick={() => setTaskView('list')} className={`px-4 py-2 rounded-lg text-sm font-medium ${taskView === 'list' ? 'bg-purple-600 text-white' : 'bg-white border text-gray-600'}`} style={taskView === 'list' ? { backgroundColor: config.primaryColor } : {}}>List</button>
           </div>
-          <button onClick={() => handleAddTask('pre-event')} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-sm" style={{ backgroundColor: config.primaryColor }}>+ Add Task</button>
+          <button
+  	    type="button"
+  	    onClick={() => handleAddTask('pre-event')}
+  	    disabled={!canMutateOperations}
+  	    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+  	    style={{ backgroundColor: config.primaryColor }}
+	  >
+  	    + Add Task
+	  </button>
         </div>
 
         <div className="flex-1 min-h-0">
@@ -498,7 +538,15 @@ const StaffOperationsPanel: React.FC<Props> = ({
       <div className="h-full flex flex-col">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-gray-900">Operational Areas</h2>
-          <button onClick={handleAddArea} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-sm" style={{ backgroundColor: config.primaryColor }}>+ Add Area</button>
+          <button
+  	    type="button"
+  	    onClick={handleAddArea}
+  	    disabled={!canMutateOperations}
+  	    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+  	    style={{ backgroundColor: config.primaryColor }}
+	  >
+  	    + Add Area
+	  </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -595,7 +643,15 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <button onClick={() => setShiftView('timeline')} className={`px-4 py-2 rounded-lg text-sm font-medium ${shiftView === 'timeline' ? 'bg-purple-600 text-white' : 'bg-white border text-gray-600'}`} style={shiftView === 'timeline' ? { backgroundColor: config.primaryColor } : {}}>Timeline</button>
             <button onClick={() => setShiftView('list')} className={`px-4 py-2 rounded-lg text-sm font-medium ${shiftView === 'list' ? 'bg-purple-600 text-white' : 'bg-white border text-gray-600'}`} style={shiftView === 'list' ? { backgroundColor: config.primaryColor } : {}}>List</button>
           </div>
-          <button onClick={handleAddShift} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-sm" style={{ backgroundColor: config.primaryColor }}>+ Add Shift</button>
+          <button
+  	    type="button"
+  	    onClick={handleAddShift}
+  	    disabled={!canMutateOperations}
+  	    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+  	    style={{ backgroundColor: config.primaryColor }}
+	  >
+  	    + Add Shift
+	  </button>
         </div>
 
         <div className="flex-1 min-h-0">
