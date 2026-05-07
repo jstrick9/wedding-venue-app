@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DirectMessage, MessageRole } from '../models/DirectMessage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { STORAGE_VERSIONS } from '../constants/storageVersions';
+import { loadVersionedStorage, saveVersionedStorage } from '../utils/storage';
 
-const STORAGE_KEY = 'spm_direct_messages_v1';
+const STORAGE_KEY = STORAGE_KEYS.DIRECT_MESSAGES;
+const STORAGE_VERSION = STORAGE_VERSIONS.DIRECT_MESSAGES;
 
 type SendMessagePayload = {
   threadId: string;
@@ -11,29 +15,31 @@ type SendMessagePayload = {
   message: string;
 };
 
+function loadStoredMessages(): DirectMessage[] {
+  return loadVersionedStorage<DirectMessage[]>({
+    key: STORAGE_KEY,
+    defaultValue: [],
+    currentVersion: STORAGE_VERSION,
+    migrations: {
+      0: (input) => (Array.isArray(input) ? (input as DirectMessage[]) : []),
+    },
+    normalize: (value) => (Array.isArray(value) ? value : []),
+  });
+}
+
 export function useDirectMessages() {
-  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [messages, setMessages] = useState<DirectMessage[]>(() => loadStoredMessages());
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as DirectMessage[];
-      if (Array.isArray(parsed)) setMessages(parsed);
-    } catch {
-      // ignore invalid storage
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    saveVersionedStorage(STORAGE_KEY, STORAGE_VERSION, messages);
   }, [messages]);
 
   const sendMessage = (payload: SendMessagePayload) => {
     const text = payload.message.trim();
     if (!text) return;
 
-    const recipientRole: MessageRole = payload.senderRole === 'admin' ? 'master' : 'admin';
+    const recipientRole: MessageRole =
+      payload.senderRole === 'admin' ? 'master' : 'admin';
 
     const next: DirectMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -52,11 +58,16 @@ export function useDirectMessages() {
   const getThreadMessages = (threadId: string): DirectMessage[] => {
     return messages
       .filter((m) => m.threadId === threadId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
   };
 
   const unreadCountForRole = (threadId: string, role: MessageRole): number => {
-    return messages.filter((m) => m.threadId === threadId && m.recipientRole === role).length;
+    return messages.filter(
+      (m) => m.threadId === threadId && m.recipientRole === role,
+    ).length;
   };
 
   return useMemo(

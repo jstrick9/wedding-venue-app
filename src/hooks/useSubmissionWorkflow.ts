@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EventAnswer } from '../types';
-import type { EventSubmission, SubmissionStatus } from '../models/SubmissionWorkflow';
+import type {
+  EventSubmission,
+  SubmissionStatus,
+} from '../models/SubmissionWorkflow';
 import { buildSubmissionKey } from '../models/SubmissionWorkflow';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { STORAGE_VERSIONS } from '../constants/storageVersions';
+import { loadVersionedStorage, saveVersionedStorage } from '../utils/storage';
 
-const STORAGE_KEY = 'spm_event_submissions_v1';
+const STORAGE_KEY = STORAGE_KEYS.EVENT_SUBMISSIONS;
+const STORAGE_VERSION = STORAGE_VERSIONS.EVENT_SUBMISSIONS;
 
 interface SubmitPayload {
   eventName: string;
@@ -13,22 +20,25 @@ interface SubmitPayload {
   answers: EventAnswer[];
 }
 
+function loadStoredSubmissions(): EventSubmission[] {
+  return loadVersionedStorage<EventSubmission[]>({
+    key: STORAGE_KEY,
+    defaultValue: [],
+    currentVersion: STORAGE_VERSION,
+    migrations: {
+      0: (input) => (Array.isArray(input) ? (input as EventSubmission[]) : []),
+    },
+    normalize: (value) => (Array.isArray(value) ? value : []),
+  });
+}
+
 export function useSubmissionWorkflow() {
-  const [submissions, setSubmissions] = useState<EventSubmission[]>([]);
+  const [submissions, setSubmissions] = useState<EventSubmission[]>(() =>
+    loadStoredSubmissions(),
+  );
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as EventSubmission[];
-      if (Array.isArray(parsed)) setSubmissions(parsed);
-    } catch {
-      // ignore corrupted local storage
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(submissions));
+    saveVersionedStorage(STORAGE_KEY, STORAGE_VERSION, submissions);
   }, [submissions]);
 
   const pendingCount = useMemo(
@@ -37,13 +47,26 @@ export function useSubmissionWorkflow() {
   );
 
   const getByMasterAndEvent = (masterUserId: string, eventName: string) =>
-    submissions.find((s) => buildSubmissionKey(s.eventName, s.masterUserId) === buildSubmissionKey(eventName, masterUserId)) || null;
+    submissions.find(
+      (s) =>
+        buildSubmissionKey(s.eventName, s.masterUserId) ===
+        buildSubmissionKey(eventName, masterUserId),
+    ) || null;
 
-  const submit = ({ eventName, masterUserId, masterUserName, selectedVenueIds, answers }: SubmitPayload) => {
+  const submit = ({
+    eventName,
+    masterUserId,
+    masterUserName,
+    selectedVenueIds,
+    answers,
+  }: SubmitPayload) => {
     const now = new Date().toISOString();
+
     setSubmissions((prev) => {
       const existing = prev.find(
-        (s) => buildSubmissionKey(s.eventName, s.masterUserId) === buildSubmissionKey(eventName, masterUserId),
+        (s) =>
+          buildSubmissionKey(s.eventName, s.masterUserId) ===
+          buildSubmissionKey(eventName, masterUserId),
       );
 
       if (!existing) {
@@ -59,6 +82,7 @@ export function useSubmissionWorkflow() {
           updatedAt: now,
           history: [],
         };
+
         return [next, ...prev];
       }
 
@@ -83,11 +107,15 @@ export function useSubmissionWorkflow() {
     reviewerName: string,
     comment?: string,
   ) => {
-    const statusMap: Record<typeof action, SubmissionStatus> = {
+    const statusMap: Record<
+      'approve' | 'request_changes' | 'reject',
+      SubmissionStatus
+    > = {
       approve: 'approved',
       request_changes: 'changes_requested',
       reject: 'rejected',
     };
+
     const now = new Date().toISOString();
 
     setSubmissions((prev) =>
