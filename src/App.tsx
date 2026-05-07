@@ -17,15 +17,35 @@ import { PrintView } from './components/PrintView';
 import { TemplateSelector } from './components/TemplateSelector';
 import { WelcomeModal } from './components/WelcomeModal';
 import { ToastContainer, showToast } from './components/Toast';
+import { LiveRegion, announce } from './components/LiveRegion';
+import AppStatusBar, { StatusBarItem } from './components/AppStatusBar';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { DirectMessagePanel } from './components/DirectMessagePanel';
 import { buildMessageThreadId } from './models/DirectMessage';
 import { useSubmissionWorkflow } from './hooks/useSubmissionWorkflow';
 import { SubmissionStatusPanel } from './components/SubmissionStatusPanel';
 import { EventQuestionsWizard } from './components/EventQuestionsWizard';
+import SafeImage from './components/SafeImage';
 
 import { getConfig } from './config';
 import { checkTableCollision, checkFixtureCollision } from './utils/collisionDetection';
+import { getGuestPortalTokenFromLocation } from './utils/guestPortal';
+import { subscribeToCollaborationEvents } from './utils/collaborationChannel';
+import {
+  buildProjectHealthReport,
+  createEmergencyRecoverySnapshot,
+  recoverCorruptDomains,
+  type ProjectHealthReport,
+} from './utils/recovery';
+import { STORAGE_KEYS } from './constants/storageKeys';
+import {
+  canAccessAdminPanel,
+  canAccessOperationsPanel,
+  canEditLayout,
+  canManageGuests,
+  canMoveFixture,
+  canPrintLayouts,
+} from './utils/permissions';
 
 // Position type
 interface Position {
@@ -45,12 +65,19 @@ function AuthenticatedApp() {
   const allUsers = getAllUsers();
   const isStaff = user?.role === 'staff';
   const layoutState = useLayoutState();
+  const canOpenAdminPanel = canAccessAdminPanel(user);
+  const canOpenOperationsPanel = canAccessOperationsPanel(user);
+  const canOpenGuestPanel = canManageGuests(user);
+  const canPrintCurrentLayout = canPrintLayouts(user);
+  const canEditCurrentLayout = canEditLayout(user);
   
   // Refs for centering
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   
   // Branding config state - reloads when admin panel closes
   const [brandingConfig, setBrandingConfig] = useState(() => getConfig());
+  const [projectHealth, setProjectHealth] = useState<ProjectHealthReport | null>(null);
+  const [safeMode, setSafeMode] = useState(false);
   
   // Local UI state
   const [zoom, setZoom] = useState(1);
@@ -104,6 +131,15 @@ function AuthenticatedApp() {
     return true;
   });
   
+  useEffect(() => {
+    const report = buildProjectHealthReport();
+    setProjectHealth(report);
+
+    if (report.overallStatus === 'corrupt') {
+      setSafeMode(true);
+    }
+  }, []);
+
   // Effect to handle welcome modal visibility based on user type
   useEffect(() => {
     if (!user) return;
@@ -124,7 +160,7 @@ function AuthenticatedApp() {
     }
     
     // For admin and basic users, check if they've hidden it permanently
-    const permanentlyHidden = localStorage.getItem('spm_welcome_hidden') === 'true';
+    const permanentlyHidden = localStorage.getItem(STORAGE_KEYS.WELCOME_HIDDEN) === 'true';
     if (permanentlyHidden) {
       setShowWelcome(false);
     }
@@ -142,7 +178,7 @@ function AuthenticatedApp() {
 
   const currentEventAnswers = useMemo(() => {
     try {
-      const raw = localStorage.getItem('spm_event_answers');
+      const raw = localStorage.getItem(STORAGE_KEYS.EVENT_ANSWERS);
       if (!raw) return [] as EventAnswer[];
       const parsed = JSON.parse(raw) as EventAnswer[];
       if (!Array.isArray(parsed)) return [] as EventAnswer[];
@@ -154,7 +190,7 @@ function AuthenticatedApp() {
 
   const eventQuestions = useMemo(() => {
     try {
-      const raw = localStorage.getItem('spm_event_questions');
+      const raw = localStorage.getItem(STORAGE_KEYS.EVENT_QUESTIONS);
       if (!raw) return [] as EventQuestion[];
       const parsed = JSON.parse(raw) as EventQuestion[];
       return Array.isArray(parsed) ? parsed : [];
@@ -165,18 +201,64 @@ function AuthenticatedApp() {
 
   const saveEventAnswers = useCallback((answers: EventAnswer[]) => {
     try {
-      const raw = localStorage.getItem('spm_event_answers');
+      const raw = localStorage.getItem(STORAGE_KEYS.EVENT_ANSWERS);
       const existing = raw ? (JSON.parse(raw) as EventAnswer[]) : [];
       const filtered = (Array.isArray(existing) ? existing : []).filter(
         (a) => !(a.userId === user.id && a.eventId === currentEventName),
       );
-      localStorage.setItem('spm_event_answers', JSON.stringify([...filtered, ...answers]));
+      localStorage.setItem(STORAGE_KEYS.EVENT_ANSWERS, JSON.stringify([...filtered, ...answers]));
     } catch {
       // ignore local storage errors in frontend-only mode
     }
   }, [user.id, currentEventName]);
 
   const currentSubmission = submissionWorkflow.getByMasterAndEvent(user.id, currentEventName);
+
+  const statusItems = useMemo<StatusBarItem[]>(() => {
+    const items: StatusBarItem[] = [];
+
+    if (safeMode) {
+      items.push({
+        id: 'safe-mode',
+        kind: 'warning',
+        title: 'Safe Mode is active',
+        description:
+          'Some local project data appears damaged. Advanced actions may be limited until recovery is reviewed.',
+        actions: [
+          {
+            label: 'Attempt Auto-Repair',
+            onClick: () => {
+              void handleAutoRepair();
+            },
+          },
+          {
+            label: 'Reload App',
+            onClick: () => {
+              window.location.reload();
+            },
+          },
+        ],
+      });
+    } else if (projectHealth?.overallStatus === 'warning') {
+      items.push({
+        id: 'health-warning',
+        kind: 'warning',
+        title: 'Project health warning',
+        description:
+          'Some local project data may be incomplete or inconsistent. Review recovery tools if you notice issues.',
+        actions: [
+          {
+            label: 'Reload App',
+            onClick: () => {
+              window.location.reload();
+            },
+          },
+        ],
+      });
+    }
+
+    return items;
+  }, [safeMode, projectHealth]);
 
   useEffect(() => {
     if (selectableVenues.length === 0) return;
@@ -351,6 +433,42 @@ function AuthenticatedApp() {
     setSavedLayoutsState(getSavedLayouts());
   }, []);
 
+  async function handleAutoRepair() {
+    await createEmergencyRecoverySnapshot({ id: user.id, name: user.name });
+    const repaired = recoverCorruptDomains();
+    const report = buildProjectHealthReport();
+
+    setProjectHealth(report);
+    setSafeMode(report.overallStatus === 'corrupt');
+
+    window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'all' } }));
+
+    showToast(`Recovered ${repaired.length} corrupt storage domain(s).`, 'warning');
+  }
+
+  useEffect(() => {
+    return subscribeToCollaborationEvents((event) => {
+      if (event.type === 'layout-saved') {
+        refreshSavedLayouts();
+
+        if (event.actorName && event.actorName !== user.name) {
+          showToast(`${event.actorName} saved a newer layout revision.`, 'info');
+        }
+      }
+    });
+  }, [refreshSavedLayouts, user.name]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'spm_savedLayouts') {
+        refreshSavedLayouts();
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [refreshSavedLayouts]);
+
   // Get total capacity
   const getTotalCapacity = useCallback(() => {
     const tableSpecs = getTableSpecs();
@@ -451,6 +569,7 @@ function AuthenticatedApp() {
 
   // Handle drop on canvas
   const handleDrop = useCallback((position: Position, isExterior?: boolean) => {
+    if (!ensureCanEditLayout()) return;
     if (!dragItem) return;
 
     // Handle Arrangement Drops (Apply design to existing items)
@@ -507,10 +626,11 @@ function AuthenticatedApp() {
     
     setDragItem(null);
     setShowProperties(true);
-  }, [dragItem, layoutState, resolvePlacement, showToast]);
+  }, [dragItem, layoutState, resolvePlacement, showToast, ensureCanEditLayout]);
 
   // Handle click to place (mobile friendly)
   const handleClickToPlace = useCallback((position: Position, isExterior?: boolean) => {
+    if (!ensureCanEditLayout()) return;
     if (!dragItem) return;
 
     // Handle Arrangement Clicks (Apply design to existing items)
@@ -569,7 +689,7 @@ function AuthenticatedApp() {
     setDragItem(null);
     setShowProperties(true);
     setMobileMenuOpen(false);
-  }, [dragItem, layoutState, resolvePlacement, showToast]);
+  }, [dragItem, layoutState, resolvePlacement, showToast, ensureCanEditLayout]);
 
   // Handle item selection (single click - do NOT open properties)
   const handleSelectItem = useCallback((id: string | null) => {
@@ -589,6 +709,8 @@ function AuthenticatedApp() {
 
   // Handle item move
   const handleMoveItem = useCallback((id: string, position: Position, isExterior?: boolean) => {
+    if (!ensureCanEditLayout()) return;
+
     const table = layoutState.layout.tables.find(t => t.id === id);
     if (table) {
       const placement = resolvePlacement(position, {
@@ -610,12 +732,19 @@ function AuthenticatedApp() {
     const fixture = layoutState.layout.fixtures.find(f => f.id === id);
     if (fixture) {
       const fixtureSpec = getFixtureTypes().find(s => s.id === fixture.specId);
-      const blockedForRole = !isAdmin && fixtureSpec?.isLocked;
       const permanentlyBlocked = !!fixtureSpec?.isPermanent;
+      const blockedForRole = fixtureSpec ? !canMoveFixture(user, fixtureSpec) : false;
+
       if (blockedForRole || permanentlyBlocked) {
-        showToast(permanentlyBlocked ? 'This fixture is permanent and cannot be moved.' : 'This fixture is locked for basic/shared users.', 'warning');
+        showToast(
+          permanentlyBlocked
+            ? 'This fixture is permanent and cannot be moved.'
+            : 'This fixture is locked for your role and cannot be moved.',
+          'warning',
+        );
         return;
       }
+
       const placement = resolvePlacement(position, {
         kind: 'fixture',
         id,
@@ -627,10 +756,12 @@ function AuthenticatedApp() {
       if (!placement.ok) return;
       layoutState.updateFixture(id, { x: placement.position.x, y: placement.position.y });
     }
-  }, [layoutState, resolvePlacement, isAdmin, showToast]);
+  }, [layoutState, resolvePlacement, showToast, user, ensureCanEditLayout]);
 
   // Safe table update path (used by Properties panel too) so spacing/collision stays authoritative
   const handleUpdateTableSafe = useCallback((id: string, updates: Partial<any>) => {
+    if (!ensureCanEditLayout()) return;
+    
     const existing = layoutState.layout.tables.find(t => t.id === id);
     if (!existing) return;
 
@@ -662,21 +793,28 @@ function AuthenticatedApp() {
       x: placement.position.x,
       y: placement.position.y,
     });
-  }, [layoutState, resolvePlacement]);
+  }, [layoutState, resolvePlacement, ensureCanEditLayout]);
 
   // Safe fixture update path (used by Properties panel too) so spacing/collision stays authoritative
   const handleUpdateFixtureSafe = useCallback((id: string, updates: Partial<any>) => {
+    if (!ensureCanEditLayout()) return;
+
     const existing = layoutState.layout.fixtures.find(f => f.id === id);
     if (!existing) return;
 
     const fixtureSpec = getFixtureTypes().find(s => s.id === existing.specId);
-    const blockedForRole = !isAdmin && fixtureSpec?.isLocked;
     const permanentlyBlocked = !!fixtureSpec?.isPermanent;
+    const blockedForRole = fixtureSpec ? !canMoveFixture(user, fixtureSpec) : false;
+
     if (blockedForRole || permanentlyBlocked) {
-      showToast(permanentlyBlocked ? 'This fixture is permanent and cannot be moved.' : 'This fixture is locked for basic/shared users.', 'warning');
+      showToast(
+        permanentlyBlocked
+          ? 'This fixture is permanent and cannot be moved.'
+          : 'This fixture is locked for your role and cannot be moved.',
+        'warning',
+      );
       return;
     }
-
     const hasPositionUpdate = Object.prototype.hasOwnProperty.call(updates, 'x') || Object.prototype.hasOwnProperty.call(updates, 'y');
     if (!hasPositionUpdate) {
       layoutState.updateFixture(id, updates);
@@ -702,33 +840,43 @@ function AuthenticatedApp() {
       x: placement.position.x,
       y: placement.position.y,
     });
-  }, [layoutState, resolvePlacement, isAdmin, showToast]);
+  }, [layoutState, resolvePlacement, showToast, user, ensureCanEditLayout]);
 
   // Handle save layout
+  const handleClearLayout = useCallback(() => {
+    if (!ensureCanEditLayout()) return;
+    layoutState.clearLayout();
+  }, [layoutState, canEditCurrentLayout]);
+
+  // Handle save layout
+
   const handleSaveLayout = useCallback((name: string) => {
+
     layoutState.saveLayout(name);
+
     refreshSavedLayouts();
-  }, [layoutState, refreshSavedLayouts]);
+
+  }, [layoutState, refreshSavedLayouts, ensureCanEditLayout]);
 
   // Handle load saved layout
   const handleLoadSavedLayout = useCallback((layoutId: string) => {
     layoutState.loadLayout(layoutId);
     handleResetView();
-  }, [layoutState, handleResetView]);
+  }, [layoutState, handleResetView, ensureCanEditLayout]);
 
   // Handle delete saved layout
   const handleDeleteSavedLayout = useCallback((layoutId: string) => {
     const updated = savedLayouts.filter(l => l.id !== layoutId);
     setSavedLayouts(updated);
     setSavedLayoutsState(updated);
-  }, [savedLayouts]);
+  }, [savedLayouts, ensureCanEditLayout]);
 
   // Handle load template
   const handleLoadTemplate = useCallback((template: LayoutTemplate) => {
     layoutState.loadTemplate(template);
     setShowTemplates(false);
     handleResetView();
-  }, [layoutState, handleResetView]);
+  }, [layoutState, handleResetView, ensureCanEditLayout]);
 
   // Handle load template for editing (from admin panel)
   const handleLoadTemplateForEdit = useCallback((template: LayoutTemplate) => {
@@ -739,11 +887,67 @@ function AuthenticatedApp() {
     // Load the template
     layoutState.loadTemplate(template);
     handleResetView();
-  }, [layoutState, handleResetView]);
+  }, [layoutState, handleResetView, ensureCanEditLayout]);
+
+  const openAdminPanel = useCallback(() => {
+    if (!canOpenAdminPanel) {
+      const message = 'You do not have permission to access the admin panel.';
+      showToast(message, 'warning');
+      announce(message);
+      return;
+    }
+
+    announce('Opening admin panel');
+    setShowAdmin(true);
+  }, [canOpenAdminPanel]);
+
+  const openOperationsPanel = useCallback(() => {
+    if (!canOpenOperationsPanel) {
+      const message = 'You do not have permission to access staff operations.';
+      showToast(message, 'warning');
+      announce(message);
+      return;
+    }
+
+    announce('Opening staff operations panel');
+    setShowOperations(true);
+  }, [canOpenOperationsPanel]);
+
+  const openGuestPanel = useCallback(() => {
+    if (!canOpenGuestPanel) {
+      const message = 'You do not have permission to manage guests.';
+      showToast(message, 'warning');
+      announce(message);
+      return;
+    }
+
+    announce('Opening guest management');
+    setShowGuests(true);
+  }, [canOpenGuestPanel]);
+
+  const openPrintView = useCallback(() => {
+    if (!canPrintCurrentLayout) {
+      const message = 'You do not have permission to print/export this layout.';
+      showToast(message, 'warning');
+      announce(message);
+      return;
+    }
+
+    announce('Opening print preview');
+    setShowPrint(true);
+  }, [canPrintCurrentLayout]);
+
+  function ensureCanEditLayout() {
+    if (canEditCurrentLayout) return true;
+    showToast('You do not have permission to edit this layout.', 'warning');
+    return false;
+  }
 
   // Handle view image
+
   const handleViewImage = useCallback((url: string, title: string) => {
     setImagePreview({ url, title });
+
   }, []);
 
   // Handle pan change
@@ -800,7 +1004,11 @@ function AuthenticatedApp() {
 
   // Handle venue change
   const handleVenueChange = useCallback((venueId: string) => {
+
+    const venueName =
+      layoutState.venues.find((v) => v.id === venueId)?.name || 'venue';
     layoutState.changeVenue(venueId);
+    announce(`Switched to ${venueName}`);
     // Reset zoom and center venue after a short delay to allow state to update
     setTimeout(() => {
       fitAndCenterVenue();
@@ -873,13 +1081,36 @@ function AuthenticatedApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [layoutState, handleResetView, handleResetToVenue, handleResetToCanvas]);
 
-  // Refresh data when admin panel closes
   useEffect(() => {
+    if (!canOpenAdminPanel && showAdmin) setShowAdmin(false);
+    if (!canOpenOperationsPanel && showOperations) setShowOperations(false);
+    if (!canOpenGuestPanel && showGuests) setShowGuests(false);
+    if (!canPrintCurrentLayout && showPrint) setShowPrint(false);
+  }, [
+    canOpenAdminPanel,
+    canOpenOperationsPanel,
+    canOpenGuestPanel,
+    canPrintCurrentLayout,
+    showAdmin,
+    showOperations,
+    showGuests,
+    showPrint,
+  ]);
+
+  // Refresh data when admin panel closes
+
+  useEffect(() => {
+
     if (!showAdmin) {
+
       layoutState.refreshVenues();
+
       // Reload branding config when admin panel closes
+
       setBrandingConfig(getConfig());
+
     }
+
   }, [showAdmin, layoutState]);
   
   // Apply branding styles to document
@@ -918,21 +1149,24 @@ function AuthenticatedApp() {
         onSaveLayout={handleSaveLayout}
         onSaveMasterLayout={isAdmin ? layoutState.saveMasterLayout : undefined}
         onClearMasterLayout={isAdmin ? layoutState.clearMasterLayout : undefined}
-        onPrint={() => setShowPrint(true)}
+        onPrint={openPrintView}
         onShowTemplates={() => setShowTemplates(true)}
-        onShowGuests={() => setShowGuests(true)}
-        onShowAdmin={isAdmin ? () => setShowAdmin(true) : undefined}
+        onShowGuests={openGuestPanel}
+        onShowAdmin={canOpenAdminPanel ? openAdminPanel : undefined}
         onLogout={logout}
         userName={user.name}
         isAdmin={isAdmin}
 	isStaff={isStaff}
-	onOpenOperations={() => setShowOperations(true)}
+	onOpenOperations={canOpenOperationsPanel ? openOperationsPanel : undefined}
         savedLayouts={savedLayouts}
         onLoadSavedLayout={handleLoadSavedLayout}
         onDeleteSavedLayout={handleDeleteSavedLayout}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
+	currentUser={user}
       />
+
+      <AppStatusBar items={statusItems} />
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
@@ -955,7 +1189,7 @@ function AuthenticatedApp() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           currentDragItem={dragItem}
-          onClearLayout={layoutState.clearLayout}
+          onClearLayout={handleClearLayout}
           isAdmin={isAdmin}
           onViewImage={handleViewImage}
           layoutCategories={layoutCategories}
@@ -969,6 +1203,7 @@ function AuthenticatedApp() {
           onResetToCanvas={handleResetToCanvas}
           placedTables={layoutState.layout.tables}
           placedFixtures={layoutState.layout.fixtures}
+	  currentUser={user}
         />
 
         {/* Canvas */}
@@ -1158,7 +1393,7 @@ function AuthenticatedApp() {
       </div>
 
       {/* Guest Panel Modal */}
-      {showGuests && (
+      {showGuests && canOpenGuestPanel && (
         <GuestPanel
           guests={layoutState.guests}
           tables={layoutState.layout.tables}
@@ -1276,7 +1511,7 @@ function AuthenticatedApp() {
       )}
 
       {/* Staff Operations Panel Modal */}
-      {showOperations && (
+      {showOperations && canOpenOperationsPanel && (
   			<StaffOperationsPanel
     				onClose={() => setShowOperations(false)}
     				currentUser={user}
@@ -1289,7 +1524,7 @@ function AuthenticatedApp() {
 	)}
 
       {/* Admin Panel Modal */}
-      {showAdmin && isAdmin && (
+      {showAdmin && canOpenAdminPanel && (
         <AdminPanel 
           onClose={() => {
             setShowAdmin(false);
@@ -1317,7 +1552,7 @@ function AuthenticatedApp() {
       )}
 
       {/* Print View Modal */}
-      {showPrint && (
+      {showPrint && canPrintCurrentLayout && (
         <PrintView
           venue={layoutState.currentVenue}
           tables={layoutState.layout.tables}
@@ -1346,11 +1581,16 @@ function AuthenticatedApp() {
               </button>
             </div>
             <div className="p-4">
-              <img 
-                src={imagePreview.url} 
-                alt={imagePreview.title}
-                className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg"
-              />
+             			     <SafeImage
+                			   src={imagePreview.url}
+                			   alt={imagePreview.title || 'Preview image'}
+                			   className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg"
+                			   fallback={
+                  				<div className="w-[320px] h-[220px] max-w-full flex items-center justify-center bg-gray-100 text-gray-500 border border-gray-200 rounded mx-auto">
+                    				Preview unavailable
+                  				</div>
+                			   }
+              			     />
             </div>
           </div>
         </div>
@@ -1386,16 +1626,17 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Guest Portal route
-  if (hash.startsWith('#/guest-portal')) {
-    const params = new URLSearchParams(window.location.search);
-    return (
-      <GuestPortal
-        guestToken={params.get('token') || undefined}
-        onExitPortal={() => { window.location.hash = ''; }}
-      />
-    );
-  }
+   // Guest Portal route
+ if (hash.startsWith('#/guest-portal')) {
+ return (
+  <GuestPortal
+    guestToken={getGuestPortalTokenFromLocation(window.location)}
+    onExitPortal={() => {
+      window.location.hash = '';
+    }}
+  />
+ );
+ }
 
   // Login screen
   if (!user) {
@@ -1406,11 +1647,21 @@ function AppContent() {
 }
 
 export default function App() {
+
   return (
+
     <AppErrorBoundary>
+
       <AuthProvider>
+
+        <LiveRegion />
+
         <AppContent />
+
       </AuthProvider>
+
     </AppErrorBoundary>
+
   );
+
 }

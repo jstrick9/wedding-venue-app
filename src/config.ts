@@ -1,11 +1,16 @@
 /**
  * Seven Paths Manor - Layout Planner Configuration
- * 
+ *
  * Easy configuration for branding and customization.
  * These values can be updated via the Admin Panel or directly here.
  */
 
-const CONFIG_STORAGE_KEY = 'spm_config';
+import { STORAGE_KEYS } from './constants/storageKeys';
+import { STORAGE_VERSIONS } from './constants/storageVersions';
+import { loadVersionedStorage, saveVersionedStorage } from './utils/storage';
+
+const CONFIG_STORAGE_KEY = STORAGE_KEYS.CONFIG;
+const CONFIG_STORAGE_VERSION = STORAGE_VERSIONS.CONFIG;
 
 export interface Config {
   // Branding
@@ -16,7 +21,7 @@ export interface Config {
   websiteUrl: string;
   supportEmail: string;
   phone?: string;
-  
+
   // Color Palette
   primaryColor: string;
   primaryDark: string;
@@ -24,14 +29,14 @@ export interface Config {
   accentColor: string;
   backgroundColor: string;
   textColor: string;
-  
+
   // Typography
   fontFamily: string;
   headingFontFamily: string;
   headerTextColor: string;
   bodyTextColor: string;
   accentTextColor: string;
-  
+
   // Welcome Settings
   welcomeLogoUrl?: string;
   welcomeTitle?: string;
@@ -42,35 +47,29 @@ export interface Config {
 
 // Default configuration
 export const defaultConfig: Config = {
-  // Logo - paste your image URL here
   logoUrl: '',
-  
-  // Venue Information
   venueName: 'Seven Paths Manor',
-  tagline: 'Where Your Love Story Unfolds',
+  tagline: 'Affordable Luxury - Weddings Reimagined',
   location: 'Spring Hope, NC',
   websiteUrl: 'https://www.sevenpathsmanor.com',
-  supportEmail: 'events@sevenpathsmanor.com',
+  supportEmail: 'weddings@sevenpathsmanor.com',
   phone: '',
-  
-  // Color Palette - Deep Plum
+
   primaryColor: '#4A1942',
   primaryDark: '#3d1a45',
   primaryLight: '#6b2c5c',
   accentColor: '#8B5A8B',
   backgroundColor: '#f3f4f6',
   textColor: '#1f2937',
-  
-  // Typography
+
   fontFamily: 'Inter, system-ui, sans-serif',
   headingFontFamily: 'Inter, system-ui, sans-serif',
   headerTextColor: '#FFFFFF',
   bodyTextColor: '#374151',
   accentTextColor: '#4A1942',
-  
-  // Welcome Settings
+
   welcomeLogoUrl: '',
-  welcomeTitle: 'Welcome to the Wedding Layout Planner',
+  welcomeTitle: 'Welcome to the Wedding Venue Layout Planner',
   showWelcomeByDefault: true,
   welcomeFeatures: [
     'Layout Design',
@@ -82,44 +81,44 @@ export const defaultConfig: Config = {
   ],
 };
 
-// Load config from localStorage
 export function getConfig(): Config {
   try {
-    const stored = localStorage.getItem(CONFIG_STORAGE_KEY);
-    if (stored) {
-      return { ...defaultConfig, ...JSON.parse(stored) };
-    }
+    return loadVersionedStorage<Config>({
+      key: CONFIG_STORAGE_KEY,
+      defaultValue: defaultConfig,
+      currentVersion: CONFIG_STORAGE_VERSION,
+      migrations: {
+        0: (input) => ({ ...defaultConfig, ...(input as Partial<Config>) }),
+      },
+      normalize: (value) => ({ ...defaultConfig, ...value }),
+    });
   } catch (e) {
     console.error('Failed to load config:', e);
+    return defaultConfig;
   }
-  return defaultConfig;
 }
 
-// Save config to localStorage
 export function updateConfig(config: Partial<Config>): void {
   try {
     const current = getConfig();
     const updated = { ...current, ...config };
-    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(updated));
+    saveVersionedStorage(CONFIG_STORAGE_KEY, CONFIG_STORAGE_VERSION, updated);
   } catch (e) {
     console.error('Failed to save config:', e);
   }
 }
 
-// Set full config (alias for AdminPanel compatibility)
 export function setConfig(config: Config): void {
   try {
-    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+    saveVersionedStorage(CONFIG_STORAGE_KEY, CONFIG_STORAGE_VERSION, config);
   } catch (e) {
     console.error('Failed to save config:', e);
   }
 }
 
-// Reset config to defaults
 export function resetConfig(): void {
   localStorage.removeItem(CONFIG_STORAGE_KEY);
 }
 
-// Export the current config as default for backward compatibility
 const CONFIG = getConfig();
 export default CONFIG;

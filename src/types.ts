@@ -415,9 +415,10 @@ export interface Venue {
   // Outdoor/exterior features (trees, ponds, pathways, etc.)
   outdoorFeatures?: OutdoorFeature[];
   // Master layout - includes tables and fixtures that come pre-placed on the venue
-  masterLayout?: {
+    masterLayout?: {
     tables: PlacedTable[];
     fixtures: PlacedFixture[];
+    decor: PlacedDecor[];
     savedAt: string;
   };
 }
@@ -816,6 +817,8 @@ export interface DecorArrangement {
 export interface RSVPSubmission {
   id: string;
   guestId: string;
+  eventName?: string;
+  eventKey?: string;
   fullName: string;
   email: string;
   phone?: string;
@@ -828,6 +831,35 @@ export interface RSVPSubmission {
   specialNeeds?: string;
   notes?: string;
   submittedAt: string;
+}
+
+export interface GuestPortalConfig {
+  eventTitle: string;
+  eventStartDate: string;
+  eventEndDate?: string;
+  isMultiDay?: boolean;
+  heroImageUrl?: string;
+  welcomeMessage?: string;
+  rsvpMessage?: string;
+  portalPasswordHash?: string;
+  portalPasswordSalt?: string;
+  portalPassword?: string;
+  showMap?: boolean;
+  showSchedule?: boolean;
+  showWayfinding?: boolean;
+  showRSVP?: boolean;
+  showLodging?: boolean;
+  enabledVenueCategories?: string[];
+}
+
+export interface GuestPortalGuestRecord extends Guest {
+  token?: string;
+  roomId?: string;
+  tableId?: string;
+  eventName?: string;
+  eventKey?: string;
+  allowPortalAccess?: boolean;
+  allowLodgingAccess?: boolean;
 }
 
 export interface PlacedDecor {
