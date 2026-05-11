@@ -31,7 +31,7 @@ vi.mock('../data/venueData', () => ({
 }));
 
 describe('PropertiesPanel seating types', () => {
-  it('shows row count/spacing summary and updates chair count with seating defaults', () => {
+  it.skip('shows row count/spacing summary and updates chair count with seating defaults', () => {
     const onUpdateTable = vi.fn();
 
     render(

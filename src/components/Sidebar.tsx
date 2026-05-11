@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type {
   ChangeEvent,
   DragEvent,
@@ -308,6 +308,23 @@ export function Sidebar({
 
   const lodgingFixtures = fixtureTypes.filter((f) => f.category === 'lodging');
   const exteriorFixtures = fixtureTypes.filter((f) => f.category === 'exterior');
+  // Pre-compute chair usage for all items (optimization)
+  const chairUsageMap = useMemo(() => {
+    const usage: Record<string, number> = {};
+  
+    placedTables.forEach((t) => {
+      if (t.showChairs && t.chairType && t.chairType !== 'none') {
+        const chairCount =
+          t.chairCount ||
+          t.customCapacity ||
+          tableSpecs.find((ts) => ts.id === t.specId)?.capacity ||
+          0;
+        usage[t.chairType] = (usage[t.chairType] || 0) + chairCount;
+      }
+    });
+  
+    return usage;
+  }, [placedTables, tableSpecs]);
 
   if (collapsed) {
     return (
@@ -379,41 +396,18 @@ export function Sidebar({
       isOutOfStock = remainingInventory <= 0;
     }
 
-    let chairUsageInfo: {
-      chairId: string;
-      used: number;
-      total?: number;
-      remaining?: number;
-    }[] = [];
-
-    if (type === 'table') {
-      const chairSpecs = getChairSpecs();
-      const chairUsage: Record<string, number> = {};
-
-      placedTables.forEach((t) => {
-        if (t.showChairs && t.chairType && t.chairType !== 'none') {
-          const chairCount =
-            t.chairCount ||
-            t.customCapacity ||
-            tableSpecs.find((ts) => ts.id === t.specId)?.capacity ||
-            0;
-
-          chairUsage[t.chairType] = (chairUsage[t.chairType] || 0) + chairCount;
-        }
-      });
-
-      chairUsageInfo = chairSpecs
-        .filter((c) => c.inventoryCount !== undefined && c.id !== 'none')
-        .map((c) => ({
-          chairId: c.id,
-          used: chairUsage[c.id] || 0,
-          total: c.inventoryCount,
-          remaining:
-            c.inventoryCount !== undefined
-              ? c.inventoryCount - (chairUsage[c.id] || 0)
+    const chairUsageInfo = type === 'table'
+      ? getChairSpecs()
+          .filter((c) => c.inventoryCount !== undefined && c.id !== 'none')
+          .map((c) => ({
+            chairId: c.id,
+            used: chairUsageMap[c.id] || 0,
+            total: c.inventoryCount,
+            remaining: c.inventoryCount !== undefined
+              ? c.inventoryCount - (chairUsageMap[c.id] || 0)
               : undefined,
-        }));
-    }
+          }))
+      : [];
 
     const handleDragStartEvent = (e: DragEvent<HTMLDivElement>) => {
       if (!isAllowedToPlace) {

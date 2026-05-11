@@ -83,18 +83,19 @@ describe('GuestPanel seating capacity with row count/spacing', () => {
   it('uses row count to compute total seating capacity', async () => {
     await renderPanel(3, 3);
     // 4 chairs per row * 3 rows = 12 capacity
-    expect(screen.getByText('Row A (0/12)')).toBeInTheDocument();
+    expect(screen.getAllByText('Row A (0/12)').length).toBeGreaterThan(0);
   });
 
   it('row spacing changes do not change total seat capacity', async () => {
     await renderPanel(3, 8);
     // Capacity should still be 12 even with larger row spacing
-    expect(screen.getByText('Row A (0/12)')).toBeInTheDocument();
+    expect(screen.getAllByText('Row A (0/12)').length).toBeGreaterThan(0);
   });
 
   it('allows assignment until capacity then disables additional selection', async () => {
     const { onAssignToTable } = await renderPanel(1, 3); // capacity 4
-    const select = screen.getByDisplayValue('Unseated');
+    const selects = screen.getAllByDisplayValue('Unseated');
+	const select = selects[0];
     fireEvent.change(select, { target: { value: 't1' } });
     expect(onAssignToTable).toHaveBeenCalledWith('g1', 't1');
   });

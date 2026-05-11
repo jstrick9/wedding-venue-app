@@ -443,7 +443,29 @@ export function Header({
                   )}
 
                   <hr className="my-1" />
-
+				  
+				    <button
+					  onClick={() => {
+						const event = new CustomEvent('spm_open_vendors');
+						window.dispatchEvent(event);
+					  }}
+					  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+					  title="Vendor Management"
+					>
+					  🤝 Vendors
+					</button>
+				  
+					<button
+				      onClick={() => {
+					    const event = new CustomEvent('spm_open_timeline');
+					    window.dispatchEvent(event);
+				      }}
+				      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+				      title="Wedding Timeline"
+				    >
+				      📅 Timeline
+				    </button>
+				  
                   <button
                     type="button"
                     onClick={(e) => {

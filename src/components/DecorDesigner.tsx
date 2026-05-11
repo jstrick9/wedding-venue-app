@@ -176,7 +176,7 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
     const arrangement: DecorArrangement = {
       id: initialArrangement?.id || `arrangement-${Date.now()}`,
       name: trimmedName,
-      userId: user?.id || 'current-user', 
+      userId: user?.id || 'anonymous', 
       baseType,
       baseSpecId,
       items: placedItems.map(item => ({

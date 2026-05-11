@@ -74,8 +74,9 @@ describe('PasswordReset email flow', () => {
       expect(stored.codeSalt).toBeTruthy();
 
       await screen.findByText(/demo mode - verification code/i);
-      const codeElement = await screen.findByText(/^\d{6}$/);
-      const code = codeElement.textContent || '';
+	  // Get the displayed code
+	  const codeElement = await screen.findByText(/^\d{6}$/);
+	  const code = codeElement.textContent || '';
 
       await user.type(screen.getByLabelText(/verification code/i), code);
       await user.click(screen.getByRole('button', { name: /verify code/i }));

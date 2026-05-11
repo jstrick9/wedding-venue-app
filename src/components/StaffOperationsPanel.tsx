@@ -6,6 +6,7 @@ import {
 import { getConfig } from '../config';
 import EmojiPicker from './EmojiPicker';
 import { canAccessOperationsPanel, canManageOperationsData } from '../utils/permissions';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 interface Props {
   onClose: () => void;
@@ -16,12 +17,6 @@ interface Props {
   users: User[];
   venues: Venue[];
 }
-
-const STORAGE_KEYS = {
-  TASKS: 'spm_staff_tasks',
-  AREAS: 'spm_staff_areas',
-  SHIFTS: 'spm_staff_shifts',
-};
 
 const PHASES: StaffTaskPhase[] = ['pre-event', 'during-event', 'post-event'];
 const STATUSES: StaffTaskStatus[] = ['not-started', 'in-progress', 'completed', 'blocked'];
@@ -76,9 +71,9 @@ const StaffOperationsPanel: React.FC<Props> = ({
   // Load Data
   useEffect(() => {
     const loadData = () => {
-      const savedTasks = localStorage.getItem(STORAGE_KEYS.TASKS);
-      const savedAreas = localStorage.getItem(STORAGE_KEYS.AREAS);
-      const savedShifts = localStorage.getItem(STORAGE_KEYS.SHIFTS);
+      const savedTasks = localStorage.getItem(STORAGE_KEYS.STAFF_TASKS);
+      const savedAreas = localStorage.getItem(STORAGE_KEYS.STAFF_AREAS);
+      const savedShifts = localStorage.getItem(STORAGE_KEYS.STAFF_SHIFTS);
       
       if (savedTasks) setTasks(JSON.parse(savedTasks));
       if (savedAreas) setAreas(JSON.parse(savedAreas));
@@ -93,19 +88,19 @@ const StaffOperationsPanel: React.FC<Props> = ({
   // Save Helpers
   const saveTasks = (newTasks: StaffTask[]) => {
     setTasks(newTasks);
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(newTasks));
+    localStorage.setItem(STORAGE_KEYS.STAFF_TASKS, JSON.stringify(newTasks));
     window.dispatchEvent(new CustomEvent('spm_data_changed'));
   };
 
   const saveAreas = (newAreas: StaffArea[]) => {
     setAreas(newAreas);
-    localStorage.setItem(STORAGE_KEYS.AREAS, JSON.stringify(newAreas));
+    localStorage.setItem(STORAGE_KEYS.STAFF_AREAS, JSON.stringify(newAreas));
     window.dispatchEvent(new CustomEvent('spm_data_changed'));
   };
 
   const saveShifts = (newShifts: StaffShift[]) => {
     setShifts(newShifts);
-    localStorage.setItem(STORAGE_KEYS.SHIFTS, JSON.stringify(newShifts));
+    localStorage.setItem(STORAGE_KEYS.STAFF_SHIFTS, JSON.stringify(newShifts));
     window.dispatchEvent(new CustomEvent('spm_data_changed'));
   };
 

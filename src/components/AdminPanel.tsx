@@ -35,6 +35,8 @@ import {
   getDecorPackages, 
   setDecorPackages 
 } from '../hooks/useLayoutState';
+import { AccessControlPanel } from './AccessControlPanel';
+import { useRBAC } from '../hooks/useRBAC';
 
 // Branding-aware section header component
 interface BrandedSectionHeaderProps {
@@ -451,8 +453,11 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
   const [questionError, setQuestionError] = useState('');
   const [selectedMessageMasterUserId, setSelectedMessageMasterUserId] = useState<string>('');
   const [showWelcomePreview, setShowWelcomePreview] = useState(false);
+  const [showAccessControl, setShowAccessControl] = useState(false);
   const submissionWorkflow = useSubmissionWorkflow();
   const directMessages = useDirectMessages();
+  const rbac = useRBAC();
+  const allRoles = rbac.getAllRoles();
 
   const AVAILABLE_WELCOME_FEATURES = [
     'Layout Design',
@@ -1166,6 +1171,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
     { id: 'guidelines', label: '💡 Guidelines', icon: '💡' },
     { id: 'event-questions', label: '❓ Event Questions', icon: '❓' },
     { id: 'users', label: '👥 Users', icon: '👥' },
+	{ id: 'access-control', label: '🔐 Access Control', icon: '🔐' },
     { id: 'branding', label: '🎨 Branding', icon: '🎨' }
   ];
 
@@ -7675,16 +7681,19 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
                                 <span>{u.loginCount} login{u.loginCount !== 1 ? 's' : ''}</span>
                               )}
                             </div>
-                            {/* Role Badge */}
-                            <span className={`text-xs px-3 py-1.5 rounded-full font-semibold ${
-                              u.isActive === false 
-                                ? 'bg-gray-100 text-gray-500'
-                                : u.role === 'admin' 
-                                  ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-                                  : 'bg-blue-100 text-blue-700 border border-blue-200'
-                            }`}>
-                              {u.isActive === false ? '⏸️ Inactive' : u.role === 'admin' ? '👑 Admin' : '👤 Basic'}
-                            </span>
+                            {/* Role Badge - Updated to show RBAC role name */}
+							<span className={`text-xs px-3 py-1.5 rounded-full font-semibold ${
+							  u.isActive === false 
+								? 'bg-gray-100 text-gray-500'
+								: allRoles.find(r => r.id === (u.assignedRoles?.[0] || u.role))?.hierarchy && 
+								  allRoles.find(r => r.id === (u.assignedRoles?.[0] || u.role))?.hierarchy! >= 90
+								  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+								  : 'bg-blue-100 text-blue-700 border border-blue-200'
+							}`}>
+							  {u.isActive === false 
+								? '⏸️ Inactive' 
+								: allRoles.find(r => r.id === (u.assignedRoles?.[0] || u.role))?.name || u.role}
+							</span>
                             {/* Action Buttons */}
                             <div className="flex gap-1">
                               <button
@@ -7793,278 +7802,214 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
                             </div>
                             
                             {/* Personal Information */}
-                            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                              <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
-                                <span className="text-lg">📋</span> Personal Information
-                              </h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    👤 Full Name
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={u.name}
-                                    onChange={(e) => handleSaveUsers(users.map(usr => 
-                                      usr.id === u.id ? { ...usr, name: e.target.value, updatedAt: new Date().toISOString() } : usr
-                                    ))}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-                                  />
-                                  {editUserFieldErrors.name && (
-                                    <p className="mt-1 text-xs text-red-600">{editUserFieldErrors.name}</p>
-                                  )}
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    🔑 Username
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={u.username}
-                                    onChange={(e) => handleSaveUsers(users.map(usr => 
-                                      usr.id === u.id ? { ...usr, username: e.target.value, updatedAt: new Date().toISOString() } : usr
-                                    ))}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    ✉️ Email
-                                  </label>
-                                  <input
-                                    type="email"
-                                    value={u.email || ''}
-                                    onChange={(e) => handleSaveUsers(users.map(usr => 
-                                      usr.id === u.id ? { ...usr, email: e.target.value, updatedAt: new Date().toISOString() } : usr
-                                    ))}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-                                    placeholder="user@example.com"
-                                  />
-                                  {editUserFieldErrors.email && (
-                                    <p className="mt-1 text-xs text-red-600">{editUserFieldErrors.email}</p>
-                                  )}
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    📞 Contact Phone Number
-                                  </label>
-                                  <input
-                                    type="tel"
-                                    value={u.contactPhoneNumber || u.phone || ''}
-                                    onChange={(e) => handleSaveUsers(users.map(usr => 
-                                      usr.id === u.id ? { ...usr, contactPhoneNumber: e.target.value, phone: e.target.value, updatedAt: new Date().toISOString() } : usr
-                                    ))}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-                                    placeholder="(555) 123-4567"
-                                  />
-                                  {editUserFieldErrors.contactPhoneNumber && (
-                                    <p className="mt-1 text-xs text-red-600">{editUserFieldErrors.contactPhoneNumber}</p>
-                                  )}
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    📱 Phone Type
-                                  </label>
-                                  <select
-                                    value={u.phoneType || 'Mobile'}
-                                    onChange={(e) => {
-                                      const nextPhoneType = e.target.value as 'Mobile' | 'Home' | 'Work' | 'Other';
-                                      handleSaveUsers(users.map(usr =>
-                                        usr.id === u.id
-                                          ? {
-                                              ...usr,
-                                              phoneType: nextPhoneType,
-                                              preferredCommunication: nextPhoneType !== 'Mobile'
-                                                ? (usr.preferredCommunication || []).filter(m => m !== 'text')
-                                                : (usr.preferredCommunication || []),
-                                              updatedAt: new Date().toISOString()
-                                            }
-                                          : usr
-                                      ));
-                                    }}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-                                  >
-                                    <option value="Mobile">Mobile</option>
-                                    <option value="Home">Home</option>
-                                    <option value="Work">Work</option>
-                                    <option value="Other">Other</option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    ✉️ Preferred Communication
-                                  </label>
-                                  <div className="flex flex-wrap gap-3 px-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50">
-                                    {(['call', 'text', 'email'] as const).map(method => {
-                                      const disabled = method === 'text' && (u.phoneType || 'Mobile') !== 'Mobile';
-                                      const selected = (u.preferredCommunication || []).includes(method);
-                                      return (
-                                        <label key={method} className={`text-sm flex items-center gap-1 ${disabled ? 'opacity-40' : ''}`}>
-                                          <input
-                                            type="checkbox"
-                                            disabled={disabled}
-                                            checked={selected}
-                                            onChange={(e) => handleSaveUsers(users.map(usr => {
-                                              if (usr.id !== u.id) return usr;
-                                              const current = usr.preferredCommunication || [];
-                                              const updated = e.target.checked
-                                                ? [...current, method]
-                                                : current.filter(m => m !== method);
-                                              return { ...usr, preferredCommunication: updated, updatedAt: new Date().toISOString() };
-                                            }))}
-                                          />
-                                          {method}
-                                        </label>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    💼 Event Role
-                                  </label>
-                                  <select
-                                    value={u.eventRole || u.jobTitle || ''}
-                                    onChange={(e) => handleSaveUsers(users.map(usr => 
-                                      usr.id === u.id ? { ...usr, eventRole: e.target.value, jobTitle: e.target.value, updatedAt: new Date().toISOString() } : usr
-                                    ))}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-                                  >
-                                    <option value="">Select Event Role</option>
-                                    {eventRoles.map(role => (
-                                      <option key={role} value={role}>{role}</option>
-                                    ))}
-                                  </select>
-                                  {editUserFieldErrors.eventRole && (
-                                    <p className="mt-1 text-xs text-red-600">{editUserFieldErrors.eventRole}</p>
-                                  )}
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    🏛️ Event Name
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={u.eventName || u.department || ''}
-                                    onChange={(e) => handleSaveUsers(users.map(usr => 
-                                      usr.id === u.id ? { ...usr, eventName: e.target.value, department: e.target.value, updatedAt: new Date().toISOString() } : usr
-                                    ))}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-                                    placeholder="Smith Wedding"
-                                  />
-                                  {editUserFieldErrors.eventName && (
-                                    <p className="mt-1 text-xs text-red-600">{editUserFieldErrors.eventName}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
+							<div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+							  <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
+								<span className="text-lg">📋</span> Personal Information
+							  </h4>
+							  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									✉️ Email (Login ID)
+								  </label>
+								  <input
+									type="email"
+									value={u.email || ''}
+									onChange={(e) => handleSaveUsers(users.map(usr => 
+									  usr.id === u.id ? { ...usr, email: e.target.value, updatedAt: new Date().toISOString() } : usr
+									))}
+									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
+									placeholder="user@example.com"
+								  />
+								  {editUserFieldErrors.email && (
+									<p className="mt-1 text-xs text-red-600">{editUserFieldErrors.email}</p>
+								  )}
+								</div>
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									👤 Full Name
+								  </label>
+								  <input
+									type="text"
+									value={u.name}
+									onChange={(e) => handleSaveUsers(users.map(usr => 
+									  usr.id === u.id ? { ...usr, name: e.target.value, updatedAt: new Date().toISOString() } : usr
+									))}
+									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
+								  />
+								  {editUserFieldErrors.name && (
+									<p className="mt-1 text-xs text-red-600">{editUserFieldErrors.name}</p>
+								  )}
+								</div>
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									📞 Contact Phone Number
+								  </label>
+								  <input
+									type="tel"
+									value={u.contactPhoneNumber || u.phone || ''}
+									onChange={(e) => handleSaveUsers(users.map(usr => 
+									  usr.id === u.id ? { ...usr, contactPhoneNumber: e.target.value, phone: e.target.value, updatedAt: new Date().toISOString() } : usr
+									))}
+									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
+									placeholder="(555) 123-4567"
+								  />
+								</div>
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									📱 Phone Type
+								  </label>
+								  <select
+									value={u.phoneType || 'Mobile'}
+									onChange={(e) => handleSaveUsers(users.map(usr =>
+									  usr.id === u.id ? { ...usr, phoneType: e.target.value as 'Mobile' | 'Home' | 'Work' | 'Other', updatedAt: new Date().toISOString() } : usr
+									))}
+									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
+								  >
+									<option value="Mobile">Mobile</option>
+									<option value="Home">Home</option>
+									<option value="Work">Work</option>
+									<option value="Other">Other</option>
+								  </select>
+								</div>
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									💼 Event Role
+								  </label>
+								  <select
+									value={u.eventRole || u.jobTitle || ''}
+									onChange={(e) => handleSaveUsers(users.map(usr => 
+									  usr.id === u.id ? { ...usr, eventRole: e.target.value, jobTitle: e.target.value, updatedAt: new Date().toISOString() } : usr
+									))}
+									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
+								  >
+									<option value="">Select Event Role</option>
+									{eventRoles.map(role => (
+									  <option key={role} value={role}>{role}</option>
+									))}
+								  </select>
+								</div>
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									🏛️ Event Name
+								  </label>
+								  <input
+									type="text"
+									value={u.eventName || u.department || ''}
+									onChange={(e) => handleSaveUsers(users.map(usr => 
+									  usr.id === u.id ? { ...usr, eventName: e.target.value, department: e.target.value, updatedAt: new Date().toISOString() } : usr
+									))}
+									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
+									placeholder="Smith Wedding"
+								  />
+								</div>
+							  </div>
+							</div>
                             
                             {/* Account Settings */}
-                            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                              <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
-                                <span className="text-lg">⚙️</span> Account Settings
-                              </h4>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    👑 User Role
-                                  </label>
-                                  <select
-                                    value={u.userRole || (u.role === 'admin' ? 'admin' : 'shared')}
-                                    onChange={(e) => {
-                                      const nextUserRole = e.target.value as 'admin' | 'master' | 'shared' | 'read-only' | 'staff';
-                                      handleSaveUsers(users.map(usr => 
-                                        usr.id === u.id ? { 
-                                          ...usr, 
-                                          userRole: nextUserRole,
-                                          role: mapUserRoleToLegacyRole(nextUserRole),
-                                          isMasterUser: nextUserRole === 'master' ? true : (usr.isMasterUser || false),
-                                          updatedAt: new Date().toISOString() 
-                                        } : usr
-                                      ));
-                                    }}
-                                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${
-                                      (u.userRole || (u.role === 'admin' ? 'admin' : 'shared')) === 'admin' ? 'border-purple-300 bg-purple-50' : 'border-blue-300 bg-blue-50'
-                                    }`}
-                                  >
-                                    <option value="admin">👑 Admin</option>
-                                    <option value="master">⭐ Master Basic User</option>
-                                    <option value="shared">👥 Shared User</option>
-                                    <option value="read-only">👁️ Read Only</option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    📊 User Status
-                                  </label>
-                                  <select
-                                    value={u.userStatus || (u.isActive === false ? 'disabled' : 'active')}
-                                    onChange={(e) => handleSaveUsers(users.map(usr => 
-                                      usr.id === u.id ? { 
-                                        ...usr, 
-                                        userStatus: e.target.value as 'invited' | 'pending' | 'active' | 'suspended' | 'disabled',
-                                        isActive: !['suspended', 'disabled'].includes(e.target.value),
-                                        updatedAt: new Date().toISOString() 
-                                      } : usr
-                                    ))}
-                                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${
-                                      (u.userStatus || (u.isActive === false ? 'disabled' : 'active')) === 'active' ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-100'
-                                    }`}
-                                  >
-                                    <option value="invited">📨 Invited</option>
-                                    <option value="pending">🕒 Pending</option>
-                                    <option value="active">✅ Active</option>
-                                    <option value="suspended">⏸️ Suspended</option>
-                                    <option value="disabled">⛔ Disabled</option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    ⭐ Master Basic User
-                                  </label>
-                                  <label className="flex items-center gap-2 px-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50">
-                                    <input
-                                      type="checkbox"
-                                      checked={u.isMasterUser || false}
-                                      onChange={(e) => handleSaveUsers(users.map(usr =>
-                                        usr.id === u.id ? { ...usr, isMasterUser: e.target.checked, updatedAt: new Date().toISOString() } : usr
-                                      ))}
-                                    />
-                                    <span className="text-sm text-gray-700">Mark as master for event</span>
-                                  </label>
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-                                    🔒 Change Password
-                                  </label>
-                                  <div className="flex gap-2">
-                                    <input
-                                      type="password"
-                                      placeholder="New password (min 4 chars)"
-                                      id={`password-${u.id}`}
-                                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-                                    />
-                                    <button
-                                      onClick={() => {
-                                        const input = document.getElementById(`password-${u.id}`) as HTMLInputElement;
-                                        if (input.value.length >= 4) {
-                                          handleSaveUsers(users.map(usr => 
-                                            usr.id === u.id ? { ...usr, password: input.value, updatedAt: new Date().toISOString() } : usr
-                                          ));
-                                          input.value = '';
-                                          showSuccess('Password updated!');
-                                        } else {
-                                          alert('Password must be at least 4 characters');
-                                        }
-                                      }}
-                                      className="px-4 py-2.5 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium"
-                                    >
-                                      Update
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+							<div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+							  <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
+								<span className="text-lg">⚙️</span> Account Settings
+							  </h4>
+							  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								{/* RBAC Role Selection */}
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									🔐 Role (RBAC)
+								  </label>
+								  <select
+									value={u.assignedRoles?.[0] || u.role || 'basic'}
+									onChange={(e) => {
+									  const roleId = e.target.value;
+									  const selectedRole = allRoles.find(r => r.id === roleId);
+									  handleSaveUsers(users.map(usr => 
+										usr.id === u.id ? { 
+										  ...usr, 
+										  assignedRoles: [roleId],
+										  role: selectedRole?.hierarchy && selectedRole.hierarchy >= 90 ? 'admin' :
+												selectedRole?.hierarchy && selectedRole.hierarchy >= 40 ? 'staff' :
+												roleId === 'guest' ? 'guest' : 'basic',
+										  updatedAt: new Date().toISOString() 
+										} : usr
+									  ));
+									}}
+									className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${
+									  allRoles.find(r => r.id === (u.assignedRoles?.[0] || u.role))?.hierarchy && 
+									  allRoles.find(r => r.id === (u.assignedRoles?.[0] || u.role))?.hierarchy! >= 90 
+										? 'border-purple-300 bg-purple-50' 
+										: 'border-blue-300 bg-blue-50'
+									}`}
+								  >
+									{allRoles.map(role => (
+									  <option key={role.id} value={role.id}>
+										{role.name} {role.isImmutable ? '(System)' : role.isSystem ? '(Default)' : '(Custom)'}
+									  </option>
+									))}
+								  </select>
+								  <p className="text-xs text-gray-500 mt-1">
+									{allRoles.find(r => r.id === (u.assignedRoles?.[0] || u.role))?.description}
+								  </p>
+								</div>
+								
+								{/* User Status */}
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									📊 User Status
+								  </label>
+								  <select
+									value={u.userStatus || (u.isActive === false ? 'disabled' : 'active')}
+									onChange={(e) => handleSaveUsers(users.map(usr => 
+									  usr.id === u.id ? { 
+										...usr, 
+										userStatus: e.target.value as 'invited' | 'pending' | 'active' | 'suspended' | 'disabled',
+										isActive: !['suspended', 'disabled'].includes(e.target.value),
+										updatedAt: new Date().toISOString() 
+									  } : usr
+									))}
+									className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${
+									  (u.userStatus || (u.isActive === false ? 'disabled' : 'active')) === 'active' ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-100'
+									}`}
+								  >
+									<option value="invited">📨 Invited</option>
+									<option value="pending">🕒 Pending</option>
+									<option value="active">✅ Active</option>
+									<option value="suspended">⏸️ Suspended</option>
+									<option value="disabled">⛔ Disabled</option>
+								  </select>
+								</div>
+								
+								{/* Change Password */}
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									🔒 Change Password
+								  </label>
+								  <div className="flex gap-2">
+									<input
+									  type="password"
+									  placeholder="New password (min 4 chars)"
+									  id={`password-${u.id}`}
+									  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
+									/>
+									<button
+									  onClick={() => {
+										const input = document.getElementById(`password-${u.id}`) as HTMLInputElement;
+										if (input.value.length >= 4) {
+										  handleSaveUsers(users.map(usr => 
+											usr.id === u.id ? { ...usr, password: input.value, updatedAt: new Date().toISOString() } : usr
+										  ));
+										  input.value = '';
+										  showSuccess('Password updated!');
+										} else {
+										  alert('Password must be at least 4 characters');
+										}
+									  }}
+									  className="px-4 py-2.5 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium"
+									>
+									  Update
+									</button>
+								  </div>
+								</div>
+							  </div>
+							</div>
                             
                             {/* Notes */}
                             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -8220,270 +8165,235 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
               </div>
               
               {/* Create User Modal */}
-              {showCreateUserModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4">
-                  <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-                    <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#4A1942] to-[#6b2a64]">
-                      <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                        ➕ Create New User
-                      </h3>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Full Name *</label>
-                          <input
-                            type="text"
-                            value={newUser.name}
-                            onChange={(e) => {
-                              setNewUser({ ...newUser, name: e.target.value });
-                              if (createUserFieldErrors.name) {
-                                setCreateUserFieldErrors((prev) => ({ ...prev, name: '' }));
-                              }
-                            }}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.name ? 'border-red-300' : 'border-gray-300'}`}
-                            placeholder="John Smith"
-                          />
-                          {createUserFieldErrors.name && (
-                            <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.name}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Username *</label>
-                          <input
-                            type="text"
-                            value={newUser.username}
-                            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
-                            placeholder="jsmith"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Password *</label>
-                          <input
-                            type="password"
-                            value={newUser.password}
-                            onChange={(e) => {
-                              setNewUser({ ...newUser, password: e.target.value });
-                              if (createUserFieldErrors.password) {
-                                setCreateUserFieldErrors((prev) => ({ ...prev, password: '' }));
-                              }
-                            }}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.password ? 'border-red-300' : 'border-gray-300'}`}
-                            placeholder="••••••••"
-                          />
-                          {createUserFieldErrors.password && (
-                            <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.password}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">User Role *</label>
-                          <select
-                            value={newUser.userRole}
-                            onChange={(e) => setNewUser({
-                              ...newUser,
-                              userRole: e.target.value as 'admin' | 'master' | 'shared' | 'read-only' | 'staff',
-                              role: mapUserRoleToLegacyRole(e.target.value as 'admin' | 'master' | 'shared' | 'read-only' | 'staff')
-                            })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
-                          >
-                            <option value="admin">👑 Admin</option>
-                            <option value="master">⭐ Master Basic User</option>
-                            <option value="staff">📋 Staff Member</option>
-                            <option value="shared">👥 Shared User</option>
-                            <option value="read-only">👁️ Read Only</option>
-                          </select>
-                          {createUserFieldErrors.userRole && (
-                            <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.userRole}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Email *</label>
-                          <input
-                            type="email"
-                            value={newUser.email || ''}
-                            onChange={(e) => {
-                              setNewUser({ ...newUser, email: e.target.value });
-                              if (createUserFieldErrors.email) {
-                                setCreateUserFieldErrors((prev) => ({ ...prev, email: '' }));
-                              }
-                            }}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.email ? 'border-red-300' : 'border-gray-300'}`}
-                            placeholder="user@example.com"
-                          />
-                          {createUserFieldErrors.email && (
-                            <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.email}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Contact Phone Number *</label>
-                          <input
-                            type="tel"
-                            value={newUser.contactPhoneNumber || ''}
-                            onChange={(e) => {
-                              setNewUser({ ...newUser, contactPhoneNumber: e.target.value, phone: e.target.value });
-                              if (createUserFieldErrors.contactPhoneNumber) {
-                                setCreateUserFieldErrors((prev) => ({ ...prev, contactPhoneNumber: '' }));
-                              }
-                            }}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.contactPhoneNumber ? 'border-red-300' : 'border-gray-300'}`}
-                            placeholder="(555) 123-4567"
-                          />
-                          {createUserFieldErrors.contactPhoneNumber && (
-                            <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.contactPhoneNumber}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Phone Type *</label>
-                          <select
-                            value={newUser.phoneType}
-                            onChange={(e) => setNewUser({
-                              ...newUser,
-                              phoneType: e.target.value as 'Mobile' | 'Home' | 'Work' | 'Other',
-                              preferredCommunication: e.target.value !== 'Mobile'
-                                ? (newUser.preferredCommunication || []).filter(m => m !== 'text')
-                                : (newUser.preferredCommunication || [])
-                            })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
-                          >
-                            <option value="Mobile">Mobile</option>
-                            <option value="Home">Home</option>
-                            <option value="Work">Work</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Preferred Communication</label>
-                          <div className="flex flex-wrap gap-3 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm">
-                            {(['call', 'text', 'email'] as const).map(method => {
-                              const disabled = method === 'text' && newUser.phoneType !== 'Mobile';
-                              const selected = (newUser.preferredCommunication || []).includes(method);
-                              return (
-                                <label key={method} className={`flex items-center gap-1 ${disabled ? 'opacity-40' : ''}`}>
-                                  <input
-                                    type="checkbox"
-                                    disabled={disabled}
-                                    checked={selected}
-                                    onChange={(e) => {
-                                      const current = newUser.preferredCommunication || [];
-                                      const updated = e.target.checked ? [...current, method] : current.filter(m => m !== method);
-                                      setNewUser({ ...newUser, preferredCommunication: updated });
-                                    }}
-                                  />
-                                  {method}
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Event Role *</label>
-                          <select
-                            value={newUser.eventRole || ''}
-                            onChange={(e) => setNewUser({ ...newUser, eventRole: e.target.value, jobTitle: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
-                            required={newUser.userRole !== 'admin'}
-                          >
-                            <option value="">Select Event Role</option>
-                            {eventRoles.map(role => (
-                              <option key={role} value={role}>{role}</option>
-                            ))}
-                          </select>
-                          {createUserFieldErrors.eventRole && (
-                            <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.eventRole}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Event Name *</label>
-                          <input
-                            type="text"
-                            value={newUser.eventName || ''}
-                            onChange={(e) => setNewUser({ ...newUser, eventName: e.target.value, department: e.target.value })}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.eventName ? 'border-red-300' : 'border-gray-300'}`}
-                            placeholder="Smith Wedding"
-                          />
-                          {createUserFieldErrors.eventName && (
-                            <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.eventName}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Event Date *</label>
-                          <input
-                            type="date"
-                            value={newUser.eventDate || ''}
-                            onChange={(e) => {
-                              setNewUser({ ...newUser, eventDate: e.target.value });
-                              if (createUserFieldErrors.eventDate) {
-                                setCreateUserFieldErrors((prev) => ({ ...prev, eventDate: '' }));
-                              }
-                            }}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.eventDate ? 'border-red-300' : 'border-gray-300'}`}
-                            required={newUser.userRole !== 'admin'}
-                          />
-                          {createUserFieldErrors.eventDate && (
-                            <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.eventDate}</p>
-                          )}
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                            <input
-                              type="checkbox"
-                              checked={newUser.isMasterUser || false}
-                              onChange={(e) => setNewUser({ ...newUser, isMasterUser: e.target.checked })}
-                            />
-                            Mark as Master Basic User
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50">
-                      <button
-                        onClick={() => {
-                          setShowCreateUserModal(false);
-                          setCreateUserFieldErrors({});
-                          setNewUser({
-                            name: '',
-                            username: '',
-                            password: '',
-                            role: 'basic',
-                            email: '',
-                            phone: '',
-                            contactPhoneNumber: '',
-                            phoneType: 'Mobile',
-                            preferredCommunication: [],
-                            eventRole: '',
-                            eventName: '',
-                            userRole: 'master',
-                            isMasterUser: false,
-                            parentUserId: undefined,
-                            allowSharedAccess: false,
-                            sharedUserLimit: 0,
-                            userStatus: 'active',
-                            eventDate: '',
-                            jobTitle: '',
-                            department: ''
-                          });
-                        }}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleCreateUser();
-                        }}
-                        className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] transition-colors font-medium"
-                      >
-                        Create User
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+			  {showCreateUserModal && (
+			    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4">
+				  <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+				    <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#4A1942] to-[#6b2a64]">
+					  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+					    ➕ Create New User
+					  </h3>
+				    </div>
+				    <div className="p-6 space-y-4">
+					  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					    {/* Email - Primary Login Identifier */}
+					    <div className="md:col-span-2">
+						  <label className="text-xs font-medium text-gray-500 uppercase">Email Address * (Used for login)</label>
+						  <input
+						    type="email"
+						    value={newUser.email || ''}
+						    onChange={(e) => {
+							  setNewUser({ ...newUser, email: e.target.value });
+							  if (createUserFieldErrors.email) {
+							    setCreateUserFieldErrors((prev) => ({ ...prev, email: '' }));
+							  }
+			  			    }}
+						    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.email ? 'border-red-300' : 'border-gray-300'}`}
+						    placeholder="user@example.com"
+						  />
+						  {createUserFieldErrors.email && (
+						    <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.email}</p>
+						  )}
+					      </div>
+					  
+					    {/* Full Name */}
+					    <div>
+						  <label className="text-xs font-medium text-gray-500 uppercase">Full Name *</label>
+						  <input
+						    type="text"
+						    value={newUser.name}
+						    onChange={(e) => {
+							  setNewUser({ ...newUser, name: e.target.value });
+							  if (createUserFieldErrors.name) {
+							    setCreateUserFieldErrors((prev) => ({ ...prev, name: '' }));
+							  }
+						    }}
+						    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.name ? 'border-red-300' : 'border-gray-300'}`}
+						    placeholder="John Smith"
+						  />
+						  {createUserFieldErrors.name && (
+						    <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.name}</p>
+						  )}
+					    </div>
+					  
+					    {/* Password */}
+					    <div>
+						  <label className="text-xs font-medium text-gray-500 uppercase">Password *</label>
+						  <input
+						    type="password"
+						    value={newUser.password}
+						    onChange={(e) => {
+							  setNewUser({ ...newUser, password: e.target.value });
+							  if (createUserFieldErrors.password) {
+							    setCreateUserFieldErrors((prev) => ({ ...prev, password: '' }));
+							  }
+						    }}
+						    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent ${createUserFieldErrors.password ? 'border-red-300' : 'border-gray-300'}`}
+						    placeholder="••••••••"
+						  />
+						  {createUserFieldErrors.password && (
+						    <p className="mt-1 text-xs text-red-600">{createUserFieldErrors.password}</p>
+						  )}
+					    </div>
+					  
+					    {/* RBAC Role Selection */}
+					    <div className="md:col-span-2">
+						  <label className="text-xs font-medium text-gray-500 uppercase">Role * (Controls access permissions)</label>
+						  <select
+						    value={newUser.assignedRoles?.[0] || newUser.role || 'basic'}
+						    onChange={(e) => {
+							  const roleId = e.target.value;
+							  const selectedRole = allRoles.find(r => r.id === roleId);
+							  setNewUser({
+							    ...newUser,
+							    assignedRoles: [roleId],
+							    role: selectedRole?.hierarchy && selectedRole.hierarchy >= 90 ? 'admin' :
+									  selectedRole?.hierarchy && selectedRole.hierarchy >= 40 ? 'staff' :
+									  roleId === 'guest' ? 'guest' : 'basic',
+							  });
+						    }}
+						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						  >
+						    {allRoles.map(role => (
+							  <option key={role.id} value={role.id}>
+							    {role.name} {role.isImmutable ? '(System)' : role.isSystem ? '(Default)' : '(Custom)'}
+							  </option>
+						    ))}
+						  </select>
+						  <p className="text-xs text-gray-500 mt-1">
+						    {allRoles.find(r => r.id === (newUser.assignedRoles?.[0] || newUser.role))?.description}
+						  </p>
+					    </div>
+					  
+					    {/* Contact Phone */}
+					    <div>
+						  <label className="text-xs font-medium text-gray-500 uppercase">Contact Phone</label>
+						  <input
+						    type="tel"
+						    value={newUser.contactPhoneNumber || ''}
+						    onChange={(e) => setNewUser({ ...newUser, contactPhoneNumber: e.target.value, phone: e.target.value })}
+						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						    placeholder="(555) 123-4567"
+						  />
+					    </div>
+					  
+					    {/* Phone Type */}
+					    <div>
+						  <label className="text-xs font-medium text-gray-500 uppercase">Phone Type</label>
+						  <select
+						    value={newUser.phoneType || 'Mobile'}
+						    onChange={(e) => setNewUser({
+							  ...newUser,
+							  phoneType: e.target.value as 'Mobile' | 'Home' | 'Work' | 'Other',
+						    })}
+						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						  >
+						    <option value="Mobile">Mobile</option>
+						    <option value="Home">Home</option>
+						    <option value="Work">Work</option>
+						    <option value="Other">Other</option>
+						  </select>
+					    </div>
+					  
+					    {/* Event Role */}
+					    <div>
+						  <label className="text-xs font-medium text-gray-500 uppercase">Event Role</label>
+						  <select
+						    value={newUser.eventRole || ''}
+						    onChange={(e) => setNewUser({ ...newUser, eventRole: e.target.value, jobTitle: e.target.value })}
+						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						  >
+						    <option value="">Select Event Role</option>
+						    {eventRoles.map(role => (
+							  <option key={role} value={role}>{role}</option>
+						    ))}
+						  </select>
+					    </div>
+					  
+					    {/* Event Name */}
+					    <div>
+						  <label className="text-xs font-medium text-gray-500 uppercase">Event Name</label>
+						  <input
+						    type="text"
+						    value={newUser.eventName || ''}
+						    onChange={(e) => setNewUser({ ...newUser, eventName: e.target.value, department: e.target.value })}
+						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						    placeholder="Smith Wedding"
+						  />
+					    </div>
+					  
+					    {/* Event Date */}
+					    <div>
+						  <label className="text-xs font-medium text-gray-500 uppercase">Event Date</label>
+						  <input
+						    type="date"
+						    value={newUser.eventDate || ''}
+						    onChange={(e) => setNewUser({ ...newUser, eventDate: e.target.value })}
+						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						  />
+					    </div>
+					  
+					    {/* User Status */}
+					    <div>
+						  <label className="text-xs font-medium text-gray-500 uppercase">User Status</label>
+						  <select
+						    value={newUser.userStatus || 'active'}
+						    onChange={(e) => setNewUser({
+							  ...newUser,
+							  userStatus: e.target.value as 'invited' | 'pending' | 'active' | 'suspended' | 'disabled',
+						    })}
+						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						  >
+						    <option value="active">✅ Active</option>
+						    <option value="invited">📨 Invited</option>
+						    <option value="pending">🕒 Pending</option>
+						    <option value="suspended">⏸️ Suspended</option>
+						    <option value="disabled">⛔ Disabled</option>
+						  </select>
+					    </div>
+					  </div>
+				    </div>
+				    <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50">
+					  <button
+					    onClick={() => {
+						  setShowCreateUserModal(false);
+						  setCreateUserFieldErrors({});
+						  setNewUser({
+						    name: '',
+						    password: '',
+						    role: 'basic',
+						    email: '',
+						    phone: '',
+						    contactPhoneNumber: '',
+						    phoneType: 'Mobile',
+						    preferredCommunication: [],
+						    eventRole: '',
+						    eventName: '',
+						    userStatus: 'active',
+						    eventDate: '',
+						    assignedRoles: [],
+						  });
+					    }}
+					    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+					  >
+					    Cancel
+					  </button>
+					  <button
+					    onClick={handleCreateUser}
+					    className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] transition-colors font-medium"
+					  >
+					    Create User
+					  </button>
+				    </div>
+				  </div>
+			    </div>
+			  )}
+              </div>
+            )}
+		  
+		  {/* Access Control Tab */}
+		  {activeTab === 'access-control' && (
+			<AccessControlPanel onClose={() => setActiveTab('venues')} />
+		  )}
 
           {/* Branding Tab */}
           {activeTab === 'branding' && (

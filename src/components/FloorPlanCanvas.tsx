@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { Venue, PlacedTable, PlacedFixture, Guest, CeremonyChairRow, RectangularChairLayout } from '../types';
-import { getTableSpecs, getFixtureTypes, getLinenColors, getDecorArrangements } from '../hooks/useLayoutState';
+import { Venue, PlacedTable, PlacedFixture, Guest, CeremonyChairRow, RectangularChairLayout, PlacedDecor, DecorArrangement } from '../types';
+import { getTableSpecs, getFixtureTypes, getLinenColors, getDecorArrangements, getDecorItems } from '../hooks/useLayoutState';
 import { getChairSpecs, getSpacingSettings } from '../data/venueData';
 import { getConfig } from '../config';
 
@@ -8,9 +8,6 @@ interface Position {
   x: number;
   y: number;
 }
-
-import { PlacedDecor, DecorArrangement } from '../types';
-import { getDecorItems } from '../hooks/useLayoutState';
 
 export interface FloorPlanCanvasProps {
   venue: Venue;
@@ -149,13 +146,29 @@ export function FloorPlanCanvas({
 
   const chairSpecs = getChairSpecs();
   const decorCatalog = getDecorItems();
-  const decorArrangements = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('spm_decor_arrangements');
-      return raw ? JSON.parse(raw) as any[] : [];
-    } catch {
+  const [localArrangements, setLocalArrangements] = useState<any[]>(() => {
+	try {
+	  const raw = localStorage.getItem('spm_decor_arrangements');
+      return raw ? JSON.parse(raw) : [];
+	} catch {
       return [];
-    }
+	}
+  });
+
+  const decorArrangements = propArrangements || localArrangements;
+
+  // Update when storage changes
+  useEffect(() => {
+	const handleChange = () => {
+	  try {
+        const raw = localStorage.getItem('spm_decor_arrangements');
+        setLocalArrangements(raw ? JSON.parse(raw) : []);
+	  } catch {
+		setLocalArrangements([]);
+      }
+    };
+    window.addEventListener('spm_data_changed', handleChange);
+    return () => window.removeEventListener('spm_data_changed', handleChange);
   }, []);
   void getSpacingSettings();
 

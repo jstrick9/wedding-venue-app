@@ -79,8 +79,14 @@ interface ToastItem {
 
 let toastId = 0;
 const TOAST_DEDUPE_MS = 1200;
-const toastListeners: Array<(toasts: ToastItem[]) => void> = [];
+let toastListeners: Array<(toasts: ToastItem[]) => void> = [];
 let currentToasts: ToastItem[] = [];
+
+// Cleanup function for module unload
+export function cleanupToastListeners(): void {
+  toastListeners = [];
+  currentToasts = [];
+}
 
 export function showToast(message: string, type: ToastType = 'info') {
   const now = Date.now();

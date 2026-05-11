@@ -39,7 +39,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
   const [email, setEmail] = useState('');
   const [resolvedUsername, setResolvedUsername] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
+  const [codeGenerated, setCodeGenerated] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -51,6 +51,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
   const [resendCooldown, setResendCooldown] = useState(0);
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [userSecurityQuestion, setUserSecurityQuestion] = useState('');
+  const [displayCode, setDisplayCode] = useState('');
 
   useEffect(() => {
     if (!codeExpiry) return;
@@ -63,7 +64,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
       setTimeRemaining(remaining);
 
       if (remaining === 0) {
-        setGeneratedCode('');
+        setCodeGenerated(false);
         setError('Verification code has expired. Please request a new one.');
       }
     }, 1000);
@@ -157,7 +158,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
     }
 
     const code = generateCode();
-    setGeneratedCode(code);
+    setCodeGenerated(true);
+    setDisplayCode(code); // For demo display only
 
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
     setCodeExpiry(expiry);
@@ -189,7 +191,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     const code = generateCode();
-    setGeneratedCode(code);
+    setCodeGenerated(true);
+    console.log('[DEV] New verification code:', code);
 
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
     setCodeExpiry(expiry);
@@ -356,7 +359,6 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
           >
             ✕
           </button>
-
           <div className="text-3xl mb-2">{step === 'success' ? '✅' : '🔐'}</div>
           <h2 className="text-xl font-bold">
             {step === 'request' && 'Reset Your Password'}
@@ -496,19 +498,19 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
           {step === 'verify' && (
             <div className="space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-amber-800 font-medium mb-1">
-                  <span>🔔</span>
-                  <span>Demo Mode - Verification Code</span>
-                </div>
-                <div className="text-center">
-                  <span className="inline-block px-4 py-2 bg-white border-2 border-amber-300 rounded-lg text-2xl font-mono font-bold tracking-widest text-amber-700">
-                    {generatedCode}
-                  </span>
-                </div>
-                <p className="text-xs text-amber-600 mt-2 text-center">
-                  In production, this code would be sent via email
-                </p>
-              </div>
+			    <div className="flex items-center gap-2 text-amber-800 font-medium mb-1">
+				  <span>🔔</span>
+				  <span>Demo Mode - Verification Code</span>
+			    </div>
+			    <div className="text-center">
+				  <span className="inline-block px-4 py-2 bg-white border-2 border-amber-300 rounded-lg text-2xl font-mono font-bold tracking-widest text-amber-700">
+				    {displayCode || '------'}
+				  </span>
+			    </div>
+			    <p className="text-xs text-amber-600 mt-2 text-center">
+				  In production, this code would be sent via email
+			    </p>
+			  </div>
 
               <div className="flex items-center justify-center gap-2 text-gray-600">
                 <span>⏱️</span>
@@ -654,7 +656,6 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                       {passwordStrength.label}
                     </span>
                   </div>
-
                   <div className="grid grid-cols-2 gap-1 text-xs">
                     <div className={passwordStrength.requirements.length ? 'text-green-600' : 'text-gray-400'}>
                       {passwordStrength.requirements.length ? '✓' : '○'} 8+ characters
@@ -708,7 +709,6 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                     {showConfirmPassword ? '🙈' : '👁️'}
                   </button>
                 </div>
-
                 {confirmPassword && confirmPassword !== newPassword && (
                   <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
                 )}
@@ -730,7 +730,6 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 >
                   ← Back
                 </button>
-
                 <button
                   onClick={() => void handleResetPassword()}
                   disabled={
@@ -761,14 +760,12 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
               <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
                 <span className="text-4xl">🎉</span>
               </div>
-
               <div>
                 <h3 className="text-lg font-bold text-gray-800">Password Updated!</h3>
                 <p className="text-gray-600 text-sm mt-1">
                   Your password has been successfully changed. You can now sign in with your new password.
                 </p>
               </div>
-
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
                 <strong>🔒 Security Tips:</strong>
                 <ul className="mt-1 ml-4 list-disc text-left space-y-1">
@@ -777,7 +774,6 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                   <li>Consider using a password manager</li>
                 </ul>
               </div>
-
               <button
                 onClick={() => {
                   onSuccess();
