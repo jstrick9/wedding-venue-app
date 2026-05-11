@@ -184,11 +184,11 @@ export function setSavedLayouts(layouts: SavedLayout[]): void {
   setSavedLayoutDocuments(nextDocs);
 }
 
-export function getChairSpecs(): ChairSpec[] {
+export function getChairSpecsFromLayout(): ChairSpec[] {
   return loadFromStorage(STORAGE_KEYS.CHAIR_SPECS_LEGACY, defaultChairSpecs);
 }
 
-export function setChairSpecs(specs: ChairSpec[]): void {
+export function setChairSpecsInLayout(specs: ChairSpec[]): void {
   saveToStorage(STORAGE_KEYS.CHAIR_SPECS_LEGACY, specs);
   window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'chairSpecs' } }));
 }
@@ -895,6 +895,17 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
       setCurrentVenue(updatedVenue);
     }
   }, [currentVenue.id]);
+  
+  // Update entire layout (for undo/redo)
+  const updateLayout = useCallback((updates: { tables?: PlacedTable[]; fixtures?: PlacedFixture[]; decor?: PlacedDecor[] }) => {
+    setLayout((prev) => ({
+      ...prev,
+      tables: updates.tables ?? prev.tables,
+      fixtures: updates.fixtures ?? prev.fixtures,
+      decor: updates.decor ?? prev.decor,
+      updatedAt: new Date().toISOString(),
+    }));
+  }, []);
 
   return {
     // State
@@ -912,6 +923,7 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
     // Actions
     changeVenue,
     refreshVenues,
+	updateLayout,
     addTable,
     addFixture,
     addDecor,

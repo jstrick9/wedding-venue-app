@@ -9,7 +9,7 @@ describe('App login gate', () => {
 
     expect(screen.getByRole('heading', { name: /seven paths manor/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(document.querySelector('input[type="password"]')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 });

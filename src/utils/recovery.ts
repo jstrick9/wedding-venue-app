@@ -131,7 +131,32 @@ export async function createEmergencyRecoverySnapshot(actor?: {
   name?: string;
 }): Promise<BackupBundle> {
   const bundle = await buildBackupBundle(actor);
-  localStorage.setItem(EMERGENCY_SNAPSHOT_KEY, JSON.stringify(bundle));
+  const json = JSON.stringify(bundle);
+  
+  // Check if we have enough storage space
+  try {
+    localStorage.setItem(EMERGENCY_SNAPSHOT_KEY, json);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.error('localStorage quota exceeded. Attempting to free space...');
+      // Try to free space by removing old backups
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('spm_backup_') || key.startsWith('spm_quarantine_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      // Try again
+      try {
+        localStorage.setItem(EMERGENCY_SNAPSHOT_KEY, json);
+      } catch {
+        throw new Error('Unable to create backup: storage quota exceeded');
+      }
+    } else {
+      throw error;
+    }
+  }
+  
   return bundle;
 }
 

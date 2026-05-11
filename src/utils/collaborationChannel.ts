@@ -19,13 +19,21 @@ export type CollaborationEvent =
 
 const CHANNEL_NAME = 'spm-collaboration';
 
+// Reuse a single channel instance
+let sharedChannel: BroadcastChannel | null = null;
+
 function getChannel(): BroadcastChannel | null {
   if (typeof BroadcastChannel === 'undefined') {
     return null;
   }
 
+  if (sharedChannel) {
+    return sharedChannel;
+  }
+
   try {
-    return new BroadcastChannel(CHANNEL_NAME);
+    sharedChannel = new BroadcastChannel(CHANNEL_NAME);
+    return sharedChannel;
   } catch {
     return null;
   }
@@ -35,8 +43,11 @@ export function publishCollaborationEvent(event: CollaborationEvent): void {
   const channel = getChannel();
   if (!channel) return;
 
-  channel.postMessage(event);
-  channel.close();
+  try {
+    channel.postMessage(event);
+  } catch {
+    // Silently fail if channel is closed
+  }
 }
 
 export function subscribeToCollaborationEvents(
@@ -45,7 +56,7 @@ export function subscribeToCollaborationEvents(
   const channel = getChannel();
   if (!channel) return () => undefined;
 
-  const listener = (message: MessageEvent<CollaborationEvent>) => {
+  const listener = (message: MessageEvent) => {
     handler(message.data);
   };
 
@@ -53,6 +64,14 @@ export function subscribeToCollaborationEvents(
 
   return () => {
     channel.removeEventListener('message', listener);
-    channel.close();
+    // Don't close the shared channel - others may be using it
   };
+}
+
+// Cleanup function for module unload
+export function closeCollaborationChannel(): void {
+  if (sharedChannel) {
+    sharedChannel.close();
+    sharedChannel = null;
+  }
 }

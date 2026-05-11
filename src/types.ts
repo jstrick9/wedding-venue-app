@@ -252,36 +252,25 @@ export interface OperationsExport {
 // User type
 export interface User {
   id: string;
-  username: string;
+  email: string;  // Primary login identifier (was username)
   password: string;
   role: UserRole;
   name: string;
-  email?: string;
-  // @deprecated use contactPhoneNumber instead
   phone?: string;
-  contactPhoneNumber?: string; // replaces phone
+  contactPhoneNumber?: string;
   phoneType?: 'Mobile' | 'Home' | 'Work' | 'Other';
   preferredCommunication?: ('call' | 'text' | 'email')[];
-  eventRole?: string; // replaces jobTitle
-  eventName?: string; // replaces department
-  userRole?: 'admin' | 'master' | 'shared' | 'read-only' | 'staff';
-  isMasterUser?: boolean;
-  parentUserId?: string;
-  allowSharedAccess?: boolean;
-  sharedUserLimit?: number;
+  eventRole?: string;
+  eventName?: string;
+  assignedRoles?: string[];  // Array of role IDs for RBAC
   userStatus?: 'invited' | 'pending' | 'active' | 'suspended' | 'disabled';
   eventDate?: string;
   invitationSentDate?: string;
   invitationStatus?: 'not_sent' | 'sent' | 'accepted' | 'expired';
   invitationToken?: string;
-  invitationTemplateId?: string;
   invitationLink?: string;
   invitationExpires?: string;
   imageUrl?: string;
-  // @deprecated use eventRole instead
-  jobTitle?: string;
-  // @deprecated use eventName instead
-  department?: string;
   notes?: string;
   isActive: boolean;
   lastLogin?: string;

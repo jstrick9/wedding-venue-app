@@ -51,14 +51,34 @@ function getFirstExistingRawValue(
   return null;
 }
 
-export function saveVersionedStorage<T>(key: string, version: number, data: T): void {
+export function saveVersionedStorage(key: string, version: number, data: T): void {
   const envelope: VersionedStorageEnvelope<T> = {
     version,
     savedAt: new Date().toISOString(),
     data,
   };
 
-  localStorage.setItem(key, JSON.stringify(envelope));
+  try {
+    localStorage.setItem(key, JSON.stringify(envelope));
+  } catch (error) {
+    console.error(`Failed to save versioned storage for key ${key}:`, error);
+    
+    // Notify UI of storage error (e.g., quota exceeded)
+    try {
+      window.dispatchEvent(new CustomEvent('spm_storage_error', {
+        detail: {
+          key,
+          error: error instanceof Error ? error.message : 'Unknown storage error',
+          action: 'save',
+          timestamp: new Date().toISOString(),
+        },
+      }));
+    } catch {
+      // Ignore dispatch errors
+    }
+    
+    throw error; // Re-throw so callers know save failed
+  }
 }
 
 export function loadVersionedStorage<T>({
@@ -103,9 +123,24 @@ export function loadVersionedStorage<T>({
 
     return normalized;
   } catch (error) {
-    console.error(`Failed to load versioned storage for key ${key}:`, error);
-    backupCorruptStorage(found.sourceKey, found.raw);
-    return defaultValue;
+  console.error(`Failed to load versioned storage for key ${key}:`, error);
+  backupCorruptStorage(found.sourceKey, found.raw);
+  
+  // Notify UI of storage error
+  try {
+    window.dispatchEvent(new CustomEvent('spm_storage_error', {
+      detail: {
+        key,
+        error: error instanceof Error ? error.message : 'Unknown storage error',
+        action: 'load',
+        timestamp: new Date().toISOString(),
+      },
+    }));
+  } catch {
+    // Ignore dispatch errors
+  }
+  
+  return defaultValue;
   }
 }
 

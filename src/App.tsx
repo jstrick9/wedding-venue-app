@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useLayoutState, getSavedLayouts, setSavedLayouts, getTemplates, getTableSpecs, getFixtureTypes } from './hooks/useLayoutState';
-import { LayoutTemplate, EventAnswer, EventQuestion } from './types';
+import { LayoutTemplate, EventAnswer, EventQuestion, PlacedTable, PlacedFixture } from './types';
 import { layoutCategories, getSpacingSettings } from './data/venueData';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginScreen } from './components/LoginScreen';
@@ -46,6 +46,10 @@ import {
   canMoveFixture,
   canPrintLayouts,
 } from './utils/permissions';
+import { UndoRedoProvider } from './contexts/UndoRedoContext';
+import { UndoRedoToolbar } from './components/UndoRedoToolbar';
+import { TimelinePanel } from './components/TimelinePanel';
+import { VendorPanel } from './components/VendorPanel';
 
 // Position type
 interface Position {
@@ -78,6 +82,8 @@ function AuthenticatedApp() {
   const [brandingConfig, setBrandingConfig] = useState(() => getConfig());
   const [projectHealth, setProjectHealth] = useState<ProjectHealthReport | null>(null);
   const [safeMode, setSafeMode] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showVendors, setShowVendors] = useState(false);
   
   // Local UI state
   const [zoom, setZoom] = useState(1);
@@ -91,25 +97,12 @@ function AuthenticatedApp() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
+  const [showOperations, setShowOperations] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showSubmission, setShowSubmission] = useState(false);
   const [showEventQuestions, setShowEventQuestions] = useState(false);
   const [showDecorDesigner, setShowDecorDesigner] = useState(false);
   const [editingArrangementId, setEditingArrangementId] = useState<string | undefined>(undefined);
-  const [showOperations, setShowOperations] = useState(false);
-
-  // Listen for decor designer opening
-  useEffect(() => {
-    const handleOpenDesigner = (e: any) => {
-      const arrangementId = e.detail?.arrangementId;
-      setEditingArrangementId(arrangementId);
-      setShowDecorDesigner(true);
-    };
-    
-    window.addEventListener('spm_open_decor_designer', handleOpenDesigner as EventListener);
-    return () => window.removeEventListener('spm_open_decor_designer', handleOpenDesigner as EventListener);
-  }, []);
-
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
@@ -318,6 +311,13 @@ function AuthenticatedApp() {
     fitAndCenterVenue();
   }, [fitAndCenterVenue]);
   
+  // Permission check helper - defined early so it can be used in callbacks
+  function ensureCanEditLayout(): boolean {
+    if (canEditCurrentLayout) return true;
+    showToast('You do not have permission to edit this layout.', 'warning');
+    return false;
+  }
+  
   // Reset to venue only (without exterior features)
   const handleResetToVenue = useCallback(() => {
     if (!canvasContainerRef.current) return;
@@ -432,6 +432,26 @@ function AuthenticatedApp() {
   const refreshSavedLayouts = useCallback(() => {
     setSavedLayoutsState(getSavedLayouts());
   }, []);
+  
+  // Undo/Redo snapshot helper
+  const pushUndoSnapshot = useCallback(() => {
+    const snapshot = {
+      tables: [...layoutState.layout.tables],
+      fixtures: [...layoutState.layout.fixtures],
+      decor: [...(layoutState.layout.decor || [])],
+      timestamp: Date.now(),
+    };
+    window.dispatchEvent(new CustomEvent('spm_push_undo_snapshot', { detail: snapshot }));
+  }, [layoutState.layout]);
+
+  // Restore from undo/redo snapshot
+  const handleRestoreSnapshot = useCallback((snapshot: { tables: any[]; fixtures: any[]; decor: any[] }) => {
+    layoutState.updateLayout({
+      tables: snapshot.tables,
+      fixtures: snapshot.fixtures,
+      decor: snapshot.decor || [],
+    });
+  }, [layoutState]);
 
   async function handleAutoRepair() {
     await createEmergencyRecoverySnapshot({ id: user.id, name: user.name });
@@ -468,6 +488,19 @@ function AuthenticatedApp() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, [refreshSavedLayouts]);
+  
+  useEffect(() => {
+    const handleOpenVendors = () => setShowVendors(true);
+    window.addEventListener('spm_open_vendors', handleOpenVendors);
+    return () => window.removeEventListener('spm_open_vendors', handleOpenVendors);
+  }, []);
+	
+  useEffect(() => {
+	const handleOpenTimeline = () => setShowTimeline(true);
+	window.addEventListener('spm_open_timeline', handleOpenTimeline);
+	return () => window.removeEventListener('spm_open_timeline', handleOpenTimeline);
+  }, []);
+
 
   // Get total capacity
   const getTotalCapacity = useCallback(() => {
@@ -617,7 +650,8 @@ function AuthenticatedApp() {
       chairLayout: 'all-sides',
     });
     if (!placement.ok) return;
-    
+	
+    pushUndoSnapshot();
     if (dragItem.type === 'table') {
       layoutState.addTable(dragItem.specId, placement.position);
     } else {
@@ -680,6 +714,7 @@ function AuthenticatedApp() {
     });
     if (!placement.ok) return;
     
+	pushUndoSnapshot();
     if (dragItem.type === 'table') {
       layoutState.addTable(dragItem.specId, placement.position);
     } else {
@@ -725,6 +760,8 @@ function AuthenticatedApp() {
         silent: true,
       });
       if (!placement.ok) return;
+	  
+	  pushUndoSnapshot();
       layoutState.updateTable(id, { x: placement.position.x, y: placement.position.y });
       return;
     }
@@ -754,6 +791,8 @@ function AuthenticatedApp() {
         silent: true,
       });
       if (!placement.ok) return;
+	  
+	  pushUndoSnapshot();
       layoutState.updateFixture(id, { x: placement.position.x, y: placement.position.y });
     }
   }, [layoutState, resolvePlacement, showToast, user, ensureCanEditLayout]);
@@ -787,7 +826,8 @@ function AuthenticatedApp() {
     });
 
     if (!placement.ok) return;
-
+	
+	pushUndoSnapshot();
     layoutState.updateTable(id, {
       ...updates,
       x: placement.position.x,
@@ -834,7 +874,8 @@ function AuthenticatedApp() {
     });
 
     if (!placement.ok) return;
-
+	
+	pushUndoSnapshot();
     layoutState.updateFixture(id, {
       ...updates,
       x: placement.position.x,
@@ -856,27 +897,27 @@ function AuthenticatedApp() {
 
     refreshSavedLayouts();
 
-  }, [layoutState, refreshSavedLayouts, ensureCanEditLayout]);
+  }, [layoutState, refreshSavedLayouts]);
 
   // Handle load saved layout
   const handleLoadSavedLayout = useCallback((layoutId: string) => {
     layoutState.loadLayout(layoutId);
     handleResetView();
-  }, [layoutState, handleResetView, ensureCanEditLayout]);
+  }, [layoutState, handleResetView]);
 
   // Handle delete saved layout
   const handleDeleteSavedLayout = useCallback((layoutId: string) => {
     const updated = savedLayouts.filter(l => l.id !== layoutId);
     setSavedLayouts(updated);
     setSavedLayoutsState(updated);
-  }, [savedLayouts, ensureCanEditLayout]);
+  }, [savedLayouts]);
 
   // Handle load template
   const handleLoadTemplate = useCallback((template: LayoutTemplate) => {
     layoutState.loadTemplate(template);
     setShowTemplates(false);
     handleResetView();
-  }, [layoutState, handleResetView, ensureCanEditLayout]);
+  }, [layoutState, handleResetView]);
 
   // Handle load template for editing (from admin panel)
   const handleLoadTemplateForEdit = useCallback((template: LayoutTemplate) => {
@@ -887,7 +928,7 @@ function AuthenticatedApp() {
     // Load the template
     layoutState.loadTemplate(template);
     handleResetView();
-  }, [layoutState, handleResetView, ensureCanEditLayout]);
+  }, [layoutState, handleResetView]);
 
   const openAdminPanel = useCallback(() => {
     if (!canOpenAdminPanel) {
@@ -936,12 +977,6 @@ function AuthenticatedApp() {
     announce('Opening print preview');
     setShowPrint(true);
   }, [canPrintCurrentLayout]);
-
-  function ensureCanEditLayout() {
-    if (canEditCurrentLayout) return true;
-    showToast('You do not have permission to edit this layout.', 'warning');
-    return false;
-  }
 
   // Handle view image
 
@@ -1131,14 +1166,15 @@ function AuthenticatedApp() {
   }, [brandingConfig]);
 
   return (
-    <div 
-      className="h-screen flex flex-col overflow-hidden"
-      style={{
-        fontFamily: brandingConfig.fontFamily,
-        backgroundColor: brandingConfig.backgroundColor,
-        color: brandingConfig.bodyTextColor,
-      }}
-    >
+    <UndoRedoProvider onRestore={handleRestoreSnapshot}>
+      <div 
+        className="h-screen flex flex-col overflow-hidden"
+        style={{
+          fontFamily: brandingConfig.fontFamily,
+          backgroundColor: brandingConfig.backgroundColor,
+          color: brandingConfig.bodyTextColor,
+        }}
+      >
       {/* Header */}
       <Header
         currentVenue={layoutState.currentVenue}
@@ -1599,19 +1635,32 @@ function AuthenticatedApp() {
       {/* Welcome Modal for first-time users */}
       {showWelcome && !isAdmin && (
         <WelcomeModal
-          isAdmin={isAdmin}
-          isGuest={isGuest}
-          onClose={() => {
+		  onClose={() => {
             setShowWelcome(false);
             // Note: The WelcomeModal handles the localStorage 'spm_welcome_hidden' flag
             // when user clicks "Don't show again" checkbox (only for admin/basic users)
           }}
+          isAdmin={isAdmin}
+          isGuest={isGuest}    
         />
       )}
+	  {/* Undo/Redo Toolbar */}
+      <UndoRedoToolbar variant="floating" />
+	  
+	  {/* Vendor Panel */}
+	  {showVendors && (
+		<VendorPanel onClose={() => setShowVendors(false)} />
+      )}
+	  
+	  {/* Timeline Panel */}
+	  {showTimeline && (
+		<TimelinePanel onClose={() => setShowTimeline(false)} />
+	  )}
 
       {/* Toast notifications */}
       <ToastContainer />
     </div>
+  </UndoRedoProvider>
   );
 }
 

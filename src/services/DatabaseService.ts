@@ -18,6 +18,13 @@ class DatabaseService {
     }
   }
 
+  private getSupabase(): SupabaseClient {
+    if (!this.supabase) {
+      throw new Error('Supabase client is not initialized. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+    }
+    return this.supabase;
+  }
+
   // ==================== LAYOUTS ====================
   async getLayouts(venueId?: string): Promise<Layout[]> {
     if (this.useLocalStorage) {
@@ -26,7 +33,7 @@ class DatabaseService {
       return venueId ? all.filter((l: Layout) => l.venueId === venueId) : all;
     }
 
-    const query = this.supabase!.from('layouts').select('*');
+    const query = this.getSupabase().from('layouts').select('*');
     if (venueId) query.eq('venueId', venueId);
     const { data, error } = await query;
     if (error) throw error;
@@ -49,7 +56,7 @@ class DatabaseService {
       return layout.id;
     }
 
-    const { data, error } = await this.supabase!
+    const { data, error } = await this.getSupabase()
       .from('layouts')
       .upsert(payload)
       .select()
@@ -65,7 +72,7 @@ class DatabaseService {
       return;
     }
 
-    const { error } = await this.supabase!.from('layouts').delete().eq('id', layoutId);
+    const { error } = await this.getSupabase().from('layouts').delete().eq('id', layoutId);
     if (error) throw error;
   }
 
@@ -81,15 +88,15 @@ class DatabaseService {
       return () => clearInterval(interval);
     }
 
-    const channel = this.supabase!
+    const channel = this.getSupabase()
       .channel(`layout:${layoutId}`)
-      .on('postgres_changes', 
+      .on('postgres_changes',
         { event: '*', schema: 'public', table: 'layouts', filter: `id=eq.${layoutId}` },
         (payload) => callback(payload.new as Layout)
       )
       .subscribe();
 
-    return () => { this.supabase!.removeChannel(channel); };
+    return () => { this.getSupabase().removeChannel(channel); };
   }
 
   // ==================== GUESTS ====================
@@ -99,7 +106,7 @@ class DatabaseService {
       return stored ? JSON.parse(stored) : [];
     }
 
-    const { data, error } = await this.supabase!
+    const { data, error } = await this.getSupabase()
       .from('guests')
       .select('*')
       .eq('layoutId', layoutId);
@@ -115,7 +122,7 @@ class DatabaseService {
 
     // Batch upsert
     const payload = guests.map(g => ({ ...g, layoutId }));
-    const { error } = await this.supabase!.from('guests').upsert(payload);
+    const { error } = await this.getSupabase().from('guests').upsert(payload);
     if (error) throw error;
   }
 
@@ -126,7 +133,7 @@ class DatabaseService {
       return stored ? JSON.parse(stored) : [];
     }
 
-    const query = this.supabase!.from('venues').select('*');
+    const query = this.getSupabase().from('venues').select('*');
     if (businessId) query.eq('businessId', businessId);
     const { data, error } = await query;
     if (error) throw error;
@@ -143,7 +150,7 @@ class DatabaseService {
       return;
     }
 
-    const { error } = await this.supabase!.from('venues').upsert(venue);
+    const { error } = await this.getSupabase().from('venues').upsert(venue);
     if (error) throw error;
   }
 
@@ -166,7 +173,7 @@ class DatabaseService {
       return version.id;
     }
 
-    const { data, error } = await this.supabase!.from('layout_versions').insert(version).select().single();
+    const { data, error } = await this.getSupabase().from('layout_versions').insert(version).select().single();
     if (error) throw error;
     return data.id;
   }
@@ -177,7 +184,7 @@ class DatabaseService {
       return JSON.parse(localStorage.getItem(key) || '[]');
     }
 
-    const { data, error } = await this.supabase!
+    const { data, error } = await this.getSupabase()
       .from('layout_versions')
       .select('*')
       .eq('layoutId', layoutId)

@@ -307,9 +307,15 @@ export function loadGuestPortalSession(
 export function getGuestPortalTokenFromLocation(
   location: Location = window.location,
 ): string | undefined {
+  // Extract token from URL and immediately clear it from history
   const searchParams = new URLSearchParams(location.search);
   const directSearchToken = searchParams.get('token');
-  if (directSearchToken) return directSearchToken;
+  
+  if (directSearchToken) {
+    // Clear token from URL to prevent it from being logged in browser history
+    clearTokenFromUrl(location);
+    return directSearchToken;
+  }
 
   const hash = location.hash || '';
   const hashQueryIndex = hash.indexOf('?');
@@ -317,8 +323,36 @@ export function getGuestPortalTokenFromLocation(
   if (hashQueryIndex >= 0) {
     const hashQuery = hash.slice(hashQueryIndex + 1);
     const hashParams = new URLSearchParams(hashQuery);
-    return hashParams.get('token') || undefined;
+    const hashToken = hashParams.get('token');
+    
+    if (hashToken) {
+      clearTokenFromUrl(location);
+      return hashToken;
+    }
   }
 
   return undefined;
+}
+
+function clearTokenFromUrl(location: Location): void {
+  try {
+    // Remove token from URL without page reload
+    const url = new URL(location.href);
+    url.searchParams.delete('token');
+    
+    // Also remove from hash if present
+    if (url.hash.includes('token=')) {
+      const hashParts = url.hash.split('?');
+      if (hashParts.length > 1) {
+        const hashParams = new URLSearchParams(hashParts[1]);
+        hashParams.delete('token');
+        url.hash = hashParams.toString() ? `${hashParts[0]}?${hashParams.toString()}` : hashParts[0];
+      }
+    }
+    
+    // Replace current history entry to remove token
+    window.history.replaceState({}, '', url.toString());
+  } catch {
+    // Silently fail if URL manipulation is not possible
+  }
 }

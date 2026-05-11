@@ -157,7 +157,16 @@ export async function verifyPassword(
     return timingSafeEqual(derived, user.passwordHash);
   }
 
-  return Boolean(user.password) && user.password === password;
+  // Legacy plaintext fallback - log warning and migrate
+  if (user.password && user.password === password) {
+    console.warn(
+      `[SECURITY] User "${user.username}" authenticated with legacy plaintext password. ` +
+      `Password will be migrated to hashed format on next password change.`
+    );
+    return true;
+  }
+
+  return false;
 }
 
 export function needsPasswordMigration(user: AuthUser): boolean {
