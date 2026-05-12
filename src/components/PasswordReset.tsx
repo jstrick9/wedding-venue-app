@@ -52,6 +52,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [userSecurityQuestion, setUserSecurityQuestion] = useState('');
   const [displayCode, setDisplayCode] = useState('');
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.MODE === 'test';
 
   useEffect(() => {
     if (!codeExpiry) return;
@@ -83,7 +84,9 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
   }, [resendCooldown]);
 
   const generateCode = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    const values = new Uint32Array(1);
+    crypto.getRandomValues(values);
+    return String(100000 + (values[0] % 900000));
   };
 
   const getPasswordStrength = (password: string): PasswordStrength => {
@@ -159,7 +162,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
 
     const code = generateCode();
     setCodeGenerated(true);
-    setDisplayCode(code); // For demo display only
+    setDisplayCode(isDemoMode ? code : '');
 
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
     setCodeExpiry(expiry);
@@ -192,7 +195,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
 
     const code = generateCode();
     setCodeGenerated(true);
-    console.log('[DEV] New verification code:', code);
+    setDisplayCode(isDemoMode ? code : '');
 
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
     setCodeExpiry(expiry);
@@ -497,30 +500,22 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
 
           {step === 'verify' && (
             <div className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-			    <div className="flex items-center gap-2 text-amber-800 font-medium mb-1">
-				  <span>🔔</span>
-				  <span>Demo Mode - Verification Code</span>
-			    </div>
-			    <div className="text-center">
-				  <span className="inline-block px-4 py-2 bg-white border-2 border-amber-300 rounded-lg text-2xl font-mono font-bold tracking-widest text-amber-700">
-				    {displayCode || '------'}
-				  </span>
-			    </div>
-			    <p className="text-xs text-amber-600 mt-2 text-center">
-				  In production, this code would be sent via email
-			    </p>
-			  </div>
-
-              <div className="flex items-center justify-center gap-2 text-gray-600">
-                <span>⏱️</span>
-                <span>
-                  Code expires in:{' '}
-                  <strong className={timeRemaining < 60 ? 'text-red-600' : ''}>
-                    {formatTime(timeRemaining)}
-                  </strong>
-                </span>
-              </div>
+              {isDemoMode && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-amber-800 font-medium mb-1">
+                    <span>🔔</span>
+                    <span>Demo Mode - Verification Code</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="inline-block px-4 py-2 bg-white border-2 border-amber-300 rounded-lg text-2xl font-mono font-bold tracking-widest text-amber-700">
+                      {displayCode || '------'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-600 mt-2 text-center">
+                    Demo mode only. Production reset codes must be delivered server-side.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label

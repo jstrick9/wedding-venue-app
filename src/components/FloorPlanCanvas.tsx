@@ -184,7 +184,7 @@ export function FloorPlanCanvas({
     // So relative coords in inches need to be multiplied by (8/12).
     const designScale = 8 / 12; 
 
-    return arrangement.items.sort((a: any, b: any) => a.zIndex - b.zIndex).map((item: any, idx: number) => {
+    return [...arrangement.items].sort((a: any, b: any) => a.zIndex - b.zIndex).map((item: any, idx: number) => {
       const spec = decorCatalog.find(s => s.id === item.decorItemId);
       if (!spec) return null;
 
@@ -929,6 +929,12 @@ export function FloorPlanCanvas({
         }
         .design-badge-float {
           animation: spm-badge-float 3s infinite ease-in-out;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .design-active-aura,
+          .design-badge-float {
+            animation: none;
+          }
         }
       `}</style>
       <svg

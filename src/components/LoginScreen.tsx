@@ -28,7 +28,10 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      usernameInputRef.current?.focus();
+      const active = document.activeElement;
+      if (!active || active === document.body) {
+        usernameInputRef.current?.focus();
+      }
     }, 50);
 
     const savedUsername = localStorage.getItem(STORAGE_KEYS.REMEMBERED_USER);

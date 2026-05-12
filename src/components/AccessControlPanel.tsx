@@ -256,7 +256,7 @@ export function AccessControlPanel({ onClose }: AccessControlPanelProps) {
                                       checked={selectedRolePermissions.includes(permission.id)}
                                       onToggle={handleTogglePermission}
                                       allPermissions={selectedRolePermissions}
-                                      disabled={selectedRole.isImmutable}
+                                      disabled={!!selectedRole.isImmutable}
                                       level={0}
                                     />
                                   ))}

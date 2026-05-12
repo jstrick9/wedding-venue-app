@@ -37,6 +37,7 @@ import {
 } from '../hooks/useLayoutState';
 import { AccessControlPanel } from './AccessControlPanel';
 import { useRBAC } from '../hooks/useRBAC';
+import { createPasswordRecord } from '../utils/auth';
 
 // Branding-aware section header component
 interface BrandedSectionHeaderProps {
@@ -361,7 +362,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
     username: '', 
     password: '', 
     name: '', 
-    role: 'basic' as 'admin' | 'basic' | 'staff',
+    role: 'basic' as 'admin' | 'basic' | 'staff' | 'guest',
     email: '',
     phone: '',
     contactPhoneNumber: '',
@@ -377,7 +378,8 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
     userStatus: 'active' as 'invited' | 'pending' | 'active' | 'suspended' | 'disabled',
     eventDate: '',
     jobTitle: '',
-    department: ''
+    department: '',
+    assignedRoles: [] as string[]
   });
   const [successMessage, setSuccessMessage] = useState('');
   const [createUserFieldErrors, setCreateUserFieldErrors] = useState<Record<string, string>>({});
@@ -1005,15 +1007,17 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
       userStatus: 'active',
       eventDate: '',
       jobTitle: '',
-      department: ''
+      department: '',
+      assignedRoles: []
     });
     setCreateUserFieldErrors({});
     showSuccess('User created!');
   };
 
-  const handleDeleteUser = (username: string) => {
-    if (confirm(`Delete user "${username}"?`)) {
-      deleteUser(username);
+  const handleDeleteUser = (userId: string, label?: string) => {
+    const displayName = label || users.find((u) => u.id === userId)?.name || userId;
+    if (confirm(`Delete user "${displayName}"?`)) {
+      deleteUser(userId);
       setUsersState(getAllUsers());
       showSuccess('User deleted!');
     }
@@ -7706,7 +7710,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
                                 ✏️
                               </button>
                               <button
-                                onClick={() => handleDeleteUser(u.username)}
+                                onClick={() => handleDeleteUser(u.id, u.name || u.email || u.username)}
                                 className="p-2 text-gray-500 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors"
                                 title="Delete user"
                               >
@@ -7985,23 +7989,31 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
 								  <div className="flex gap-2">
 									<input
 									  type="password"
-									  placeholder="New password (min 4 chars)"
+									  placeholder="New password (min 8 chars)"
 									  id={`password-${u.id}`}
 									  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
 									/>
 									<button
-									  onClick={() => {
-										const input = document.getElementById(`password-${u.id}`) as HTMLInputElement;
-										if (input.value.length >= 4) {
-										  handleSaveUsers(users.map(usr => 
-											usr.id === u.id ? { ...usr, password: input.value, updatedAt: new Date().toISOString() } : usr
-										  ));
-										  input.value = '';
-										  showSuccess('Password updated!');
-										} else {
-										  alert('Password must be at least 4 characters');
-										}
-									  }}
+									  onClick={async () => {
+											const input = document.getElementById(`password-${u.id}`) as HTMLInputElement;
+											const nextPassword = input.value;
+											if (nextPassword.length >= 8) {
+											  const passwordRecord = await createPasswordRecord(nextPassword);
+											  handleSaveUsers(users.map(usr => 
+												usr.id === u.id ? {
+												  ...usr,
+												  password: '',
+												  ...passwordRecord,
+												  sessionVersion: ((usr as any).sessionVersion ?? 1) + 1,
+												  updatedAt: new Date().toISOString()
+												} : usr
+											  ));
+											  input.value = '';
+											  showSuccess('Password updated!');
+											} else {
+											  alert('Password must be at least 8 characters');
+											}
+										  }}
 									  className="px-4 py-2.5 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium"
 									>
 									  Update
@@ -8144,7 +8156,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
                                 <button
                                   onClick={() => {
                                     if (confirm(`Are you sure you want to delete "${u.name}"?`)) {
-                                      handleDeleteUser(u.username);
+                                      handleDeleteUser(u.id, u.name || u.email || u.username);
                                     }
                                   }}
                                   className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
@@ -8358,8 +8370,9 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
 						  setShowCreateUserModal(false);
 						  setCreateUserFieldErrors({});
 						  setNewUser({
-						    name: '',
+						    username: '',
 						    password: '',
+						    name: '',
 						    role: 'basic',
 						    email: '',
 						    phone: '',
@@ -8368,8 +8381,15 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit }: Ad
 						    preferredCommunication: [],
 						    eventRole: '',
 						    eventName: '',
+						    userRole: 'master',
+						    isMasterUser: false,
+						    parentUserId: undefined,
+						    allowSharedAccess: false,
+						    sharedUserLimit: 0,
 						    userStatus: 'active',
 						    eventDate: '',
+						    jobTitle: '',
+						    department: '',
 						    assignedRoles: [],
 						  });
 					    }}

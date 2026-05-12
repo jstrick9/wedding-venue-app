@@ -262,7 +262,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
   const handleRSVPSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rsvpForm.fullName.trim() || !rsvpForm.email.trim()) return;
+    if (!rsvpForm.fullName.trim() || !rsvpForm.email.trim() || !identifiedGuest) return;
 
     setIsSubmittingRSVP(true);
 
@@ -271,7 +271,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
     const newSubmission: RSVPSubmission = {
       id: guestRSVP?.id || `rsvp-${Date.now()}`,
-      guestId: identifiedGuest?.id || `guest-${Date.now()}`,
+      guestId: identifiedGuest.id,
       eventName,
       eventKey,
       fullName: rsvpForm.fullName.trim(),
@@ -321,6 +321,13 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     const formatICSDate = (d: Date) =>
       d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 
+    const escapeICS = (value: string) =>
+      value
+        .replace(/\\/g, '\\')
+        .replace(/\r?\n/g, '\\n')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;');
+
     const ics = [
       'BEGIN:VCALENDAR',
       'VERSION=2.0',
@@ -330,9 +337,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       `DTSTAMP:${formatICSDate(new Date())}`,
       `DTSTART:${formatICSDate(dtStart)}`,
       `DTEND:${formatICSDate(dtEnd)}`,
-      `SUMMARY:${item.title}`,
-      item.location ? `LOCATION:${item.location}` : '',
-      item.description ? `DESCRIPTION:${item.description}` : '',
+      `SUMMARY:${escapeICS(item.title)}`,
+      item.location ? `LOCATION:${escapeICS(item.location)}` : '',
+      item.description ? `DESCRIPTION:${escapeICS(item.description)}` : '',
       'END:VEVENT',
       'END:VCALENDAR',
     ]
