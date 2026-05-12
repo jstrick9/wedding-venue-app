@@ -14,6 +14,12 @@ import {
   saveSession,
   verifyPassword,
 } from '../utils/auth';
+import {
+  restoreSupabaseSession,
+  shouldUseSupabaseAuth,
+  signInWithSupabase,
+  signOutSupabase,
+} from '../services/backend/AuthBackend';
 
 interface AuthContextType {
   user: User | null;
@@ -55,6 +61,7 @@ function buildGuestUser(): User {
   return {
     id: 'guest',
     username: 'guest',
+    email: 'guest@example.local',
     password: '',
     role: 'guest',
     name: 'Guest User',
@@ -68,6 +75,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    if (shouldUseSupabaseAuth()) {
+      void restoreSupabaseSession()
+        .then((session) => {
+          if (session?.user) {
+            setUser(session.user);
+          } else {
+            clearSession();
+          }
+        })
+        .finally(() => setInitialized(true));
+      return;
+    }
+
     const savedSession = loadSession();
 
     if (!savedSession) {
@@ -99,6 +119,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
+    if (shouldUseSupabaseAuth()) {
+      const session = await signInWithSupabase(username, password);
+      if (!session) return false;
+      setUser(session.user);
+      return true;
+    }
+
     const users = getUsers();
 
     const foundUser = users.find(
@@ -138,6 +165,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     setUser(null);
     clearSession();
+    if (shouldUseSupabaseAuth()) {
+      void signOutSupabase();
+    }
   };
 
   const continueAsGuest = () => {
@@ -164,10 +194,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const newUser: User = {
       id: `user-${Date.now()}`,
       username,
+      email: email || username,
       password: '',
       role,
       name,
-      email,
       contactPhoneNumber: '',
       phoneType: 'Mobile',
       preferredCommunication: [],

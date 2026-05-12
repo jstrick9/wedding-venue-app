@@ -252,8 +252,18 @@ export interface OperationsExport {
 // User type
 export interface User {
   id: string;
-  email: string;  // Primary login identifier (was username)
+  /** Backward-compatible login identifier. New records should keep username and email in sync when email is used for login. */
+  username: string;
+  email: string;
+  /** Legacy plaintext password. Keep empty for new/updated users; retained only for migration. */
   password: string;
+  passwordHash?: string;
+  passwordSalt?: string;
+  passwordAlgorithm?: 'pbkdf2-sha256';
+  passwordUpdatedAt?: string;
+  sessionVersion?: number;
+  failedLoginCount?: number;
+  lockedUntil?: string;
   role: UserRole;
   name: string;
   phone?: string;
@@ -262,7 +272,12 @@ export interface User {
   preferredCommunication?: ('call' | 'text' | 'email')[];
   eventRole?: string;
   eventName?: string;
-  assignedRoles?: string[];  // Array of role IDs for RBAC
+  assignedRoles?: string[];
+  userRole?: 'admin' | 'master' | 'shared' | 'read-only' | 'staff';
+  isMasterUser?: boolean;
+  parentUserId?: string;
+  allowSharedAccess?: boolean;
+  sharedUserLimit?: number;
   userStatus?: 'invited' | 'pending' | 'active' | 'suspended' | 'disabled';
   eventDate?: string;
   invitationSentDate?: string;
@@ -271,6 +286,8 @@ export interface User {
   invitationLink?: string;
   invitationExpires?: string;
   imageUrl?: string;
+  jobTitle?: string;
+  department?: string;
   notes?: string;
   isActive: boolean;
   lastLogin?: string;

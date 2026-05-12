@@ -152,7 +152,7 @@ vi.mock('./contexts/AuthContext', () => ({
     deleteUser: vi.fn(),
     getAllUsers: vi.fn(() => []),
   }),
-  AuthProvider: ({ children }) => children,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('./utils/collisionDetection', () => ({

@@ -65,7 +65,8 @@ interface DragItem {
 }
 
 function AuthenticatedApp() {
-  const { user, isAdmin, isGuest, logout, getAllUsers } = useAuth();
+  const { user: authUser, isAdmin, isGuest, logout, getAllUsers } = useAuth();
+  const user = authUser!;
   const allUsers = getAllUsers();
   const isStaff = user?.role === 'staff';
   const layoutState = useLayoutState();

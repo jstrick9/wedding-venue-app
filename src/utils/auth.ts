@@ -75,7 +75,7 @@ async function deriveHash(secret: string, saltBase64: string): Promise<string> {
 
   const keyMaterial = await cryptoApi.subtle.importKey(
     'raw',
-    encoder.encode(secret),
+    encoder.encode(secret) as BufferSource,
     'PBKDF2',
     false,
     ['deriveBits'],
@@ -84,7 +84,7 @@ async function deriveHash(secret: string, saltBase64: string): Promise<string> {
   const derivedBits = await cryptoApi.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt: base64ToBytes(saltBase64),
+      salt: base64ToBytes(saltBase64) as BufferSource,
       iterations: PASSWORD_ITERATIONS,
       hash: 'SHA-256',
     },

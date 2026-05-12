@@ -11,7 +11,7 @@ const FOCUSABLE_SELECTOR = [
 ].join(',');
 
 export function useFocusTrap(
-  containerRef: RefObject<HTMLElement>,
+  containerRef: RefObject<HTMLElement | null>,
   active: boolean,
   onEscape?: () => void,
 ) {

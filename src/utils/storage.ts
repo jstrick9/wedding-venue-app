@@ -51,7 +51,7 @@ function getFirstExistingRawValue(
   return null;
 }
 
-export function saveVersionedStorage(key: string, version: number, data: T): void {
+export function saveVersionedStorage<T>(key: string, version: number, data: T): void {
   const envelope: VersionedStorageEnvelope<T> = {
     version,
     savedAt: new Date().toISOString(),

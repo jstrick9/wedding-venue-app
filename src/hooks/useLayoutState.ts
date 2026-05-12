@@ -102,6 +102,39 @@ const FALLBACK_VENUE: Venue = {
   exteriorPadding: { top: 20, right: 20, bottom: 20, left: 20 },
 };
 
+
+function parseCsvLine(line: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      current += '"';
+      i += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
+function csvEscape(value: unknown): string {
+  const text = String(value ?? '');
+  const formulaSafe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${formulaSafe.replace(/"/g, '""')}"`;
+}
+
 // Data access functions
 export function getVenues(): Venue[] {
   const venues = loadFromStorage(STORAGE.VENUES, defaultVenues) as Venue[];
@@ -679,10 +712,10 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
 
   // Import guests from CSV
   const importGuestsFromCSV = useCallback((csvText: string) => {
-    const lines = csvText.trim().split('\n');
+    const lines = csvText.trim().split(/\r?\n/);
     if (lines.length < 2) return;
 
-    const headers = lines[0].toLowerCase().split(',').map((h) => h.trim());
+    const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase().trim());
     const nameIndex = headers.findIndex((h) => h.includes('name'));
     const groupIndex = headers.findIndex((h) => h.includes('group') || h.includes('party'));
 
@@ -693,7 +726,7 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
 
     const newGuests: Guest[] = [];
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map((v) => v.trim());
+      const values = parseCsvLine(lines[i]);
       const name = values[nameIndex];
       if (name) {
         newGuests.push({
@@ -720,10 +753,10 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
         g.dietaryRestrictions || '',
         g.accessibility ? 'Yes' : 'No',
         g.rsvpStatus || 'pending',
-      ].join(',');
+      ].map(csvEscape).join(',');
     });
 
-    const csv = [headers.join(','), ...rows].join('\n');
+    const csv = [headers.map(csvEscape).join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

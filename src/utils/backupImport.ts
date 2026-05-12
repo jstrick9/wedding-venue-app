@@ -1,4 +1,6 @@
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { STORAGE_VERSIONS } from '../constants/storageVersions';
+import { saveVersionedStorage } from './storage';
 import type { BackupBundle, BackupImportReport, BackupPayload } from './backupTypes';
 import { buildBackupBundle } from './backupExport';
 import {
@@ -127,6 +129,11 @@ function writeJson(key: string, value: unknown): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function writeVersioned(key: string, version: number, value: unknown): void {
+  if (value === undefined) return;
+  saveVersionedStorage(key, version, value);
+}
+
 export function applyBackupPayload(
   payload: BackupPayload,
   mode: 'replace' | 'merge' = 'replace',
@@ -135,7 +142,7 @@ export function applyBackupPayload(
     throw new Error('Only replace mode is currently supported.');
   }
 
-  writeJson(STORAGE_KEYS.CONFIG, payload.config);
+  writeVersioned(STORAGE_KEYS.CONFIG, STORAGE_VERSIONS.CONFIG, payload.config);
   writeJson(STORAGE_KEYS.VENUES, payload.venues);
   writeJson(STORAGE_KEYS.TABLE_SPECS, payload.tableSpecs);
   writeJson(STORAGE_KEYS.FIXTURE_TYPES, payload.fixtureTypes);
@@ -152,10 +159,10 @@ export function applyBackupPayload(
   writeJson(STORAGE_KEYS.EVENT_QUESTIONS, payload.eventQuestions);
   writeJson(STORAGE_KEYS.EVENT_ANSWERS, payload.eventAnswers);
   writeJson(STORAGE_KEYS.EVENT_SUBMISSIONS, payload.eventSubmissions);
-  writeJson(STORAGE_KEYS.DIRECT_MESSAGES, payload.directMessages);
-  writeJson(STORAGE_KEYS.PORTAL_CONFIG, payload.portalConfig);
-  writeJson(STORAGE_KEYS.PORTAL_GUESTS, payload.portalGuests);
-  writeJson(STORAGE_KEYS.RSVP_SUBMISSIONS, payload.rsvpSubmissions);
+  writeVersioned(STORAGE_KEYS.DIRECT_MESSAGES, STORAGE_VERSIONS.DIRECT_MESSAGES, payload.directMessages);
+  writeVersioned(STORAGE_KEYS.PORTAL_CONFIG, STORAGE_VERSIONS.PORTAL_CONFIG, payload.portalConfig);
+  writeVersioned(STORAGE_KEYS.PORTAL_GUESTS, STORAGE_VERSIONS.PORTAL_GUESTS, payload.portalGuests);
+  writeVersioned(STORAGE_KEYS.RSVP_SUBMISSIONS, STORAGE_VERSIONS.RSVP_SUBMISSIONS, payload.rsvpSubmissions);
   writeJson(STORAGE_KEYS.STAFF_TASKS, payload.staffTasks);
   writeJson(STORAGE_KEYS.STAFF_AREAS, payload.staffAreas);
   writeJson(STORAGE_KEYS.STAFF_SHIFTS, payload.staffShifts);
