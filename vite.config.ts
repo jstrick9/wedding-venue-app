@@ -2,7 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,6 +10,12 @@ const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+    css: true,
+  },
   plugins: [react(), tailwindcss(), viteSingleFile()],
   // Use relative paths so the app works when opened directly from file system
   base: './',
@@ -20,7 +26,7 @@ export default defineConfig({
   },
   build: {
     // Ensure all assets are inlined for single-file deployment
-    assetsInlineLimit: 10485760, // 10MB max per asset
+    assetsInlineLimit: 100000000,
     cssCodeSplit: false,
     rollupOptions: {
       output: {
