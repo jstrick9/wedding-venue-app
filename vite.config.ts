@@ -20,7 +20,7 @@ export default defineConfig({
   },
   build: {
     // Ensure all assets are inlined for single-file deployment
-    assetsInlineLimit: 100000000,
+    assetsInlineLimit: 10485760, // 10MB max per asset
     cssCodeSplit: false,
     rollupOptions: {
       output: {
