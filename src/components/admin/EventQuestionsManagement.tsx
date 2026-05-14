@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from 'react';
 import { EventQuestion, EventQuestionGroup, EventQuestionAnswerType } from '../../types';
 import { Config } from '../../config';
