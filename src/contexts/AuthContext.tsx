@@ -10,6 +10,7 @@ import {
   isSessionValidForUser,
   isUserLocked,
   loadSession,
+  needsPasswordMigration,
   recordFailedLogin,
   saveSession,
   verifyPassword,
@@ -149,9 +150,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return false;
     }
 
-    const updatedUsers = users.map((u) =>
-      u.id === foundUser.id ? (clearFailedLoginState(u as any) as User) : u,
-    );
+    const migratedPasswordRecord = needsPasswordMigration(foundUser as any)
+      ? await createPasswordRecord(password)
+      : null;
+
+    const updatedUsers = users.map((u) => {
+      if (u.id !== foundUser.id) return u;
+
+      const cleared = clearFailedLoginState(u as any) as User;
+      if (!migratedPasswordRecord) return cleared;
+
+      return {
+        ...cleared,
+        password: '',
+        ...(migratedPasswordRecord as any),
+        sessionVersion: ((cleared as any).sessionVersion ?? 1) + 1,
+      } as User;
+    });
     setUsers(updatedUsers);
 
     const authenticatedUser =

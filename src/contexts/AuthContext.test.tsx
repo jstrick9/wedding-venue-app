@@ -127,6 +127,12 @@ describe('AuthContext', () => {
     const stored = JSON.parse(localStorage.getItem('spm_session_v2') || 'null');
     expect(stored.v).toBe(2);
     expect(stored.userId).toBe('u1');
+    expect(mockUsers[0].password).toBe('');
+    expect((mockUsers[0] as any).passwordHash).toBeTruthy();
+    expect((mockUsers[0] as any).passwordSalt).toBeTruthy();
+    expect((mockUsers[0] as any).passwordAlgorithm).toBe('pbkdf2-sha256');
+    expect((mockUsers[0] as any).sessionVersion).toBe(2);
+    expect(stored.sessionVersion).toBe(2);
   });
 
   it('failed login records a failedLoginCount', async () => {
