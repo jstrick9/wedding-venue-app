@@ -27,6 +27,7 @@ export interface HeaderProps {
   onShowGuests: () => void;
   onShowAdmin?: () => void;
   onOpenOperations?: () => void;
+  onShowWorkspaceHelp?: () => void;
   onLogout: () => void;
   userName: string;
   isAdmin: boolean;
@@ -53,6 +54,7 @@ export function Header({
   onShowGuests,
   onShowAdmin,
   onOpenOperations,
+  onShowWorkspaceHelp,
   onLogout,
   userName,
   isAdmin,
@@ -399,6 +401,22 @@ export function Header({
               </button>
             )}
 
+            {onShowWorkspaceHelp && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onShowWorkspaceHelp();
+                }}
+                className="hidden md:flex items-center gap-1 px-2 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                title="Open workspace help and keyboard shortcuts"
+              >
+                <span>❔</span>
+                <span className="hidden lg:inline">Workspace Help</span>
+                <span className="lg:hidden">Help</span>
+              </button>
+            )}
+
             <div className="hidden md:block relative" ref={menuRef}>
               <button
                 type="button"
@@ -704,6 +722,20 @@ export function Header({
                 >
                   📋 Templates
                 </button>
+
+                {onShowWorkspaceHelp && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onShowWorkspaceHelp();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
+                  >
+                    ❔ Help
+                  </button>
+                )}
 
                 {canOpenGuests && (
                   <button

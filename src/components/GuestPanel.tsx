@@ -15,6 +15,8 @@ export interface GuestPanelProps {
   onImportCSV: (content: string) => void;
   onExportCSV: () => void;
   onClose: () => void;
+  eventName?: string;
+  venueName?: string;
 }
 
 type ActiveTab = 'guests' | 'assignments' | 'stats';
@@ -40,6 +42,8 @@ export function GuestPanel({
   onImportCSV,
   onExportCSV,
   onClose,
+  eventName,
+  venueName,
 }: GuestPanelProps) {
   const isLodging = venue?.category === 'lodging';
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +52,8 @@ export function GuestPanel({
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('guests');
   const [search, setSearch] = useState('');
+  const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'assigned' | 'unassigned'>('all');
+  const [rsvpFilter, setRsvpFilter] = useState<'all' | 'confirmed' | 'pending' | 'declined'>('all');
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [newGuestName, setNewGuestName] = useState('');
@@ -111,14 +117,25 @@ export function GuestPanel({
 
   const filteredGuests = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return guests;
-    return guests.filter(g =>
-      g.name.toLowerCase().includes(q) ||
-      g.group?.toLowerCase().includes(q) ||
-      g.email?.toLowerCase().includes(q) ||
-      g.phone?.includes(q)
-    );
-  }, [guests, search]);
+    return guests.filter((g) => {
+      const matchesSearch =
+        !q ||
+        g.name.toLowerCase().includes(q) ||
+        g.group?.toLowerCase().includes(q) ||
+        g.email?.toLowerCase().includes(q) ||
+        g.phone?.includes(q);
+
+      const isAssigned = isLodging ? Boolean(g.roomId) : Boolean(g.tableId);
+      const matchesAssignment =
+        assignmentFilter === 'all' ||
+        (assignmentFilter === 'assigned' ? isAssigned : !isAssigned);
+
+      const normalizedRsvp = (g.rsvpStatus || 'pending') as 'confirmed' | 'pending' | 'declined';
+      const matchesRsvp = rsvpFilter === 'all' || normalizedRsvp === rsvpFilter;
+
+      return matchesSearch && matchesAssignment && matchesRsvp;
+    });
+  }, [guests, search, isLodging, assignmentFilter, rsvpFilter]);
 
   const unassignedGuests = useMemo(() => {
     return guests.filter(g => (isLodging ? !g.roomId : !g.tableId));
@@ -183,6 +200,28 @@ export function GuestPanel({
             </div>
             <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors">✕</button>
           </div>
+          {(eventName || venueName) && (
+            <div className="px-4 pb-4">
+              <div className="rounded-xl bg-white/10 border border-white/10 px-3 py-3 text-sm text-white/90 flex flex-wrap gap-3">
+                {eventName && (
+                  <span className="inline-flex items-center gap-1">
+                    <span>💍</span>
+                    <strong>Event:</strong> {eventName}
+                  </span>
+                )}
+                {venueName && (
+                  <span className="inline-flex items-center gap-1">
+                    <span>{isLodging ? '🛏️' : '🏛️'}</span>
+                    <strong>{isLodging ? 'Lodging venue' : 'Venue'}:</strong> {venueName}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1">
+                  <span>📍</span>
+                  <strong>Mode:</strong> {isLodging ? 'Room assignments' : 'Table assignments'}
+                </span>
+              </div>
+            </div>
+          )}
           <div className="flex border-t border-white/20">
             {[
               { id: 'guests', label: 'Guest List', icon: '👥' },
@@ -202,21 +241,68 @@ export function GuestPanel({
 
         {activeTab === 'guests' && (
           <>
-            <div className="p-3 border-b bg-gray-50 flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[220px]">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search guests..."
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
-                />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <div className="p-3 border-b bg-gray-50 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[220px]">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search guests by name, party, email, or phone..."
+                    className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                </div>
+                <button onClick={() => setShowAdd(true)} className="px-4 py-2 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#5c2a54]">➕ Add Guest</button>
+                <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" />
+                <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100">📥 Import</button>
+                <button onClick={onExportCSV} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100">📤 Export</button>
               </div>
-              <button onClick={() => setShowAdd(true)} className="px-4 py-2 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#5c2a54]">➕ Add Guest</button>
-              <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" />
-              <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100">📥 Import</button>
-              <button onClick={onExportCSV} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100">📤 Export</button>
+
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-medium text-gray-500">Assignment</span>
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'assigned', label: isLodging ? 'Assigned to rooms' : 'Assigned to tables' },
+                  { id: 'unassigned', label: isLodging ? 'Unassigned rooms' : 'Unassigned seats' },
+                ].map((filter) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    onClick={() => setAssignmentFilter(filter.id as typeof assignmentFilter)}
+                    className={`rounded-full px-3 py-1.5 transition-colors ${
+                      assignmentFilter === filter.id
+                        ? 'bg-[#4A1942] text-white'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+                <span className="ml-2 font-medium text-gray-500">RSVP</span>
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'confirmed', label: 'Confirmed' },
+                  { id: 'pending', label: 'Pending' },
+                  { id: 'declined', label: 'Declined' },
+                ].map((filter) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    onClick={() => setRsvpFilter(filter.id as typeof rsvpFilter)}
+                    className={`rounded-full px-3 py-1.5 transition-colors ${
+                      rsvpFilter === filter.id
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+                <span className="ml-auto text-gray-500">
+                  Showing <strong>{filteredGuests.length}</strong> of {guests.length}
+                </span>
+              </div>
             </div>
 
             <div className="flex-1 overflow-auto divide-y">

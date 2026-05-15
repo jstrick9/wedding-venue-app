@@ -145,6 +145,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const EVENT_QUESTIONS_STORAGE_KEY = 'spm_event_questions';
 
   const [activeTab, setActiveTab] = useState('venues');
+  const [tabSearch, setTabSearch] = useState('');
   const [venues, setVenuesState] = useState(() => getVenues());
   const [tableSpecs, setTableSpecsState] = useState(() => getTableSpecs());
   const [fixtureTypes, setFixtureTypesState] = useState(() => getFixtureTypes());
@@ -988,24 +989,68 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps },
   ];
 
-  const activeTabConfig = tabs.find((tab) => tab.id === activeTab) || tabs[0];
+  const filteredTabs = tabs.filter((tab) => {
+    const q = tabSearch.trim().toLowerCase();
+    if (!q) return true;
+    return `${tab.label} ${tab.id}`.toLowerCase().includes(q);
+  });
+  const activeTabConfig =
+    filteredTabs.find((tab) => tab.id === activeTab) ||
+    tabs.find((tab) => tab.id === activeTab) ||
+    filteredTabs[0] ||
+    tabs[0];
   const ActiveComponent = activeTabConfig.Component;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4" style={{ zIndex: 10000 }}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col overflow-hidden">
         <div className="p-4 border-b" style={{ backgroundColor: config.primaryColor, color: config.headerTextColor }}>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-start gap-4">
             <div>
               <h2 className="text-xl font-bold" style={{ fontFamily: config.headingFontFamily }}>Admin Panel</h2>
               <p className="text-sm opacity-90 mt-1">Manage venues, fixtures, users, branding, and wedding intelligence data.</p>
             </div>
             <button type="button" onClick={onClose} className="text-2xl hover:opacity-80" aria-label="Close admin panel">✕</button>
           </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 text-xs">
+            <div className="rounded-lg bg-white/10 px-3 py-2">
+              <div className="font-semibold text-base text-white">{venues.length}</div>
+              <div className="text-white/70">Venues</div>
+            </div>
+            <div className="rounded-lg bg-white/10 px-3 py-2">
+              <div className="font-semibold text-base text-white">{templates.length}</div>
+              <div className="text-white/70">Templates</div>
+            </div>
+            <div className="rounded-lg bg-white/10 px-3 py-2">
+              <div className="font-semibold text-base text-white">{users.length}</div>
+              <div className="text-white/70">Users</div>
+            </div>
+            <div className="rounded-lg bg-white/10 px-3 py-2">
+              <div className="font-semibold text-base text-white">{activeTabConfig.label.replace(`${activeTabConfig.icon} `, '')}</div>
+              <div className="text-white/70">Current section</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-b bg-white px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1 max-w-lg">
+            <label htmlFor="admin-tab-search" className="sr-only">Find an admin section</label>
+            <input
+              id="admin-tab-search"
+              type="search"
+              value={tabSearch}
+              onChange={(e) => setTabSearch(e.target.value)}
+              placeholder="Quick find an admin section..."
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
+            />
+          </div>
+          <div className="text-xs text-gray-500">
+            Showing <strong>{filteredTabs.length}</strong> of {tabs.length} sections
+          </div>
         </div>
 
         <div className="flex overflow-x-auto border-b" style={{ backgroundColor: config.primaryColor }}>
-          {tabs.map((tab) => (
+          {filteredTabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -1024,7 +1069,23 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
-          <ActiveComponent {...activeTabConfig.props} />
+          {filteredTabs.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500">
+              <div className="text-3xl mb-3">🔎</div>
+              <p className="text-lg font-semibold text-gray-700">No admin sections match “{tabSearch}”</p>
+              <p className="text-sm mt-1">Try a broader term like venue, guest, user, or branding.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#4A1942]/10 px-3 py-1 text-[#4A1942] font-medium">
+                  {activeTabConfig.icon} {activeTabConfig.label.replace(`${activeTabConfig.icon} `, '')}
+                </span>
+                <span>Use Quick find to jump between sections without scanning the full admin tab list.</span>
+              </div>
+              <ActiveComponent {...activeTabConfig.props} />
+            </div>
+          )}
         </div>
 
         {dialog && (

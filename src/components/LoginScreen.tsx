@@ -6,6 +6,7 @@ import { isUserLocked } from '../utils/auth';
 import { getUsers } from '../hooks/useLayoutState';
 import PasswordReset from './PasswordReset';
 import Logo from './Logo';
+import { shouldUseSupabaseAuth } from '../services/backend/AuthBackend';
 
 export interface LoginScreenProps {
   onContinueAsGuest?: () => void;
@@ -29,6 +30,9 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
 
   const usernameInputRef = useRef<HTMLInputElement>(null);
   const config = getConfig();
+  const usingSupabaseAuth = shouldUseSupabaseAuth();
+  const hasLocalAccounts = getUsers().length > 0;
+  const showNoLocalAccountsHint = !usingSupabaseAuth && !hasLocalAccounts;
 
   // ─── On mount: pre-fill remembered username & check persisted lockout ─────
   useEffect(() => {
@@ -99,6 +103,13 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (showNoLocalAccountsHint) {
+      setError(
+        'No local accounts are configured for this production build. Enable Supabase auth or provision users before signing in.',
+      );
+      return;
+    }
 
     // Re-sync just before submit in case another tab updated the store
     syncLockoutFromStore(username);
@@ -180,6 +191,40 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
         </div>
 
         <div className="px-6 py-6">
+          <div className="mb-5 space-y-3">
+            <div className={`rounded-xl border px-4 py-3 text-sm ${
+              usingSupabaseAuth
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : showNoLocalAccountsHint
+                  ? 'border-blue-200 bg-blue-50 text-blue-800'
+                  : 'border-amber-200 bg-amber-50 text-amber-800'
+            }`}>
+              <p className="font-semibold">
+                {usingSupabaseAuth
+                  ? 'Secure venue sign-in is enabled.'
+                  : showNoLocalAccountsHint
+                    ? 'Production access requires backend setup.'
+                    : 'Local workspace sign-in is active.'}
+              </p>
+              <p className="mt-1 text-xs opacity-90">
+                {usingSupabaseAuth
+                  ? 'Venue teams and couples should sign in here to access protected planning tools.'
+                  : showNoLocalAccountsHint
+                    ? 'Use Supabase auth for real production access, or provision accounts before publishing this workspace.'
+                    : 'Best for demos, QA, and local planning workshops.'}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+              <p className="font-semibold text-gray-900">Choose your entry point</p>
+              <ul className="mt-2 space-y-1.5 text-xs text-gray-600">
+                <li>• <strong>Venue teams & couples:</strong> sign in to manage layouts, guests, vendors, and timelines.</li>
+                <li>• <strong>Planner guests:</strong> continue as a guest to review the workspace without full admin controls.</li>
+                <li>• <strong>Wedding guests:</strong> use the Guest Portal for RSVP, schedule, lodging, and directions.</li>
+              </ul>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label
@@ -250,7 +295,8 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
               <button
                 type="button"
                 onClick={() => setShowPasswordReset(true)}
-                className="text-sm text-[#4A1942] hover:underline"
+                disabled={showNoLocalAccountsHint}
+                className="text-sm text-[#4A1942] hover:underline disabled:text-gray-400 disabled:no-underline"
               >
                 Forgot password?
               </button>
@@ -262,6 +308,15 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
               >
                 {error}
+              </div>
+            )}
+
+            {showNoLocalAccountsHint && !error && (
+              <div
+                role="status"
+                className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700"
+              >
+                Local demo accounts are disabled in production bundles. Configure Supabase auth to sign in securely.
               </div>
             )}
 
@@ -282,7 +337,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
 
             <button
               type="submit"
-              disabled={isLoading || isLockedOut}
+              disabled={isLoading || isLockedOut || showNoLocalAccountsHint}
               className="w-full rounded-lg bg-[#4A1942] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Signing in…' : 'Sign In'}
@@ -299,17 +354,23 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
             <button
               type="button"
               onClick={handleGuestAccess}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
             >
-              Continue as Planner Guest
+              <span className="block text-sm font-semibold text-gray-800">Continue as Planner Guest</span>
+              <span className="mt-1 block text-xs text-gray-500">
+                Review the planning workspace without a full account sign-in.
+              </span>
             </button>
 
             <button
               type="button"
               onClick={handleOpenGuestPortal}
-              className="w-full rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+              className="w-full rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-3 text-left hover:bg-indigo-100 transition-colors"
             >
-              💍 Open Wedding Guest Portal
+              <span className="block text-sm font-semibold text-indigo-800">💍 Open Wedding Guest Portal</span>
+              <span className="mt-1 block text-xs text-indigo-700/80">
+                RSVP, view the event schedule, check lodging, and get directions.
+              </span>
             </button>
           </div>
 

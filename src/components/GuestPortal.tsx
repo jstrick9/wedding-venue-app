@@ -483,6 +483,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('map')}
+              aria-current={activeTab === 'map' ? 'page' : undefined}
               className="bg-white rounded-xl shadow p-3 flex flex-col items-start justify-between min-h-[80px]"
             >
               <span className="text-2xl mb-1">🗺️</span>
@@ -494,6 +495,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('rsvp')}
+              aria-current={activeTab === 'rsvp' ? 'page' : undefined}
               className="bg-white rounded-xl shadow p-3 flex flex-col items-start justify-between min-h-[80px]"
             >
               <span className="text-2xl mb-1">📝</span>
@@ -505,6 +507,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('schedule')}
+              aria-current={activeTab === 'schedule' ? 'page' : undefined}
               className="bg-white rounded-xl shadow p-3 flex flex-col items-start justify-between min-h-[80px]"
             >
               <span className="text-2xl mb-1">📅</span>
@@ -516,6 +519,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('wayfinding')}
+              aria-current={activeTab === 'wayfinding' ? 'page' : undefined}
               className="bg-white rounded-xl shadow p-3 flex flex-col items-start justify-between min-h-[80px]"
             >
               <span className="text-2xl mb-1">🧭</span>
@@ -610,10 +614,15 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
               {/* Images if available */}
               {venue.imageUrl && (
-                <img
+                <SafeImage
                   src={venue.imageUrl}
                   alt={venue.name}
                   className="w-full rounded-lg object-cover max-h-48 mt-2"
+                  fallback={
+                    <div className="w-full h-24 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center mt-2 text-xs text-gray-500">
+                      Venue image unavailable
+                    </div>
+                  }
                 />
               )}
 
@@ -1325,6 +1334,24 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                 <p className="text-xs text-gray-500 leading-relaxed mb-4">
                   Enter your event name and the email or name your venue has on file to access RSVP, schedule, lodging, and directions.
                 </p>
+                <div className="grid grid-cols-2 gap-2 mb-4 text-[11px] text-gray-600">
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="font-semibold text-gray-800">📝 RSVP</div>
+                    <div>Confirm attendance and meal choices.</div>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="font-semibold text-gray-800">📅 Schedule</div>
+                    <div>See the latest event timing and highlights.</div>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="font-semibold text-gray-800">🗺️ Map</div>
+                    <div>Review locations, wayfinding, and arrival details.</div>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="font-semibold text-gray-800">🛏️ Lodging</div>
+                    <div>Check room assignments when lodging is enabled.</div>
+                  </div>
+                </div>
 
                 <label
                   htmlFor="guest-portal-event"
@@ -1471,6 +1498,14 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       	   	identifiedGuest,
       	   	activeEventName || config.eventTitle || '',
      );
+  const tabPanelId = `guest-portal-panel-${activeTab}`;
+  const desktopTabProps = (tabId: TabId) => ({
+    role: 'tab' as const,
+    id: `guest-portal-tab-${tabId}`,
+    'aria-selected': activeTab === tabId,
+    'aria-controls': `guest-portal-panel-${tabId}`,
+    type: 'button' as const,
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -1495,9 +1530,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
         )}
       </header>
 
-      <nav className="hidden md:flex px-4 pb-2 gap-2 text-xs">
+      <nav className="hidden md:flex px-4 pb-2 gap-2 text-xs" role="tablist" aria-label="Guest portal sections">
         <button
-          type="button"
+          {...desktopTabProps('home')}
           onClick={() => setActiveTab('home')}
           className={`px-3 py-1.5 rounded-full ${
             activeTab === 'home'
@@ -1510,7 +1545,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
         {showMapTab && (
           <button
-            type="button"
+            {...desktopTabProps('map')}
             onClick={() => setActiveTab('map')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'map'
@@ -1524,7 +1559,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
         {showScheduleTab && (
           <button
-            type="button"
+            {...desktopTabProps('schedule')}
             onClick={() => setActiveTab('schedule')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'schedule'
@@ -1538,7 +1573,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
         {showWayfindingTab && (
           <button
-            type="button"
+            {...desktopTabProps('wayfinding')}
             onClick={() => setActiveTab('wayfinding')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'wayfinding'
@@ -1552,7 +1587,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
         {showRSVPTab && (
           <button
-            type="button"
+            {...desktopTabProps('rsvp')}
             onClick={() => setActiveTab('rsvp')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'rsvp'
@@ -1566,7 +1601,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
         {showLodgingTab && (
           <button
-            type="button"
+            {...desktopTabProps('lodging')}
             onClick={() => setActiveTab('lodging')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'lodging'
@@ -1579,15 +1614,22 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
         )}
       </nav>
 
-      <main className="flex-1 px-4 pt-2 pb-20 md:pb-6 overflow-y-auto">
+      <main
+        className="flex-1 px-4 pt-2 pb-20 md:pb-6 overflow-y-auto"
+        role="tabpanel"
+        id={tabPanelId}
+        aria-labelledby={`guest-portal-tab-${activeTab}`}
+        tabIndex={0}
+      >
         {renderContent()}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 md:hidden bg-white border-t border-gray-200 shadow-sm">
+      <nav className="fixed bottom-0 inset-x-0 md:hidden bg-white border-t border-gray-200 shadow-sm" aria-label="Guest portal sections">
         <div className="flex justify-around py-1">
           <button
             type="button"
             onClick={() => setActiveTab('home')}
+            aria-current={activeTab === 'home' ? 'page' : undefined}
             className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
               activeTab === 'home' ? 'text-indigo-600' : 'text-gray-500'
             }`}
@@ -1600,6 +1642,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('map')}
+              aria-current={activeTab === 'map' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
                 activeTab === 'map' ? 'text-indigo-600' : 'text-gray-500'
               }`}
@@ -1613,6 +1656,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('schedule')}
+              aria-current={activeTab === 'schedule' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
                 activeTab === 'schedule' ? 'text-indigo-600' : 'text-gray-500'
               }`}
@@ -1626,6 +1670,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('wayfinding')}
+              aria-current={activeTab === 'wayfinding' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
                 activeTab === 'wayfinding' ? 'text-indigo-600' : 'text-gray-500'
               }`}
@@ -1639,6 +1684,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('rsvp')}
+              aria-current={activeTab === 'rsvp' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
                 activeTab === 'rsvp' ? 'text-indigo-600' : 'text-gray-500'
               }`}
@@ -1652,6 +1698,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             <button
               type="button"
               onClick={() => setActiveTab('lodging')}
+              aria-current={activeTab === 'lodging' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
                 activeTab === 'lodging' ? 'text-indigo-600' : 'text-gray-500'
               }`}

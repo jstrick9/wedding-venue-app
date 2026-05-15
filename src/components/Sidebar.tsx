@@ -29,6 +29,7 @@ import {
   isAdminUser,
 } from '../utils/permissions';
 import SafeImage from './SafeImage';
+import { showToast } from './Toast';
 import { emit, on } from '../utils/appEvents';
 
 interface DragItem {
@@ -107,9 +108,20 @@ export function Sidebar({
   const [isResizing, setIsResizing] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('tables');
   const [zoomInput, setZoomInput] = useState(String(Math.round(zoom * 100)));
+  const [catalogSearch, setCatalogSearch] = useState('');
 
   const config = getConfig();
   const showFullLabels = width > 320;
+  const normalizedCatalogSearch = catalogSearch.trim().toLowerCase();
+
+  const matchesCatalogSearch = (value: string, extraValues: string[] = []) => {
+    if (!normalizedCatalogSearch) return true;
+    const haystack = [value, ...extraValues]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(normalizedCatalogSearch);
+  };
 
   // Refresh data when app data changes
   useEffect(() => {
@@ -289,7 +301,11 @@ export function Sidebar({
       t.venueCategories.length === 0 ||
       t.venueCategories.includes(currentVenueCategory as any);
 
-    return categoryAllowed && canUseTableSpec(currentUser, t);
+    return (
+      categoryAllowed &&
+      canUseTableSpec(currentUser, t) &&
+      matchesCatalogSearch(t.name, [t.shape, t.isSeatingType ? 'seating' : 'table'])
+    );
   });
 
   const venueFixtures = fixtureTypes.filter((f) => {
@@ -300,11 +316,20 @@ export function Sidebar({
       f.venueCategories.length === 0 ||
       f.venueCategories.includes(currentVenueCategory as any);
 
-    return isVenueFixture && categoryAllowed && canSeeFixtureType(currentUser, f);
+    return (
+      isVenueFixture &&
+      categoryAllowed &&
+      canSeeFixtureType(currentUser, f) &&
+      matchesCatalogSearch(f.name, [f.category || '', f.shape || '', f.icon || ''])
+    );
   });
 
-  const lodgingFixtures = fixtureTypes.filter((f) => f.category === 'lodging');
-  const exteriorFixtures = fixtureTypes.filter((f) => f.category === 'exterior');
+  const lodgingFixtures = fixtureTypes.filter((f) =>
+    f.category === 'lodging' && matchesCatalogSearch(f.name, [f.category || '', f.icon || '']),
+  );
+  const exteriorFixtures = fixtureTypes.filter((f) =>
+    f.category === 'exterior' && matchesCatalogSearch(f.name, [f.category || '', f.icon || '']),
+  );
   // Pre-compute chair usage for all items (optimization)
   const chairUsageMap = useMemo(() => {
     const usage: Record<string, number> = {};
@@ -409,15 +434,13 @@ export function Sidebar({
     const handleDragStartEvent = (e: DragEvent<HTMLDivElement>) => {
       if (!isAllowedToPlace) {
         e.preventDefault();
-        alert('You do not have permission to place this item.');
+        showToast('You do not have permission to place this item.', 'warning');
         return;
       }
 
       if (isOutOfStock) {
         e.preventDefault();
-        alert(
-          `❌ Out of Stock!\n\n"${item.name}" is out of inventory.\n\nUsed: ${usedCount} / ${totalInventory}`,
-        );
+        showToast(`"${item.name}" is out of inventory (${usedCount}/${totalInventory} used).`, 'warning');
         return;
       }
 
@@ -435,14 +458,12 @@ export function Sidebar({
 
     const handleClick = () => {
       if (!isAllowedToPlace) {
-        alert('You do not have permission to place this item.');
+        showToast('You do not have permission to place this item.', 'warning');
         return;
       }
 
       if (isOutOfStock) {
-        alert(
-          `❌ Out of Stock!\n\n"${item.name}" is out of inventory.\n\nUsed: ${usedCount} / ${totalInventory}`,
-        );
+        showToast(`"${item.name}" is out of inventory (${usedCount}/${totalInventory} used).`, 'warning');
         return;
       }
 
@@ -587,6 +608,17 @@ export function Sidebar({
     { id: 'settings', label: 'Settings', icon: '⚙️' },
     { id: 'tips', label: 'Tips', icon: '💡' },
   ];
+  const showCatalogSearch = ['tables', 'fixtures', 'decor', 'lodging', 'exterior'].includes(activeSection);
+  const sectionSearchPlaceholder: Record<string, string> = {
+    tables: 'Find a table or seating style',
+    fixtures: 'Find a venue fixture',
+    decor: 'Find a saved design',
+    lodging: 'Find a lodging fixture',
+    exterior: 'Find an exterior feature',
+  };
+  const matchingDecorArrangements = getDecorArrangements().filter((arr) =>
+    matchesCatalogSearch(arr.name, [arr.baseType, String(arr.items.length)]),
+  );
 
   return (
     <div
@@ -654,7 +686,69 @@ export function Sidebar({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Workspace Snapshot
+              </p>
+              <h3 className="text-sm font-semibold text-gray-800 mt-1">
+                {venueWidth}' × {venueHeight}' {currentVenueCategory} layout
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => emit('spm_open_workspace_help')}
+              className="text-xs font-medium text-[#4A1942] hover:underline"
+            >
+              Keyboard help
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+            <div className="rounded-lg bg-gray-50 px-2 py-2">
+              <div className="text-base font-bold text-gray-900">{placedTables.length}</div>
+              <div className="text-[11px] text-gray-500">Tables</div>
+            </div>
+            <div className="rounded-lg bg-gray-50 px-2 py-2">
+              <div className="text-base font-bold text-gray-900">{placedFixtures.length}</div>
+              <div className="text-[11px] text-gray-500">Fixtures</div>
+            </div>
+            <div className="rounded-lg bg-gray-50 px-2 py-2">
+              <div className="text-base font-bold text-gray-900">{Math.round(zoom * 100)}%</div>
+              <div className="text-[11px] text-gray-500">Zoom</div>
+            </div>
+          </div>
+        </div>
+
+        {showCatalogSearch && (
+          <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+            <label htmlFor="sidebar-catalog-search" className="block text-xs font-semibold text-gray-700 mb-2">
+              Quick find
+            </label>
+            <input
+              id="sidebar-catalog-search"
+              type="search"
+              value={catalogSearch}
+              onChange={(e) => setCatalogSearch(e.target.value)}
+              placeholder={sectionSearchPlaceholder[activeSection] || 'Search this section'}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
+            />
+            {catalogSearch && (
+              <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
+                <span>Showing matches for “{catalogSearch}”</span>
+                <button
+                  type="button"
+                  onClick={() => setCatalogSearch('')}
+                  className="text-[#4A1942] hover:underline"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeSection === 'tables' && (
           <>
             <p className="text-xs text-gray-500 mb-2">
@@ -680,6 +774,12 @@ export function Sidebar({
                   .map((spec) => renderItem(spec, 'table'))}
               </div>
             )}
+
+            {visibleTables.length === 0 && (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                No tables or seating styles match this search.
+              </div>
+            )}
           </>
         )}
 
@@ -687,6 +787,11 @@ export function Sidebar({
           <>
             <p className="text-xs text-gray-500 mb-2">Venue fixtures &amp; areas</p>
             {venueFixtures.map((fixture) => renderItem(fixture, 'fixture'))}
+            {venueFixtures.length === 0 && (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                No venue fixtures match this search.
+              </div>
+            )}
           </>
         )}
 
@@ -730,9 +835,13 @@ export function Sidebar({
                       Start Designing →
                     </button>
                   </div>
+                ) : matchingDecorArrangements.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500 mx-1">
+                    No saved designs match this search.
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-2 px-1">
-                    {getDecorArrangements().map((arr) => (
+                    {matchingDecorArrangements.map((arr) => (
                       <div
                         key={arr.id}
                         draggable
@@ -812,6 +921,11 @@ export function Sidebar({
               Lodging &amp; Utilities fixtures (Admin only)
             </p>
             {lodgingFixtures.map((fixture) => renderItem(fixture, 'fixture'))}
+            {lodgingFixtures.length === 0 && (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                No lodging fixtures match this search.
+              </div>
+            )}
           </>
         )}
 
@@ -821,6 +935,11 @@ export function Sidebar({
               Architectural/Landscape features (Admin only)
             </p>
             {exteriorFixtures.map((fixture) => renderItem(fixture, 'fixture', true))}
+            {exteriorFixtures.length === 0 && (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                No exterior features match this search.
+              </div>
+            )}
           </>
         )}
 
@@ -953,16 +1072,25 @@ export function Sidebar({
         {activeSection === 'tips' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <h4 className="font-semibold text-sm text-gray-800 mb-2">💡 Quick Tips</h4>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h4 className="font-semibold text-sm text-gray-800">💡 Quick Tips</h4>
+                <button
+                  type="button"
+                  onClick={() => emit('spm_open_workspace_help')}
+                  className="text-[11px] text-[#4A1942] hover:underline"
+                >
+                  Open shortcut guide
+                </button>
+              </div>
               <ul className="text-xs text-gray-600 space-y-1.5">
                 <li>• <strong>Drag</strong> items from sidebar to canvas</li>
                 <li>• <strong>Click</strong> to select, then click on canvas</li>
+                <li>• <strong>Use Quick find</strong> to jump to any table, fixture, or design</li>
                 <li>• <strong>Shift + Drag</strong> to pan the view</li>
                 <li>• <strong>Delete</strong> key removes selected item</li>
                 <li>• <strong>Ctrl/Cmd + D</strong> duplicates item</li>
                 <li>• <strong>P</strong> toggles properties panel</li>
-                <li>• <strong>Ctrl/Cmd + 0</strong> fits venue to screen</li>
-                <li>• <strong>Double-click</strong> item to open properties</li>
+                <li>• <strong>?</strong> opens the full workspace shortcut guide</li>
               </ul>
             </div>
 
