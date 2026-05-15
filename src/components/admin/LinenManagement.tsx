@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function LinenManagement(props: any) {
+export function LinenManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function LinenManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -460,9 +463,10 @@ export function LinenManagement(props: any) {
                     <span className="text-gray-300">|</span>
                     <button
                       onClick={() => {
-                        if (confirm('Sort colors alphabetically?')) {
-                          handleSaveLinenColors([...linenColors].sort((a, b) => a.name.localeCompare(b.name)));
-                        }
+                        confirmAction(
+                          { title: 'Sort colors?', message: 'Sort colors alphabetically?', kind: 'warning', confirmLabel: 'Sort Colors' },
+                          () => handleSaveLinenColors([...linenColors].sort((a, b) => a.name.localeCompare(b.name))),
+                        );
                       }}
                       className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
                     >
@@ -566,9 +570,10 @@ export function LinenManagement(props: any) {
                         <div onClick={e => e.stopPropagation()}>
                           <button
                             onClick={() => {
-                              if (confirm(`Delete "${color.name}"?`)) {
-                                handleSaveLinenColors(linenColors.filter(c => c.id !== color.id));
-                              }
+                              confirmAction(
+                                { title: 'Delete linen color?', message: `Delete "${color.name}"?`, kind: 'danger', confirmLabel: 'Delete Color' },
+                                () => handleSaveLinenColors(linenColors.filter(c => c.id !== color.id)),
+                              );
                             }}
                             className="p-2 rounded-lg transition-colors hover:bg-white/30"
                             style={{ color: color.textColor }}
@@ -676,9 +681,10 @@ export function LinenManagement(props: any) {
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm(`Delete "${color.name}"?`)) {
-                                  handleSaveLinenColors(linenColors.filter(c => c.id !== color.id));
-                                }
+                                confirmAction(
+                                  { title: 'Delete linen color?', message: `Delete "${color.name}"?`, kind: 'danger', confirmLabel: 'Delete Color' },
+                                  () => handleSaveLinenColors(linenColors.filter(c => c.id !== color.id)),
+                                );
                               }}
                               className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Delete"

@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function GuidelineManagement(props: any) {
+export function GuidelineManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function GuidelineManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -654,9 +657,10 @@ export function GuidelineManagement(props: any) {
                               </div>
                               <button
                                 onClick={() => {
-                                  if (confirm('Are you sure you want to delete this guideline?')) {
-                                    handleSaveGuidelines(guidelines.filter(g => g.id !== guideline.id));
-                                  }
+                                  confirmAction(
+                                    { title: 'Delete guideline?', message: 'Are you sure you want to delete this guideline?', kind: 'danger', confirmLabel: 'Delete Guideline' },
+                                    () => handleSaveGuidelines(guidelines.filter(g => g.id !== guideline.id)),
+                                  );
                                 }}
                                 className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium flex items-center gap-2"
                               >

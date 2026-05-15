@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function WallManagement(props: any) {
+export function WallManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function WallManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -437,9 +440,10 @@ export function WallManagement(props: any) {
                     <span className="text-gray-300">|</span>
                     <button
                       onClick={() => {
-                        if (confirm('Reset to default wall styles?')) {
-                          handleSaveWallStyles(defaultWallStyles);
-                        }
+                        confirmAction(
+                          { title: 'Reset wall styles?', message: 'Reset to default wall styles?', kind: 'warning', confirmLabel: 'Reset Styles' },
+                          () => handleSaveWallStyles(defaultWallStyles),
+                        );
                       }}
                       className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors text-sm font-medium"
                     >
@@ -731,9 +735,10 @@ export function WallManagement(props: any) {
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Delete "${style.name}"? This cannot be undone.`)) {
-                              handleSaveWallStyles(wallStyles.filter(s => s.id !== style.id));
-                            }
+                            confirmAction(
+                              { title: 'Delete wall style?', message: `Delete "${style.name}"? This cannot be undone.`, kind: 'danger', confirmLabel: 'Delete Style' },
+                              () => handleSaveWallStyles(wallStyles.filter(s => s.id !== style.id)),
+                            );
                           }}
                           className="px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-sm font-medium flex items-center gap-1"
                         >

@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function TableManagement(props: any) {
+export function TableManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function TableManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -551,9 +554,10 @@ export function TableManagement(props: any) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Delete table "${table.name}"?`)) {
-                            handleSaveTables(tableSpecs.filter(t => t.id !== table.id));
-                          }
+                          confirmAction(
+                            { title: 'Delete table?', message: `Delete table "${table.name}"?`, kind: 'danger', confirmLabel: 'Delete Table' },
+                            () => handleSaveTables(tableSpecs.filter(t => t.id !== table.id)),
+                          );
                         }}
                         className="text-gray-400 hover:text-red-600 text-sm px-2 py-1 hover:bg-red-50 rounded transition-colors"
                         title="Delete"
@@ -1041,9 +1045,10 @@ export function TableManagement(props: any) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Delete seating type "${seat.name}"?`)) {
-                            handleSaveTables(tableSpecs.filter(t => t.id !== seat.id));
-                          }
+                          confirmAction(
+                            { title: 'Delete seating type?', message: `Delete seating type "${seat.name}"?`, kind: 'danger', confirmLabel: 'Delete Seating Type' },
+                            () => handleSaveTables(tableSpecs.filter(t => t.id !== seat.id)),
+                          );
                         }}
                         className="text-gray-400 hover:text-red-600 text-sm px-2 py-1 hover:bg-red-50 rounded"
                       >

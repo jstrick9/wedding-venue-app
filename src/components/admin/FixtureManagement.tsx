@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function FixtureManagement(props: any) {
+export function FixtureManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function FixtureManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -554,9 +557,10 @@ export function FixtureManagement(props: any) {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm(`Delete fixture "${fixture.name}"?`)) {
-                              handleSaveFixtures(fixtureTypes.filter(f => f.id !== fixture.id));
-                            }
+                            confirmAction(
+                              { title: 'Delete fixture?', message: `Delete fixture "${fixture.name}"?`, kind: 'danger', confirmLabel: 'Delete Fixture' },
+                              () => handleSaveFixtures(fixtureTypes.filter(f => f.id !== fixture.id)),
+                            );
                           }}
                           className="text-red-500 hover:text-red-700 text-sm px-2"
                         >
@@ -911,9 +915,10 @@ export function FixtureManagement(props: any) {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (confirm(`Delete lodging/utility fixture \"${fixture.name}\"?`)) {
-                                handleSaveFixtures(fixtureTypes.filter(f => f.id !== fixture.id));
-                              }
+                              confirmAction(
+                                { title: 'Delete lodging/utility fixture?', message: `Delete lodging/utility fixture "${fixture.name}"?`, kind: 'danger', confirmLabel: 'Delete Fixture' },
+                                () => handleSaveFixtures(fixtureTypes.filter(f => f.id !== fixture.id)),
+                              );
                             }}
                             className="text-red-500 hover:text-red-700 text-sm px-2"
                           >
@@ -1158,9 +1163,10 @@ export function FixtureManagement(props: any) {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm(`Delete feature "${fixture.name}"?`)) {
-                              handleSaveFixtures(fixtureTypes.filter(f => f.id !== fixture.id));
-                            }
+                            confirmAction(
+                              { title: 'Delete feature?', message: `Delete feature "${fixture.name}"?`, kind: 'danger', confirmLabel: 'Delete Feature' },
+                              () => handleSaveFixtures(fixtureTypes.filter(f => f.id !== fixture.id)),
+                            );
                           }}
                           className="text-red-500 hover:text-red-700 text-sm px-2"
                         >

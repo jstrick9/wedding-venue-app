@@ -5,6 +5,7 @@ import { useRBAC } from '../../hooks/useRBAC';
 import { useAuth } from '../../contexts/AuthContext';
 import { Role, PermissionDefinition } from '../../types/rbac';
 import { PERMISSIONS, getChildPermissions } from '../../constants/permissions';
+import ModalDialog from '../ModalDialog';
 
 interface AccessControlPanelProps {
   onClose: () => void;
@@ -30,6 +31,7 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [showCreateRole, setShowCreateRole] = useState(false);
   const [viewMode, setViewMode] = useState<'matrix' | 'tree'>('tree');
+  const [confirmDeleteRole, setConfirmDeleteRole] = useState<Role | null>(null);
 
   const [newRole, setNewRole] = useState({
     name: '',
@@ -174,12 +176,7 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                     <div className="flex gap-2">
                       {/* Copy permissions + Delete buttons (kept from original) */}
                       <button
-                        onClick={() => {
-                          if (confirm(`Delete role "${selectedRole.name}"?`)) {
-                            deleteRole(selectedRole.id, user?.id || '', user?.name || '');
-                            setSelectedRoleId(null);
-                          }
-                        }}
+                        onClick={() => setConfirmDeleteRole(selectedRole)}
                         disabled={selectedRole.isImmutable || selectedRole.isSystem}
                         className="px-3 py-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg text-sm disabled:opacity-50"
                       >
@@ -289,6 +286,39 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
             </div>
           </div>
         </div>
+      )}
+
+      {confirmDeleteRole && (
+        <ModalDialog
+          title="Delete role?"
+          description="Please confirm this destructive action."
+          onClose={() => setConfirmDeleteRole(null)}
+          className="max-w-lg"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700">Delete role "{confirmDeleteRole.name}"?</p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteRole(null)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteRole(confirmDeleteRole.id, user?.id || '', user?.name || '');
+                  setSelectedRoleId(null);
+                  setConfirmDeleteRole(null);
+                }}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Delete Role
+              </button>
+            </div>
+          </div>
+        </ModalDialog>
       )}
     </div>
   );

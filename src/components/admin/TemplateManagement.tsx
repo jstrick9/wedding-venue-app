@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function TemplateManagement(props: any) {
+export function TemplateManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function TemplateManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -742,9 +745,10 @@ export function TemplateManagement(props: any) {
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if (confirm(`Are you sure you want to delete "${template.name}"?`)) {
-                                      handleSaveTemplates(templates.filter(t => t.id !== template.id));
-                                    }
+                                    confirmAction(
+                                      { title: 'Delete template?', message: `Are you sure you want to delete "${template.name}"?`, kind: 'danger', confirmLabel: 'Delete Template' },
+                                      () => handleSaveTemplates(templates.filter(t => t.id !== template.id)),
+                                    );
                                   }}
                                   className="px-4 py-2.5 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
                                 >

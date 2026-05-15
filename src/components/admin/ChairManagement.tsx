@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function ChairManagement(props: any) {
+export function ChairManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function ChairManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -516,12 +519,15 @@ export function ChairManagement(props: any) {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (confirm(`Delete chair type "${chair.name}"?`)) {
-                                const updated = chairSpecs.filter(c => c.id !== chair.id);
-                                setChairSpecs(updated);
-                                setChairSpecsState(updated);
-                                showSuccess('Chair deleted!');
-                              }
+                              confirmAction(
+                                { title: 'Delete chair type?', message: `Delete chair type "${chair.name}"?`, kind: 'danger', confirmLabel: 'Delete Chair' },
+                                () => {
+                                  const updated = chairSpecs.filter(c => c.id !== chair.id);
+                                  setChairSpecs(updated);
+                                  setChairSpecsState(updated);
+                                  showSuccess('Chair deleted!');
+                                },
+                              );
                             }}
                             className="p-1.5 bg-white/80 hover:bg-white rounded-lg text-gray-600 hover:text-red-600 transition-colors"
                             title="Delete"

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { EventQuestion, EventQuestionGroup, EventQuestionAnswerType } from '../../types';
 import { Config } from '../../config';
 import { BrandedSectionHeader } from './shared/AdminSharedComponents';
+import type { AdminCommonProps } from './AdminTabTypes';
 
 interface EventQuestionsManagementProps {
   eventQuestions: EventQuestion[];

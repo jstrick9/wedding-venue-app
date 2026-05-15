@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function VenueManagement(props: any) {
+export function VenueManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function VenueManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -595,9 +598,10 @@ export function VenueManagement(props: any) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Delete venue "${venue.name}"?`)) {
-                            handleSaveVenues(venues.filter(v => v.id !== venue.id));
-                          }
+                          confirmAction(
+                            { title: 'Delete venue?', message: `Delete venue "${venue.name}"?`, kind: 'danger', confirmLabel: 'Delete Venue' },
+                            () => handleSaveVenues(venues.filter(v => v.id !== venue.id)),
+                          );
                         }}
                         className="text-gray-400 hover:text-red-500 text-sm px-1.5 py-1 hover:bg-red-50 rounded"
                         title="Delete"
@@ -1023,15 +1027,16 @@ export function VenueManagement(props: any) {
                       {venue.masterLayout && (
                         <button
                           onClick={() => {
-                            if (confirm(`Clear master layout for "${venue.name}"? All pre-placed items will be removed.`)) {
-                              handleSaveVenues(venues.map(v => {
+                            confirmAction(
+                              { title: 'Clear master layout?', message: `Clear master layout for "${venue.name}"? All pre-placed items will be removed.`, kind: 'danger', confirmLabel: 'Clear Layout' },
+                              () => handleSaveVenues(venues.map(v => {
                                 if (v.id === venue.id) {
                                   const { masterLayout, ...rest } = v;
                                   return rest;
                                 }
                                 return v;
-                              }));
-                            }
+                              })),
+                            );
                           }}
                           className="px-3 py-1.5 text-orange-600 hover:bg-orange-100 border border-orange-200 rounded-lg text-xs"
                         >

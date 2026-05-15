@@ -9,8 +9,9 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import type { AdminCommonProps } from './AdminTabTypes';
 
-export function UserManagement(props: any) {
+export function UserManagement(props: AdminCommonProps) {
   const {
     config,
     venues,
@@ -77,6 +78,8 @@ export function UserManagement(props: any) {
     handleDeleteEventRole,
     handleImageUpload,
     showSuccess,
+    showInfo,
+    confirmAction,
     createPasswordRecord,
     tableTypes,
     tableSpecs,
@@ -1024,7 +1027,7 @@ export function UserManagement(props: any) {
 											  input.value = '';
 											  showSuccess('Password updated!');
 											} else {
-											  alert('Password must be at least 8 characters');
+											  showInfo('Password too short', 'Password must be at least 8 characters.', 'warning');
 											}
 										  }}
 									  className="px-4 py-2.5 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium"
@@ -1168,9 +1171,7 @@ export function UserManagement(props: any) {
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => {
-                                    if (confirm(`Are you sure you want to delete "${u.name}"?`)) {
-                                      handleDeleteUser(u.id, u.name || u.email || u.username);
-                                    }
+                                    handleDeleteUser(u.id, u.name || u.email || u.username);
                                   }}
                                   className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
                                 >

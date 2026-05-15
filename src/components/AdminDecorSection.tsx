@@ -12,6 +12,7 @@ import { defaultDecorPackages } from '../data/venueData';
 import EmojiPicker from './EmojiPicker';
 import MultiImageUpload from './MultiImageUpload';
 import { DrawingTool } from './DrawingTool';
+import type { AdminDialogOptions } from './admin/AdminTabTypes';
 
 interface BrandedSectionHeaderProps {
   icon: string;
@@ -162,6 +163,7 @@ interface AdminDecorSectionProps {
   decorPackages: DecorPackage[];
   setDecorPackages: (pkgs: DecorPackage[]) => void;
   onShowSuccess: (msg: string) => void;
+  confirmAction?: (options: AdminDialogOptions, onConfirm: () => void | Promise<void>) => void;
 }
 
 export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
@@ -174,7 +176,8 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
   setDecorArrangements,
   decorPackages,
   setDecorPackages,
-  onShowSuccess
+  onShowSuccess,
+  confirmAction
 }) => {
   // Use these props to avoid lint errors if they are not used elsewhere
   void decorArrangements;
@@ -232,14 +235,19 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
   };
 
   const handleDeleteDecorItem = (id: string) => {
-    if (window.confirm('Delete this decor item?')) {
-      setDecorItems(decorItems.filter(i => i.id !== id));
-      onShowSuccess('Decor item deleted');
-    }
+    confirmAction?.(
+      { title: 'Delete decor item?', message: 'Delete this decor item?', kind: 'danger', confirmLabel: 'Delete Item' },
+      () => {
+        setDecorItems(decorItems.filter(i => i.id !== id));
+        onShowSuccess('Decor item deleted');
+      },
+    );
   };
 
   const handleLoadDefaultCategories = () => {
-    if (window.confirm('Reset categories to standard wedding set? This will not delete your items.')) {
+    confirmAction?.(
+      { title: 'Reset decor categories?', message: 'Reset categories to standard wedding set? This will not delete your items.', kind: 'warning', confirmLabel: 'Reset Categories' },
+      () => {
       // Ensure we maintain the exact order and properties required by the prompt
       const standardCategories: DecorCategoryDef[] = [
         { id: 'florals', name: 'Florals', icon: '🌸', color: '#ec4899', description: 'Flower arrangements and floral accents' },
@@ -256,7 +264,8 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
       ];
       setDecorCategories(standardCategories);
       onShowSuccess('Standard categories loaded');
-    }
+      },
+    );
   };
 
   const handleAddCategory = () => {
@@ -275,11 +284,14 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
   };
 
   const handleDeleteCategory = (id: string) => {
-    if (window.confirm('Delete this category? Items in this category will be moved to uncategorized.')) {
-      setDecorCategories(decorCategories.filter(c => c.id !== id));
-      setDecorItems(decorItems.map(i => i.categoryId === id ? { ...i, categoryId: 'uncategorized' } : i));
-      onShowSuccess('Category deleted');
-    }
+    confirmAction?.(
+      { title: 'Delete decor category?', message: 'Delete this category? Items in this category will be moved to uncategorized.', kind: 'danger', confirmLabel: 'Delete Category' },
+      () => {
+        setDecorCategories(decorCategories.filter(c => c.id !== id));
+        setDecorItems(decorItems.map(i => i.categoryId === id ? { ...i, categoryId: 'uncategorized' } : i));
+        onShowSuccess('Category deleted');
+      },
+    );
   };
 
   const toggleItem = (id: string) => {
