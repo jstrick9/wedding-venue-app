@@ -84,6 +84,7 @@ import { EventQuestionsManagement } from './admin/EventQuestionsManagement';
 import { UserManagement } from './admin/UserManagement';
 import { BrandingManagement } from './admin/BrandingManagement';
 import { AccessControlPanel } from './admin/AccessControlPanel';
+import { GuestPortalManagement } from './admin/GuestPortalManagement';
 import type { AdminCommonProps, AdminDialogOptions, AdminTabDefinition } from './admin/AdminTabTypes';
 
 const chairLayoutOptions: { id: RectangularChairLayout; name: string; description: string }[] = [
@@ -977,6 +978,13 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps },
     { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps },
     { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') } },
+    {
+      id: 'guest-portal',
+      label: '💍 Guest Portal',
+      icon: '💍',
+      Component: GuestPortalManagement,
+      props: { onShowSuccess: showSuccess },
+    },
     { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps },
   ];
 

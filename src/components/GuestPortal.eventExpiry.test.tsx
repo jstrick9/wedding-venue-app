@@ -36,7 +36,7 @@ describe('GuestPortal event expiry', () => {
     vi.clearAllMocks();
   });
 
-  it('shows event unavailable when portal access has expired', () => {
+  it('shows event unavailable banner when portal access has expired', () => {
     vi.mocked(guestPortalHelpers.getGuestPortalConfig).mockReturnValue({
       eventTitle: 'Spring Wedding',
       eventStartDate: '2026-05-12',
@@ -55,16 +55,14 @@ describe('GuestPortal event expiry', () => {
 
     render(<GuestPortal onExitPortal={() => undefined} />);
 
+    // The sign-in gate now always shows first; the expiry notice appears as an
+    // inline banner above the form rather than replacing the form entirely.
     expect(
-      screen.getByText(/this guest portal is no longer available/i),
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getByText(/guest access automatically ends the day after the event/i),
+      screen.getByText(/guest access has closed/i),
     ).toBeInTheDocument();
   });
 
-  it('does not show the sign-in gate when the event is expired', () => {
+  it('still shows the sign-in form when the event has expired (banner + form)', () => {
     vi.mocked(guestPortalHelpers.getGuestPortalConfig).mockReturnValue({
       eventTitle: 'Spring Wedding',
       eventStartDate: '2026-05-12',
@@ -84,13 +82,12 @@ describe('GuestPortal event expiry', () => {
 
     render(<GuestPortal onExitPortal={() => undefined} />);
 
-    expect(
-      screen.queryByLabelText(/event name or code/i),
-    ).not.toBeInTheDocument();
+    // Sign-in form fields ARE visible (sign-in gate always renders first)
+    expect(screen.getByLabelText(/event name or code/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/guest email or name/i)).toBeInTheDocument();
 
-    expect(
-      screen.queryByLabelText(/guest email or name/i),
-    ).not.toBeInTheDocument();
+    // AND the expiry banner is shown inline
+    expect(screen.getByText(/guest access has closed/i)).toBeInTheDocument();
   });
 
   it('clears any existing guest portal session when the event is expired', () => {

@@ -8,6 +8,8 @@ import {
   RSVPSubmission,
   GuestPortalConfig,
   GuestPortalGuestRecord,
+  PortalScheduleItem,
+  PortalWayfindingPoint,
 } from '../types';
 import {
   clearGuestPortalSession,
@@ -561,60 +563,76 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       <div className="space-y-4 pb-24">
         {venuesToShow.map((venue) => (
           <div key={venue.id} className="bg-white rounded-xl shadow p-4 mt-2">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-gray-800">{venue.name}</h2>
-              <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700">
+              <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 capitalize">
                 {venue.category}
               </span>
             </div>
 
-            <div className="relative w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-500">
-              <span>Floor plan preview coming from saved layout (read-only).</span>
-              {identifiedGuest?.tableId && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-16 h-16 rounded-full border-4 border-pink-500 animate-ping" />
-                  <div className="absolute text-xs font-semibold text-pink-700 bg-white/80 px-2 py-1 rounded-full shadow">
-                    Your Seat!
-                  </div>
-                </div>
+            {/* Venue info card — shows whatever metadata is available */}
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 space-y-2 text-xs text-gray-700">
+              {venue.description && (
+                <p className="text-sm text-gray-600 leading-relaxed">{venue.description}</p>
               )}
-            </div>
-
-            <div className="flex items-center justify-between mt-3">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-700"
-                >
-                  +
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-700"
-                >
-                  −
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 text-gray-700"
-                >
-                  Reset
-                </button>
+              <div className="flex flex-wrap gap-3">
+                {venue.capacity > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="text-gray-400">👥</span>
+                    Capacity: <strong>{venue.capacity}</strong>
+                  </span>
+                )}
+                {venue.width > 0 && venue.height > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="text-gray-400">📐</span>
+                    {venue.width} × {venue.height} ft
+                  </span>
+                )}
               </div>
 
-              <button
-                type="button"
-                className="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white"
-              >
-                View Larger
-              </button>
+              {/* Show assigned table/room info for this guest if available */}
+              {identifiedGuest?.tableId && (
+                <div className="mt-2 flex items-center gap-2 bg-pink-50 border border-pink-200 rounded-lg px-3 py-2">
+                  <span className="text-pink-500 text-base">📍</span>
+                  <span className="text-pink-700 font-medium text-xs">
+                    Your seat is at Table {identifiedGuest.tableId}
+                  </span>
+                </div>
+              )}
+              {identifiedGuest?.roomId && venue.category === 'lodging' && (
+                <div className="mt-2 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                  <span className="text-blue-500 text-base">🛏️</span>
+                  <span className="text-blue-700 font-medium text-xs">
+                    Your room: {identifiedGuest.roomId}
+                  </span>
+                </div>
+              )}
+
+              {/* Images if available */}
+              {venue.imageUrl && (
+                <img
+                  src={venue.imageUrl}
+                  alt={venue.name}
+                  className="w-full rounded-lg object-cover max-h-48 mt-2"
+                />
+              )}
+
+              {!venue.imageUrl && (
+                <div className="w-full h-24 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center mt-2">
+                  <span className="text-3xl opacity-40">🏛️</span>
+                </div>
+              )}
             </div>
           </div>
         ))}
 
         {venuesToShow.length === 0 && (
-          <div className="bg-white rounded-xl shadow p-4 mt-4">
-            <p className="text-sm text-gray-700">No venues configured for map view.</p>
+          <div className="bg-white rounded-xl shadow p-4 mt-4 text-center space-y-2">
+            <p className="text-2xl">🗺️</p>
+            <p className="text-sm font-medium text-gray-700">Venue map coming soon</p>
+            <p className="text-xs text-gray-500">
+              The venue coordinator will publish location details here.
+            </p>
           </div>
         )}
       </div>
@@ -632,23 +650,18 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       );
     }
 
-    const scheduleItems: {
-      id: string;
-      title: string;
-      description?: string;
-      location?: string;
-      venueId?: string;
-      startTime: string;
-      endTime?: string;
-      isHighlight?: boolean;
-      dayIndex?: number;
-    }[] = [];
+    // B-09 fix: read schedule items from config instead of a hardcoded empty array.
+    const scheduleItems: PortalScheduleItem[] = config.scheduleItems ?? [];
 
     if (!scheduleItems.length) {
       return (
         <div className="pb-24">
-          <div className="bg-white rounded-xl shadow p-4 mt-4">
-            <p className="text-sm text-gray-700">Schedule details will be shared soon.</p>
+          <div className="bg-white rounded-xl shadow p-4 mt-4 text-center space-y-2">
+            <p className="text-2xl">📅</p>
+            <p className="text-sm font-medium text-gray-700">Schedule coming soon</p>
+            <p className="text-xs text-gray-500">
+              The venue coordinator will publish the event timeline here. Check back closer to the event date!
+            </p>
           </div>
         </div>
       );
@@ -756,13 +769,19 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       );
     }
 
-    const hasWayfindingPoints = false;
+    // B-09 fix: read wayfinding points from config.
+    const wayfindingPoints: PortalWayfindingPoint[] = config.wayfindingPoints ?? [];
+    const hasWayfindingPoints = wayfindingPoints.length > 0;
 
     if (!hasWayfindingPoints) {
       return (
         <div className="pb-24">
-          <div className="bg-white rounded-xl shadow p-4 mt-4">
-            <p className="text-sm text-gray-700">Wayfinding map coming soon!</p>
+          <div className="bg-white rounded-xl shadow p-4 mt-4 text-center space-y-2">
+            <p className="text-2xl">🧭</p>
+            <p className="text-sm font-medium text-gray-700">Directions coming soon</p>
+            <p className="text-xs text-gray-500">
+              Venue maps and turn-by-turn directions will be available here. Contact the venue for early access.
+            </p>
           </div>
         </div>
       );
@@ -799,6 +818,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                 onChange={(e) => setSelectedWayfindingTo(e.target.value)}
               >
                 <option value="">Select destination</option>
+                {wayfindingPoints.map((pt) => (
+                  <option key={pt.id} value={pt.label}>{pt.label}</option>
+                ))}
               </select>
             </div>
 
@@ -1240,109 +1262,177 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
   };
 
   const renderSignInGate = () => {
+    // Determine if portal has a known status to surface in the sign-in UI
+    const portalUnavailable = config && !isGuestPortalEventActive(config);
+    const portalNotConfigured = !config;
+
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
-        <header className="px-4 pt-4 pb-2 flex items-center justify-between">
+      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-slate-100 flex flex-col">
+        <header className="px-4 pt-4 pb-2 flex items-center justify-between bg-white/60 backdrop-blur-sm border-b border-indigo-100">
           <button
             type="button"
             onClick={onExitPortal}
-            className="text-xs text-gray-600 underline"
+            className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2 transition-colors"
+            aria-label="Return to login screen"
           >
-            Exit
+            ← Back to Login
           </button>
-          <h1 className="text-sm font-semibold text-gray-800">Guest Portal</h1>
-          <div className="w-10" />
+          <h1 className="text-sm font-semibold text-gray-800">🌸 Guest Portal</h1>
+          <div className="w-24" />
         </header>
 
-        <main className="flex-1 flex items-center justify-center px-4 pb-16">
-          <form
-            onSubmit={(e) => {
-              void handleGuestPortalSignIn(e);
-            }}
-            className="w-full max-w-sm bg-white rounded-xl shadow p-4 space-y-4"
-          >
-              		<p className="text-xs text-gray-600 leading-relaxed">
-              				Enter your wedding event name and the guest email or name used for that event to access RSVP, schedule, lodging, and directions.
-            			</p>
-
-            <div>
-              <label
-                htmlFor="guest-portal-event"
-                className="text-sm font-semibold text-gray-800 block mb-1"
-              >
-                Event Name or Code
-              </label>
-              <input
-                id="guest-portal-event"
-                type="text"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                value={eventInput}
-                onChange={(e) => setEventInput(e.target.value)}
-                autoFocus
-              />
+        <main className="flex-1 flex items-center justify-center px-4 py-8">
+          <div className="w-full max-w-sm space-y-4">
+            {/* Hero card */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 text-center space-y-1">
+              <div className="text-4xl mb-2">💍</div>
+              <h2 className="text-lg font-bold text-gray-900">
+                {config?.eventTitle || 'Wedding Guest Portal'}
+              </h2>
+              {config?.eventStartDate && (
+                <p className="text-xs text-gray-500">
+                  {new Date(config.eventStartDate).toLocaleDateString(undefined, {
+                    month: 'long', day: 'numeric', year: 'numeric',
+                  })}
+                  {config?.eventEndDate &&
+                    config.eventEndDate !== config.eventStartDate &&
+                    ` – ${new Date(config.eventEndDate).toLocaleDateString(undefined, {
+                      month: 'long', day: 'numeric', year: 'numeric',
+                    })}`}
+                </p>
+              )}
             </div>
 
-            <div>
-              <label
-                htmlFor="guest-portal-guest-identifier"
-                className="text-sm font-semibold text-gray-800 block mb-1"
-              >
-                Guest Email or Name
-              </label>
-              <input
-                id="guest-portal-guest-identifier"
-                type="text"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                value={guestIdentifier}
-                onChange={(e) => setGuestIdentifier(e.target.value)}
-              />
-            </div>
-
-            {requiresPortalPassword && (
-              <div>
-                <label
-                  htmlFor="guest-portal-password"
-                  className="text-sm font-semibold text-gray-800 block mb-1"
-                >
-                  Enter portal password
-                </label>
-                <input
-                  id="guest-portal-password"
-                  type="password"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                />
+            {/* Status banners */}
+            {portalNotConfigured && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                <strong>Portal not yet configured.</strong> Please contact the venue coordinator for your event access details.
+              </div>
+            )}
+            {portalUnavailable && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                <strong>Guest access has closed.</strong> Access is available until the day after the event ends. Contact the venue coordinator if you need assistance.
               </div>
             )}
 
-            {passwordError && (
-              <p className="text-xs text-red-600">{passwordError}</p>
-            )}
-
-            <button
-              type="submit"
-              className="w-full mt-1 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
+            {/* Sign-in form */}
+            <form
+              onSubmit={(e) => { void handleGuestPortalSignIn(e); }}
+              className="bg-white rounded-2xl shadow-lg p-6 space-y-4"
+              aria-label="Guest portal sign-in"
             >
-              Continue
-            </button>
-          </form>
+              <div>
+                <p className="text-xs text-gray-500 leading-relaxed mb-4">
+                  Enter your event name and the email or name your venue has on file to access RSVP, schedule, lodging, and directions.
+                </p>
+
+                <label
+                  htmlFor="guest-portal-event"
+                  className="text-sm font-semibold text-gray-800 block mb-1"
+                >
+                  Event Name or Code
+                </label>
+                <input
+                  id="guest-portal-event"
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                  value={eventInput}
+                  onChange={(e) => setEventInput(e.target.value)}
+                  autoComplete="off"
+                  autoFocus
+                  placeholder={config?.eventTitle ? config.eventTitle : 'e.g. Smith-Johnson Wedding'}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="guest-portal-guest-identifier"
+                  className="text-sm font-semibold text-gray-800 block mb-1"
+                >
+                  Guest Email or Name
+                </label>
+                <input
+                  id="guest-portal-guest-identifier"
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                  value={guestIdentifier}
+                  onChange={(e) => setGuestIdentifier(e.target.value)}
+                  autoComplete="off"
+                  placeholder="jane@example.com or Jane Smith"
+                />
+              </div>
+
+              {requiresPortalPassword && (
+                <div>
+                  <label
+                    htmlFor="guest-portal-password"
+                    className="text-sm font-semibold text-gray-800 block mb-1"
+                  >
+                    Portal Password
+                  </label>
+                  <input
+                    id="guest-portal-password"
+                    type="password"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    autoComplete="current-password"
+                    placeholder="Enter the event password"
+                  />
+                </div>
+              )}
+
+              {passwordError && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2"
+                >
+                  <span className="text-red-500 text-sm mt-0.5">⚠</span>
+                  <p className="text-xs text-red-700">{passwordError}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={!eventInput.trim() || !guestIdentifier.trim()}
+                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Access My Portal →
+              </button>
+            </form>
+
+            <p className="text-center text-xs text-gray-400 pb-4">
+              Need help? Contact your venue coordinator.
+            </p>
+          </div>
         </main>
       </div>
     );
   };
 
+  // FIX: Show the sign-in gate first so guests always have a form to interact with.
+  // Config / activity errors are surfaced as form-level messages in handleGuestPortalSignIn.
+  if (needsEventScopedSignIn) {
+    return renderSignInGate();
+  }
+
   if (!config) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
-        <p className="text-sm text-gray-700">Guest portal is not configured yet.</p>
-        <button
-          type="button"
-          onClick={onExitPortal}
-          className="mt-3 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
-        >
-          Exit
-        </button>
+        <div className="bg-white rounded-xl shadow p-6 max-w-sm w-full text-center space-y-3">
+          <div className="text-3xl">🌸</div>
+          <p className="text-base font-semibold text-gray-800">Portal Not Configured</p>
+          <p className="text-sm text-gray-600">
+            The guest portal has not been set up yet. Please contact the venue coordinator for access details.
+          </p>
+          <button
+            type="button"
+            onClick={onExitPortal}
+            className="mt-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
+          >
+            Return to Login
+          </button>
+        </div>
       </div>
     );
   }
@@ -1350,25 +1440,24 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
   if (!isGuestPortalEventActive(config)) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
-        <p className="text-sm font-semibold text-gray-800">
-          This guest portal is no longer available.
-        </p>
-        <p className="mt-2 text-sm text-gray-600 text-center">
-          Guest access automatically ends the day after the event.
-        </p>
-        <button
-          type="button"
-          onClick={onExitPortal}
-          className="mt-4 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
-        >
-          Exit
-        </button>
+        <div className="bg-white rounded-xl shadow p-6 max-w-sm w-full text-center space-y-3">
+          <div className="text-3xl">📅</div>
+          <p className="text-base font-semibold text-gray-800">
+            Guest Portal Has Closed
+          </p>
+          <p className="text-sm text-gray-600 text-center">
+            Guest access automatically closes the day after the event ends. We hope you had a wonderful time celebrating!
+          </p>
+          <button
+            type="button"
+            onClick={onExitPortal}
+            className="mt-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
+          >
+            Return to Login
+          </button>
+        </div>
       </div>
     );
-  }
-
-  if (needsEventScopedSignIn) {
-    return renderSignInGate();
   }
 
   const showMapTab = !!config.showMap;
@@ -1385,18 +1474,25 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="px-4 pt-4 pb-2 flex items-center justify-between">
+      <header className="sticky top-0 z-10 px-4 pt-3 pb-3 flex items-center justify-between bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <button
           type="button"
           onClick={onExitPortal}
-          className="text-xs text-gray-600 underline"
+          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 transition-colors"
+          aria-label="Return to login screen"
         >
-          Exit
+          ← Exit
         </button>
-        <h1 className="text-sm font-semibold text-gray-800 truncate max-w-[60%] text-center">
-          {config.eventTitle || 'Guest Portal'}
+        <h1 className="text-sm font-semibold text-gray-900 truncate max-w-[55%] text-center">
+          🌸 {config.eventTitle || 'Guest Portal'}
         </h1>
-        <div className="w-10" />
+        {identifiedGuest ? (
+          <span className="text-xs text-gray-500 truncate max-w-[80px] text-right">
+            Hi, {identifiedGuest.name.split(' ')[0]}!
+          </span>
+        ) : (
+          <div className="w-10" />
+        )}
       </header>
 
       <nav className="hidden md:flex px-4 pb-2 gap-2 text-xs">

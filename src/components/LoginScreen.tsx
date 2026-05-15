@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { isUserLocked } from '../utils/auth';
+import { getUsers } from '../hooks/useLayoutState';
 import PasswordReset from './PasswordReset';
 import Logo from './Logo';
 
@@ -18,14 +20,17 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [capsLockOn, setCapsLockOn] = useState(false);
-  const [loginAttempts, setLoginAttempts] = useState(0);
-  const [isLocked, setIsLocked] = useState(false);
-  const [lockoutTime, setLockoutTime] = useState(0);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+
+  // Lockout countdown displayed to the user (seconds remaining).
+  // Driven by the persisted User.lockedUntil field rather than a local counter
+  // so that a page-refresh cannot reset the lockout (B-07 fix).
+  const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
 
   const usernameInputRef = useRef<HTMLInputElement>(null);
   const config = getConfig();
 
+  // ─── On mount: pre-fill remembered username & check persisted lockout ─────
   useEffect(() => {
     const timer = setTimeout(() => {
       const active = document.activeElement;
@@ -38,37 +43,66 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
     if (savedUsername) {
       setUsername(savedUsername);
       setRememberMe(true);
+      // Check if this user is already locked in the persisted store
+      syncLockoutFromStore(savedUsername);
     }
 
     return () => clearTimeout(timer);
   }, []);
 
+  // ─── Tick the lockout countdown every second ──────────────────────────────
   useEffect(() => {
-    if (lockoutTime <= 0) return;
-
-    const timer = window.setInterval(() => {
-      setLockoutTime((prev) => {
-        if (prev <= 1) {
-          setIsLocked(false);
-          return 0;
-        }
+    if (lockoutSecondsLeft <= 0) return;
+    const id = window.setInterval(() => {
+      setLockoutSecondsLeft((prev) => {
+        if (prev <= 1) return 0;
         return prev - 1;
       });
     }, 1000);
+    return () => window.clearInterval(id);
+  }, [lockoutSecondsLeft]);
 
-    return () => window.clearInterval(timer);
-  }, [lockoutTime]);
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  /**
+   * Read the persisted User record for `uname` and, if it is currently locked,
+   * seed the countdown with the remaining seconds.
+   */
+  function syncLockoutFromStore(uname: string) {
+    try {
+      const users = getUsers();
+      const found = users.find(
+        (u) => u.username.toLowerCase() === uname.trim().toLowerCase(),
+      );
+      if (found && isUserLocked(found as any)) {
+        const msLeft = new Date((found as any).lockedUntil!).getTime() - Date.now();
+        setLockoutSecondsLeft(Math.max(1, Math.ceil(msLeft / 1000)));
+      }
+    } catch {
+      // storage unavailable — ignore
+    }
+  }
+
+  const isLockedOut = lockoutSecondsLeft > 0;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     setCapsLockOn(e.getModifierState('CapsLock'));
   };
 
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUsername(e.target.value);
+    // When user changes the username field, re-check persisted lockout for
+    // the new name so the countdown appears immediately if they're locked.
+    if (lockoutSecondsLeft <= 0) {
+      syncLockoutFromStore(e.target.value);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isLocked) {
-      return;
-    }
+    // Re-sync just before submit in case another tab updated the store
+    syncLockoutFromStore(username);
+    if (isLockedOut) return;
 
     setError('');
     setIsLoading(true);
@@ -83,19 +117,31 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
       } else {
         localStorage.removeItem(STORAGE_KEYS.REMEMBERED_USER);
       }
-      setLoginAttempts(0);
+      setLockoutSecondsLeft(0);
     } else {
-      const newAttempts = loginAttempts + 1;
-      setLoginAttempts(newAttempts);
-
-      if (newAttempts >= 5) {
-        setIsLocked(true);
-        setLockoutTime(30);
-        setError('Too many failed attempts. Please wait 30 seconds.');
-      } else if (newAttempts >= 3) {
-        setError(`Invalid credentials. ${5 - newAttempts} attempts remaining.`);
-      } else {
-        setError('Invalid username or password');
+      // The AuthContext.login() call already persisted the failed-login state
+      // (via recordFailedLogin → setUsers). Re-read to get the up-to-date
+      // lockedUntil value and drive the countdown from it.
+      try {
+        const users = getUsers();
+        const found = users.find(
+          (u) => u.username.toLowerCase() === username.trim().toLowerCase(),
+        );
+        if (found && isUserLocked(found as any)) {
+          const msLeft = new Date((found as any).lockedUntil!).getTime() - Date.now();
+          const sLeft = Math.max(1, Math.ceil(msLeft / 1000));
+          setLockoutSecondsLeft(sLeft);
+          setError(`Too many failed attempts. Please wait ${sLeft} seconds.`);
+        } else if (found && (found as any).failedLoginCount >= 3) {
+          const remaining = 5 - ((found as any).failedLoginCount ?? 0);
+          setError(
+            `Invalid credentials. ${Math.max(0, remaining)} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`,
+          );
+        } else {
+          setError('Invalid username or password.');
+        }
+      } catch {
+        setError('Invalid username or password.');
       }
     }
 
@@ -146,11 +192,11 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 ref={usernameInputRef}
                 id="login-username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={handleUsernameChange}
                 onKeyDown={handleKeyDown}
                 placeholder="Enter username"
                 autoComplete="username"
-                disabled={isLocked}
+                disabled={isLockedOut}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942] disabled:bg-gray-100"
                 required
               />
@@ -172,7 +218,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                   onKeyDown={handleKeyDown}
                   placeholder="Enter password"
                   autoComplete="current-password"
-                  disabled={isLocked}
+                  disabled={isLockedOut}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942] disabled:bg-gray-100"
                   required
                 />
@@ -186,12 +232,12 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 </button>
               </div>
               {capsLockOn && (
-                <p className="mt-1 text-xs text-amber-700">Caps Lock is on</p>
+                <p className="mt-1 text-xs text-amber-700">⚠ Caps Lock is on</p>
               )}
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={rememberMe}
@@ -210,7 +256,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
               </button>
             </div>
 
-            {error && (
+            {error && !isLockedOut && (
               <div
                 role="alert"
                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
@@ -219,26 +265,33 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
               </div>
             )}
 
-            {isLocked && lockoutTime > 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                Retry in {lockoutTime}s
+            {isLockedOut && (
+              <div
+                role="alert"
+                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+              >
+                <p className="font-medium">Account temporarily locked</p>
+                <p className="text-xs mt-0.5">
+                  Too many failed attempts. Retry in{' '}
+                  <span className="font-semibold tabular-nums">
+                    {lockoutSecondsLeft}s
+                  </span>
+                </p>
               </div>
             )}
 
             <button
               type="submit"
-              disabled={isLoading || isLocked}
+              disabled={isLoading || isLockedOut}
               className="w-full rounded-lg bg-[#4A1942] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs uppercase tracking-wide text-gray-400">
-              or
-            </span>
+            <span className="text-xs uppercase tracking-wide text-gray-400">or</span>
             <div className="h-px flex-1 bg-gray-200" />
           </div>
 
@@ -256,11 +309,11 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
               onClick={handleOpenGuestPortal}
               className="w-full rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
             >
-              Open Wedding Guest Portal
+              💍 Open Wedding Guest Portal
             </button>
           </div>
 
-          <div className="mt-3 text-xs text-gray-500 text-center space-y-1">
+          <div className="mt-3 text-xs text-gray-500 text-center">
             <p>
               Wedding guests should use the Guest Portal for RSVP, schedule,
               lodging, and directions.

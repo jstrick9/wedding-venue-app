@@ -73,8 +73,8 @@ describe('GuestPortal password gate', () => {
 
     await user.type(screen.getByLabelText(/event name or code/i), 'Spring Wedding');
     await user.type(screen.getByLabelText(/guest email or name/i), 'jane@example.com');
-    await user.type(screen.getByLabelText(/enter portal password/i), 'secret123');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.type(screen.getByLabelText(/portal password/i), 'secret123');
+    await user.click(screen.getByRole('button', { name: /access my portal/i }));
 
     await waitFor(() => {
       expect(guestPortalHelpers.saveGuestPortalSession).toHaveBeenCalledWith(
@@ -115,8 +115,8 @@ describe('GuestPortal password gate', () => {
 
     await user.type(screen.getByLabelText(/event name or code/i), 'Spring Wedding');
     await user.type(screen.getByLabelText(/guest email or name/i), 'jane@example.com');
-    await user.type(screen.getByLabelText(/enter portal password/i), 'secret123');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.type(screen.getByLabelText(/portal password/i), 'secret123');
+    await user.click(screen.getByRole('button', { name: /access my portal/i }));
 
     await waitFor(() => {
       expect(verifySecret).toHaveBeenCalledWith('secret123', {
@@ -162,15 +162,15 @@ describe('GuestPortal password gate', () => {
 
     await user.type(screen.getByLabelText(/event name or code/i), 'Spring Wedding');
     await user.type(screen.getByLabelText(/guest email or name/i), 'jane@example.com');
-    await user.type(screen.getByLabelText(/enter portal password/i), 'wrong-password');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.type(screen.getByLabelText(/portal password/i), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: /access my portal/i }));
 
     expect(
       await screen.findByText(/incorrect password\. please try again\./i),
     ).toBeInTheDocument();
   });
 
-  it('shows an event unavailable message when the event has ended', () => {
+  it('shows an event unavailable banner when the event has ended', () => {
     const config = {
       eventTitle: 'Spring Wedding',
       eventStartDate: '2026-05-12',
@@ -187,11 +187,12 @@ describe('GuestPortal password gate', () => {
 
     render(<GuestPortal onExitPortal={() => undefined} />);
 
+    // The sign-in gate now renders first with an inline "access closed" banner.
     expect(
-      screen.getByText(/this guest portal is no longer available/i),
+      screen.getByText(/guest access has closed/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/guest access automatically ends the day after the event/i),
+      screen.getByText(/contact the venue coordinator/i),
     ).toBeInTheDocument();
   });
 });

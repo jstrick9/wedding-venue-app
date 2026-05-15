@@ -63,7 +63,7 @@ describe('GuestPortal event-scoped sign-in', () => {
     expect(screen.getByLabelText(/guest email or name/i)).toBeInTheDocument();
     expect(
       screen.getByText(
-        /enter your wedding event name and the guest email or name used for that event/i,
+        /enter your event name and the email or name your venue has on file/i,
       ),
     ).toBeInTheDocument();
   });
@@ -75,7 +75,7 @@ describe('GuestPortal event-scoped sign-in', () => {
 
     await user.type(screen.getByLabelText(/event name or code/i), 'Wrong Wedding');
     await user.type(screen.getByLabelText(/guest email or name/i), 'jane@example.com');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /access my portal/i }));
 
     expect(
       await screen.findByText(/event not found or not available/i),
@@ -91,7 +91,7 @@ describe('GuestPortal event-scoped sign-in', () => {
 
     await user.type(screen.getByLabelText(/event name or code/i), 'Spring Wedding');
     await user.type(screen.getByLabelText(/guest email or name/i), 'unknown@example.com');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /access my portal/i }));
 
     expect(
       await screen.findByText(/guest not found for this event/i),
@@ -108,7 +108,7 @@ describe('GuestPortal event-scoped sign-in', () => {
     // Wrong event → event error
     await user.type(screen.getByLabelText(/event name or code/i), 'Wrong Wedding');
     await user.type(screen.getByLabelText(/guest email or name/i), 'unknown@example.com');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /access my portal/i }));
 
     expect(
       await screen.findByText(/event not found or not available/i),
@@ -117,7 +117,7 @@ describe('GuestPortal event-scoped sign-in', () => {
     // Correct event but wrong guest → guest error
     await user.clear(screen.getByLabelText(/event name or code/i));
     await user.type(screen.getByLabelText(/event name or code/i), 'Spring Wedding');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /access my portal/i }));
 
     expect(
       await screen.findByText(/guest not found for this event/i),
