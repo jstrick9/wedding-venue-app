@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { loadVersionedStorage, saveVersionedStorage } from './storage';
+import { on } from './appEvents';
+import { vi } from 'vitest';
 
 class MemoryStorage implements Storage {
   private store = new Map<string, string>();
@@ -142,6 +144,26 @@ describe('versioned storage', () => {
 
     const backupKeys = getAllStorageKeys().filter((key) => key.startsWith('spm_backup_bad_key_'));
     expect(backupKeys.length).toBe(1);
+  });
+
+
+  it('emits a typed spm_storage_error event when load encounters corrupt JSON', () => {
+    const handler = vi.fn();
+    const off = on('spm_storage_error', handler);
+    localStorage.setItem('typed_bad_key', '{not-valid-json');
+
+    loadVersionedStorage({
+      key: 'typed_bad_key',
+      defaultValue: ['fallback'],
+      currentVersion: 1,
+    });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    const detail = handler.mock.calls[0][0];
+    expect(detail).toMatchObject({ key: 'typed_bad_key', action: 'load' });
+    expect(typeof detail.error).toBe('string');
+    expect(typeof detail.timestamp).toBe('string');
+    off();
   });
 
   it('applies normalization after loading', () => {

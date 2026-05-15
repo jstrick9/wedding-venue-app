@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
+import { on } from '../utils/appEvents';
 
 interface LayoutSnapshot {
   tables: any[];
@@ -107,12 +108,9 @@ export function UndoRedoProvider({ children, onRestore }: UndoRedoProviderProps)
 
   // Listen for snapshot events from the app
   useEffect(() => {
-    const handleSnapshot = (e: CustomEvent<LayoutSnapshot>) => {
-      pushSnapshot(e.detail);
-    };
-
-    window.addEventListener('spm_push_undo_snapshot', handleSnapshot as EventListener);
-    return () => window.removeEventListener('spm_push_undo_snapshot', handleSnapshot as EventListener);
+    return on('spm_push_undo_snapshot', (snapshot) => {
+      pushSnapshot(snapshot);
+    });
   }, [pushSnapshot]);
 
   // Keyboard shortcuts

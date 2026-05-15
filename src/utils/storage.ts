@@ -1,3 +1,4 @@
+import { emit } from './appEvents';
 export interface VersionedStorageEnvelope<T> {
   version: number;
   savedAt: string;
@@ -63,16 +64,14 @@ export function saveVersionedStorage<T>(key: string, version: number, data: T): 
   } catch (error) {
     console.error(`Failed to save versioned storage for key ${key}:`, error);
     
-    // Notify UI of storage error (e.g., quota exceeded)
+    // Notify UI of storage error (e.g., quota exceeded) via the typed event bus.
     try {
-      window.dispatchEvent(new CustomEvent('spm_storage_error', {
-        detail: {
-          key,
-          error: error instanceof Error ? error.message : 'Unknown storage error',
-          action: 'save',
-          timestamp: new Date().toISOString(),
-        },
-      }));
+      emit('spm_storage_error', {
+        key,
+        error: error instanceof Error ? error.message : 'Unknown storage error',
+        action: 'save',
+        timestamp: new Date().toISOString(),
+      });
     } catch {
       // Ignore dispatch errors
     }
@@ -126,16 +125,14 @@ export function loadVersionedStorage<T>({
   console.error(`Failed to load versioned storage for key ${key}:`, error);
   backupCorruptStorage(found.sourceKey, found.raw);
   
-  // Notify UI of storage error
+  // Notify UI of storage error via the typed event bus.
   try {
-    window.dispatchEvent(new CustomEvent('spm_storage_error', {
-      detail: {
-        key,
-        error: error instanceof Error ? error.message : 'Unknown storage error',
-        action: 'load',
-        timestamp: new Date().toISOString(),
-      },
-    }));
+    emit('spm_storage_error', {
+      key,
+      error: error instanceof Error ? error.message : 'Unknown storage error',
+      action: 'load',
+      timestamp: new Date().toISOString(),
+    });
   } catch {
     // Ignore dispatch errors
   }

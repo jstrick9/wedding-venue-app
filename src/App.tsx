@@ -49,6 +49,8 @@ import {
 import { UndoRedoProvider } from './contexts/UndoRedoContext';
 import { UndoRedoToolbar } from './components/UndoRedoToolbar';
 import { TimelinePanel } from './components/TimelinePanel';
+import { emit, emitDataChanged, on, type UndoSnapshot } from './utils/appEvents';
+import { useAppModals } from './hooks/useAppModals';
 import { VendorPanel } from './components/VendorPanel';
 
 // Position type
@@ -83,9 +85,40 @@ function AuthenticatedApp() {
   const [brandingConfig, setBrandingConfig] = useState(() => getConfig());
   const [projectHealth, setProjectHealth] = useState<ProjectHealthReport | null>(null);
   const [safeMode, setSafeMode] = useState(false);
-  const [showTimeline, setShowTimeline] = useState(false);
-  const [showVendors, setShowVendors] = useState(false);
-  
+  // All modal/panel open-state lives in one hook so that:
+  //   - the typed event-bus subscriptions for spm_open_* are co-located, and
+  //   - the file no longer needs ~12 useState hooks for what is conceptually
+  //     a single "which modals are visible?" map.
+  // We keep the original `showXxx` / `setShowXxx` local names to avoid touching
+  // every call site downstream — the local consts below are a thin facade.
+  const _modals = useAppModals();
+  const editingArrangementId = _modals.editingArrangementId;
+  const setEditingArrangementId = _modals.setEditingArrangementId;
+  const showVendors = _modals.modals.vendors;
+  const setShowVendors = (v: boolean) => (v ? _modals.open('vendors') : _modals.close('vendors'));
+  const showTimeline = _modals.modals.timeline;
+  const setShowTimeline = (v: boolean) => (v ? _modals.open('timeline') : _modals.close('timeline'));
+  const showGuests = _modals.modals.guests;
+  const setShowGuests = (v: boolean) => (v ? _modals.open('guests') : _modals.close('guests'));
+  const showAdmin = _modals.modals.admin;
+  const setShowAdmin = (v: boolean) => (v ? _modals.open('admin') : _modals.close('admin'));
+  const showTemplates = _modals.modals.templates;
+  const setShowTemplates = (v: boolean) => (v ? _modals.open('templates') : _modals.close('templates'));
+  const showPrint = _modals.modals.print;
+  const setShowPrint = (v: boolean) => (v ? _modals.open('print') : _modals.close('print'));
+  const showOperations = _modals.modals.operations;
+  const setShowOperations = (v: boolean) => (v ? _modals.open('operations') : _modals.close('operations'));
+  const showMessages = _modals.modals.messages;
+  const setShowMessages = (v: boolean) => (v ? _modals.open('messages') : _modals.close('messages'));
+  const showSubmission = _modals.modals.submission;
+  const setShowSubmission = (v: boolean) => (v ? _modals.open('submission') : _modals.close('submission'));
+  const showEventQuestions = _modals.modals.eventQuestions;
+  const setShowEventQuestions = (v: boolean) =>
+    (v ? _modals.open('eventQuestions') : _modals.close('eventQuestions'));
+  const showDecorDesigner = _modals.modals.decorDesigner;
+  const setShowDecorDesigner = (v: boolean) =>
+    (v ? _modals.open('decorDesigner') : _modals.close('decorDesigner'));
+
   // Local UI state
   const [zoom, setZoom] = useState(1);
   // Grid functionality removed from canvas/layout tools by request.
@@ -94,16 +127,6 @@ function AuthenticatedApp() {
   const gridContrast = 0.45;
   const snapToGrid = false;
   const [showProperties, setShowProperties] = useState(false);
-  const [showGuests, setShowGuests] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [showPrint, setShowPrint] = useState(false);
-  const [showOperations, setShowOperations] = useState(false);
-  const [showMessages, setShowMessages] = useState(false);
-  const [showSubmission, setShowSubmission] = useState(false);
-  const [showEventQuestions, setShowEventQuestions] = useState(false);
-  const [showDecorDesigner, setShowDecorDesigner] = useState(false);
-  const [editingArrangementId, setEditingArrangementId] = useState<string | undefined>(undefined);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
@@ -442,7 +465,7 @@ function AuthenticatedApp() {
       decor: [...(layoutState.layout.decor || [])],
       timestamp: Date.now(),
     };
-    window.dispatchEvent(new CustomEvent('spm_push_undo_snapshot', { detail: snapshot }));
+    emit('spm_push_undo_snapshot', snapshot satisfies UndoSnapshot);
   }, [layoutState.layout]);
 
   // Restore from undo/redo snapshot
@@ -462,7 +485,7 @@ function AuthenticatedApp() {
     setProjectHealth(report);
     setSafeMode(report.overallStatus === 'corrupt');
 
-    window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'all' } }));
+    emitDataChanged('all');
 
     showToast(`Recovered ${repaired.length} corrupt storage domain(s).`, 'warning');
   }
@@ -490,17 +513,19 @@ function AuthenticatedApp() {
     return () => window.removeEventListener('storage', onStorage);
   }, [refreshSavedLayouts]);
   
-  useEffect(() => {
-    const handleOpenVendors = () => setShowVendors(true);
-    window.addEventListener('spm_open_vendors', handleOpenVendors);
-    return () => window.removeEventListener('spm_open_vendors', handleOpenVendors);
-  }, []);
-	
-  useEffect(() => {
-	const handleOpenTimeline = () => setShowTimeline(true);
-	window.addEventListener('spm_open_timeline', handleOpenTimeline);
-	return () => window.removeEventListener('spm_open_timeline', handleOpenTimeline);
-  }, []);
+  // Modal-open subscriptions live inside useAppModals(); see src/hooks/useAppModals.ts.
+
+  // Surface storage failures (quota exceeded, corrupt JSON, etc.) to the user.
+  // Previously emitted into the void; now goes through the typed event bus and
+  // lands in a toast so the user knows their save didn't persist.
+  useEffect(
+    () =>
+      on('spm_storage_error', (detail) => {
+        const verb = detail.action === 'save' ? 'save' : 'load';
+        showToast(`Could not ${verb} "${detail.key}": ${detail.error}`, 'warning');
+      }),
+    [],
+  );
 
 
   // Get total capacity
@@ -1450,7 +1475,10 @@ function AuthenticatedApp() {
       {/* Decor Designer Modal */}
       {showDecorDesigner && (
         <DecorDesigner
-          onClose={() => setShowDecorDesigner(false)}
+          onClose={() => {
+            setShowDecorDesigner(false);
+            setEditingArrangementId(undefined);
+          }}
           onSave={(arrangement) => {
             const currentArrangements = layoutState.getDecorArrangements();
             const exists = currentArrangements.find(a => a.id === arrangement.id);
@@ -1460,6 +1488,7 @@ function AuthenticatedApp() {
               layoutState.setDecorArrangements([...currentArrangements, arrangement]);
             }
             setShowDecorDesigner(false);
+            setEditingArrangementId(undefined);
             showToast('Design saved successfully!', 'success');
           }}
           initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null}

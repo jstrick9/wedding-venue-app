@@ -2,6 +2,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../constants/storageVersions';
 import { saveVersionedStorage } from './storage';
 import type { BackupBundle, BackupImportReport, BackupPayload } from './backupTypes';
+import { emitDataChanged } from './appEvents';
 import { buildBackupBundle } from './backupExport';
 import {
   validateDecorArrangement,
@@ -167,9 +168,7 @@ export function applyBackupPayload(
   writeJson(STORAGE_KEYS.STAFF_AREAS, payload.staffAreas);
   writeJson(STORAGE_KEYS.STAFF_SHIFTS, payload.staffShifts);
 
-  window.dispatchEvent(
-    new CustomEvent('spm_data_changed', { detail: { type: 'all' } }),
-  );
+  emitDataChanged('all');
 }
 
 export function getRollbackBackup(): BackupBundle | null {

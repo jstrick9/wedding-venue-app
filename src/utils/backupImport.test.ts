@@ -1,3 +1,4 @@
+import { on } from './appEvents';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../config', () => ({
@@ -154,7 +155,7 @@ describe('backup import', () => {
 
   it('applies backup payload into supported storage keys', () => {
     const event = vi.fn();
-    window.addEventListener('spm_data_changed', event);
+    const off = on('spm_data_changed', event);
 
     applyBackupPayload(
       {
@@ -168,7 +169,7 @@ describe('backup import', () => {
     expect(JSON.parse(localStorage.getItem('spm_templates') || '[]')).toHaveLength(1);
     expect(event).toHaveBeenCalled();
 
-    window.removeEventListener('spm_data_changed', event);
+    off();
   });
 
   it('stores and retrieves a rollback backup snapshot', async () => {

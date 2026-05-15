@@ -35,6 +35,7 @@ import {
   setSavedLayoutDocuments,
 } from '../utils/collaboration';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { emitDataChanged, on } from '../utils/appEvents';
 
 // Position type
 export interface Position {
@@ -143,7 +144,7 @@ export function getVenues(): Venue[] {
 
 export function setVenues(venues: Venue[]): void {
   saveToStorage(STORAGE.VENUES, venues);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'venues' } }));
+  emitDataChanged('venues');
 }
 
 export function getTableSpecs(): TableSpec[] {
@@ -152,7 +153,7 @@ export function getTableSpecs(): TableSpec[] {
 
 export function setTableSpecs(specs: TableSpec[]): void {
   saveToStorage(STORAGE.TABLE_SPECS, specs);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'tableSpecs' } }));
+  emitDataChanged('tableSpecs');
 }
 
 export function getFixtureTypes(): FixtureType[] {
@@ -161,7 +162,7 @@ export function getFixtureTypes(): FixtureType[] {
 
 export function setFixtureTypes(types: FixtureType[]): void {
   saveToStorage(STORAGE.FIXTURE_TYPES, types);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'fixtureTypes' } }));
+  emitDataChanged('fixtureTypes');
 }
 
 export function getGuidelines(): Guideline[] {
@@ -170,7 +171,7 @@ export function getGuidelines(): Guideline[] {
 
 export function setGuidelines(guidelines: Guideline[]): void {
   saveToStorage(STORAGE.GUIDELINES, guidelines);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'guidelines' } }));
+  emitDataChanged('guidelines');
 }
 
 export function getTemplates(): LayoutTemplate[] {
@@ -179,7 +180,7 @@ export function getTemplates(): LayoutTemplate[] {
 
 export function setTemplates(templates: LayoutTemplate[]): void {
   saveToStorage(STORAGE.TEMPLATES, templates);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'templates' } }));
+  emitDataChanged('templates');
 }
 
 export function getUsers(): User[] {
@@ -223,7 +224,7 @@ export function getChairSpecsFromLayout(): ChairSpec[] {
 
 export function setChairSpecsInLayout(specs: ChairSpec[]): void {
   saveToStorage(STORAGE_KEYS.CHAIR_SPECS_LEGACY, specs);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'chairSpecs' } }));
+  emitDataChanged('chairSpecs');
 }
 
 export function getLinenColors(): LinenColor[] {
@@ -232,7 +233,7 @@ export function getLinenColors(): LinenColor[] {
 
 export function setLinenColors(colors: LinenColor[]): void {
   saveToStorage(STORAGE.LINEN_COLORS, colors);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'linenColors' } }));
+  emitDataChanged('linenColors');
 }
 
 export function getDecorItems(): DecorItem[] {
@@ -242,7 +243,7 @@ export function getDecorItems(): DecorItem[] {
 
 export function setDecorItems(items: DecorItem[]): void {
   saveToStorage(STORAGE.DECOR_ITEMS, items);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorItems' } }));
+  emitDataChanged('decorItems');
 }
 
 export function getDecorCategories(): DecorCategoryDef[] {
@@ -251,7 +252,7 @@ export function getDecorCategories(): DecorCategoryDef[] {
 
 export function setDecorCategories(categories: DecorCategoryDef[]): void {
   saveToStorage(STORAGE.DECOR_CATEGORIES, categories);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorCategories' } }));
+  emitDataChanged('decorCategories');
 }
 
 export function getDecorArrangements(): DecorArrangement[] {
@@ -260,7 +261,7 @@ export function getDecorArrangements(): DecorArrangement[] {
 
 export function setDecorArrangements(arrangements: DecorArrangement[]): void {
   saveToStorage(STORAGE.DECOR_ARRANGEMENTS, arrangements);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorArrangements' } }));
+  emitDataChanged('decorArrangements');
 }
 
 export function getDecorPackages(): DecorPackage[] {
@@ -269,7 +270,7 @@ export function getDecorPackages(): DecorPackage[] {
 
 export function setDecorPackages(packages: DecorPackage[]): void {
   saveToStorage(STORAGE.DECOR_PACKAGES, packages);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorPackages' } }));
+  emitDataChanged('decorPackages');
 }
 
 export function resetToDefaults(): void {
@@ -281,7 +282,7 @@ export function resetToDefaults(): void {
   saveToStorage(STORAGE.USERS, defaultUsers);
   saveToStorage(STORAGE.LINEN_COLORS, defaultLinenColors);
   saveToStorage(STORAGE.DECOR_ITEMS, []);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'all' } }));
+  emitDataChanged('all');
 }
 
 // Create initial layout
@@ -327,8 +328,8 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
 
   // Listen for data changes from AdminPanel
   useEffect(() => {
-    const handleDataChange = (event: CustomEvent) => {
-      const { type } = event.detail;
+    const handleDataChange = (detail: { type: string } | void) => {
+      const type = detail?.type;
 
       if (type === 'venues' || type === 'all') {
         const allVenues = getVenues();
@@ -343,9 +344,7 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
       }
     };
 
-    window.addEventListener('spm_data_changed', handleDataChange as EventListener);
-    return () =>
-      window.removeEventListener('spm_data_changed', handleDataChange as EventListener);
+    return on('spm_data_changed', handleDataChange);
   }, [currentVenue.id]);
 
   // Refresh venues from storage

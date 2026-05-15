@@ -15,6 +15,7 @@ import {
   DecorPackage
 } from '../types';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { emitDataChanged } from '../utils/appEvents';
 
 // Default spacing settings
 export const defaultSpacingSettings: SpacingSettings = {
@@ -41,7 +42,7 @@ export function getSpacingSettings(): SpacingSettings {
 
 export function setSpacingSettings(settings: SpacingSettings): void {
   localStorage.setItem(STORAGE_KEYS.SPACING_SETTINGS, JSON.stringify(settings));
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'spacing' } }));
+  emitDataChanged('spacing');
 }
 
 // Get/Set alignment settings
@@ -59,7 +60,7 @@ export function getAlignmentSettings(): AlignmentSettings {
 
 export function setAlignmentSettings(settings: AlignmentSettings): void {
   localStorage.setItem(STORAGE_KEYS.ALIGNMENT_SETTINGS, JSON.stringify(settings));
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'alignment' } }));
+  emitDataChanged('alignment');
 }
 
 // Default chair specifications
@@ -89,7 +90,7 @@ export function getChairSpecs(): ChairSpec[] {
 
 export function setChairSpecs(specs: ChairSpec[]): void {
   localStorage.setItem(STORAGE_KEYS.CHAIR_SPECS_PRIMARY, JSON.stringify(specs));
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'chairs' } }));
+  emitDataChanged('chairs');
 }
 
 // Default wall styles (for greenery/drapery walls)
@@ -121,7 +122,7 @@ export function getWallStyles(): WallStyle[] {
 
 export function setWallStyles(styles: WallStyle[]): void {
   localStorage.setItem(STORAGE_KEYS.WALL_STYLES, JSON.stringify(styles));
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'wallStyles' } }));
+  emitDataChanged('wallStyles');
 }
 
 // Indoor feature templates (doors, windows, etc.)
@@ -189,7 +190,7 @@ export function setIndoorFeatureTemplates(templates: IndoorFeatureTemplate[]): v
   // Only save custom templates (filter out defaults)
   const customTemplates = templates.filter(t => t.isCustom);
   localStorage.setItem(STORAGE_KEYS.INDOOR_FEATURE_TEMPLATES, JSON.stringify(customTemplates));
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'indoorTemplates' } }));
+  emitDataChanged('indoorTemplates');
 }
 
 export function addIndoorFeatureTemplate(template: IndoorFeatureTemplate): void {
@@ -279,7 +280,7 @@ export function setOutdoorFeatureTemplates(templates: OutdoorFeatureTemplate[]):
   // Only save custom templates (filter out defaults)
   const customTemplates = templates.filter(t => t.isCustom);
   localStorage.setItem(STORAGE_KEYS.OUTDOOR_FEATURE_TEMPLATES, JSON.stringify(customTemplates));
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'outdoorTemplates' } }));
+  emitDataChanged('outdoorTemplates');
 }
 
 export function addOutdoorFeatureTemplate(template: OutdoorFeatureTemplate): void {
@@ -1181,7 +1182,7 @@ export function getDecorPackages(): any[] {
 
 export function setDecorPackages(packages: any[]): void {
   saveToStorage(STORAGE_KEYS.DECOR_PACKAGES, packages);
-  window.dispatchEvent(new CustomEvent('spm_data_changed', { detail: { type: 'decorPackages' } }));
+  emitDataChanged('decorPackages');
 }
 
 // Helper function to save data to localStorage
