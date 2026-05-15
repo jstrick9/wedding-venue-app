@@ -119,7 +119,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     : null;
 
   const isMultiDay = !!config?.isMultiDay && !!eventEndDate && !!eventStartDate;
-  const rsvpDeadline = eventStartDate;
+  const rsvpDeadline = (config as any)?.rsvpDeadlineDate
+    ? new Date((config as any).rsvpDeadlineDate)
+    : null;
   const rsvpClosed = rsvpDeadline ? today > rsvpDeadline : false;
 
   const scopedGuests = useMemo(() => {

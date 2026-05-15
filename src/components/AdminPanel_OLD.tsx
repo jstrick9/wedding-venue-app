@@ -35,7 +35,7 @@ import {
   getDecorPackages, 
   setDecorPackages 
 } from '../hooks/useLayoutState';
-import { AccessControlPanel } from './AccessControlPanel';
+import { AccessControlPanel } from './admin/AccessControlPanel';
 import { useRBAC } from '../hooks/useRBAC';
 import { createPasswordRecord } from '../utils/auth';
 
