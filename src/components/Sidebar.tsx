@@ -29,6 +29,7 @@ import {
   isAdminUser,
 } from '../utils/permissions';
 import SafeImage from './SafeImage';
+import { emit, on } from '../utils/appEvents';
 
 interface DragItem {
   type: 'table' | 'fixture' | 'arrangement';
@@ -119,11 +120,7 @@ export function Sidebar({
     };
 
     refresh();
-    window.addEventListener('spm_data_changed', refresh as EventListener);
-
-    return () => {
-      window.removeEventListener('spm_data_changed', refresh as EventListener);
-    };
+    return on('spm_data_changed', refresh);
   }, []);
 
   useEffect(() => {
@@ -702,7 +699,7 @@ export function Sidebar({
                 </h3>
                 <button
                   onClick={() =>
-                    (window as any).dispatchEvent(new CustomEvent('spm_open_decor_designer'))
+                    emit('spm_open_decor_designer')
                   }
                   className="text-[10px] bg-[#4A1942] text-white px-3 py-1.5 rounded-lg font-bold hover:bg-[#3b1435] transition-all active:scale-95 shadow-sm flex items-center gap-1"
                   type="button"
@@ -725,7 +722,7 @@ export function Sidebar({
                     </p>
                     <button
                       onClick={() =>
-                        (window as any).dispatchEvent(new CustomEvent('spm_open_decor_designer'))
+                        emit('spm_open_decor_designer')
                       }
                       className="mt-3 bg-purple-50 text-purple-600 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-purple-100 transition-colors"
                       type="button"

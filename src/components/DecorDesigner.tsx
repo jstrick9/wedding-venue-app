@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   DecorItem, 
   DecorArrangement, 
@@ -12,11 +12,14 @@ import {
   getTableSpecs, 
   getFixtureTypes,
   getDecorPackages,
-  getDecorCategories
+  getDecorCategories,
+  setDecorArrangements as persistDecorArrangements
 } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { showToast } from './Toast';
+import { on } from '../utils/appEvents';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface DecorDesignerProps {
   onClose: () => void;
@@ -57,9 +60,28 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
     return [];
   });
   
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Multi-select: keep a Set so Shift+Click / Ctrl+A naturally extend the selection.
+  // `selectedId` is derived as the *last* item added so the existing single-select
+  // properties panel keeps working unchanged.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const selectedId = useMemo(() => {
+    if (selectedIds.size === 0) return null;
+    // Iteration order on Set is insertion order, so last() is just an Array.from peek.
+    const arr = Array.from(selectedIds);
+    return arr[arr.length - 1];
+  }, [selectedIds]);
+  const setSelectedId = useCallback((id: string | null) => {
+    setSelectedIds(id ? new Set([id]) : new Set());
+  }, []);
   const [showProperties, setShowProperties] = useState(false);
   const [zoom, setZoom] = useState(1);
+  // Persist a tiny bit of UI chrome state per-user across opens.
+  const [showRulers, setShowRulers] = useState<boolean>(() => {
+    try { return localStorage.getItem('spm_decor_show_rulers') !== '0'; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('spm_decor_show_rulers', showRulers ? '1' : '0'); } catch {}
+  }, [showRulers]);
   
   // Search and Filter States
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,8 +104,7 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
       setDecorCatalog(getDecorItems());
       setArrangements(getDecorArrangements());
     };
-    window.addEventListener('spm_data_changed', handleDataChange);
-    return () => window.removeEventListener('spm_data_changed', handleDataChange);
+    return on('spm_data_changed', handleDataChange);
   }, []);
 
   const availableBases = useMemo(() => {
@@ -119,15 +140,19 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
       if (filterPackageId !== 'all') {
         const pkg = decorPackages.find(p => p.id === filterPackageId);
         if (pkg) {
-          // Check if item is included in the package
-          matchesPackage = pkg.arrangements.some(a => a.arrangementId === item.id) || 
-                           pkg.description?.toLowerCase().includes(item.name.toLowerCase()) || false;
+          // A package contains arrangements; gather every decorItemId used in those arrangements
+          const arrangementIds = new Set(pkg.arrangements.map(a => a.arrangementId));
+          const allowedDecorIds = new Set<string>();
+          arrangements
+            .filter(a => arrangementIds.has(a.id))
+            .forEach(a => a.items.forEach(it => allowedDecorIds.add(it.decorItemId)));
+          matchesPackage = allowedDecorIds.has(item.id);
         }
       }
-      
+
       return matchesSearch && matchesCategory && matchesPackage;
     });
-  }, [decorCatalog, searchTerm, filterCategoryId, filterPackageId, decorPackages]);
+  }, [decorCatalog, searchTerm, filterCategoryId, filterPackageId, decorPackages, arrangements]);
 
   const scale = 8; // 8 pixels per inch
   const canvasWidthInches = 144;
@@ -214,10 +239,24 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
 
   const handleItemMouseDown = (e: React.MouseEvent, item: PlacedDecor) => {
     e.stopPropagation();
-    setSelectedId(item.id);
-    // Note: We specifically do NOT set showProperties to true here 
+    e.preventDefault();
+
+    // Shift / Cmd / Ctrl click extends the selection without dropping the rest;
+    // a plain click on an already-selected item keeps the multi-selection so the
+    // user can then drag the whole group together.
+    setSelectedIds((prev) => {
+      const isExtend = e.shiftKey || e.metaKey || e.ctrlKey;
+      if (isExtend) {
+        const next = new Set(prev);
+        if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+        return next;
+      }
+      if (prev.has(item.id) && prev.size > 1) return prev; // keep group selection for drag
+      return new Set([item.id]);
+    });
+    // Note: We specifically do NOT set showProperties to true here
     // so that single-click only selects/moves, matching main layout UX.
-    
+
     setDragState({
       id: item.id,
       startX: e.clientX,
@@ -226,6 +265,121 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
       itemY: item.y
     });
   };
+
+  // Track item drag at the window level so releasing the mouse outside the modal still ends the drag.
+  // When multiple items are selected, the entire group translates together by (dx, dy).
+  useEffect(() => {
+    if (!dragState) return;
+    const startSnapshot = new Map(placedItems.map((i) => [i.id, { x: i.x, y: i.y }] as const));
+    const movingIds = selectedIds.has(dragState.id) && selectedIds.size > 1
+      ? selectedIds
+      : new Set<string>([dragState.id]);
+    const onMove = (em: MouseEvent) => {
+      const dx = (em.clientX - dragState.startX) / (scale * zoom);
+      const dy = (em.clientY - dragState.startY) / (scale * zoom);
+      setPlacedItems((prev) => prev.map((item) => {
+        if (!movingIds.has(item.id)) return item;
+        const start = startSnapshot.get(item.id) ?? { x: item.x, y: item.y };
+        return { ...item, x: start.x + dx, y: start.y + dy };
+      }));
+    };
+    const onUp = () => setDragState(null);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    // placedItems intentionally omitted — we snapshot once at drag start.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragState, scale, zoom, selectedIds]);
+
+  // Keyboard shortcuts:
+  //   Esc        — close panel / clear selection / close designer
+  //   Del/Bksp   — remove every selected item
+  //   +/-        — zoom in/out
+  //   Cmd/Ctrl+A — select all placed decor
+  //   Cmd/Ctrl+D — duplicate selection
+  //   Arrows     — nudge selection by 1 inch (Shift = 6 inch)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      if (isTyping) return;
+
+      const meta = e.metaKey || e.ctrlKey;
+      const hasSelection = selectedIds.size > 0;
+
+      if (e.key === 'Escape') {
+        if (showProperties) { setShowProperties(false); return; }
+        if (hasSelection) { setSelectedIds(new Set()); return; }
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (!hasSelection) return;
+        e.preventDefault();
+        setPlacedItems((prev) => prev.filter((i) => !selectedIds.has(i.id)));
+        setSelectedIds(new Set());
+        setShowProperties(false);
+        return;
+      }
+
+      if ((e.key === '+' || e.key === '=')) { setZoom((z) => Math.min(4, z + 0.1)); return; }
+      if (e.key === '-') { setZoom((z) => Math.max(0.2, z - 0.1)); return; }
+
+      if (meta && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        setSelectedIds(new Set(placedItems.map((i) => i.id)));
+        return;
+      }
+
+      if (meta && e.key.toLowerCase() === 'd' && hasSelection) {
+        e.preventDefault();
+        duplicateSelection();
+        return;
+      }
+
+      // Arrow-key nudge — power users expect this in any design tool.
+      const NUDGE = e.shiftKey ? 6 : 1; // inches
+      let dx = 0, dy = 0;
+      if (e.key === 'ArrowUp') dy = -NUDGE;
+      else if (e.key === 'ArrowDown') dy = NUDGE;
+      else if (e.key === 'ArrowLeft') dx = -NUDGE;
+      else if (e.key === 'ArrowRight') dx = NUDGE;
+      if ((dx || dy) && hasSelection) {
+        e.preventDefault();
+        setPlacedItems((prev) => prev.map((i) =>
+          selectedIds.has(i.id) ? { ...i, x: i.x + dx, y: i.y + dy } : i,
+        ));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // duplicateSelection is stable below; placedItems read inside is via setter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds, placedItems, showProperties, onClose]);
+
+  // Duplicate every selected item with a small visual offset, then select the duplicates.
+  const duplicateSelection = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setPlacedItems((prev) => {
+      const baseZ = prev.reduce((m, i) => Math.max(m, i.zIndex), 100);
+      const additions: PlacedDecor[] = [];
+      let z = baseZ + 1;
+      const newIds: string[] = [];
+      prev.forEach((item) => {
+        if (!selectedIds.has(item.id)) return;
+        const id = `designer-decor-${Date.now()}-${additions.length}-${Math.random().toString(36).slice(2, 6)}`;
+        additions.push({ ...item, id, x: item.x + 6, y: item.y + 6, zIndex: z++ });
+        newIds.push(id);
+      });
+      setSelectedIds(new Set(newIds));
+      return [...prev, ...additions];
+    });
+    showToast(`Duplicated ${selectedIds.size} item${selectedIds.size === 1 ? '' : 's'}`, 'info');
+  }, [selectedIds]);
 
   const handleItemDoubleClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -239,33 +393,58 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
         x: prev.x + e.movementX,
         y: prev.y + e.movementY
       }));
-      return;
     }
-
-    if (!dragState) return;
-
-    const dx = (e.clientX - dragState.startX) / (scale * zoom);
-    const dy = (e.clientY - dragState.startY) / (scale * zoom);
-
-    setPlacedItems(prev => prev.map(item => 
-      item.id === dragState.id 
-        ? { ...item, x: dragState.itemX + dx, y: dragState.itemY + dy } 
-        : item
-    ));
   };
 
   const handleMouseUp = () => {
-    setDragState(null);
     setIsDraggingController(false);
   };
 
-  const selectedItem = placedItems.find(i => i.id === selectedId);
+  const loadArrangement = useCallback((arr: DecorArrangement) => {
+    setDesignName(arr.name);
+    setBaseType(arr.baseType);
+    setBaseSpecId(arr.baseSpecId ?? '');
+    setPlacedItems(arr.items.map((item, idx) => ({
+      id: `designer-decor-${Date.now()}-${idx}`,
+      decorItemId: item.decorItemId,
+      x: item.x,
+      y: item.y,
+      rotation: item.rotation,
+      scaleX: item.scaleX,
+      scaleY: item.scaleY,
+      opacity: 1,
+      zIndex: item.zIndex,
+      parentType: 'decor' as const,
+    })));
+    setSelectedId(null);
+    setShowProperties(false);
+    setActiveSidebarTab('catalog');
+    showToast(`Loaded "${arr.name}"`, 'info');
+  }, []);
+
+  const handleDeleteArrangement = useCallback((id: string) => {
+    if (!window.confirm('Delete this saved design? This cannot be undone.')) return;
+    const next = arrangements.filter(a => a.id !== id);
+    setArrangements(next);
+    persistDecorArrangements(next);
+    showToast('Design deleted', 'success');
+  }, [arrangements]);
+
+    const selectedItem = placedItems.find(i => i.id === selectedId);
   const selectedItemSpec = selectedItem ? decorCatalog.find(s => s.id === selectedItem.decorItemId) : null;
 
+  // Trap keyboard focus inside the modal — accessibility + power-user UX so Tab
+  // doesn't escape into the underlying app.
+  useFocusTrap(containerRef, true);
+
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="fixed inset-0 z-[10000] bg-white flex flex-col font-sans overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Decor Designer"
+      tabIndex={-1}
+      className="fixed inset-0 z-[10000] bg-white flex flex-col font-sans overflow-hidden outline-none"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
@@ -301,6 +480,8 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
         <div className="flex items-center gap-3">
           <button 
             onClick={onClose}
+            aria-label="Close Decor Designer (Esc)"
+            title="Close (Esc)"
             className="px-5 py-2 rounded-xl text-white/70 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all"
           >
             Discard
@@ -442,8 +623,17 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
                                 <div className="text-lg opacity-0 group-hover:opacity-100 transition-opacity">✨</div>
                               </div>
                               <div className="flex gap-2">
-                                <button className="flex-1 py-2 bg-gray-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#4A1942] transition-all">Apply Design</button>
-                                <button className="px-3 py-2 bg-red-50 text-red-500 rounded-xl text-[9px] font-black hover:bg-red-100 transition-colors">🗑</button>
+                                <button
+                                  type="button"
+                                  onClick={() => loadArrangement(arr)}
+                                  className="flex-1 py-2 bg-gray-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#4A1942] transition-all"
+                                >Load Design</button>
+                                <button
+                                  type="button"
+                                  aria-label={`Delete design ${arr.name}`}
+                                  onClick={() => handleDeleteArrangement(arr.id)}
+                                  className="px-3 py-2 bg-red-50 text-red-500 rounded-xl text-[9px] font-black hover:bg-red-100 transition-colors"
+                                >🗑</button>
                               </div>
                             </div>
                           ))
@@ -483,6 +673,23 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
 
         {/* Main Workspace */}
         <main className="flex-1 bg-[#EBEDF0] relative flex items-center justify-center overflow-hidden">
+          {availableBases.tables.length === 0 && availableBases.fixtures.length === 0 && (
+            <div className="absolute inset-0 z-[55] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+              <div className="max-w-sm text-center p-8 rounded-2xl border-2 border-dashed border-purple-200 bg-white shadow-xl">
+                <div className="text-3xl mb-3">🪑</div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-gray-800 mb-2">No base objects available</h3>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  Mark at least one Table Spec or interior Fixture as <strong>"Allow as decor base"</strong>
+                  in the Admin panel to start designing arrangements.
+                </p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="mt-4 px-4 py-2 bg-[#4A1942] text-white rounded-xl text-[10px] font-black uppercase tracking-widest"
+                >Close</button>
+              </div>
+            </div>
+          )}
           {/* Base Controller */}
           <div 
             className="absolute z-[60] shadow-2xl transition-opacity duration-300"
@@ -549,26 +756,81 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
                   </div>
 
                   <div className="flex items-center justify-between pt-2">
-                    <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className="w-9 h-9 rounded-xl border-2 border-gray-100 font-black hover:bg-gray-50">−</button>
-                    <span className="text-[10px] font-black text-gray-800">{Math.round(zoom * 100)}%</span>
-                    <button onClick={() => setZoom(z => Math.min(4, z + 0.1))} className="w-9 h-9 rounded-xl border-2 border-gray-100 font-black hover:bg-gray-50">+</button>
+                    <button
+                      onClick={() => setZoom(z => Math.max(0.2, z - 0.1))}
+                      aria-label="Zoom out"
+                      title="Zoom out (−)"
+                      className="w-9 h-9 rounded-xl border-2 border-gray-100 font-black hover:bg-gray-50"
+                    >−</button>
+                    <span className="text-[10px] font-black text-gray-800" aria-live="polite">{Math.round(zoom * 100)}%</span>
+                    <button
+                      onClick={() => setZoom(z => Math.min(4, z + 0.1))}
+                      aria-label="Zoom in"
+                      title="Zoom in (+)"
+                      className="w-9 h-9 rounded-xl border-2 border-gray-100 font-black hover:bg-gray-50"
+                    >+</button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowRulers((r) => !r)}
+                    aria-pressed={showRulers}
+                    className={`w-full mt-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${showRulers ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
+                  >📏 Rulers {showRulers ? 'On' : 'Off'}</button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Canvas */}
-          <div 
-            className="bg-white shadow-[0_0_100px_rgba(0,0,0,0.1)] relative"
-            style={{ 
-              width: canvasWidthInches * scale * zoom, 
-              height: canvasHeightInches * scale * zoom,
-              backgroundImage: 'radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px)',
-              backgroundSize: `${scale * zoom}px ${scale * zoom}px`
-            }}
-            onClick={() => { setSelectedId(null); setShowProperties(false); }}
-          >
+          {/* Canvas wrapper — adds horizontal/vertical inch rulers when enabled. */}
+          <div className="relative" style={{ paddingTop: showRulers ? 22 : 0, paddingLeft: showRulers ? 22 : 0 }}>
+            {showRulers && (
+              <>
+                {/* Top ruler: 1ft (12in) major ticks, 6in mid ticks. */}
+                <div
+                  className="absolute top-0 left-[22px] right-0 h-[22px] bg-white/90 border-b border-gray-200 text-[8px] font-bold text-gray-400 select-none"
+                  style={{ width: canvasWidthInches * scale * zoom }}
+                  aria-hidden="true"
+                >
+                  {Array.from({ length: Math.floor(canvasWidthInches / 12) + 1 }).map((_, i) => {
+                    const px = i * 12 * scale * zoom;
+                    return (
+                      <div key={i} className="absolute top-0 h-full" style={{ left: px }}>
+                        <div className="w-px h-3 bg-gray-300" />
+                        <span className="absolute left-1 top-2.5">{i}'</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Left ruler. */}
+                <div
+                  className="absolute left-0 top-[22px] bottom-0 w-[22px] bg-white/90 border-r border-gray-200 text-[8px] font-bold text-gray-400 select-none"
+                  style={{ height: canvasHeightInches * scale * zoom }}
+                  aria-hidden="true"
+                >
+                  {Array.from({ length: Math.floor(canvasHeightInches / 12) + 1 }).map((_, i) => {
+                    const px = i * 12 * scale * zoom;
+                    return (
+                      <div key={i} className="absolute left-0 w-full" style={{ top: px }}>
+                        <div className="h-px w-3 bg-gray-300" />
+                        <span className="absolute top-0.5 left-2.5">{i}'</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Canvas */}
+            <div
+              className="bg-white shadow-[0_0_100px_rgba(0,0,0,0.1)] relative"
+              style={{
+                width: canvasWidthInches * scale * zoom,
+                height: canvasHeightInches * scale * zoom,
+                backgroundImage: 'radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px)',
+                backgroundSize: `${scale * zoom}px ${scale * zoom}px`,
+              }}
+              onClick={() => { setSelectedIds(new Set()); setShowProperties(false); }}
+            >
             {/* Guide */}
             {baseItem && (
               <div 
@@ -595,7 +857,7 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
                 if (!spec) return null;
                 const w = (spec.width * 12 + (spec.widthInches || 0)) * item.scaleX;
                 const h = (spec.height * 12 + (spec.heightInches || 0)) * item.scaleY;
-                const isSelected = selectedId === item.id;
+                const isSelected = selectedIds.has(item.id);
                 
                 return (
                   <g 
@@ -617,6 +879,7 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
                 );
               })}
             </svg>
+            </div>
           </div>
         </main>
 
@@ -627,8 +890,19 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
           {selectedItem && (
             <div className="w-72 p-6 flex flex-col gap-8">
               <div className="flex items-center justify-between">
-                <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-gray-400">Settings</h3>
-                <button onClick={() => setShowProperties(false)} className="text-gray-300 hover:text-gray-900 transition-colors font-bold text-lg">✕</button>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-gray-400">Settings</h3>
+                  {selectedIds.size > 1 && (
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 uppercase tracking-widest">
+                      {selectedIds.size} selected
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowProperties(false)}
+                  aria-label="Close settings panel"
+                  className="text-gray-300 hover:text-gray-900 transition-colors font-bold text-lg"
+                >✕</button>
               </div>
 
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
@@ -659,10 +933,26 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
                 </div>
               </div>
 
-              <button 
-                onClick={() => { setPlacedItems(prev => prev.filter(i => i.id !== selectedId)); setSelectedId(null); }}
-                className="mt-auto py-3 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all"
-              >Delete Item</button>
+              <div className="mt-auto flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={duplicateSelection}
+                  aria-label={`Duplicate ${selectedIds.size} selected item${selectedIds.size === 1 ? '' : 's'} (Cmd/Ctrl+D)`}
+                  title="Duplicate (⌘/Ctrl + D)"
+                  className="py-3 bg-purple-50 text-purple-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-100 transition-all"
+                >Duplicate {selectedIds.size > 1 ? `(${selectedIds.size})` : 'Item'}</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlacedItems(prev => prev.filter(i => !selectedIds.has(i.id)));
+                    setSelectedIds(new Set());
+                    setShowProperties(false);
+                  }}
+                  aria-label={`Delete ${selectedIds.size} selected item${selectedIds.size === 1 ? '' : 's'}`}
+                  title="Delete (Del)"
+                  className="py-3 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all"
+                >Delete {selectedIds.size > 1 ? `(${selectedIds.size})` : 'Item'}</button>
+              </div>
             </div>
           )}
         </aside>

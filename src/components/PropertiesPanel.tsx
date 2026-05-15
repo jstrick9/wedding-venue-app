@@ -4,6 +4,7 @@ import { getTableSpecs, getFixtureTypes, getLinenColors } from '../hooks/useLayo
 import { getChairSpecs } from '../data/venueData';
 import { getConfig } from '../config';
 import SafeImage from './SafeImage';
+import { emit } from '../utils/appEvents';
 
 export interface PropertiesPanelProps {
   selectedId: string | null;
@@ -285,11 +286,7 @@ export function PropertiesPanel({
                   </span>
                   <button
                     onClick={() => {
-                      (window as any).dispatchEvent(
-                        new CustomEvent('spm_open_decor_designer', {
-                          detail: { arrangementId: item.appliedArrangementId },
-                        }),
-                      );
+                      emit('spm_open_decor_designer', { arrangementId: item.appliedArrangementId });
                     }}
                     className="text-[10px] text-blue-600 font-bold hover:underline"
                     type="button"

@@ -7,6 +7,7 @@ import { getConfig } from '../config';
 import EmojiPicker from './EmojiPicker';
 import { canAccessOperationsPanel, canManageOperationsData } from '../utils/permissions';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { emitDataChanged, on } from '../utils/appEvents';
 
 interface Props {
   onClose: () => void;
@@ -81,27 +82,26 @@ const StaffOperationsPanel: React.FC<Props> = ({
     };
 
     loadData();
-    window.addEventListener('spm_data_changed', loadData);
-    return () => window.removeEventListener('spm_data_changed', loadData);
+    return on('spm_data_changed', loadData);
   }, []);
 
   // Save Helpers
   const saveTasks = (newTasks: StaffTask[]) => {
     setTasks(newTasks);
     localStorage.setItem(STORAGE_KEYS.STAFF_TASKS, JSON.stringify(newTasks));
-    window.dispatchEvent(new CustomEvent('spm_data_changed'));
+    emitDataChanged();
   };
 
   const saveAreas = (newAreas: StaffArea[]) => {
     setAreas(newAreas);
     localStorage.setItem(STORAGE_KEYS.STAFF_AREAS, JSON.stringify(newAreas));
-    window.dispatchEvent(new CustomEvent('spm_data_changed'));
+    emitDataChanged();
   };
 
   const saveShifts = (newShifts: StaffShift[]) => {
     setShifts(newShifts);
     localStorage.setItem(STORAGE_KEYS.STAFF_SHIFTS, JSON.stringify(newShifts));
-    window.dispatchEvent(new CustomEvent('spm_data_changed'));
+    emitDataChanged();
   };
 
   // --- Handlers ---

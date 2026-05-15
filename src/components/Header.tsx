@@ -11,6 +11,7 @@ import {
 } from '../utils/permissions';
 import ModalDialog from './ModalDialog';
 import Logo from './Logo';
+import { emit } from '../utils/appEvents';
 
 export interface HeaderProps {
   currentVenue: Venue;
@@ -445,10 +446,7 @@ export function Header({
                   <hr className="my-1" />
 				  
 				    <button
-					  onClick={() => {
-						const event = new CustomEvent('spm_open_vendors');
-						window.dispatchEvent(event);
-					  }}
+					  onClick={() => emit('spm_open_vendors')}
 					  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 					  title="Vendor Management"
 					>
@@ -456,10 +454,7 @@ export function Header({
 					</button>
 				  
 					<button
-				      onClick={() => {
-					    const event = new CustomEvent('spm_open_timeline');
-					    window.dispatchEvent(event);
-				      }}
+				      onClick={() => emit('spm_open_timeline')}
 				      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 				      title="Wedding Timeline"
 				    >

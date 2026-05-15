@@ -3,6 +3,7 @@ import { Venue, PlacedTable, PlacedFixture, Guest, CeremonyChairRow, Rectangular
 import { getTableSpecs, getFixtureTypes, getLinenColors, getDecorArrangements, getDecorItems } from '../hooks/useLayoutState';
 import { getChairSpecs, getSpacingSettings } from '../data/venueData';
 import { getConfig } from '../config';
+import { on } from '../utils/appEvents';
 
 interface Position {
   x: number;
@@ -167,8 +168,7 @@ export function FloorPlanCanvas({
 		setLocalArrangements([]);
       }
     };
-    window.addEventListener('spm_data_changed', handleChange);
-    return () => window.removeEventListener('spm_data_changed', handleChange);
+    return on('spm_data_changed', handleChange);
   }, []);
   void getSpacingSettings();
 
