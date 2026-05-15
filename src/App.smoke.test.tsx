@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 /**
  * Re-enabled smoke test (was previously skipped with `describe.skip`).
@@ -15,8 +15,8 @@ import { render, screen } from '@testing-library/react';
  * thousands of LOC of SVG / canvas code that JSDOM struggles with.  That
  * contract is still covered, but at the right granularity:
  *
- *   - `src/utils/appEvents.test.ts`         — typed bus delivery contract
- *   - `src/hooks/useAppModals.test.ts`      — modal opener subscribes & flips
+ *   - `src/utils/appEvents.test.ts`           — typed bus delivery contract
+ *   - `src/hooks/useAppModals.test.ts`        — modal opener subscribes & flips
  *     state when `spm_open_decor_designer` fires (regression test for the
  *     original Decor Designer bug)
  *   - `src/components/DecorDesigner.test.tsx` — the modal itself works once
@@ -24,8 +24,15 @@ import { render, screen } from '@testing-library/react';
  *
  * Together those three files prove the same end-to-end contract that an
  * AuthenticatedApp render would, without paying jsdom's full mount cost.
+ *
+ * NOTE (lazy-load): GuestPortal is now React.lazy(). Vitest's module mock
+ * interceptor works on the ES-module graph, so vi.mock still works but the
+ * Suspense boundary in AppContent means we must await the resolved state with
+ * waitFor / findBy* queries.
  */
 
+// Mock the lazy-loaded GuestPortal module – Vitest resolves the mock before
+// the dynamic import fires so the component renders synchronously in jsdom.
 vi.mock('./components/GuestPortal', () => ({
   default: () => <div data-testid="guest-portal-stub">GUEST_PORTAL</div>,
 }));
@@ -47,10 +54,11 @@ describe('App smoke', () => {
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it('routes to the GuestPortal when the URL hash points at it', () => {
+  it('routes to the GuestPortal when the URL hash points at it', async () => {
     window.location.hash = '#/guest-portal';
     render(<App />);
-    expect(screen.getByTestId('guest-portal-stub')).toBeInTheDocument();
+    // GuestPortal is React.lazy() – wait for the Suspense boundary to resolve.
+    expect(await screen.findByTestId('guest-portal-stub')).toBeInTheDocument();
     // And does NOT fall through to the LoginScreen.
     expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
   });

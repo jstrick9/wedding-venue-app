@@ -839,6 +839,27 @@ export interface RSVPSubmission {
   submittedAt: string;
 }
 
+/** A single entry on the guest-facing event schedule. */
+export interface PortalScheduleItem {
+  id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  venueId?: string;
+  startTime: string;   // ISO-8601
+  endTime?: string;    // ISO-8601
+  isHighlight?: boolean;
+  /** 0-based day index for multi-day events */
+  dayIndex?: number;
+}
+
+/** A named point-of-interest used in the wayfinding tab. */
+export interface PortalWayfindingPoint {
+  id: string;
+  label: string;
+  description?: string;
+}
+
 export interface GuestPortalConfig {
   eventTitle: string;
   eventStartDate: string;
@@ -857,6 +878,15 @@ export interface GuestPortalConfig {
   showRSVP?: boolean;
   showLodging?: boolean;
   enabledVenueCategories?: string[];
+  /** Schedule items published to guests (B-09 fix). */
+  scheduleItems?: PortalScheduleItem[];
+  /** Named wayfinding destinations (B-09 fix). */
+  wayfindingPoints?: PortalWayfindingPoint[];
+  /**
+   * Hours after event-end date before the portal closes (B-06 fix).
+   * Defaults to 36 so EST venues don't lose access mid-event.
+   */
+  accessGracePeriodHours?: number;
 }
 
 export interface GuestPortalGuestRecord extends Guest {

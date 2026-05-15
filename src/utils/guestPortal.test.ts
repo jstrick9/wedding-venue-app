@@ -82,19 +82,23 @@ describe('guest portal helpers', () => {
     expect(stored.version).toBe(2);
   });
 
-  it('calculates event access end as the start of the day after the event', () => {
+  it('calculates event access end as event-end date plus the grace period (default 36 h)', () => {
+    // sampleConfig.eventEndDate = '2026-05-13'
+    // default grace = 36 h  →  2026-05-13T00:00:00Z + 36 h = 2026-05-14T12:00:00Z
     const end = getGuestPortalAccessEnd(sampleConfig as any);
     expect(end).not.toBeNull();
-    expect(end?.toISOString().startsWith('2026-05-14T00:00:00')).toBe(true);
+    expect(end?.toISOString()).toBe('2026-05-14T12:00:00.000Z');
   });
 
-  it('treats guest portal as inactive the day after the event', () => {
+  it('treats guest portal as active until the grace period expires (36 h after event-end date)', () => {
+    // Portal stays open through 2026-05-14T11:59:59Z (inside the 36 h grace)
     expect(
-      isGuestPortalEventActive(sampleConfig as any, new Date('2026-05-13T23:59:59Z')),
+      isGuestPortalEventActive(sampleConfig as any, new Date('2026-05-14T11:59:59Z')),
     ).toBe(true);
 
+    // Portal closes at 2026-05-14T12:00:00Z (exactly 36 h after midnight UTC of eventEndDate)
     expect(
-      isGuestPortalEventActive(sampleConfig as any, new Date('2026-05-14T00:00:00Z')),
+      isGuestPortalEventActive(sampleConfig as any, new Date('2026-05-14T12:00:00Z')),
     ).toBe(false);
   });
 

@@ -8,24 +8,53 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { FloorPlanCanvas } from './components/FloorPlanCanvas';
 import { PropertiesPanel } from './components/PropertiesPanel';
-import { DecorDesigner } from './components/DecorDesigner';
-import { GuestPanel } from './components/GuestPanel';
-import StaffOperationsPanel from './components/StaffOperationsPanel';
-import GuestPortal from './components/GuestPortal';
-import { AdminPanel } from './components/AdminPanel';
-import { PrintView } from './components/PrintView';
-import { TemplateSelector } from './components/TemplateSelector';
+import { lazy, Suspense } from 'react';
+// Always-present shell components – eager imports
 import { WelcomeModal } from './components/WelcomeModal';
 import { ToastContainer, showToast } from './components/Toast';
 import { LiveRegion, announce } from './components/LiveRegion';
 import AppStatusBar, { StatusBarItem } from './components/AppStatusBar';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
-import { DirectMessagePanel } from './components/DirectMessagePanel';
+import SafeImage from './components/SafeImage';
 import { buildMessageThreadId } from './models/DirectMessage';
 import { useSubmissionWorkflow } from './hooks/useSubmissionWorkflow';
-import { SubmissionStatusPanel } from './components/SubmissionStatusPanel';
-import { EventQuestionsWizard } from './components/EventQuestionsWizard';
-import SafeImage from './components/SafeImage';
+
+// ─── Lazy-loaded modal / portal components ───────────────────────────────────
+// These are gated by showXxx flags or URL hash – load them only when needed.
+// A single Suspense boundary wraps the whole modals section below.
+const DecorDesigner = lazy(() =>
+  import('./components/DecorDesigner').then((m) => ({ default: m.DecorDesigner })),
+);
+const GuestPanel = lazy(() =>
+  import('./components/GuestPanel').then((m) => ({ default: m.GuestPanel })),
+);
+const StaffOperationsPanel = lazy(() => import('./components/StaffOperationsPanel'));
+const GuestPortal = lazy(() => import('./components/GuestPortal'));
+const AdminPanel = lazy(() =>
+  import('./components/AdminPanel').then((m) => ({ default: m.AdminPanel })),
+);
+const PrintView = lazy(() =>
+  import('./components/PrintView').then((m) => ({ default: m.PrintView })),
+);
+const TemplateSelector = lazy(() =>
+  import('./components/TemplateSelector').then((m) => ({ default: m.TemplateSelector })),
+);
+const DirectMessagePanel = lazy(() =>
+  import('./components/DirectMessagePanel').then((m) => ({ default: m.DirectMessagePanel })),
+);
+const SubmissionStatusPanel = lazy(() =>
+  import('./components/SubmissionStatusPanel').then((m) => ({ default: m.SubmissionStatusPanel })),
+);
+const EventQuestionsWizard = lazy(() =>
+  import('./components/EventQuestionsWizard').then((m) => ({ default: m.EventQuestionsWizard })),
+);
+const VendorPanel = lazy(() =>
+  import('./components/VendorPanel').then((m) => ({ default: m.VendorPanel })),
+);
+const TimelinePanel = lazy(() =>
+  import('./components/TimelinePanel').then((m) => ({ default: m.TimelinePanel })),
+);
+// ─────────────────────────────────────────────────────────────────────────────
 
 import { getConfig } from './config';
 import { checkTableCollision, checkFixtureCollision } from './utils/collisionDetection';
@@ -48,10 +77,8 @@ import {
 } from './utils/permissions';
 import { UndoRedoProvider } from './contexts/UndoRedoContext';
 import { UndoRedoToolbar } from './components/UndoRedoToolbar';
-import { TimelinePanel } from './components/TimelinePanel';
 import { emit, emitDataChanged, on, type UndoSnapshot } from './utils/appEvents';
 import { useAppModals } from './hooks/useAppModals';
-import { VendorPanel } from './components/VendorPanel';
 
 // Position type
 interface Position {
@@ -193,17 +220,28 @@ function AuthenticatedApp() {
   const masterThreadId = buildMessageThreadId(currentEventName, user.id);
   const submissionWorkflow = useSubmissionWorkflow();
 
-  const currentEventAnswers = useMemo(() => {
+  // ── Reactive event-answers ───────────────────────────────────────────────
+  // Read answers from localStorage into state so they are reactive across
+  // re-renders without the `showSubmission` staleness hack (B-08 fix).
+  const readEventAnswers = useCallback((): EventAnswer[] => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.EVENT_ANSWERS);
-      if (!raw) return [] as EventAnswer[];
+      if (!raw) return [];
       const parsed = JSON.parse(raw) as EventAnswer[];
-      if (!Array.isArray(parsed)) return [] as EventAnswer[];
+      if (!Array.isArray(parsed)) return [];
       return parsed.filter((a) => a.userId === user.id && a.eventId === currentEventName);
     } catch {
-      return [] as EventAnswer[];
+      return [];
     }
-  }, [user.id, currentEventName, showSubmission]);
+  }, [user.id, currentEventName]);
+
+  const [currentEventAnswers, setCurrentEventAnswers] = useState<EventAnswer[]>(readEventAnswers);
+
+  // Keep answers fresh whenever any part of the app writes new data.
+  useEffect(() => {
+    setCurrentEventAnswers(readEventAnswers());
+    return on('spm_data_changed', () => setCurrentEventAnswers(readEventAnswers()));
+  }, [readEventAnswers]);
 
   const eventQuestions = useMemo(() => {
     try {
@@ -1454,6 +1492,11 @@ function AuthenticatedApp() {
         />
       </div>
 
+      {/* ─── Lazy-loaded modals – one shared Suspense boundary ─────────────── */}
+      {/* All components below are React.lazy(). The fallback is invisible so   */}
+      {/* first-paint of the main canvas is never blocked by modal JS chunks.  */}
+      <Suspense fallback={null}>
+
       {/* Guest Panel Modal */}
       {showGuests && canOpenGuestPanel && (
         <GuestPanel
@@ -1578,15 +1621,15 @@ function AuthenticatedApp() {
 
       {/* Staff Operations Panel Modal */}
       {showOperations && canOpenOperationsPanel && (
-  			<StaffOperationsPanel
-    				onClose={() => setShowOperations(false)}
-    				currentUser={user}
-    				isAdmin={isAdmin}
-    				venueId={layoutState.currentVenue.id}
-    				eventName={currentEventName}
-    				users={allUsers}  
-    				venues={layoutState.venues}   
-  			/>
+          <StaffOperationsPanel
+          onClose={() => setShowOperations(false)}
+          currentUser={user}
+          isAdmin={isAdmin}
+          venueId={layoutState.currentVenue.id}
+          eventName={currentEventName}
+          users={allUsers}
+          venues={layoutState.venues}
+        />
 	)}
 
       {/* Admin Panel Modal */}
@@ -1647,16 +1690,16 @@ function AuthenticatedApp() {
               </button>
             </div>
             <div className="p-4">
-             			     <SafeImage
-                			   src={imagePreview.url}
-                			   alt={imagePreview.title || 'Preview image'}
-                			   className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg"
-                			   fallback={
-                  				<div className="w-[320px] h-[220px] max-w-full flex items-center justify-center bg-gray-100 text-gray-500 border border-gray-200 rounded mx-auto">
-                    				Preview unavailable
-                  				</div>
-                			   }
-              			     />
+              <SafeImage
+                src={imagePreview.url}
+                alt={imagePreview.title || 'Preview image'}
+                className="max-w-full max-h-[70vh] object-contain mx-auto rounded-lg"
+                fallback={
+                  <div className="w-[320px] h-[220px] max-w-full flex items-center justify-center bg-gray-100 text-gray-500 border border-gray-200 rounded mx-auto">
+                    Preview unavailable
+                  </div>
+                }
+              />
             </div>
           </div>
         </div>
@@ -1665,10 +1708,8 @@ function AuthenticatedApp() {
       {/* Welcome Modal for first-time users */}
       {showWelcome && !isAdmin && (
         <WelcomeModal
-		  onClose={() => {
+          onClose={() => {
             setShowWelcome(false);
-            // Note: The WelcomeModal handles the localStorage 'spm_welcome_hidden' flag
-            // when user clicks "Don't show again" checkbox (only for admin/basic users)
           }}
           isAdmin={isAdmin}
           isGuest={isGuest}    
@@ -1687,6 +1728,9 @@ function AuthenticatedApp() {
 		<TimelinePanel onClose={() => setShowTimeline(false)} />
 	  )}
 
+      </Suspense>
+      {/* ─────────────────────────────────────────────────────────────────────── */}
+
       {/* Toast notifications */}
       <ToastContainer />
     </div>
@@ -1695,7 +1739,7 @@ function AuthenticatedApp() {
 }
 
 function AppContent() {
-  const { user } = useAuth();
+  const { user, continueAsGuest } = useAuth();
   // TRACK HASH IN STATE TO TRIGGER RE-RENDERS
   const [hash, setHash] = useState(window.location.hash);
 
@@ -1705,21 +1749,33 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-   // Guest Portal route
- if (hash.startsWith('#/guest-portal')) {
- return (
-  <GuestPortal
-    guestToken={getGuestPortalTokenFromLocation(window.location)}
-    onExitPortal={() => {
-      window.location.hash = '';
-    }}
-  />
- );
- }
+  // Guest Portal route — GuestPortal is lazy, wrap in its own Suspense
+  if (hash.startsWith('#/guest-portal')) {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-slate-100 flex items-center justify-center">
+            <div className="text-center space-y-3">
+              <div className="text-4xl animate-pulse">🌸</div>
+              <p className="text-sm text-gray-500">Loading Guest Portal…</p>
+            </div>
+          </div>
+        }
+      >
+        <GuestPortal
+          guestToken={getGuestPortalTokenFromLocation(window.location)}
+          onExitPortal={() => {
+            window.location.hash = '';
+          }}
+        />
+      </Suspense>
+    );
+  }
 
-  // Login screen
+  // Login screen — pass continueAsGuest so the button works without
+  // requiring AuthContext access directly inside LoginScreen (B-12 fix).
   if (!user) {
-    return <LoginScreen />;
+    return <LoginScreen onContinueAsGuest={continueAsGuest} />;
   }
 
   return <AuthenticatedApp />;

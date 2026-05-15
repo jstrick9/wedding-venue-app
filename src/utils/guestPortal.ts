@@ -42,11 +42,25 @@ export function normalizeEventKey(eventName: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/**
+ * Returns the UTC timestamp after which the guest portal should be considered
+ * inaccessible.
+ *
+ * Default: midnight UTC at end of the event day PLUS a grace period so that
+ * venues in time-zones behind UTC (e.g. EST = UTC-5) don't lose portal access
+ * hours before their event physically ends.
+ *
+ * The grace period defaults to 36 hours but is overridable via
+ * `config.accessGracePeriodHours` (set in the Admin → Guest Portal tab).
+ */
 export function getGuestPortalAccessEnd(
   config: GuestPortalConfig,
 ): Date | null {
   const rawDate = config.eventEndDate || config.eventStartDate;
   if (!rawDate) return null;
+
+  // Grace period in hours (default 36 h = event day + next full day buffer)
+  const gracePeriodHours = (config as any).accessGracePeriodHours ?? 36;
 
   const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rawDate.trim());
 
@@ -54,24 +68,24 @@ export function getGuestPortalAccessEnd(
     const year = Number(dateOnlyMatch[1]);
     const monthIndex = Number(dateOnlyMatch[2]) - 1;
     const day = Number(dateOnlyMatch[3]);
-
-    return new Date(Date.UTC(year, monthIndex, day + 1, 0, 0, 0, 0));
+    // Start of the event date in UTC, then add grace period
+    const baseMs = Date.UTC(year, monthIndex, day, 0, 0, 0, 0);
+    return new Date(baseMs + gracePeriodHours * 60 * 60 * 1000);
   }
 
   const eventDate = new Date(rawDate);
   if (Number.isNaN(eventDate.getTime())) return null;
 
-  return new Date(
-    Date.UTC(
-      eventDate.getUTCFullYear(),
-      eventDate.getUTCMonth(),
-      eventDate.getUTCDate() + 1,
-      0,
-      0,
-      0,
-      0,
-    ),
+  const baseMs = Date.UTC(
+    eventDate.getUTCFullYear(),
+    eventDate.getUTCMonth(),
+    eventDate.getUTCDate(),
+    0,
+    0,
+    0,
+    0,
   );
+  return new Date(baseMs + gracePeriodHours * 60 * 60 * 1000);
 }
 
 export function isGuestPortalEventActive(
