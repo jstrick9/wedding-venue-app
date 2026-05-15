@@ -76,6 +76,8 @@ export interface AppEventMap {
   spm_open_timeline: void;
   /** Open the Decor Designer; optionally preload an existing arrangement. */
   spm_open_decor_designer: { arrangementId?: string } | void;
+  /** Open the workspace help / shortcuts modal. */
+  spm_open_workspace_help: void;
   /** Some persisted store mutated; subscribers should refresh from `localStorage`. */
   spm_data_changed: { type: DataChangedType } | void;
   /** A new undo snapshot is available for the undo/redo stack. */
