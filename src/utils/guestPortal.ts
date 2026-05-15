@@ -246,7 +246,7 @@ export function createGuestPortalSession(
 
   const naturalExpiry = new Date(now + GUEST_PORTAL_SESSION_TTL_MS);
   const expiresAt =
-    accessEnd && accessEnd.getTime() < naturalExpiry.getTime()
+    accessEnd && accessEnd.getTime() > now && accessEnd.getTime() < naturalExpiry.getTime()
       ? accessEnd
       : naturalExpiry;
 
@@ -289,8 +289,6 @@ export function loadGuestPortalSession(
     if (!parsed?.expiresAt) return null;
     if (new Date(parsed.expiresAt).getTime() <= Date.now()) return null;
     if (parsed.portalFingerprint !== getPortalFingerprint(config)) return null;
-    if (config && !isGuestPortalEventActive(config)) return null;
-
     if (eventName) {
       const expectedEventKey = normalizeEventKey(eventName);
       if (parsed.eventKey && parsed.eventKey !== expectedEventKey) {

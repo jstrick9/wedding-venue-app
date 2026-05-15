@@ -161,7 +161,7 @@ export async function verifyPassword(
   if (user.password && user.password === password) {
     console.warn(
       `[SECURITY] User "${user.username}" authenticated with legacy plaintext password. ` +
-      `Password will be migrated to hashed format on next password change.`
+      `Password will be migrated to hashed format immediately after successful login when using local auth.`
     );
     return true;
   }

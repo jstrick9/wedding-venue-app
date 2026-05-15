@@ -847,6 +847,7 @@ export interface GuestPortalConfig {
   heroImageUrl?: string;
   welcomeMessage?: string;
   rsvpMessage?: string;
+  rsvpDeadlineDate?: string;
   portalPasswordHash?: string;
   portalPasswordSalt?: string;
   portalPassword?: string;
