@@ -16,6 +16,7 @@ import { LiveRegion, announce } from './components/LiveRegion';
 import AppStatusBar, { StatusBarItem } from './components/AppStatusBar';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import SafeImage from './components/SafeImage';
+import ModalDialog from './components/ModalDialog';
 import { buildMessageThreadId } from './models/DirectMessage';
 import { useSubmissionWorkflow } from './hooks/useSubmissionWorkflow';
 
@@ -165,6 +166,7 @@ function AuthenticatedApp() {
   const [showFloatingViewControls, setShowFloatingViewControls] = useState(true);
   const [floatingViewControlsPos, setFloatingViewControlsPos] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
   const [draggingViewControls, setDraggingViewControls] = useState(false);
+  const [showWorkspaceHelp, setShowWorkspaceHelp] = useState(false);
   const [viewControlsDragOffset, setViewControlsDragOffset] = useState({ x: 0, y: 0 });
   const [showWelcome, setShowWelcome] = useState(() => {
     // Check if admin has disabled welcome by default
@@ -565,6 +567,7 @@ function AuthenticatedApp() {
     [],
   );
 
+  useEffect(() => on('spm_open_workspace_help', () => setShowWorkspaceHelp(true)), []);
 
   // Get total capacity
   const getTotalCapacity = useCallback(() => {
@@ -1173,6 +1176,10 @@ function AuthenticatedApp() {
             setZoom(prev => Math.max(0.1, prev - 0.1));
           }
           break;
+        case '?':
+          e.preventDefault();
+          setShowWorkspaceHelp(true);
+          break;
       }
     };
 
@@ -1263,6 +1270,7 @@ function AuthenticatedApp() {
         onDeleteSavedLayout={handleDeleteSavedLayout}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
+        onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)}
 	currentUser={user}
       />
 
@@ -1504,6 +1512,8 @@ function AuthenticatedApp() {
           tables={layoutState.layout.tables}
           fixtures={layoutState.layout.fixtures}
           venue={layoutState.currentVenue}
+          eventName={currentEventName}
+          venueName={layoutState.currentVenue.name}
           onAddGuest={layoutState.addGuest}
           onUpdateGuest={layoutState.updateGuest}
           onRemoveGuest={layoutState.removeGuest}
@@ -1730,6 +1740,45 @@ function AuthenticatedApp() {
 
       </Suspense>
       {/* ─────────────────────────────────────────────────────────────────────── */}
+
+      {showWorkspaceHelp && (
+        <ModalDialog
+          title="Workspace Help & Shortcuts"
+          description="Use these shortcuts to move faster through layout planning."
+          onClose={() => setShowWorkspaceHelp(false)}
+          className="max-w-2xl"
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">Navigation</h3>
+              <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                <li><strong>Shift + Drag</strong> pan the canvas</li>
+                <li><strong>Ctrl/Cmd + 0</strong> fit the full canvas</li>
+                <li><strong>Ctrl/Cmd + 1</strong> fit the venue</li>
+                <li><strong>?</strong> open this help panel</li>
+              </ul>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">Editing</h3>
+              <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                <li><strong>Drag or click</strong> an item from the sidebar to place it</li>
+                <li><strong>Double-click</strong> an item to open properties</li>
+                <li><strong>Delete / Backspace</strong> remove the selected item</li>
+                <li><strong>Ctrl/Cmd + D</strong> duplicate the selected item</li>
+                <li><strong>P</strong> toggle the properties panel</li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-4 rounded-xl border border-[#4A1942]/10 bg-[#4A1942]/5 p-4 text-sm text-gray-700">
+            <p className="font-semibold text-[#4A1942]">Workspace UX tips</p>
+            <ul className="mt-2 space-y-1.5">
+              <li>• Use <strong>Quick find</strong> in the sidebar to jump to any table, fixture, or saved design.</li>
+              <li>• The <strong>Workspace Snapshot</strong> card keeps key layout counts visible while you work.</li>
+              <li>• Use the Guest, Admin, Vendor, and Timeline tools from the header when you need event-wide context.</li>
+            </ul>
+          </div>
+        </ModalDialog>
+      )}
 
       {/* Toast notifications */}
       <ToastContainer />

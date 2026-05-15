@@ -81,20 +81,46 @@ export const defaultConfig: Config = {
   ],
 };
 
+function readEnvString(name: string): string | undefined {
+  const value = import.meta.env?.[name as keyof ImportMetaEnv];
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function readEnvBoolean(name: string): boolean | undefined {
+  const value = import.meta.env?.[name as keyof ImportMetaEnv];
+  if (typeof value !== 'string') return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return undefined;
+}
+
+function getRuntimeDefaultConfig(): Config {
+  return {
+    ...defaultConfig,
+    primaryColor:
+      readEnvString('VITE_BRANDING_PRIMARY_COLOR') ?? defaultConfig.primaryColor,
+    showWelcomeByDefault:
+      readEnvBoolean('VITE_SHOW_WELCOME_BY_DEFAULT') ??
+      defaultConfig.showWelcomeByDefault,
+  };
+}
+
 export function getConfig(): Config {
   try {
     return loadVersionedStorage<Config>({
       key: CONFIG_STORAGE_KEY,
-      defaultValue: defaultConfig,
+      defaultValue: getRuntimeDefaultConfig(),
       currentVersion: CONFIG_STORAGE_VERSION,
       migrations: {
-        0: (input) => ({ ...defaultConfig, ...(input as Partial<Config>) }),
+        0: (input) => ({ ...getRuntimeDefaultConfig(), ...(input as Partial<Config>) }),
       },
-      normalize: (value) => ({ ...defaultConfig, ...value }),
+      normalize: (value) => ({ ...getRuntimeDefaultConfig(), ...value }),
     });
   } catch (e) {
     console.error('Failed to load config:', e);
-    return defaultConfig;
+    return getRuntimeDefaultConfig();
   }
 }
 
