@@ -63,7 +63,7 @@ describe('GuestPanel lodging room capacity enforcement', () => {
         onRemoveGuest={() => undefined}
         onAssignToTable={() => undefined}
         onAssignToRoom={() => undefined}
-        onImportCSV={() => undefined}
+        onImportCSV={() => ({ ok: true, added: 0 })}
         onExportCSV={() => undefined}
         onClose={() => undefined}
       />,

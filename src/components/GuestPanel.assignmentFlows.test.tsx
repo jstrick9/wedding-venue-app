@@ -61,7 +61,7 @@ describe('GuestPanel assignment flows', () => {
         onUpdateGuest={() => undefined}
         onRemoveGuest={() => undefined}
         onAssignToTable={onAssignToTable}
-        onImportCSV={() => undefined}
+        onImportCSV={() => ({ ok: true, added: 0 })}
         onExportCSV={() => undefined}
         onClose={() => undefined}
       />,
@@ -103,7 +103,7 @@ describe('GuestPanel assignment flows', () => {
         onRemoveGuest={() => undefined}
         onAssignToTable={() => undefined}
         onAssignToRoom={onAssignToRoom}
-        onImportCSV={() => undefined}
+        onImportCSV={() => ({ ok: true, added: 0 })}
         onExportCSV={() => undefined}
         onClose={() => undefined}
       />,

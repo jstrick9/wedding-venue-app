@@ -64,7 +64,7 @@ describe('GuestPanel room assignment (lodging fixtures)', () => {
         onRemoveGuest={() => undefined}
         onAssignToTable={() => undefined}
         onAssignToRoom={onAssignToRoom}
-        onImportCSV={() => undefined}
+        onImportCSV={() => ({ ok: true, added: 0 })}
         onExportCSV={() => undefined}
         onClose={() => undefined}
       />,

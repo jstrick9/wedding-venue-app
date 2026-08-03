@@ -20,7 +20,7 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | # | Module | Scope | Status |
 |---|---|---|---|
 | 08 | Layout canvas & interaction | FloorPlanCanvas, Sidebar, PropertiesPanel, DrawingTool, useLayoutState | ✅ zoom-to-cursor, pan clamp, keyboard a11y + nudge, fix undo-stack flood |
-| 09 | Guest panel & guest mgmt | GuestPanel, assignments, seating capacity, CSV | |
+| 09 | Guest panel & guest mgmt | GuestPanel, assignments, seating capacity, CSV | ✅ CSV import: toasts instead of alert, full column mapping, dedup; pure testable parser |
 | 10 | Guest portal | GuestPortal, portal config, RSVP, lodging, schedule, wayfinding | |
 | 11 | Admin panel shell + venue mgmt | AdminPanel, VenueManagement | |
 | 12 | Design/asset mgmt (tables, chairs, fixtures, walls, linens, spacing) | admin/* consolidation | |

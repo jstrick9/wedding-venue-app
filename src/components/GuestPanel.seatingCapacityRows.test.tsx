@@ -66,7 +66,7 @@ async function renderPanel(rowCount: number, rowSpacing: number) {
       onUpdateGuest={() => undefined}
       onRemoveGuest={() => undefined}
       onAssignToTable={onAssignToTable}
-      onImportCSV={() => undefined}
+      onImportCSV={() => ({ ok: true, added: 0 })}
       onExportCSV={() => undefined}
       onClose={() => undefined}
     />,

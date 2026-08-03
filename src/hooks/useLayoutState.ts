@@ -39,6 +39,7 @@ import {
   getSavedLayoutDocuments,
   setSavedLayoutDocuments,
 } from '../utils/collaboration';
+import { parseGuestCsv } from '../utils/guestCsv';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
 import { validateLayout } from '../utils/collisionDetection';
@@ -56,6 +57,11 @@ export interface ValidationWarning {
   message: string;
   itemIds: string[];
 }
+
+// Result of a CSV guest import. Type lives in utils/guestCsv.ts and is
+// imported + re-exported here for backward-compatible imports.
+import type { GuestImportResult } from '../utils/guestCsv';
+export type { GuestImportResult };
 
 // Saved layout type (user layouts)
 export interface SavedLayout {
@@ -745,36 +751,14 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
     }));
   }, []);
 
-  // Import guests from CSV
-  const importGuestsFromCSV = useCallback((csvText: string) => {
-    const lines = csvText.trim().split(/\r?\n/);
-    if (lines.length < 2) return;
-
-    const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase().trim());
-    const nameIndex = headers.findIndex((h) => h.includes('name'));
-    const groupIndex = headers.findIndex((h) => h.includes('group') || h.includes('party'));
-
-    if (nameIndex === -1) {
-      alert('CSV must have a "name" column');
-      return;
+  // Import guests from CSV (parsing lives in utils/guestCsv.ts for testability)
+  const importGuestsFromCSV = useCallback((csvText: string): GuestImportResult => {
+    const result = parseGuestCsv(csvText, guests);
+    if (result.guests && result.guests.length > 0) {
+      setGuests((prev) => [...prev, ...(result.guests as Guest[])]);
     }
-
-    const newGuests: Guest[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCsvLine(lines[i]);
-      const name = values[nameIndex];
-      if (name) {
-        newGuests.push({
-          id: `guest-${Date.now()}-${i}`,
-          name,
-          group: groupIndex >= 0 ? values[groupIndex] : undefined,
-          rsvpStatus: 'pending' as const,
-        });
-      }
-    }
-
-    setGuests((prev) => [...prev, ...newGuests]);
-  }, []);
+    return result;
+  }, [guests]);
 
   // Export guests to CSV
   const exportGuestsToCSV = useCallback(() => {

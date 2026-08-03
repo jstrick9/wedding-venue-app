@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
+import type { GuestImportResult } from '../hooks/useLayoutState';
+import { showToast } from './Toast';
 import { Guest, PlacedFixture, PlacedTable, Venue } from '../types';
 import { getFixtureTypes, getTableSpecs } from '../hooks/useLayoutState';
 
@@ -12,7 +14,7 @@ export interface GuestPanelProps {
   onRemoveGuest: (id: string) => void;
   onAssignToTable: (guestId: string, tableId: string | null) => void;
   onAssignToRoom?: (guestId: string, roomId: string | null) => void;
-  onImportCSV: (content: string) => void;
+  onImportCSV: (content: string) => GuestImportResult;
   onExportCSV: () => void;
   onClose: () => void;
   eventName?: string;
@@ -181,7 +183,15 @@ export function GuestPanel({
     const reader = new FileReader();
     reader.onload = ev => {
       const content = ev.target?.result as string;
-      onImportCSV(content);
+      const result = onImportCSV(content);
+      if (!result.ok) {
+        showToast(result.error || 'Could not import guests.', 'warning');
+      } else {
+        const skipped = result.skipped || 0;
+        const msg = `Imported ${result.added || 0} guest${(result.added || 0) === 1 ? '' : 's'}` +
+          (skipped > 0 ? ` (${skipped} duplicate${skipped === 1 ? '' : 's'} skipped)` : '');
+        showToast(msg, 'success');
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
