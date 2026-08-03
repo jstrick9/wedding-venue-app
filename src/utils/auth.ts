@@ -28,6 +28,7 @@ export type AuthUser = User & {
   sessionVersion?: number;
   failedLoginCount?: number;
   lockedUntil?: string;
+  requiresPasswordChange?: boolean;
   userStatus?: 'invited' | 'pending' | 'active' | 'suspended' | 'disabled';
 };
 

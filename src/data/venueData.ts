@@ -337,7 +337,8 @@ export const defaultUsers: User[] = [
   {
     id: 'admin-1',
     username: 'admin',
-    password: 'spm2024',
+    password: 'REPLACE_ON_FIRST_LOGIN',
+    requiresPasswordChange: true,
     role: 'admin',
     name: 'Administrator',
     email: 'weddings@sevenpathsmanor.com',

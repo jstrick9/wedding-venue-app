@@ -160,12 +160,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const cleared = clearFailedLoginState(u as any) as User;
       if (!migratedPasswordRecord) return cleared;
 
-      return {
-        ...cleared,
-        password: '',
-        ...(migratedPasswordRecord as any),
-        sessionVersion: ((cleared as any).sessionVersion ?? 1) + 1,
-      } as User;
+        return {
+          ...cleared,
+          password: '',
+          requiresPasswordChange: false,
+          ...(migratedPasswordRecord as any),
+          sessionVersion: ((cleared as any).sessionVersion ?? 1) + 1,
+        } as User;
     });
     setUsers(updatedUsers);
 

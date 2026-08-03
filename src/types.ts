@@ -290,6 +290,7 @@ export interface User {
   department?: string;
   notes?: string;
   isActive: boolean;
+  requiresPasswordChange?: boolean;
   lastLogin?: string;
   loginCount?: number;
   createdAt: string;
@@ -701,6 +702,7 @@ export interface Config {
   location: string;
   websiteUrl: string;
   supportEmail: string;
+  phone?: string;
   primaryColor: string;
   primaryDark: string;
   primaryLight: string;
@@ -712,6 +714,9 @@ export interface Config {
   accentTextColor: string;
   fontFamily: string;
   headingFontFamily: string;
+  welcomeLogoUrl?: string;
+  welcomeTitle?: string;
+  showWelcomeByDefault?: boolean;
   welcomeFeatures?: string[];
 }
 
