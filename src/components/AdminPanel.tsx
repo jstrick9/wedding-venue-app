@@ -85,6 +85,8 @@ import { UserManagement } from './admin/UserManagement';
 import { BrandingManagement } from './admin/BrandingManagement';
 import { AccessControlPanel } from './admin/AccessControlPanel';
 import { GuestPortalManagement } from './admin/GuestPortalManagement';
+import { BackupManagement } from './admin/BackupManagement';
+import { emitDataChanged } from '../utils/appEvents';
 import type { AdminCommonProps, AdminDialogOptions, AdminTabDefinition } from './admin/AdminTabTypes';
 
 const chairLayoutOptions: { id: RectangularChairLayout; name: string; description: string }[] = [
@@ -1008,6 +1010,14 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
       props: { onShowSuccess: showSuccess },
     },
     { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps, group: 'Portal & Brand' },
+    {
+      id: 'backup',
+      label: '💾 Backup & Restore',
+      icon: '💾',
+      Component: BackupManagement,
+      group: 'System & Backup',
+      props: { user, onDataRestored: () => emitDataChanged('all') },
+    },
   ];
 
   const filteredTabs = tabs.filter((tab) => {

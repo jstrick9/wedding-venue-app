@@ -28,7 +28,7 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | 14 | Events: questions, templates, guidelines | EventQuestionsWizard, TemplateSelector, guideline admin | ✅ fix dead Templates feature (never rendered) + overwrite confirm |
 | 15 | Operations: staff, timeline, vendors | StaffOperationsPanel, TimelinePanel, VendorPanel | ✅ toast for import success/error |
 | 16 | Communication: direct messages, submissions | DirectMessagePanel, SubmissionStatusPanel | ✅ auto-scroll message list to newest |
-| 17 | Print/export + backup UI + onboarding | PrintView, backup UI, welcome, empty states | |
+| 17 | Print/export + backup UI + onboarding | PrintView, backup UI, welcome, empty states | ✅ expose Backup & Restore panel (was unreachable) |
 | 18 | NEW — Event Overview dashboard | EventOverview, eventDashboard util | ✅ RSVP/capacity reconciliation, response rate, health grade, quick actions |
 
 ## New feature candidates (Intelligence Platform additions)
