@@ -583,6 +583,17 @@ export default function AuthenticatedApp() {
         </div>
         <Suspense fallback={null}>
           {showGuests && <GuestPanel guests={layoutState.guests} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} venue={layoutState.currentVenue} eventName={currentEventName} venueName={layoutState.currentVenue.name} onAddGuest={layoutState.addGuest} onUpdateGuest={layoutState.updateGuest} onRemoveGuest={layoutState.removeGuest} onAssignToTable={layoutState.assignGuestToTable} onAssignToRoom={layoutState.assignGuestToRoom} onImportCSV={layoutState.importGuestsFromCSV} onExportCSV={layoutState.exportGuestsToCSV} onClose={() => close('guests')} />}
+          {showOperations && (
+            <StaffOperationsPanel
+              onClose={() => close('operations')}
+              currentUser={user}
+              isAdmin={isAdmin}
+              venueId={layoutState.currentVenue.id}
+              eventName={currentEventName}
+              users={allUsers}
+              venues={selectableVenues}
+            />
+          )}
           {showDecorDesigner && <DecorDesigner onClose={() => close('decorDesigner')} onSave={(a) => { const currentArrangements = layoutState.getDecorArrangements(); const nextArrangements = currentArrangements.find(x => x.id === a.id) ? currentArrangements.map(x => x.id === a.id ? a : x) : [...currentArrangements, a]; layoutState.setDecorArrangements(nextArrangements); close('decorDesigner'); }} initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null} />}
           {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }} />}
           {showOverview && (
