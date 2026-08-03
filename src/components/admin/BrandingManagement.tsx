@@ -9,6 +9,7 @@ import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import { deriveShades } from '../../utils/color';
 import type { AdminCommonProps } from './AdminTabTypes';
 
 const DEFAULT_LOADED_FONT_FAMILIES = new Set(['Inter', 'Playfair Display']);
@@ -939,6 +940,28 @@ export function BrandingManagement(props: AdminCommonProps) {
                         </div>
                       ))}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shades = deriveShades(config.primaryColor || '#4A1942');
+                        handleSaveConfig({
+                          ...config,
+                          primaryDark: shades.dark,
+                          primaryLight: shades.light,
+                        });
+                      }}
+                      className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
+                      style={{
+                        borderColor: config.primaryColor || '#4A1942',
+                        color: config.primaryColor || '#4A1942',
+                      }}
+                    >
+                      🎨 Auto-generate dark &amp; light shades from Primary
+                    </button>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Derives the header-gradient (dark) and hover (light) shades from your
+                      primary color so you don't have to tune them by hand.
+                    </p>
                   </div>
                   
                   {/* Live Preview */}

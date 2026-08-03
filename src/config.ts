@@ -8,42 +8,16 @@
 import { STORAGE_KEYS } from './constants/storageKeys';
 import { STORAGE_VERSIONS } from './constants/storageVersions';
 import { loadVersionedStorage, saveVersionedStorage } from './utils/storage';
+import type { Config } from './types';
 
 const CONFIG_STORAGE_KEY = STORAGE_KEYS.CONFIG;
 const CONFIG_STORAGE_VERSION = STORAGE_VERSIONS.CONFIG;
 
-export interface Config {
-  // Branding
-  logoUrl: string;
-  venueName: string;
-  tagline: string;
-  location: string;
-  websiteUrl: string;
-  supportEmail: string;
-  phone?: string;
-
-  // Color Palette
-  primaryColor: string;
-  primaryDark: string;
-  primaryLight: string;
-  accentColor: string;
-  backgroundColor: string;
-  textColor: string;
-
-  // Typography
-  fontFamily: string;
-  headingFontFamily: string;
-  headerTextColor: string;
-  bodyTextColor: string;
-  accentTextColor: string;
-
-  // Welcome Settings
-  welcomeLogoUrl?: string;
-  welcomeTitle?: string;
-  showWelcomeByDefault?: boolean;
-  /** Feature chips shown on welcome screen for non-admin users */
-  welcomeFeatures?: string[];
-}
+// The `Config` interface is defined once in `src/types.ts` and re-exported
+// here so that `import { Config } from '../config'` and
+// `import { Config } from '../../types'` resolve to the same type. Keeping two
+// copies in sync was a maintainability hazard.
+export type { Config };
 
 // Default configuration
 export const defaultConfig: Config = {
