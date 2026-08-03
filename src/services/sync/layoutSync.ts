@@ -1,5 +1,7 @@
 import { getPlatformProvider } from '../platform';
 import { getLayoutRepository, type LayoutSyncContext } from '../repository/layoutRepository';
+
+export type { LayoutSyncContext };
 import { getSavedLayouts } from '../../hooks/useLayoutState';
 
 /**

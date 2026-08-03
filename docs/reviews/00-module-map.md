@@ -52,7 +52,7 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | B | Data repository seam (local + Supabase providers) + layout sync | ✅ built + tested |
 | C | From-scratch go-live guide & architecture (docs/platform/PLATFORM.md) | ✅ written |
 | D | Wire repository into app UI (useLayoutState → repository when enabled) | ✅ built + tested: org id in auth, layoutSync service + useLayoutBackendSync hook, save/delete flush to backend |
-| E | Real-time layout collaboration (Supabase Realtime) | ⏳ scaffolded (DatabaseService) |
+| E | Real-time layout collaboration (Supabase Realtime) | ✅ built + tested: org-scoped layouts channel in useLayoutBackendSync |
 | F | Server-side guest portal auth + RSVP | ⏳ schema ready |
 | G | Object storage for images | ⏳ service ready |
 | H | Extend repository to venues/guests/vendors/staff/decor | ⏳ pattern proven |

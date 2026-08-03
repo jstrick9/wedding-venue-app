@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { canSyncLayouts, pullLayouts, pushLayouts } from '../services/sync/layoutSync';
+import { subscribeToLayoutChanges } from '../services/sync/layoutRealtime';
 
 export interface LayoutBackendSyncOptions {
   userId: string | null;
@@ -62,6 +63,14 @@ export function useLayoutBackendSync({
     loadedRef.current = true;
     void loadFromBackend();
   }, [enabled, context, loadFromBackend]);
+
+  // Real-time collaboration: when the platform backend is enabled, subscribe to
+  // org-scoped layout changes and re-pull + notify on any member's change so all
+  // devices/users see the same layouts live.
+  useEffect(() => {
+    if (!enabled || !context) return;
+    return subscribeToLayoutChanges(context, () => onLoaded?.());
+  }, [enabled, context, onLoaded]);
 
   return { enabled, loadFromBackend, saveToBackend };
 }
