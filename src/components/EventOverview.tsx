@@ -4,13 +4,14 @@ import { computeEventDashboard, type EventDashboard } from '../utils/eventDashbo
 import { computeVendorBudget, type VendorBudget } from '../utils/vendorBudget';
 import type { Vendor, VendorPayment } from '../types/vendor';
 import { getConfig } from '../config';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 const money = (n: number) =>
   n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
 function readVendors(): Vendor[] {
   try {
-    const raw = localStorage.getItem('spm_vendors');
+    const raw = localStorage.getItem(STORAGE_KEYS.VENDORS);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -18,7 +19,7 @@ function readVendors(): Vendor[] {
 }
 function readPayments(): VendorPayment[] {
   try {
-    const raw = localStorage.getItem('spm_vendor_payments');
+    const raw = localStorage.getItem(STORAGE_KEYS.VENDOR_PAYMENTS);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
