@@ -35,6 +35,9 @@ export interface FloorPlanCanvasProps {
   panOffset: { x: number; y: number };
   onPanChange: (offset: { x: number; y: number }) => void;
   onZoomChange: (zoom: number) => void;
+  /** Called once when the user begins dragging an item or presses an arrow key
+   *  to nudge one, so the caller can push a single undo snapshot per gesture. */
+  onDragStart?: () => void;
   containerRef?: React.RefObject<HTMLDivElement>;
   onMoveVenueFeature?: (featureType: 'indoor' | 'outdoor', featureId: string, position: Position) => void;
 }
@@ -63,11 +66,15 @@ export function FloorPlanCanvas({
   panOffset,
   onPanChange,
   onZoomChange,
+  onDragStart,
   containerRef: externalContainerRef,
 }: FloorPlanCanvasProps) {
   const internalContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = externalContainerRef || internalContainerRef;
   const svgRef = useRef<SVGSVGElement>(null);
+  // Tracks whether the current item drag has actually moved (so an undo
+  // snapshot is pushed once per real drag, not on click-to-select).
+  const dragMovedRef = useRef(false);
   const [dragState, setDragState] = useState<{ id: string; startX: number; startY: number; itemX: number; itemY: number; isExterior: boolean } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
@@ -774,6 +781,7 @@ export function FloorPlanCanvas({
     if (e.button === 1 || e.shiftKey) return;
     
     onSelect(id);
+    dragMovedRef.current = false;
     setDragState({
       id,
       startX: e.clientX,
@@ -796,6 +804,43 @@ export function FloorPlanCanvas({
     }
   };
 
+  // Keyboard support for canvas items: Enter/Space to select, arrow keys to
+  // nudge the item a step (Shift = 1ft, plain = 0.5ft). Delete/Backspace is
+  // handled globally by the workspace. This makes the canvas usable without a
+  // mouse and consistent with the app's screen-reader/keyboard work.
+  const handleItemKeyDown = (
+    e: React.KeyboardEvent,
+    id: string,
+    itemX: number,
+    itemY: number,
+    isExterior: boolean,
+  ) => {
+    if (e.target !== e.currentTarget) return;
+
+    const step = e.shiftKey ? 1 : 0.5;
+    let dx = 0;
+    let dy = 0;
+    switch (e.key) {
+      case 'ArrowLeft': dx = -step; break;
+      case 'ArrowRight': dx = step; break;
+      case 'ArrowUp': dy = -step; break;
+      case 'ArrowDown': dy = step; break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        onSelect(id);
+        return;
+      default:
+        return;
+    }
+    e.preventDefault();
+    onSelect(id);
+    // Each arrow-key nudge is a discrete action, so snapshot before it so the
+    // user can undo one nudge at a time.
+    onDragStart?.();
+    onMove(id, { x: Math.max(0, itemX + dx), y: Math.max(0, itemY + dy) }, isExterior);
+  };
+
   // Handle canvas click for placing items
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (dragState || isPanning) return;
@@ -814,13 +859,50 @@ export function FloorPlanCanvas({
     onSelect(null);
   };
 
+  // Keep the pan offset inside the container so the canvas can't be panned
+  // entirely off-screen (the parent's programmatic fit/reset calls still set
+  // whatever offset they want — this only bounds user-driven pan/zoom).
+  const clampPan = useCallback(
+    (next: Position): Position => {
+      const container = containerRef.current;
+      if (!container) return next;
+      const cw = container.clientWidth;
+      const ch = container.clientHeight;
+      const cW = (canvasWidth || 1) * zoom;
+      const cH = (canvasHeight || 1) * zoom;
+      const margin = 60;
+
+      const clamp = (v: number, min: number, max: number) =>
+        Math.min(Math.max(v, min), max);
+
+      // Horizontal
+      let x: number;
+      if (cW <= cw) {
+        x = (cw - cW) / 2; // fit: center it
+      } else {
+        x = clamp(next.x, cw - cW - margin, margin);
+      }
+      // Vertical
+      let y: number;
+      if (cH <= ch) {
+        y = (ch - cH) / 2;
+      } else {
+        y = clamp(next.y, ch - cH - margin, margin);
+      }
+      return { x, y };
+    },
+    [canvasWidth, canvasHeight, zoom, containerRef],
+  );
+
   // Mouse move effect for dragging
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isPanning) {
         const dx = e.clientX - panStart.x;
         const dy = e.clientY - panStart.y;
-        onPanChange({ x: panStart.offsetX + dx, y: panStart.offsetY + dy });
+        onPanChange(
+          clampPan({ x: panStart.offsetX + dx, y: panStart.offsetY + dy }),
+        );
         return;
       }
       
@@ -835,6 +917,13 @@ export function FloorPlanCanvas({
         newX = Math.max(0, newX);
         newY = Math.max(0, newY);
         
+        // Push a single undo snapshot on the first real movement of the drag
+        // (so a mere click-to-select does not pollute the undo history, and a
+        // whole drag is undoable as one step).
+        if (!dragMovedRef.current) {
+          dragMovedRef.current = true;
+          onDragStart?.();
+        }
         onMove(dragState.id, { x: newX, y: newY }, dragState.isExterior);
       }
     };
@@ -852,17 +941,38 @@ export function FloorPlanCanvas({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [dragState, isPanning, panStart, zoom, scale, onMove, onPanChange]);
+  }, [dragState, isPanning, panStart, zoom, scale, onMove, onPanChange, clampPan, onDragStart]);
 
-  // Handle wheel zoom
-  const handleWheel = useCallback((e: WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
+  // Handle wheel zoom — zoom is anchored to the point under the cursor so the
+  // content the user is looking at stays under their mouse.
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
       const newZoom = Math.max(0.25, Math.min(2, zoom + delta));
+      if (newZoom === zoom) return;
+
+      const container = containerRef.current;
+      const rect = container?.getBoundingClientRect();
+      if (container && rect) {
+        const localX = e.clientX - rect.left + container.scrollLeft;
+        const localY = e.clientY - rect.top + container.scrollTop;
+        // The base (un-zoomed) coordinate under the cursor.
+        const baseX = (localX - panOffset.x) / zoom;
+        const baseY = (localY - panOffset.y) / zoom;
+        // Reposition the pan so that base coordinate stays under the cursor.
+        onPanChange(
+          clampPan({
+            x: localX - baseX * newZoom,
+            y: localY - baseY * newZoom,
+          }),
+        );
+      }
       onZoomChange(newZoom);
-    }
-  }, [zoom, onZoomChange]);
+    },
+    [zoom, panOffset, onZoomChange, onPanChange, clampPan, containerRef],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1231,8 +1341,13 @@ export function FloorPlanCanvas({
               key={fixture.id}
               className="cursor-move"
               transform={`rotate(${fixtureRotation}, ${centerX}, ${centerY})`}
+              role="button"
+              tabIndex={0}
+              aria-label={`${fixture.label}, ${spec.name}`}
+              aria-pressed={selectedId === fixture.id}
               onMouseDown={(e) => handleItemMouseDown(e, fixture.id, fixture.x, fixture.y, fixture.isExterior)}
               onDoubleClick={(e) => handleItemDoubleClick(e, fixture.id, spec.imageUrl, spec.name)}
+              onKeyDown={(e) => handleItemKeyDown(e, fixture.id, fixture.x, fixture.y, !!fixture.isExterior)}
             >
               {/* Design Active Status Overlay */}
               {fixture.appliedArrangementId && (
@@ -1434,8 +1549,13 @@ export function FloorPlanCanvas({
                     key={table.id}
                     className="cursor-move"
                     transform={`rotate(${tableRotation}, ${tableCenterX}, ${tableCenterY})`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${table.label}, ${spec.name}`}
+                    aria-pressed={selectedId === table.id}
                     onMouseDown={(e) => handleItemMouseDown(e, table.id, table.x, table.y)}
                     onDoubleClick={(e) => handleItemDoubleClick(e, table.id, spec.imageUrl, spec.name)}
+                    onKeyDown={(e) => handleItemKeyDown(e, table.id, table.x, table.y, false)}
                   >
                     {/* Design Active Status Overlay */}
                     {table.appliedArrangementId && (

@@ -393,12 +393,15 @@ export default function AuthenticatedApp() {
   const handleSelectItem = useCallback((id: string | null) => layoutState.setSelectedId(id), [layoutState]);
   const handleDoubleClickItem = useCallback((id: string) => { layoutState.setSelectedId(id); setShowProperties(true); }, [layoutState]);
 
+  // A single undo snapshot is pushed once per interaction (at drag start, via
+  // onDragStart, or once per discrete arrow-key nudge) so that Undo rewinds an
+  // entire drag as one step rather than hundreds of per-mousemove snapshots.
   const handleMoveItem = useCallback((id: string, position: Position, isExterior?: boolean) => {
     if (!ensureCanEditLayout()) return;
     const table = layoutState.layout.tables.find(t => t.id === id);
     if (table) {
       const placement = resolvePlacement(position, { kind: 'table', id, specId: table.specId, isExterior: false, }, { silent: true });
-      if (placement.ok) { pushUndoSnapshot(); layoutState.updateTable(id, { x: placement.position.x, y: placement.position.y }); }
+      if (placement.ok) { layoutState.updateTable(id, { x: placement.position.x, y: placement.position.y }); }
       return;
     }
     const fixture = layoutState.layout.fixtures.find(f => f.id === id);
@@ -406,7 +409,7 @@ export default function AuthenticatedApp() {
       const spec = getFixtureTypes().find(s => s.id === fixture.specId);
       if (spec?.isPermanent || !canMoveFixture(user, spec!)) { showToast('Cannot move this fixture.', 'warning'); return; }
       const placement = resolvePlacement(position, { kind: 'fixture', id, specId: fixture.specId, isExterior: !!(fixture.isExterior || isExterior), }, { silent: true });
-      if (placement.ok) { pushUndoSnapshot(); layoutState.updateFixture(id, { x: placement.position.x, y: placement.position.y }); }
+      if (placement.ok) { layoutState.updateFixture(id, { x: placement.position.x, y: placement.position.y }); }
     }
   }, [layoutState, resolvePlacement, user, ensureCanEditLayout]);
 
@@ -464,7 +467,7 @@ export default function AuthenticatedApp() {
           <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden">
             <FloorPlanCanvas
               venue={layoutState.currentVenue} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} decor={layoutState.layout.decor} guests={layoutState.guests} selectedId={layoutState.selectedId} zoom={zoom} showGrid={showGrid} gridSize={gridSize} gridContrast={gridContrast}
-              onSelect={handleSelectItem} onDoubleClick={handleDoubleClickItem} onMove={handleMoveItem} onDrop={handleDrop} onClickToPlace={handleDrop} isDragging={!!dragItem} isDraggingExterior={dragItem?.isExterior || false} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })} panOffset={panOffset} onPanChange={setPanOffset} onZoomChange={setZoom}
+              onSelect={handleSelectItem} onDoubleClick={handleDoubleClickItem} onMove={handleMoveItem} onDrop={handleDrop} onClickToPlace={handleDrop} onDragStart={pushUndoSnapshot} isDragging={!!dragItem} isDraggingExterior={dragItem?.isExterior || false} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })} panOffset={panOffset} onPanChange={setPanOffset} onZoomChange={setZoom}
             />
             <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-lg text-sm">
               <span className="font-medium">Capacity:</span> <span className={getTotalCapacity() > layoutState.currentVenue.capacity ? 'text-red-600 font-bold' : 'text-green-600'}>{getTotalCapacity()} / {layoutState.currentVenue.capacity}</span>
