@@ -41,6 +41,8 @@ import {
 } from '../utils/collaboration';
 import { parseGuestCsv } from '../utils/guestCsv';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { STORAGE_VERSIONS } from '../constants/storageVersions';
+import { saveVersionedStorage } from '../utils/storage';
 import { emitDataChanged, on } from '../utils/appEvents';
 import { validateLayout } from '../utils/collisionDetection';
 
@@ -307,24 +309,28 @@ export function resetToDefaults(): void {
   saveToStorage(STORAGE_KEYS.OUTDOOR_FEATURE_TEMPLATES, defaultOutdoorFeatureTemplates);
   // User-generated data resets to empty so a "reset to defaults" truly clears
   // events, messages, portal, staff, and vendor content.
-  const userDataKeys = [
-    STORAGE_KEYS.SAVED_LAYOUTS,
+  // Versioned domains (saved layouts, direct messages, portal config/guests,
+  // RSVP) must be reset through the versioned writer so they keep their
+  // envelope format — writing raw values would force a legacy-migration
+  // self-heal on the next load.
+  const rawUserDataKeys = [
     STORAGE_KEYS.EVENT_ROLES,
     STORAGE_KEYS.EVENT_QUESTIONS,
     STORAGE_KEYS.EVENT_ANSWERS,
     STORAGE_KEYS.EVENT_SUBMISSIONS,
-    STORAGE_KEYS.DIRECT_MESSAGES,
-    STORAGE_KEYS.PORTAL_CONFIG,
-    STORAGE_KEYS.PORTAL_GUESTS,
-    STORAGE_KEYS.RSVP_SUBMISSIONS,
     STORAGE_KEYS.STAFF_TASKS,
     STORAGE_KEYS.STAFF_AREAS,
     STORAGE_KEYS.STAFF_SHIFTS,
     STORAGE_KEYS.VENDORS,
     STORAGE_KEYS.VENDOR_PAYMENTS,
   ];
-  userDataKeys.forEach((key) => saveToStorage(key, []));
-  saveToStorage(STORAGE_KEYS.PORTAL_CONFIG, null);
+  rawUserDataKeys.forEach((key) => saveToStorage(key, []));
+
+  saveVersionedStorage(STORAGE_KEYS.SAVED_LAYOUTS, STORAGE_VERSIONS.SAVED_LAYOUTS, []);
+  saveVersionedStorage(STORAGE_KEYS.DIRECT_MESSAGES, STORAGE_VERSIONS.DIRECT_MESSAGES, []);
+  saveVersionedStorage(STORAGE_KEYS.PORTAL_CONFIG, STORAGE_VERSIONS.PORTAL_CONFIG, null);
+  saveVersionedStorage(STORAGE_KEYS.PORTAL_GUESTS, STORAGE_VERSIONS.PORTAL_GUESTS, []);
+  saveVersionedStorage(STORAGE_KEYS.RSVP_SUBMISSIONS, STORAGE_VERSIONS.RSVP_SUBMISSIONS, []);
   emitDataChanged('all');
 }
 

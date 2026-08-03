@@ -95,4 +95,31 @@ describe('resetToDefaults', () => {
       ).not.toBeNull();
     }
   });
+
+  it('resets versioned user-data keys in the correct envelope format', () => {
+    // Plant bogus raw values that would trigger a legacy-migration self-heal
+    // on the next load if not reset properly.
+    localStorage.setItem(STORAGE_KEYS.SAVED_LAYOUTS, JSON.stringify([{ id: 'old' }]));
+    localStorage.setItem(STORAGE_KEYS.DIRECT_MESSAGES, JSON.stringify([{ id: 'm' }]));
+    localStorage.setItem(STORAGE_KEYS.PORTAL_CONFIG, JSON.stringify({ eventTitle: 'Old' }));
+    localStorage.setItem(STORAGE_KEYS.PORTAL_GUESTS, JSON.stringify([{ id: 'g' }]));
+    localStorage.setItem(STORAGE_KEYS.RSVP_SUBMISSIONS, JSON.stringify([{ id: 'r' }]));
+
+    resetToDefaults();
+
+    // Each versioned key must now be a proper envelope {version, savedAt, data},
+    // not a raw array/object.
+    const checkEnvelope = (key: string) => {
+      const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+      expect(typeof parsed.version).toBe('number');
+      expect(parsed.savedAt).toBeTruthy();
+      return parsed;
+    };
+
+    expect(checkEnvelope(STORAGE_KEYS.SAVED_LAYOUTS).data).toEqual([]);
+    expect(checkEnvelope(STORAGE_KEYS.DIRECT_MESSAGES).data).toEqual([]);
+    expect(checkEnvelope(STORAGE_KEYS.PORTAL_CONFIG).data).toBeNull();
+    expect(checkEnvelope(STORAGE_KEYS.PORTAL_GUESTS).data).toEqual([]);
+    expect(checkEnvelope(STORAGE_KEYS.RSVP_SUBMISSIONS).data).toEqual([]);
+  });
 });
