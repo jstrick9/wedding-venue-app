@@ -309,6 +309,13 @@ export default function AuthenticatedApp() {
     onLoaded: refreshSavedLayouts,
   });
 
+  // Keep the saved-layouts list in sync with storage on same-tab data changes
+  // (e.g. an admin "Reset to defaults" clears saved layouts; without this the
+  // Header dropdown would show stale entries until reload).
+  useEffect(() => {
+    return on('spm_data_changed', () => refreshSavedLayouts());
+  }, [refreshSavedLayouts]);
+
   // When admin edits persist an entity domain (spm_data_changed), flush that
   // domain to the backend so other devices/users stay in sync.
   useEffect(() => {
