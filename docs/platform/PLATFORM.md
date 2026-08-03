@@ -105,6 +105,7 @@ Email (invitations, RSVP confirmations, staff notifications) uses a Supabase
 | Real-time layout collaboration | ✅ Built + tested | `services/sync/layoutRealtime.ts` |
 | Server-side guest portal (identity + RSVP) | ✅ Built + tested | `services/portal/guestPortalBackend.ts`, migration `0002_guest_portal.sql` |
 | Object storage for images | ✅ Built + tested | `services/storage/imageStorage.ts`, `SafeImage`, `MultiImageUpload` |
+| Entity repository (venues/decor/vendors/staff/settings) | ✅ Built + tested | `services/repository/entityRepository.ts`, `services/sync/entitySync.ts`, migration `0003_org_data.sql` |
 | DB schema + Row-Level Security + storage buckets | ✅ Ready (migration) | `supabase/migrations/0001_initial.sql` |
 | Transactional email Edge Function | ✅ Ready | `supabase/functions/send-email/` |
 | Object storage service | ✅ Ready | `services/storage/ObjectStorageService.ts` |
@@ -118,9 +119,7 @@ project (paste your URL + anon key). Remaining milestones:
 1. **Apply migration `0002_guest_portal.sql`** — enables the secure public guest
    portal (token-verified identity RPC + RSVP RPC). Already coded + unit-tested;
    just run the migration against your project.
-2. **Extend the repository** to venues, guests, vendors, staff, decor (the
-   pattern in Feature B generalizes to all entities).
-3. **Multi-org invites** — use the email Edge Function to invite staff/planners
+2. **Multi-org invites** — use the email Edge Function to invite staff/planners
    into an organization (the `organization_memberships` + `invitation` tables).
 
 ---

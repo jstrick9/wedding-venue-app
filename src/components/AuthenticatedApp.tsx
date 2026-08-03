@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useLayoutState, getSavedLayouts, setSavedLayouts, getTemplates, getTableSpecs, getFixtureTypes } from '../hooks/useLayoutState';
 import { useLayoutBackendSync } from '../hooks/useLayoutBackendSync';
+import { useEntityBackendSync } from '../hooks/useEntityBackendSync';
 import { LayoutTemplate, EventAnswer, EventQuestion, PlacedTable, PlacedFixture } from '../types';
 import { layoutCategories, getSpacingSettings } from '../data/venueData';
 import { useAuth } from '../contexts/AuthContext';
@@ -299,6 +300,25 @@ export default function AuthenticatedApp() {
     organizationId,
     onLoaded: refreshSavedLayouts,
   });
+
+  // Platform entity sync: pulls shared catalog/asset/design domains on load and
+  // exposes a push used after admin edits (no-op in local mode).
+  const entityBackendSync = useEntityBackendSync({
+    userId: user.id,
+    organizationId,
+    onLoaded: refreshSavedLayouts,
+  });
+
+  // When admin edits persist an entity domain (spm_data_changed), flush that
+  // domain to the backend so other devices/users stay in sync.
+  useEffect(() => {
+    if (!entityBackendSync.enabled) return;
+    return on('spm_data_changed', (detail) => {
+      const type = detail?.type;
+      if (!type || type === 'all') return;
+      void entityBackendSync.saveDomainToBackend(type);
+    });
+  }, [entityBackendSync]);
   const pushUndoSnapshot = useCallback(() => {
     const snapshot = {
       tables: [...layoutState.layout.tables], fixtures: [...layoutState.layout.fixtures],

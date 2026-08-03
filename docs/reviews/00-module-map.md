@@ -55,5 +55,5 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | E | Real-time layout collaboration (Supabase Realtime) | ✅ built + tested: org-scoped layouts channel in useLayoutBackendSync |
 | F | Server-side guest portal auth + RSVP | ✅ built + tested: token-verified identity RPC + secure RSVP RPC (migration 0002), backend seam + wired into GuestPortal |
 | G | Object storage for images | ✅ built + tested: imageStorage seam (local data-URL / Supabase bucket), SafeImage resolves signed URLs, uploads wired into MultiImageUpload + AdminPanel |
-| H | Extend repository to venues/guests/vendors/staff/decor | ⏳ pattern proven |
+| H | Extend repository to venues/guests/vendors/staff/decor | ✅ built + tested: generic org_data repository (migration 0003) + entitySync + useEntityBackendSync, wired into AuthenticatedApp |
 | I | Multi-org invites via email | ⏳ ready to wire |
