@@ -273,4 +273,6 @@ export interface AdminTabDefinition {
   icon: string;
   Component: ComponentType<any>;
   props: any;
+  /** Optional grouping label used to visually organize the admin tab bar. */
+  group?: string;
 }

@@ -948,14 +948,15 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   };
 
   const tabs: AdminTabDefinition[] = [
-    { id: 'venues', label: '🏛️ Venues', icon: '🏛️', Component: VenueManagement, props: commonProps },
-    { id: 'tables', label: '🪑 Tables/Seating', icon: '🪑', Component: TableManagement, props: commonProps },
-    { id: 'chairs', label: '💺 Chairs', icon: '💺', Component: ChairManagement, props: commonProps },
-    { id: 'fixtures', label: '📦 Fixtures', icon: '📦', Component: FixtureManagement, props: commonProps },
+    { id: 'venues', label: '🏛️ Venues', icon: '🏛️', Component: VenueManagement, props: commonProps, group: 'Venue & Layout' },
+    { id: 'tables', label: '🪑 Tables/Seating', icon: '🪑', Component: TableManagement, props: commonProps, group: 'Venue & Layout' },
+    { id: 'chairs', label: '💺 Chairs', icon: '💺', Component: ChairManagement, props: commonProps, group: 'Venue & Layout' },
+    { id: 'fixtures', label: '📦 Fixtures', icon: '📦', Component: FixtureManagement, props: commonProps, group: 'Venue & Layout' },
     {
       id: 'decor',
       label: '🎀 Decor',
       icon: '🎀',
+      group: 'Design & Content',
       Component: AdminDecorSection,
       props: {
         config,
@@ -971,22 +972,23 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
         confirmAction,
       },
     },
-    { id: 'walls', label: '🪟 Walls', icon: '🪟', Component: WallManagement, props: commonProps },
-    { id: 'linens', label: '🎨 Linens', icon: '🎨', Component: LinenManagement, props: commonProps },
-    { id: 'spacing', label: '📐 Spacing', icon: '📐', Component: SpacingManagement, props: commonProps },
-    { id: 'templates', label: '📋 Templates', icon: '📋', Component: TemplateManagement, props: commonProps },
-    { id: 'guidelines', label: '💡 Guidelines', icon: '💡', Component: GuidelineManagement, props: commonProps },
-    { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps },
-    { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps },
-    { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') } },
+    { id: 'walls', label: '🪟 Walls', icon: '🪟', Component: WallManagement, props: commonProps, group: 'Venue & Layout' },
+    { id: 'linens', label: '🎨 Linens', icon: '🎨', Component: LinenManagement, props: commonProps, group: 'Venue & Layout' },
+    { id: 'spacing', label: '📐 Spacing', icon: '📐', Component: SpacingManagement, props: commonProps, group: 'Venue & Layout' },
+    { id: 'templates', label: '📋 Templates', icon: '📋', Component: TemplateManagement, props: commonProps, group: 'Design & Content' },
+    { id: 'guidelines', label: '💡 Guidelines', icon: '💡', Component: GuidelineManagement, props: commonProps, group: 'Design & Content' },
+    { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps, group: 'Design & Content' },
+    { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'People & Access' },
+    { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'People & Access' },
     {
       id: 'guest-portal',
       label: '💍 Guest Portal',
       icon: '💍',
       Component: GuestPortalManagement,
+      group: 'Portal & Brand',
       props: { onShowSuccess: showSuccess },
     },
-    { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps },
+    { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps, group: 'Portal & Brand' },
   ];
 
   const filteredTabs = tabs.filter((tab) => {
@@ -1049,23 +1051,36 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
           </div>
         </div>
 
-        <div className="flex overflow-x-auto border-b" style={{ backgroundColor: config.primaryColor }}>
-          {filteredTabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2"
-              style={{
-                backgroundColor: activeTab === tab.id ? 'white' : 'transparent',
-                color: activeTab === tab.id ? config.primaryColor : config.headerTextColor,
-                opacity: activeTab === tab.id ? 1 : 0.9,
-              }}
-            >
-              <span>{tab.icon}</span>
-              <span className="hidden sm:inline">{tab.label.replace(`${tab.icon} `, '')}</span>
-            </button>
-          ))}
+        <div className="flex items-center overflow-x-auto border-b" style={{ backgroundColor: config.primaryColor }}>
+          {filteredTabs.map((tab, idx) => {
+            const prev = idx > 0 ? filteredTabs[idx - 1] : null;
+            const showGroupHeader = prev?.group !== tab.group;
+            return (
+              <span key={tab.id} className="flex items-center shrink-0">
+                {showGroupHeader && (
+                  <span
+                    className="px-3 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap"
+                    style={{ color: config.headerTextColor, opacity: 0.6 }}
+                  >
+                    {tab.group}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className="px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2"
+                  style={{
+                    backgroundColor: activeTab === tab.id ? 'white' : 'transparent',
+                    color: activeTab === tab.id ? config.primaryColor : config.headerTextColor,
+                    opacity: activeTab === tab.id ? 1 : 0.9,
+                  }}
+                >
+                  <span>{tab.icon}</span>
+                  <span className="hidden sm:inline">{tab.label.replace(`${tab.icon} `, '')}</span>
+                </button>
+              </span>
+            );
+          })}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">

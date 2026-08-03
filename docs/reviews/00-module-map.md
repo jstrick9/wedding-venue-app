@@ -21,8 +21,8 @@ simplify UI/UX and for **new features** to make the platform more complete.
 |---|---|---|---|
 | 08 | Layout canvas & interaction | FloorPlanCanvas, Sidebar, PropertiesPanel, DrawingTool, useLayoutState | ✅ zoom-to-cursor, pan clamp, keyboard a11y + nudge, fix undo-stack flood |
 | 09 | Guest panel & guest mgmt | GuestPanel, assignments, seating capacity, CSV | ✅ CSV import: toasts instead of alert, full column mapping, dedup; pure testable parser |
-| 10 | Guest portal | GuestPortal, portal config, RSVP, lodging, schedule, wayfinding | |
-| 11 | Admin panel shell + venue mgmt | AdminPanel, VenueManagement | |
+| 10 | Admin panel shell + venue mgmt | AdminPanel, VenueManagement, admin tabs | ✅ group 15 tabs into 4 labeled sections |
+| 11 | Guest portal | GuestPortal, portal config, RSVP, lodging, schedule, wayfinding | |
 | 12 | Design/asset mgmt (tables, chairs, fixtures, walls, linens, spacing) | admin/* consolidation | |
 | 13 | Decor designer + decor mgmt | DecorDesigner, AdminDecorSection, decor admin | |
 | 14 | Events: questions, templates, guidelines | EventQuestionsWizard, TemplateSelector, guideline admin | |
