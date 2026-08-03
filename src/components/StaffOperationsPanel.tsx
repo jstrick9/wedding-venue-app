@@ -8,6 +8,7 @@ import EmojiPicker from './EmojiPicker';
 import { canAccessOperationsPanel, canManageOperationsData } from '../utils/permissions';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
+import { showToast } from './Toast';
 
 interface Props {
   onClose: () => void;
@@ -896,10 +897,10 @@ const StaffOperationsPanel: React.FC<Props> = ({
                         saveTasks([...(data.tasks || []), ...tasks]);
                         if (data.areas) saveAreas([...(data.areas || []), ...areas]);
                         if (data.shifts) saveShifts([...(data.shifts || []), ...shifts]);
-                        alert('Import successful!');
+                        showToast('Operations data imported successfully.', 'success');
                       }
                     } catch (err) {
-                      alert('Invalid JSON file.');
+                      showToast('Invalid JSON file.', 'warning');
                     }
                   };
                   reader.readAsText(file);
