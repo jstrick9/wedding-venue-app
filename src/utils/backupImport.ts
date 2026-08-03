@@ -8,13 +8,29 @@ import {
   validateDecorArrangement,
   validateDecorItem,
   validateDecorPackage,
+  validateDecorReferences,
   validateEventQuestion,
   validateFixtureType,
   validateTableSpec,
   validateTemplate,
+  validateTemplateReferences,
   validateUser,
   validateVenue,
+  validateVenueMasterLayoutReferences,
 } from './validators';
+
+/** Push cross-reference validator issues into the errors/warnings lists. */
+function pushReferenceIssues(
+  issues: { path: string; message: string; severity: 'error' | 'warning' }[],
+  errors: string[],
+  warnings: string[],
+): void {
+  for (const ref of issues) {
+    const line = `${ref.path}: ${ref.message}`;
+    if (ref.severity === 'error') errors.push(line);
+    else warnings.push(line);
+  }
+}
 
 const ROLLBACK_KEY = STORAGE_KEYS.BACKUP_ROLLBACK;
 
@@ -92,6 +108,40 @@ export async function preflightBackupImport(
     validateDecorArrangement as any,
   );
   validateArray('Decor Package', payload.decorPackages, validateDecorPackage as any);
+
+  // Cross-reference integrity: ensure templates reference real venues/table
+  // specs/fixtures, venue master layouts reference real specs, and decor
+  // arrangements/packages reference real items/arrangements. Without this, a
+  // backup could import data whose references are dangling (broken templates,
+  // empty venues on load).
+  pushReferenceIssues(
+    validateTemplateReferences(
+      Array.isArray(payload.templates) ? (payload.templates as any[]) : [],
+      Array.isArray(payload.venues) ? (payload.venues as any[]) : [],
+      Array.isArray(payload.tableSpecs) ? (payload.tableSpecs as any[]) : [],
+      Array.isArray(payload.fixtureTypes) ? (payload.fixtureTypes as any[]) : [],
+    ),
+    errors,
+    warnings,
+  );
+  pushReferenceIssues(
+    validateVenueMasterLayoutReferences(
+      Array.isArray(payload.venues) ? (payload.venues as any[]) : [],
+      Array.isArray(payload.tableSpecs) ? (payload.tableSpecs as any[]) : [],
+      Array.isArray(payload.fixtureTypes) ? (payload.fixtureTypes as any[]) : [],
+    ),
+    errors,
+    warnings,
+  );
+  pushReferenceIssues(
+    validateDecorReferences(
+      Array.isArray(payload.decorArrangements) ? (payload.decorArrangements as any[]) : [],
+      Array.isArray(payload.decorItems) ? (payload.decorItems as any[]) : [],
+      Array.isArray(payload.decorPackages) ? (payload.decorPackages as any[]) : [],
+    ),
+    errors,
+    warnings,
+  );
 
   if (payload.eventRoles !== undefined && !Array.isArray(payload.eventRoles)) {
     warnings.push('Event Roles: expected an array, import may ignore malformed values.');

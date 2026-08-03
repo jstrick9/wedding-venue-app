@@ -190,4 +190,34 @@ describe('backup import', () => {
       ),
     ).toThrow('Only replace mode is currently supported.');
   });
+
+  it('flags dangling cross-references (template -> missing venue)', async () => {
+    const bundle = await buildBackupBundle();
+    // Point the template at a venue that does not exist in the payload.
+    bundle.payload.templates = [
+      {
+        id: 'tpl-broken',
+        name: 'Broken Template',
+        venueId: 'missing-venue',
+        tables: [],
+        fixtures: [],
+        category: 'reception',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    // Recompute the payload checksum so the failure is specifically about the
+    // dangling reference rather than a checksum mismatch.
+    const bytes = new TextEncoder().encode(JSON.stringify(bundle.payload));
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    bundle.checksums.payloadHash = Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    const report = await preflightBackupImport(bundle);
+
+    expect(report.valid).toBe(false);
+    expect(report.errors.some((e) => e.toLowerCase().includes('missing venue'))).toBe(
+      true,
+    );
+  });
 });
