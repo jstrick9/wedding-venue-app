@@ -25,7 +25,7 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | 11 | Guest portal | GuestPortal, portal config, RSVP, lodging, schedule, wayfinding | |
 | 12 | Design/asset mgmt (tables, chairs, fixtures, walls, linens, spacing) | admin/* consolidation | ✅ debounce auto-save success indicator across all asset editors |
 | 13 | Decor designer + decor mgmt | DecorDesigner, AdminDecorSection, decor admin | ✅ non-blocking delete confirm; fix owner-id dup-guard inconsistency |
-| 14 | Events: questions, templates, guidelines | EventQuestionsWizard, TemplateSelector, guideline admin | |
+| 14 | Events: questions, templates, guidelines | EventQuestionsWizard, TemplateSelector, guideline admin | ✅ fix dead Templates feature (never rendered) + overwrite confirm |
 | 15 | Operations: staff, timeline, vendors | StaffOperationsPanel, TimelinePanel, VendorPanel | |
 | 16 | Communication: direct messages, submissions | DirectMessagePanel, SubmissionStatusPanel | |
 | 17 | Print/export + backup UI + onboarding | PrintView, backup UI, welcome, empty states | |

@@ -529,6 +529,30 @@ export default function AuthenticatedApp() {
               onClose={() => close('overview')}
             />
           )}
+          {showTemplates && (
+            <TemplateSelector
+              templates={getTemplates()}
+              layoutCategories={layoutCategories}
+              onSelect={(t) => {
+                // Warn before a template overwrites non-empty current work.
+                const hasWork =
+                  layoutState.layout.tables.length > 0 ||
+                  layoutState.layout.fixtures.length > 0 ||
+                  (layoutState.layout.decor || []).length > 0;
+                const proceed = () => {
+                  if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId);
+                  layoutState.loadTemplate(t);
+                  handleResetView();
+                  close('templates');
+                };
+                if (hasWork && !window.confirm('Loading a template will replace your current layout. Continue?')) {
+                  return;
+                }
+                proceed();
+              }}
+              onClose={() => close('templates')}
+            />
+          )}
           {/* ... other modals similarly refactored ... */}
         </Suspense>
       </div>
