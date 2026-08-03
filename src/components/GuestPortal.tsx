@@ -1,6 +1,17 @@
 // src/components/GuestPortal.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import SafeImage from './SafeImage';
+
+// Safely format a time for a schedule item. Guards against invalid/incomplete
+// date strings (e.g. a malformed or time-only value) so the schedule never
+// crashes with "Invalid time value" — it falls back to the raw string.
+function safeTime(value?: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
 import {
   Venue,
   LodgingFloor,
@@ -334,12 +345,16 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     endTime?: string;
   }) => {
     const dtStart = new Date(item.startTime);
+    if (Number.isNaN(dtStart.getTime())) return; // guard invalid date
+
     const dtEnd = item.endTime
       ? new Date(item.endTime)
       : new Date(dtStart.getTime() + 60 * 60 * 1000);
 
-    const formatICSDate = (d: Date) =>
-      d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+    const formatICSDate = (d: Date) => {
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+    };
 
     const escapeICS = (value: string) =>
       value
@@ -740,15 +755,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-500">
-                    {new Date(item.startTime).toLocaleTimeString([], {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
+                    {safeTime(item.startTime)}
                     {item.endTime &&
-                      ` – ${new Date(item.endTime).toLocaleTimeString([], {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}`}
+                      ` – ${safeTime(item.endTime)}`}
                   </p>
                   <p
                     className={`text-sm ${
