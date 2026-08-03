@@ -33,6 +33,8 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
   
   // -- State --
   const [activeSidebarTab, setActiveSidebarTab] = useState<'catalog' | 'arrangements'>('catalog');
+  // ID of the design awaiting a non-blocking delete confirmation.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [decorCatalog, setDecorCatalog] = useState<DecorItem[]>(() => getDecorItems());
   const [arrangements, setArrangements] = useState<DecorArrangement[]>(() => getDecorArrangements());
   const [decorPackages] = useState<DecorPackage[]>(() => getDecorPackages());
@@ -186,10 +188,14 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
       return;
     }
 
-    // Check for duplicate names for the same user
-    const isDuplicate = arrangements.some(a => 
-      a.name.toLowerCase() === trimmedName.toLowerCase() && 
-      a.userId === (user?.id || 'current-user') &&
+    // Check for duplicate names for the same user. Use the same userId the
+    // record will be saved with so the check and the record can't diverge
+    // (previously the check used 'current-user' but the record used 'anonymous'
+    // for unauthenticated users, making the guard ineffective in that case).
+    const ownerId = user?.id || 'anonymous';
+    const isDuplicate = arrangements.some(a =>
+      a.name.toLowerCase() === trimmedName.toLowerCase() &&
+      a.userId === ownerId &&
       a.id !== (initialArrangement?.id || '')
     );
 
@@ -201,7 +207,7 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
     const arrangement: DecorArrangement = {
       id: initialArrangement?.id || `arrangement-${Date.now()}`,
       name: trimmedName,
-      userId: user?.id || 'anonymous', 
+      userId: ownerId, 
       baseType,
       baseSpecId,
       items: placedItems.map(item => ({
@@ -423,10 +429,12 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
   }, []);
 
   const handleDeleteArrangement = useCallback((id: string) => {
-    if (!window.confirm('Delete this saved design? This cannot be undone.')) return;
+    // Non-blocking, in-app confirm (consistent with the rest of the app) rather
+    // than the native window.confirm dialog.
     const next = arrangements.filter(a => a.id !== id);
     setArrangements(next);
     persistDecorArrangements(next);
+    setConfirmDeleteId(null);
     showToast('Design deleted', 'success');
   }, [arrangements]);
 
@@ -601,7 +609,7 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {arrangements.filter(a => a.userId === (user?.id || 'current-user')).length === 0 ? (
+                      {arrangements.filter(a => a.userId === (user?.id || 'anonymous')).length === 0 ? (
                         <div className="text-center py-12 px-4 border-2 border-dashed border-gray-200 rounded-2xl bg-white/50">
                           <div className="text-3xl mb-2">💎</div>
                           <p className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em]">No saved designs yet</p>
@@ -628,12 +636,31 @@ export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, i
                                   onClick={() => loadArrangement(arr)}
                                   className="flex-1 py-2 bg-gray-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#4A1942] transition-all"
                                 >Load Design</button>
-                                <button
-                                  type="button"
-                                  aria-label={`Delete design ${arr.name}`}
-                                  onClick={() => handleDeleteArrangement(arr.id)}
-                                  className="px-3 py-2 bg-red-50 text-red-500 rounded-xl text-[9px] font-black hover:bg-red-100 transition-colors"
-                                >🗑</button>
+                                {confirmDeleteId === arr.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteArrangement(arr.id)}
+                                      className="px-2 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black hover:bg-red-600 transition-colors"
+                                    >
+                                      Confirm
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteId(null)}
+                                      className="px-2 py-2 bg-gray-200 text-gray-600 rounded-xl text-[9px] font-black hover:bg-gray-300 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    aria-label={`Delete design ${arr.name}`}
+                                    onClick={() => setConfirmDeleteId(arr.id)}
+                                    className="px-3 py-2 bg-red-50 text-red-500 rounded-xl text-[9px] font-black hover:bg-red-100 transition-colors"
+                                  >🗑</button>
+                                )}
                               </div>
                             </div>
                           ))
