@@ -16,6 +16,7 @@ import {
   DecorArrangement,
   DecorPackage,
   ChairSpec,
+  defaultAlignmentSettings,
 } from '../types';
 import {
   defaultVenues,
@@ -27,6 +28,10 @@ import {
   defaultLinenColors,
   LinenColor,
   defaultChairSpecs,
+  defaultWallStyles,
+  defaultSpacingSettings,
+  defaultIndoorFeatureTemplates,
+  defaultOutdoorFeatureTemplates,
   loadFromStorage,
   saveToStorage,
 } from '../data/venueData';
@@ -282,6 +287,15 @@ export function resetToDefaults(): void {
   saveToStorage(STORAGE.USERS, defaultUsers);
   saveToStorage(STORAGE.LINEN_COLORS, defaultLinenColors);
   saveToStorage(STORAGE.DECOR_ITEMS, []);
+  saveToStorage(STORAGE.DECOR_CATEGORIES, []);
+  saveToStorage(STORAGE.DECOR_ARRANGEMENTS, []);
+  saveToStorage(STORAGE.DECOR_PACKAGES, []);
+  saveToStorage(STORAGE_KEYS.CHAIR_SPECS_PRIMARY, defaultChairSpecs);
+  saveToStorage(STORAGE_KEYS.WALL_STYLES, defaultWallStyles);
+  saveToStorage(STORAGE_KEYS.SPACING_SETTINGS, defaultSpacingSettings);
+  saveToStorage(STORAGE_KEYS.ALIGNMENT_SETTINGS, defaultAlignmentSettings);
+  saveToStorage(STORAGE_KEYS.INDOOR_FEATURE_TEMPLATES, defaultIndoorFeatureTemplates);
+  saveToStorage(STORAGE_KEYS.OUTDOOR_FEATURE_TEMPLATES, defaultOutdoorFeatureTemplates);
   emitDataChanged('all');
 }
 

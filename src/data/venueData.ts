@@ -362,8 +362,75 @@ export const defaultUsers: User[] = [
   }
 ];
 
-// Default venue spaces
-export const defaultVenues: Venue[] = [];
+// Default venue spaces.
+// These are seeded so the built-in layout templates (which reference these
+// venue IDs) work out of the box. Without them, loading a template silently
+// falls back to whatever venue is currently open.
+export const defaultVenues: Venue[] = [
+  {
+    id: 'pavilion',
+    name: 'Grand Pavilion',
+    width: 100,
+    height: 50,
+    shape: 'rectangle',
+    capacity: 150,
+    category: 'reception',
+    color: '#F7F3EA',
+    showBorder: true,
+    borderColor: '#4A1942',
+    borderWidth: 2,
+    pattern: 'solid',
+    isMaster: true,
+    environment: 'both',
+    canvasWidth: 120,
+    canvasHeight: 80,
+    venueX: 10,
+    venueY: 15,
+    exteriorPadding: { top: 15, right: 10, bottom: 15, left: 10 },
+  },
+  {
+    id: 'ceremony-lawn',
+    name: 'Ceremony Lawn',
+    width: 80,
+    height: 45,
+    shape: 'rectangle',
+    capacity: 200,
+    category: 'ceremony',
+    color: '#E8F3E4',
+    showBorder: true,
+    borderColor: '#3E7A34',
+    borderWidth: 2,
+    pattern: 'grass',
+    isMaster: true,
+    environment: 'outdoor',
+    canvasWidth: 100,
+    canvasHeight: 70,
+    venueX: 10,
+    venueY: 12,
+    exteriorPadding: { top: 12, right: 10, bottom: 13, left: 10 },
+  },
+  {
+    id: 'cocktail-garden',
+    name: 'Garden Cocktail Courtyard',
+    width: 60,
+    height: 45,
+    shape: 'rectangle',
+    capacity: 100,
+    category: 'cocktail',
+    color: '#EDF6ED',
+    showBorder: true,
+    borderColor: '#5B7A3A',
+    borderWidth: 2,
+    pattern: 'solid',
+    isMaster: true,
+    environment: 'outdoor',
+    canvasWidth: 80,
+    canvasHeight: 65,
+    venueX: 10,
+    venueY: 10,
+    exteriorPadding: { top: 10, right: 10, bottom: 10, left: 10 },
+  },
+];
 
 // Default table specifications
 export const defaultTableSpecs: TableSpec[] = [

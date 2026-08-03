@@ -937,13 +937,3 @@ export interface DecorPackage {
     targetCategory: LayoutCategory;
   }>;
 }
-
-// Storage Constants
-export const DECOR_STORAGE_KEYS = {
-  CATALOG: 'spm_decor_catalog',
-  CATEGORIES: 'spm_decor_categories',
-  ARRANGEMENTS: 'spm_decor_arrangements',
-  PACKAGES: 'spm_decor_packages',
-  PLACED: 'spm_decor_placed',
-  GROUPS: 'spm_decor_groups',
-} as const;

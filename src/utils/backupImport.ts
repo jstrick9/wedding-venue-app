@@ -151,7 +151,10 @@ export function applyBackupPayload(
   writeJson(STORAGE_KEYS.TEMPLATES, payload.templates);
   writeJson(STORAGE_KEYS.USERS, payload.users);
   writeJson(STORAGE_KEYS.LINEN_COLORS, payload.linenColors);
-  writeJson(STORAGE_KEYS.SAVED_LAYOUTS, payload.savedLayouts);
+  // Saved layouts are read/written through the versioned storage layer
+  // (see utils/collaboration.ts), so they must be imported as an envelope too —
+  // otherwise every import triggers a legacy-migration self-heal on load.
+  writeVersioned(STORAGE_KEYS.SAVED_LAYOUTS, STORAGE_VERSIONS.SAVED_LAYOUTS, payload.savedLayouts);
   writeJson(STORAGE_KEYS.DECOR_ITEMS, payload.decorItems);
   writeJson(STORAGE_KEYS.DECOR_CATEGORIES, payload.decorCategories);
   writeJson(STORAGE_KEYS.DECOR_ARRANGEMENTS, payload.decorArrangements);
