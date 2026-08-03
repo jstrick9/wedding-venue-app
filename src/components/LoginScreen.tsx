@@ -205,8 +205,8 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8f5f7] to-[#efe7ee] flex px-4 py-8 overflow-y-auto">
-      <div className="m-auto w-full max-w-md rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
-        <div className="bg-[#4A1942] px-6 py-8 text-white text-center">
+      <div className="m-auto flex w-full max-w-md flex-col rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden max-h-screen">
+        <div className="bg-[#4A1942] px-6 py-8 text-white text-center shrink-0">
           <div className="mx-auto mb-4 flex justify-center">
             <Logo url={config.logoUrl} size="lg" />
           </div>
@@ -222,7 +222,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
           </p>
         </div>
 
-        <div className="px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="mb-5 space-y-3">
             <div className={`rounded-xl border px-4 py-3 text-sm ${
               usingSupabaseAuth
