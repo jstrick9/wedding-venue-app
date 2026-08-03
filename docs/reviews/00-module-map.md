@@ -31,10 +31,15 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | 17 | Print/export + backup UI + onboarding | PrintView, backup UI, welcome, empty states | ✅ expose Backup & Restore panel (was unreachable) |
 | 18 | NEW — Event Overview dashboard | EventOverview, eventDashboard util | ✅ RSVP/capacity reconciliation, response rate, health grade, quick actions |
 
-## New feature candidates (Intelligence Platform additions)
-- Dashboard: capacity vs RSVP reconciliation, event health score.
-- Vendor payments tracking summary.
-- Guest count / seating reconciliation report.
-- Layout export to image/PDF incl. guest list.
-- Onboarding / empty-state guidance for first-time users.
-- Keyboard-shortcuts help modal.
+## Follow-up features delivered
+- ✅ Vendor payments tracking summary → added as a **Vendor budget card** in the Event Overview (contract/paid/balance/overdue) + vendors added to backup.
+- ✅ Keyboard-shortcuts help modal (was a dead Help button — no modal rendered).
+- ✅ Event Overview dashboard (capacity/RSVP reconciliation + health).
+
+## New feature candidates still open
+- Guest count / seating reconciliation report (deep-dive, e.g. per-table counts).
+- Layout export to image/PDF incl. guest list (PrintView covers HTML print; image/PDF export would be a follow-up).
+- Onboarding / empty-state guidance for first-time users (Welcome modal exists; a guided setup flow is a larger feature).
+
+## Deferred (documented, not implemented)
+- **Deep physical merge of admin asset editors** (e.g. Chairs→Tables/Seating, Linens→Tables, Walls→Fixtures). The 15 admin tabs are already grouped into 4 labeled sections (Module 10), which delivers the main UX consolidation. Physically merging the ~800-line editor components is high-risk and would need substantial new test coverage, so it is intentionally deferred rather than done right before the final QA sweep.

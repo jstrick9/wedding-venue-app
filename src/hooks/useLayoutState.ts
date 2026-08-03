@@ -286,6 +286,8 @@ export function setDecorPackages(packages: DecorPackage[]): void {
 }
 
 export function resetToDefaults(): void {
+  // Design/asset domains reset to their factory defaults (venues stay seeded so
+  // built-in templates keep working).
   saveToStorage(STORAGE.VENUES, defaultVenues);
   saveToStorage(STORAGE.TABLE_SPECS, defaultTableSpecs);
   saveToStorage(STORAGE.FIXTURE_TYPES, defaultFixtureTypes);
@@ -303,6 +305,26 @@ export function resetToDefaults(): void {
   saveToStorage(STORAGE_KEYS.ALIGNMENT_SETTINGS, defaultAlignmentSettings);
   saveToStorage(STORAGE_KEYS.INDOOR_FEATURE_TEMPLATES, defaultIndoorFeatureTemplates);
   saveToStorage(STORAGE_KEYS.OUTDOOR_FEATURE_TEMPLATES, defaultOutdoorFeatureTemplates);
+  // User-generated data resets to empty so a "reset to defaults" truly clears
+  // events, messages, portal, staff, and vendor content.
+  const userDataKeys = [
+    STORAGE_KEYS.SAVED_LAYOUTS,
+    STORAGE_KEYS.EVENT_ROLES,
+    STORAGE_KEYS.EVENT_QUESTIONS,
+    STORAGE_KEYS.EVENT_ANSWERS,
+    STORAGE_KEYS.EVENT_SUBMISSIONS,
+    STORAGE_KEYS.DIRECT_MESSAGES,
+    STORAGE_KEYS.PORTAL_CONFIG,
+    STORAGE_KEYS.PORTAL_GUESTS,
+    STORAGE_KEYS.RSVP_SUBMISSIONS,
+    STORAGE_KEYS.STAFF_TASKS,
+    STORAGE_KEYS.STAFF_AREAS,
+    STORAGE_KEYS.STAFF_SHIFTS,
+    STORAGE_KEYS.VENDORS,
+    STORAGE_KEYS.VENDOR_PAYMENTS,
+  ];
+  userDataKeys.forEach((key) => saveToStorage(key, []));
+  saveToStorage(STORAGE_KEYS.PORTAL_CONFIG, null);
   emitDataChanged('all');
 }
 

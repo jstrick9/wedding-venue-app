@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
 import { DrawingObject } from '../types';
+import { showToast } from './Toast';
 
 interface DrawingToolProps {
   onSave: (payload: { 
@@ -615,7 +616,7 @@ export const DrawingTool: React.FC<DrawingToolProps> = ({ onSave, onClose }) => 
 
   const handleSave = () => {
     if (!featureName.trim()) {
-      alert('Please enter a name for your feature');
+      showToast('Please enter a name for your feature', 'warning');
       return;
     }
     

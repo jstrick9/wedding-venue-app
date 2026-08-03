@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SafeImage from './SafeImage';
+import { showToast } from './Toast';
 
 interface ImageItem {
   id: string;
@@ -26,7 +27,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
 
   const handleImageUpload = () => {
     if (images.length >= maxImages) {
-      alert(`Maximum ${maxImages} images allowed`);
+      showToast(`Maximum ${maxImages} images allowed`, 'warning');
       return;
     }
 
@@ -39,7 +40,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
       if (!file) return;
 
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image must be less than 5MB');
+        showToast('Image must be less than 5MB', 'warning');
         return;
       }
 
