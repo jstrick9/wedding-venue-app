@@ -28,11 +28,22 @@ export function PrintView({
     window.print();
   };
 
+  // Single source of truth for a table's capacity, consistent with the guest
+  // panel / canvas counter: seating rows use chairCount×rowCount; otherwise
+  // customCapacity overrides the spec capacity.
+  const tableCapacity = (table: PlacedTable) => {
+    const spec = tableSpecs.find((s) => s.id === table.specId);
+    if (!spec) return 0;
+    if (spec.isSeatingType) {
+      const perRow = table.chairCount ?? table.customCapacity ?? spec.capacity ?? 0;
+      const rowCount = Math.max(1, spec.seatingRowCount || 1);
+      return perRow * rowCount;
+    }
+    return table.customCapacity ?? spec.capacity ?? 0;
+  };
+
   const getTotalCapacity = () => {
-    return tables.reduce((sum, table) => {
-      const spec = tableSpecs.find((s) => s.id === table.specId);
-      return sum + (spec?.capacity || 0);
-    }, 0);
+    return tables.reduce((sum, table) => sum + tableCapacity(table), 0);
   };
 
   const getSeatedGuests = () => {
@@ -260,7 +271,7 @@ export function PrintView({
                       <h4 className="font-semibold text-gray-900">{table.label}</h4>
                       <p className="text-sm text-gray-500">
                         {spec?.name || 'Unknown Table'} • {tableGuests.length}/
-                        {spec?.capacity || 0} seats
+                        {tableCapacity(table)} seats
                       </p>
                     </div>
                   </div>
