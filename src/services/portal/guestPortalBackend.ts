@@ -69,6 +69,7 @@ export class SupabaseGuestPortalBackend implements GuestPortalBackend {
           id: g.id,
           name: g.full_name,
           email: g.email,
+          token, // carry the token so RSVP submission uses the server RPC
           eventKey: normalizeEventKey(context.eventName),
           allowPortalAccess: true,
           tableId: g.table_assignment || undefined,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { canSyncEntities, pullEntities, pushEntities, pushEntityDomain } from '../services/sync/entitySync';
 
 export interface EntityBackendSyncOptions {
@@ -29,9 +29,11 @@ export function useEntityBackendSync({
   const enabled = canSyncEntities(organizationId);
   const loadedRef = useRef(false);
 
-  const context = userId && organizationId
-    ? { userId, organizationId }
-    : null;
+  // Memoize the context so its reference is stable across renders.
+  const context = useMemo(
+    () => (userId && organizationId ? { userId, organizationId } : null),
+    [userId, organizationId],
+  );
 
   const loadFromBackend = useCallback(async () => {
     if (!enabled || !context) return;
@@ -70,5 +72,9 @@ export function useEntityBackendSync({
     void loadFromBackend();
   }, [enabled, context, loadFromBackend]);
 
-  return { enabled, loadFromBackend, saveToBackend, saveDomainToBackend };
+  // Stable object identity so consumers can depend on it without re-rendering.
+  return useMemo(
+    () => ({ enabled, loadFromBackend, saveToBackend, saveDomainToBackend }),
+    [enabled, loadFromBackend, saveToBackend, saveDomainToBackend],
+  );
 }

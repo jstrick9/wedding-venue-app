@@ -185,7 +185,14 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       return;
     }
 
-    const guest = findGuestInEvent(config.eventTitle, guestIdentifier);
+    // In platform mode, identity is verified server-side via the portal token
+    // RPC (falling back to published guest records). In local mode we use the
+    // existing localStorage lookup.
+    const backend = getGuestPortalBackend();
+    const guest =
+      backend.provider === 'supabase'
+        ? await backend.findGuest({ eventName: config.eventTitle }, guestIdentifier)
+        : findGuestInEvent(config.eventTitle, guestIdentifier);
 
     if (!guest || !guestCanAccessPortal(guest, config.eventTitle)) {
       setPasswordError('Guest not found for this event.');

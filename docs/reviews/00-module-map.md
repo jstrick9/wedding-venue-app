@@ -31,6 +31,7 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | 17 | Print/export + backup UI + onboarding | PrintView, backup UI, welcome, empty states | ✅ expose Backup & Restore panel (was unreachable) |
 | 18 | NEW — Event Overview dashboard | EventOverview, eventDashboard util | ✅ RSVP/capacity reconciliation, response rate, health grade, quick actions |
 | 19 | Final QA sweep | whole app | ✅ CI green; removed last blocking alerts; completed resetToDefaults; no XSS; collision + auth + portal verified |
+| 20 | Platform QA sweep | platform workstream (A–I) | ✅ CI green; fixed guest-portal server identity wiring, RSVP token carry, realtime channel churn, listener re-registration |
 
 ## Follow-up features delivered
 - ✅ Vendor payments tracking summary → added as a **Vendor budget card** in the Event Overview (contract/paid/balance/overdue) + vendors added to backup.

@@ -42,6 +42,7 @@ describe('SupabaseGuestPortalBackend', () => {
     expect(guest?.id).toBe('g1');
     expect(guest?.name).toBe('Jane');
     expect(guest?.tableId).toBe('T1');
+    expect(guest?.token).toBe('portal-token-123');
   });
 
   it('submitRSVP calls the submit_guest_rsvp RPC with the token', async () => {

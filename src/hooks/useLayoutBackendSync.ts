@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { canSyncLayouts, pullLayouts, pushLayouts } from '../services/sync/layoutSync';
 import { subscribeToLayoutChanges } from '../services/sync/layoutRealtime';
 
@@ -35,9 +35,13 @@ export function useLayoutBackendSync({
   const enabled = canSyncLayouts(organizationId);
   const loadedRef = useRef(false);
 
-  const context = userId && organizationId
-    ? { userId, organizationId }
-    : null;
+  // Memoize the context so its reference is stable across renders (a fresh
+  // object literal each render would otherwise re-trigger the realtime
+  // subscription on every render, churning the Supabase channel).
+  const context = useMemo(
+    () => (userId && organizationId ? { userId, organizationId } : null),
+    [userId, organizationId],
+  );
 
   const loadFromBackend = useCallback(async () => {
     if (!enabled || !context) return;
@@ -72,5 +76,9 @@ export function useLayoutBackendSync({
     return subscribeToLayoutChanges(context, () => onLoaded?.());
   }, [enabled, context, onLoaded]);
 
-  return { enabled, loadFromBackend, saveToBackend };
+  // Stable object identity so consumers can depend on it without re-rendering.
+  return useMemo(
+    () => ({ enabled, loadFromBackend, saveToBackend }),
+    [enabled, loadFromBackend, saveToBackend],
+  );
 }
