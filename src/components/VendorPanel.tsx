@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useVendors } from '../hooks/useVendors';
 import { Vendor, VendorCategory, VENDOR_CATEGORIES } from '../types/vendor';
+import { showToast } from './Toast';
 
 interface VendorPanelProps {
   onClose: () => void;
@@ -15,12 +16,39 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
     getVendorsByCategory,
     getTotalBudget,
     getTotalPaid,
+    getPaymentsForVendor,
+    addPayment,
+    updatePayment,
+    deletePayment,
   } = useVendors();
 
-  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'budget'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'budget' | 'payments'>('list');
   const [filterCategory, setFilterCategory] = useState<VendorCategory | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+
+  // Payment recording state
+  const [paymentVendorId, setPaymentVendorId] = useState<string>('');
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentDueDate, setPaymentDueDate] = useState('');
+  const [paymentIsPaid, setPaymentIsPaid] = useState(true);
+
+  const handleAddPayment = () => {
+    if (!paymentVendorId || paymentAmount <= 0) {
+      showToast('Select a vendor and enter a payment amount.', 'warning');
+      return;
+    }
+    addPayment({
+      vendorId: paymentVendorId,
+      amount: paymentAmount,
+      dueDate: paymentDueDate || new Date().toISOString().slice(0, 10),
+      description: 'Vendor payment',
+      isPaid: paymentIsPaid,
+    });
+    setPaymentAmount(0);
+    setPaymentDueDate('');
+    setPaymentIsPaid(true);
+  };
 
   const [newVendor, setNewVendor] = useState({
     name: '',
@@ -97,6 +125,7 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
           {[
             { id: 'list', label: '📋 Vendors', count: vendors.length },
             { id: 'add', label: '➕ Add Vendor' },
+            { id: 'payments', label: '💳 Payments' },
             { id: 'budget', label: '💰 Budget' },
           ].map(tab => (
             <button
@@ -380,6 +409,114 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'payments' && (
+            <div className="space-y-6">
+              {/* Record a payment */}
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <h4 className="font-semibold mb-3">Record a Payment</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Vendor</label>
+                    <select
+                      value={paymentVendorId}
+                      onChange={(e) => setPaymentVendorId(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">Select vendor…</option>
+                      {vendors.map((v) => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Amount ($)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={paymentAmount || ''}
+                      onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Due date</label>
+                    <input
+                      type="date"
+                      value={paymentDueDate}
+                      onChange={(e) => setPaymentDueDate(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <input
+                        type="checkbox"
+                        checked={paymentIsPaid}
+                        onChange={(e) => setPaymentIsPaid(e.target.checked)}
+                      />
+                      Paid
+                    </label>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddPayment}
+                  className="mt-3 px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#5b2352]"
+                >
+                  + Add Payment
+                </button>
+              </div>
+
+              {/* Payments list */}
+              <div>
+                <h4 className="font-semibold mb-3">All Payments</h4>
+                {vendors.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
+                    Add vendors first to start tracking payments.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {vendors.flatMap((v) =>
+                      getPaymentsForVendor(v.id).map((p) => (
+                        <div key={p.id} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
+                          <div>
+                            <div className="font-medium text-gray-800">{v.name}</div>
+                            <div className="text-xs text-gray-500">
+                              Due {p.dueDate ? new Date(p.dueDate).toLocaleDateString() : '—'} · {p.description}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold">${p.amount.toLocaleString()}</span>
+                            <span className={`text-xs rounded-full px-2 py-0.5 ${p.isPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                              {p.isPaid ? 'Paid' : 'Due'}
+                            </span>
+                            <label className="flex items-center gap-1 text-xs text-gray-600">
+                              <input
+                                type="checkbox"
+                                checked={p.isPaid}
+                                onChange={(e) => updatePayment(p.id, { isPaid: e.target.checked })}
+                              />
+                              Mark paid
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => deletePayment(p.id)}
+                              className="text-red-500 hover:text-red-700 px-1"
+                              aria-label={`Delete payment for ${v.name}`}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      )),
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
