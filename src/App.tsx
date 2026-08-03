@@ -5,11 +5,31 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { LiveRegion } from './components/LiveRegion';
 import { ModalProvider } from './contexts/ModalContext';
 import { getGuestPortalTokenFromLocation } from './utils/guestPortal';
+import { ToastContainer, showToast } from './components/Toast';
+import { on } from './utils/appEvents';
 import { lazy } from 'react';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
 const GuestPortal = lazy(() => import('./components/GuestPortal'));
 const ForcePasswordChange = lazy(() => import('./components/ForcePasswordChange'));
+
+/**
+ * Surfaces `spm_storage_error` events as toasts no matter which screen is
+ * mounted (login, guest portal, or the planning workspace). Previously this
+ * listener only existed inside AuthenticatedApp, so storage failures on the
+ * login/guest screens were silently dropped.
+ */
+function GlobalStorageErrorListener() {
+  useEffect(
+    () =>
+      on('spm_storage_error', (detail) => {
+        const verb = detail.action === 'save' ? 'save' : 'load';
+        showToast(`Could not ${verb} "${detail.key}": ${detail.error}`, 'warning');
+      }),
+    [],
+  );
+  return null;
+}
 
 function AppContent() {
   const { user, continueAsGuest } = useAuth();
@@ -71,8 +91,10 @@ export default function App() {
     <AppErrorBoundary>
       <AuthProvider>
         <ModalProvider>
+          <GlobalStorageErrorListener />
           <LiveRegion />
           <AppContent />
+          <ToastContainer />
         </ModalProvider>
       </AuthProvider>
     </AppErrorBoundary>

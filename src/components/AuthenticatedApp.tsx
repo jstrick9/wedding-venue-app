@@ -8,7 +8,7 @@ import { Sidebar } from './Sidebar';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { PropertiesPanel } from './PropertiesPanel';
 import { WelcomeModal } from './WelcomeModal';
-import { ToastContainer, showToast } from './Toast';
+import { showToast } from './Toast';
 import AppStatusBar, { StatusBarItem } from './AppStatusBar';
 import SafeImage from './SafeImage';
 import ModalDialog from './ModalDialog';
@@ -324,11 +324,6 @@ export default function AuthenticatedApp() {
     return () => window.removeEventListener('storage', onStorage);
   }, [refreshSavedLayouts]);
 
-  useEffect(() => on('spm_storage_error', (detail) => {
-    const verb = detail.action === 'save' ? 'save' : 'load';
-    showToast(`Could not ${verb} "${detail.key}": ${detail.error}`, 'warning');
-  }), []);
-
   useEffect(() => on('spm_open_workspace_help', () => setShowWorkspaceHelp(true)), []);
 
   const getTotalCapacity = useCallback(() => {
@@ -494,7 +489,6 @@ export default function AuthenticatedApp() {
           {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }} />}
           {/* ... other modals similarly refactored ... */}
         </Suspense>
-        <ToastContainer />
       </div>
     </UndoRedoProvider>
   );

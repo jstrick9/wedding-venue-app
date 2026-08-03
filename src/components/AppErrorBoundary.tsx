@@ -29,12 +29,24 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
 
   handleResetLocalData = () => {
     try {
+      // Back up every app key before wiping so a mistaken reset isn't fatal.
+      const snapshot: Record<string, string> = {};
       const keys = Object.keys(localStorage);
       keys.forEach((key) => {
         if (key.startsWith('spm_') || key.startsWith('wedding-layout-')) {
-          localStorage.removeItem(key);
+          const raw = localStorage.getItem(key);
+          if (raw != null) snapshot[key] = raw;
         }
       });
+      try {
+        localStorage.setItem(
+          'spm_backup_emergency_reset',
+          JSON.stringify({ savedAt: new Date().toISOString(), data: snapshot }),
+        );
+      } catch {
+        // Backup itself failed (e.g. quota) — continue with the reset anyway.
+      }
+      Object.keys(snapshot).forEach((key) => localStorage.removeItem(key));
     } catch (e) {
       console.error('Failed to clear local data:', e);
     }
