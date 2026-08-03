@@ -5,12 +5,15 @@
 import { useState, useCallback } from 'react';
 import {
   GuestPortalConfig,
+  GuestPortalGuestRecord,
   PortalScheduleItem,
   PortalWayfindingPoint,
 } from '../../types';
 import {
   getGuestPortalConfig,
+  getPortalGuests,
   setGuestPortalConfig,
+  setPortalGuests,
 } from '../../utils/guestPortal';
 import { createSecretRecord as authCreateSecretRecord } from '../../utils/auth';
 
@@ -98,6 +101,50 @@ export function GuestPortalManagement({
   // ── Wayfinding points state ───────────────────────────────────────────────
   const [newPoint, setNewPoint] = useState<Partial<PortalWayfindingPoint>>({});
   const [showAddPoint, setShowAddPoint] = useState(false);
+
+  // ── Portal guests state ───────────────────────────────────────────────────
+  const [portalGuests, setPortalGuestsState] = useState<GuestPortalGuestRecord[]>(
+    () => getPortalGuests(),
+  );
+  const [showAddGuest, setShowAddGuest] = useState(false);
+  const [newGuest, setNewGuest] = useState<Partial<GuestPortalGuestRecord>>({});
+
+  const savePortalGuests = useCallback(
+    (next: GuestPortalGuestRecord[]) => {
+      setPortalGuests(next);
+      setPortalGuestsState(next);
+    },
+    [],
+  );
+
+  const addPortalGuest = () => {
+    if (!newGuest.name?.trim()) return;
+    const record: GuestPortalGuestRecord = {
+      id: newGuest.id || `portal-guest-${uid()}`,
+      name: newGuest.name.trim(),
+      email: newGuest.email?.trim() || undefined,
+      eventName: cfg.eventTitle || undefined,
+      eventKey: cfg.eventTitle
+        ? cfg.eventTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+        : undefined,
+      token: newGuest.token?.trim() || undefined,
+      allowPortalAccess: newGuest.allowPortalAccess !== false,
+      allowLodgingAccess: newGuest.allowLodgingAccess === true,
+    };
+    savePortalGuests([...portalGuests, record]);
+    setNewGuest({});
+    setShowAddGuest(false);
+  };
+
+  const deletePortalGuest = (id: string) => {
+    savePortalGuests(portalGuests.filter((g) => g.id !== id));
+  };
+
+  const togglePortalGuestFlag = (id: string, flag: 'allowPortalAccess' | 'allowLodgingAccess') => {
+    savePortalGuests(
+      portalGuests.map((g) => (g.id === id ? { ...g, [flag]: g[flag] !== false } : g)),
+    );
+  };
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
   const update = useCallback(
@@ -756,6 +803,127 @@ export function GuestPortalManagement({
           className="mt-2 w-full py-2 border-2 border-dashed border-indigo-300 rounded-xl text-sm text-indigo-600 hover:bg-indigo-50 transition-colors"
         >
           + Add Destination
+        </button>
+      )}
+
+      {/* ── Portal Guests ── */}
+      <SectionHeader title="Portal Guests" emoji="👥" />
+      <p className="text-sm text-gray-500">
+        Guests who may access the portal. Give each guest a unique portal token
+        (or use their email/name) to sign in, and control lodging access.
+      </p>
+      <div className="mt-3 space-y-2">
+        {portalGuests.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500">
+            No portal guests yet. Add a guest so they can RSVP and view the portal.
+          </div>
+        ) : (
+          portalGuests.map((g) => (
+            <div key={g.id} className="rounded-xl border border-gray-200 bg-white p-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-800 truncate">{g.name}</div>
+                <div className="text-xs text-gray-500 truncate">
+                  {g.email || 'no email'} {g.token ? `· token: ${g.token}` : ''}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <label className="flex items-center gap-1 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={g.allowPortalAccess !== false}
+                    onChange={() => togglePortalGuestFlag(g.id, 'allowPortalAccess')}
+                  />
+                  Portal
+                </label>
+                <label className="flex items-center gap-1 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={g.allowLodgingAccess === true}
+                    onChange={() => togglePortalGuestFlag(g.id, 'allowLodgingAccess')}
+                  />
+                  Lodging
+                </label>
+                <button
+                  type="button"
+                  onClick={() => deletePortalGuest(g.id)}
+                  className="text-red-500 hover:text-red-700 text-sm px-1"
+                  aria-label={`Remove ${g.name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {showAddGuest ? (
+        <div className="border border-indigo-300 rounded-xl p-3 bg-indigo-50 space-y-2 mt-2">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+            value={newGuest.name ?? ''}
+            onChange={(e) => setNewGuest({ ...newGuest, name: e.target.value })}
+            placeholder="Guest name *"
+            autoFocus
+          />
+          <input
+            type="email"
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+            value={newGuest.email ?? ''}
+            onChange={(e) => setNewGuest({ ...newGuest, email: e.target.value })}
+            placeholder="Email (optional)"
+          />
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+            value={newGuest.token ?? ''}
+            onChange={(e) => setNewGuest({ ...newGuest, token: e.target.value })}
+            placeholder="Portal token (optional; used for secure sign-in)"
+          />
+          <div className="flex items-center gap-4 text-xs text-gray-700">
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={newGuest.allowPortalAccess !== false}
+                onChange={(e) => setNewGuest({ ...newGuest, allowPortalAccess: e.target.checked })}
+              />
+              Portal access
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={newGuest.allowLodgingAccess === true}
+                onChange={(e) => setNewGuest({ ...newGuest, allowLodgingAccess: e.target.checked })}
+              />
+              Lodging access
+            </label>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={addPortalGuest}
+              disabled={!newGuest.name?.trim()}
+              className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg disabled:opacity-40"
+            >
+              Add Guest
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowAddGuest(false); setNewGuest({}); }}
+              className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowAddGuest(true)}
+          className="mt-2 w-full py-2 border-2 border-dashed border-indigo-300 rounded-xl text-sm text-indigo-600 hover:bg-indigo-50 transition-colors"
+        >
+          + Add Portal Guest
         </button>
       )}
 
