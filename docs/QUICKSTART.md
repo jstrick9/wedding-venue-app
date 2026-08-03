@@ -1,0 +1,136 @@
+# Wedding Venue Intelligence Platform — Quick-Start Cheat Sheet
+
+## Run it locally (local mode, no backend — 3 commands)
+
+```bash
+git clone https://github.com/jstrick9/wedding-venue-app-old.git
+cd wedding-venue-app-old
+npm install
+npm run dev
+```
+
+Open **http://localhost:5173**. No `.env` file needed — this runs entirely in your
+browser using `localStorage`, with a seeded "Seven Paths Manor" sample workspace
+so you can test everything immediately.
+
+> Everything below works in local mode. To enable the multi-user Supabase
+> platform instead, see `docs/platform/PLATFORM.md`.
+
+---
+
+## Signing in
+
+| What | How |
+|---|---|
+| **Admin** | Username `admin`, password `REPLACE_ON_FIRST_LOGIN`. On first login it forces you to set a new password. |
+| **Planner guest** | On the login screen, click **"Continue as Planner Guest"** — explore without an account. |
+| **Wedding guest** | Use the **Guest Portal** (below), not this login. |
+
+---
+
+## Main workspace — where everything is
+
+- **Left sidebar** → drag **tables, chairs, fixtures, decor** onto the canvas.
+- **Header (top)**: Templates · Guests · Admin · Workspace Help · Menu.
+- **Canvas (center)**: your floor plan. Drag items; **arrow keys nudge**;
+  **Ctrl/Cmd + scroll** zooms (to cursor); **Shift + drag** pans.
+- **Bottom-left**: capacity counter + **📊 Overview** button (dashboard).
+
+### Header buttons
+| Button | Opens |
+|---|---|
+| **Templates** | Prebuilt layouts (Classic Reception, Banquet, Ceremony, Cocktail) |
+| **Guests** | Guest list, table/room assignment, CSV import/export |
+| **Admin** (admins only) | Admin Panel with all settings |
+| **Help** | Keyboard-shortcuts modal |
+
+---
+
+## Admin Panel (admins only)
+
+Click **Admin** in the header. It's grouped into labeled sections:
+
+- **Venue & Layout** — Venues, Tables/Seating, Chairs, Fixtures, Walls, Linens, Spacing
+- **Design & Content** — Decor, Templates, Guidelines, Event Questions
+- **People & Access** — Users, Access Control, **Invite Members**
+- **Portal & Brand** — Guest Portal, Branding
+- **System & Backup** — **Backup & Restore**
+
+Use the **Quick find** box to jump to a section. Most editors auto-save as you
+edit (a debounced "saved" indicator confirms).
+
+**Tip:** Use **System & Backup → Backup & Restore** to download a full backup,
+and restore it to move data between computers/browsers.
+
+---
+
+## 📊 Event Overview dashboard
+
+Click **📊 Overview** (bottom-left, near the capacity counter). It shows the
+"Intelligence" view of the current event:
+
+- RSVP status (guests, confirmed, pending, declined, response rate)
+- Seating coverage (seated, unseated, table seats, utilization)
+- **Vendor budget** (contract, paid, balance, overdue)
+- Health grade (On Track / Needs Attention / Over Capacity) + actionable notes
+- Quick actions: **Manage Guests**, **Load a Template**, **Manage Vendors**
+
+---
+
+## 💍 Guest Portal (for wedding guests)
+
+Open **`http://localhost:5173/#/guest-portal`**. It requires configuration first
+— an admin must enable it before guests can use it.
+
+**To set it up:** **Admin → Guest Portal** tab → enter the event title/date,
+turn on the tabs you want (Map / Schedule / Wayfinding / RSVP / Lodging), set an
+optional portal password, and add guests (email / portal token).
+
+**How a guest signs in:**
+- Enter the **event name** (must match the configured event title).
+- Enter their **email, name, or portal token** (as configured in Admin → Guest
+  Portal guests).
+- Enter the **portal password** if one is set.
+
+**What guests can do:** RSVP (meal choice, plus-one, dietary/special needs),
+view the schedule, get wayfinding directions, check lodging, and export
+schedule items to their calendar (`.ics`).
+
+---
+
+## Keyboard shortcuts
+
+| Keys | Action |
+|---|---|
+| `Ctrl/Cmd + Z` | Undo |
+| `Ctrl/Cmd + Shift + Z` / `Ctrl/Cmd + Y` | Redo |
+| `Delete` / `Backspace` | Delete selected item |
+| `Esc` | Deselect / close |
+| `Enter` / `Space` | Select focused canvas item |
+| `← ↑ → ↓` | Nudge item (Shift = 1 ft) |
+| `Ctrl/Cmd + scroll` | Zoom (to cursor) |
+| `Shift + drag` | Pan canvas |
+
+---
+
+## Common validation commands
+
+```bash
+npm run typecheck   # TypeScript check
+npm run test        # test suite (295 tests)
+npm run build       # production build → dist/index.html
+npm run preview     # serve the built app
+```
+
+---
+
+## To go live with the multi-user platform (Supabase)
+
+Full steps in `docs/platform/PLATFORM.md`. Short version:
+1. Create a free project at supabase.com.
+2. Apply the four migrations in `supabase/migrations/` (`0001`–`0004`).
+3. Create `.env.local` with `VITE_BACKEND_PROVIDER=supabase` + `VITE_SUPABASE_URL`
+   + `VITE_SUPABASE_ANON_KEY`.
+4. `npm run dev` → "Create a new account" appears on login; all platform
+   features (auth, shared/real-time layouts, server-side guest portal, object
+   storage, invites) activate automatically.

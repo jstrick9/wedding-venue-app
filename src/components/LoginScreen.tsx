@@ -204,8 +204,8 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8f5f7] to-[#efe7ee] flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8f5f7] to-[#efe7ee] flex px-4 py-8 overflow-y-auto">
+      <div className="m-auto w-full max-w-md rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
         <div className="bg-[#4A1942] px-6 py-8 text-white text-center">
           <div className="mx-auto mb-4 flex justify-center">
             <Logo url={config.logoUrl} size="lg" />
