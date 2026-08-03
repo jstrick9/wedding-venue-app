@@ -362,7 +362,16 @@ export default function AuthenticatedApp() {
     const tableSpecs = getTableSpecs();
     return layoutState.layout.tables.reduce((sum, table) => {
       const spec = tableSpecs.find(s => s.id === table.specId);
-      return sum + (spec?.capacity || 0);
+      if (!spec) return sum;
+      // Mirror the GuestPanel capacity logic so the on-canvas counter agrees
+      // with the guest panel: seating rows = chairCount×rowCount; otherwise
+      // customCapacity overrides the spec capacity.
+      if (spec.isSeatingType) {
+        const perRow = table.chairCount ?? table.customCapacity ?? spec.capacity ?? 0;
+        const rowCount = Math.max(1, spec.seatingRowCount || 1);
+        return sum + perRow * rowCount;
+      }
+      return sum + (table.customCapacity ?? spec.capacity ?? 0);
     }, 0);
   }, [layoutState.layout.tables]);
 
