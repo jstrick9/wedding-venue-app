@@ -1,6 +1,5 @@
 import { STORAGE_KEYS } from '../constants/storageKeys';
-import { STORAGE_VERSIONS } from '../constants/storageVersions';
-import { saveVersionedStorage } from './storage';
+import { BACKUP_DOMAINS } from './backupDomains';
 import type { BackupBundle, BackupImportReport, BackupPayload } from './backupTypes';
 import { emitDataChanged } from './appEvents';
 import { buildBackupBundle } from './backupExport';
@@ -175,51 +174,64 @@ export async function snapshotCurrentProjectForRollback(actor?: {
   localStorage.setItem(ROLLBACK_KEY, JSON.stringify(bundle));
 }
 
-function writeJson(key: string, value: unknown): void {
-  if (value === undefined) return;
-  localStorage.setItem(key, JSON.stringify(value));
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value)
+  );
 }
 
-function writeVersioned(key: string, version: number, value: unknown): void {
-  if (value === undefined) return;
-  saveVersionedStorage(key, version, value);
+/**
+ * Merge incoming backup data into the current project state.
+ *  - arrays  → concatenate and de-duplicate by stable id (fallback: JSON string)
+ *  - objects → shallow merge (incoming wins)
+ *  - scalars / other → incoming wins
+ * This is intentionally conservative so a merge can never destroy existing data.
+ */
+function mergeValue(current: unknown, incoming: unknown): unknown {
+  if (incoming === undefined) return current;
+
+  if (Array.isArray(current) && Array.isArray(incoming)) {
+    const map = new Map<string, unknown>();
+    const keyFor = (item: unknown): string => {
+      const id = (item as { id?: string } | null)?.id;
+      if (id) return `id:${id}`;
+      try {
+        return `json:${JSON.stringify(item)}`;
+      } catch {
+        return `idx:${Math.random()}`;
+      }
+    };
+    [...current, ...incoming].forEach((item) => {
+      map.set(keyFor(item), item);
+    });
+    return Array.from(map.values());
+  }
+
+  if (isPlainObject(current) && isPlainObject(incoming)) {
+    return { ...current, ...incoming };
+  }
+
+  return incoming;
 }
 
 export function applyBackupPayload(
   payload: BackupPayload,
   mode: 'replace' | 'merge' = 'replace',
 ): void {
-  if (mode !== 'replace') {
-    throw new Error('Only replace mode is currently supported.');
-  }
+  for (const domain of BACKUP_DOMAINS) {
+    const incoming = payload[domain.key];
+    if (incoming === undefined) continue;
 
-  writeVersioned(STORAGE_KEYS.CONFIG, STORAGE_VERSIONS.CONFIG, payload.config);
-  writeJson(STORAGE_KEYS.VENUES, payload.venues);
-  writeJson(STORAGE_KEYS.TABLE_SPECS, payload.tableSpecs);
-  writeJson(STORAGE_KEYS.FIXTURE_TYPES, payload.fixtureTypes);
-  writeJson(STORAGE_KEYS.GUIDELINES, payload.guidelines);
-  writeJson(STORAGE_KEYS.TEMPLATES, payload.templates);
-  writeJson(STORAGE_KEYS.USERS, payload.users);
-  writeJson(STORAGE_KEYS.LINEN_COLORS, payload.linenColors);
-  // Saved layouts are read/written through the versioned storage layer
-  // (see utils/collaboration.ts), so they must be imported as an envelope too —
-  // otherwise every import triggers a legacy-migration self-heal on load.
-  writeVersioned(STORAGE_KEYS.SAVED_LAYOUTS, STORAGE_VERSIONS.SAVED_LAYOUTS, payload.savedLayouts);
-  writeJson(STORAGE_KEYS.DECOR_ITEMS, payload.decorItems);
-  writeJson(STORAGE_KEYS.DECOR_CATEGORIES, payload.decorCategories);
-  writeJson(STORAGE_KEYS.DECOR_ARRANGEMENTS, payload.decorArrangements);
-  writeJson(STORAGE_KEYS.DECOR_PACKAGES, payload.decorPackages);
-  writeJson(STORAGE_KEYS.EVENT_ROLES, payload.eventRoles);
-  writeJson(STORAGE_KEYS.EVENT_QUESTIONS, payload.eventQuestions);
-  writeJson(STORAGE_KEYS.EVENT_ANSWERS, payload.eventAnswers);
-  writeJson(STORAGE_KEYS.EVENT_SUBMISSIONS, payload.eventSubmissions);
-  writeVersioned(STORAGE_KEYS.DIRECT_MESSAGES, STORAGE_VERSIONS.DIRECT_MESSAGES, payload.directMessages);
-  writeVersioned(STORAGE_KEYS.PORTAL_CONFIG, STORAGE_VERSIONS.PORTAL_CONFIG, payload.portalConfig);
-  writeVersioned(STORAGE_KEYS.PORTAL_GUESTS, STORAGE_VERSIONS.PORTAL_GUESTS, payload.portalGuests);
-  writeVersioned(STORAGE_KEYS.RSVP_SUBMISSIONS, STORAGE_VERSIONS.RSVP_SUBMISSIONS, payload.rsvpSubmissions);
-  writeJson(STORAGE_KEYS.STAFF_TASKS, payload.staffTasks);
-  writeJson(STORAGE_KEYS.STAFF_AREAS, payload.staffAreas);
-  writeJson(STORAGE_KEYS.STAFF_SHIFTS, payload.staffShifts);
+    const value =
+      mode === 'merge' ? mergeValue(domain.read(), incoming) : incoming;
+
+    // Versioned domains (config, saved layouts, direct messages, portal
+    // config/guests, RSVP) are written as envelopes via their registry entry,
+    // so imports never trigger a legacy-migration self-heal on load.
+    domain.write(value);
+  }
 
   emitDataChanged('all');
 }

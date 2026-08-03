@@ -36,6 +36,9 @@ export interface BackupPayload {
   chairSpecs?: unknown;
   wallStyles?: unknown;
   spacingSettings?: unknown;
+  alignmentSettings?: unknown;
+  indoorFeatureTemplates?: unknown;
+  outdoorFeatureTemplates?: unknown;
   savedLayouts?: unknown;
   decorItems?: unknown;
   decorCategories?: unknown;

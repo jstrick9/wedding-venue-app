@@ -15,7 +15,11 @@ type SendMessagePayload = {
   message: string;
 };
 
-function loadStoredMessages(): DirectMessage[] {
+/**
+ * Non-hook accessor so the backup/restore layer can read the current messages
+ * (unwrapped) without needing a React component context.
+ */
+export function getStoredDirectMessages(): DirectMessage[] {
   return loadVersionedStorage<DirectMessage[]>({
     key: STORAGE_KEY,
     defaultValue: [],
@@ -25,6 +29,10 @@ function loadStoredMessages(): DirectMessage[] {
     },
     normalize: (value) => (Array.isArray(value) ? value : []),
   });
+}
+
+function loadStoredMessages(): DirectMessage[] {
+  return getStoredDirectMessages();
 }
 
 export function useDirectMessages() {

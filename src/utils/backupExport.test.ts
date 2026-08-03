@@ -48,6 +48,19 @@ vi.mock('../data/venueData', () => ({
     enableCollisionDetection: true,
     showCollisionWarnings: true,
   }),
+  getAlignmentSettings: () => ({ enabled: true, snapToGrid: true }),
+  getIndoorFeatureTemplates: () => [{ id: 'ift1', name: 'Door' }],
+  getOutdoorFeatureTemplates: () => [{ id: 'oft1', name: 'Tree' }],
+}));
+
+vi.mock('../hooks/useDirectMessages', () => ({
+  getStoredDirectMessages: () => [{ id: 'm1', message: 'hi' }],
+}));
+
+vi.mock('./guestPortal', () => ({
+  getGuestPortalConfig: () => ({ eventTitle: 'RSVP' }),
+  getPortalGuests: () => [{ id: 'g1', name: 'Guest' }],
+  getPortalRSVPSubmissions: () => [{ id: 'r1' }],
 }));
 
 import { buildBackupBundle } from './backupExport';
@@ -73,6 +86,29 @@ describe('backup export', () => {
     expect(bundle.summary.decorArrangementCount).toBe(1);
     expect(bundle.summary.guestPortalSubmissionCount).toBe(1);
     expect(bundle.checksums.payloadHash).toBeTruthy();
+  });
+
+  it('exports versioned domains as unwrapped data (not envelopes)', async () => {
+    const bundle = await buildBackupBundle();
+
+    expect(bundle.payload.directMessages).toEqual([{ id: 'm1', message: 'hi' }]);
+    expect(bundle.payload.portalConfig).toEqual({ eventTitle: 'RSVP' });
+    expect(bundle.payload.portalGuests).toEqual([{ id: 'g1', name: 'Guest' }]);
+    expect(bundle.payload.rsvpSubmissions).toEqual([{ id: 'r1' }]);
+  });
+
+  it('exports the full set of design domains', async () => {
+    const bundle = await buildBackupBundle();
+
+    expect(bundle.payload.chairSpecs).toEqual([{ id: 'c1', name: 'Chair 1' }]);
+    expect(bundle.payload.wallStyles).toEqual([{ id: 'w1', name: 'Wall 1' }]);
+    expect(bundle.payload.spacingSettings).toBeTruthy();
+    expect(bundle.payload.alignmentSettings).toEqual({
+      enabled: true,
+      snapToGrid: true,
+    });
+    expect(bundle.payload.indoorFeatureTemplates).toEqual([{ id: 'ift1', name: 'Door' }]);
+    expect(bundle.payload.outdoorFeatureTemplates).toEqual([{ id: 'oft1', name: 'Tree' }]);
   });
 
   it('includes named payload domains', async () => {

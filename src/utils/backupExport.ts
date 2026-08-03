@@ -1,24 +1,4 @@
-import { getConfig } from '../config';
-import {
-  getDecorArrangements,
-  getDecorCategories,
-  getDecorItems,
-  getDecorPackages,
-  getFixtureTypes,
-  getGuidelines,
-  getLinenColors,
-  getSavedLayouts,
-  getTableSpecs,
-  getTemplates,
-  getUsers,
-  getVenues,
-} from '../hooks/useLayoutState';
-import {
-  getChairSpecs,
-  getSpacingSettings,
-  getWallStyles,
-} from '../data/venueData';
-import { STORAGE_KEYS } from '../constants/storageKeys';
+import { BACKUP_DOMAINS } from './backupDomains';
 import type { BackupBundle, BackupBundleSummary, BackupPayload } from './backupTypes';
 
 const BUNDLE_VERSION = 1;
@@ -28,15 +8,6 @@ async function sha256(text: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function readJson<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 function buildSummary(payload: BackupPayload): BackupBundleSummary {
@@ -59,35 +30,17 @@ export async function buildBackupBundle(actor?: {
   id?: string;
   name?: string;
 }): Promise<BackupBundle> {
-  const payload: BackupPayload = {
-    config: getConfig(),
-    venues: getVenues(),
-    tableSpecs: getTableSpecs(),
-    fixtureTypes: getFixtureTypes(),
-    guidelines: getGuidelines(),
-    templates: getTemplates(),
-    users: getUsers(),
-    linenColors: getLinenColors(),
-    chairSpecs: getChairSpecs(),
-    wallStyles: getWallStyles(),
-    spacingSettings: getSpacingSettings(),
-    savedLayouts: getSavedLayouts(),
-    decorItems: getDecorItems(),
-    decorCategories: getDecorCategories(),
-    decorArrangements: getDecorArrangements(),
-    decorPackages: getDecorPackages(),
-    eventRoles: readJson(STORAGE_KEYS.EVENT_ROLES, []),
-    eventQuestions: readJson(STORAGE_KEYS.EVENT_QUESTIONS, []),
-    eventAnswers: readJson(STORAGE_KEYS.EVENT_ANSWERS, []),
-    eventSubmissions: readJson(STORAGE_KEYS.EVENT_SUBMISSIONS, []),
-    directMessages: readJson(STORAGE_KEYS.DIRECT_MESSAGES, []),
-    portalConfig: readJson(STORAGE_KEYS.PORTAL_CONFIG, null),
-    portalGuests: readJson(STORAGE_KEYS.PORTAL_GUESTS, []),
-    rsvpSubmissions: readJson(STORAGE_KEYS.RSVP_SUBMISSIONS, []),
-    staffTasks: readJson(STORAGE_KEYS.STAFF_TASKS, []),
-    staffAreas: readJson(STORAGE_KEYS.STAFF_AREAS, []),
-    staffShifts: readJson(STORAGE_KEYS.STAFF_SHIFTS, []),
-  };
+  const payload: BackupPayload = {};
+
+  for (const domain of BACKUP_DOMAINS) {
+    try {
+      payload[domain.key] = domain.read();
+    } catch {
+      // A domain that throws while reading should not fail the whole backup;
+      // store its default so the rest of the bundle is still valid.
+      payload[domain.key] = domain.defaultValue;
+    }
+  }
 
   const summary = buildSummary(payload);
   const payloadJson = JSON.stringify(payload);

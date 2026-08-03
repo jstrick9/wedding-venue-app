@@ -118,6 +118,19 @@ vi.mock('../data/venueData', () => ({
     enableCollisionDetection: true,
     showCollisionWarnings: true,
   }),
+  getAlignmentSettings: () => ({ enabled: true, snapToGrid: true }),
+  getIndoorFeatureTemplates: () => [{ id: 'ift1', name: 'Door' }],
+  getOutdoorFeatureTemplates: () => [{ id: 'oft1', name: 'Tree' }],
+}));
+
+vi.mock('../hooks/useDirectMessages', () => ({
+  getStoredDirectMessages: () => [],
+}));
+
+vi.mock('./guestPortal', () => ({
+  getGuestPortalConfig: () => null,
+  getPortalGuests: () => [],
+  getPortalRSVPSubmissions: () => [],
 }));
 
 import { buildBackupBundle } from './backupExport';
@@ -172,6 +185,48 @@ describe('backup import', () => {
     off();
   });
 
+  it('restores previously-dropped design domains on replace', () => {
+    applyBackupPayload(
+      {
+        chairSpecs: [{ id: 'c1', name: 'Chair 1' }],
+        wallStyles: [{ id: 'w1', name: 'Wall 1' }],
+        spacingSettings: { minTableSpacing: 3 },
+        alignmentSettings: { enabled: true },
+        indoorFeatureTemplates: [{ id: 'ift1', name: 'Door' }],
+        outdoorFeatureTemplates: [{ id: 'oft1', name: 'Tree' }],
+      },
+      'replace',
+    );
+
+    expect(JSON.parse(localStorage.getItem('spm_chair_specs') || '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('spm_wall_styles') || '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('spm_spacing_settings') || 'null')).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem('spm_alignment_settings') || 'null')).toBeTruthy();
+    expect(
+      JSON.parse(localStorage.getItem('spm_indoor_feature_templates') || '[]'),
+    ).toHaveLength(1);
+    expect(
+      JSON.parse(localStorage.getItem('spm_outdoor_feature_templates') || '[]'),
+    ).toHaveLength(1);
+  });
+
+  it('merge mode de-duplicates arrays by id and preserves existing records', () => {
+    // Seed existing venues.
+    applyBackupPayload({ venues: [{ id: 'v1', name: 'Existing' }] }, 'replace');
+
+    // Merge in a duplicate v1 + a new v2.
+    applyBackupPayload(
+      { venues: [{ id: 'v1', name: 'Changed' }, { id: 'v2', name: 'New' }] },
+      'merge',
+    );
+
+    const venues = JSON.parse(localStorage.getItem('spm_venues') || '[]');
+    expect(venues).toHaveLength(2);
+    // In merge mode incoming wins for the duplicate.
+    expect(venues.find((v: any) => v.id === 'v1').name).toBe('Changed');
+    expect(venues.find((v: any) => v.id === 'v2').name).toBe('New');
+  });
+
   it('stores and retrieves a rollback backup snapshot', async () => {
     await snapshotCurrentProjectForRollback({ id: 'u1', name: 'Jane' });
 
@@ -180,15 +235,16 @@ describe('backup import', () => {
     expect(rollback?.manifest.app).toBe('seven-paths-manor-layout-planner');
   });
 
-  it('throws when unsupported merge mode is requested', () => {
-    expect(() =>
-      applyBackupPayload(
-        {
-          venues: [{ id: 'v1', name: 'Venue 1' }],
-        },
-        'merge',
-      ),
-    ).toThrow('Only replace mode is currently supported.');
+  it('every backup domain is covered by the corruption-recovery registry', async () => {
+    const { BACKUP_DOMAINS } = await import('./backupDomains');
+    const { RECOVERY_DOMAINS } = await import('./recovery');
+
+    const recoveryKeys = new Set(RECOVERY_DOMAINS.map((d) => d.key));
+    const uncovered = BACKUP_DOMAINS.filter(
+      (d) => d.recovery && !recoveryKeys.has(d.storageKey),
+    );
+
+    expect(uncovered).toEqual([]);
   });
 
   it('flags dangling cross-references (template -> missing venue)', async () => {

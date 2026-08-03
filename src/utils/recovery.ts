@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { BACKUP_DOMAINS } from './backupDomains';
 import { buildBackupBundle } from './backupExport';
 import type { BackupBundle } from './backupTypes';
 
@@ -22,36 +23,19 @@ export interface ProjectHealthReport {
 const QUARANTINE_PREFIX = 'spm_quarantine_';
 const EMERGENCY_SNAPSHOT_KEY = STORAGE_KEYS.RECOVERY_SNAPSHOT;
 
+/**
+ * The domains tracked by the corruption-health/recovery system. Derived from
+ * the single backup-domain registry so the two can never drift apart.
+ */
 export const RECOVERY_DOMAINS: Array<{
   key: string;
   label: string;
   defaultValue: unknown;
-}> = [
-  { key: STORAGE_KEYS.CONFIG, label: 'Branding Config', defaultValue: null },
-  { key: STORAGE_KEYS.VENUES, label: 'Venues', defaultValue: [] },
-  { key: STORAGE_KEYS.TABLE_SPECS, label: 'Table Specs', defaultValue: [] },
-  { key: STORAGE_KEYS.FIXTURE_TYPES, label: 'Fixture Types', defaultValue: [] },
-  { key: STORAGE_KEYS.GUIDELINES, label: 'Guidelines', defaultValue: [] },
-  { key: STORAGE_KEYS.TEMPLATES, label: 'Templates', defaultValue: [] },
-  { key: STORAGE_KEYS.USERS, label: 'Users', defaultValue: [] },
-  { key: STORAGE_KEYS.LINEN_COLORS, label: 'Linen Colors', defaultValue: [] },
-  { key: STORAGE_KEYS.SAVED_LAYOUTS, label: 'Saved Layouts', defaultValue: [] },
-  { key: STORAGE_KEYS.DECOR_ITEMS, label: 'Decor Catalog', defaultValue: [] },
-  { key: STORAGE_KEYS.DECOR_CATEGORIES, label: 'Decor Categories', defaultValue: [] },
-  { key: STORAGE_KEYS.DECOR_ARRANGEMENTS, label: 'Decor Arrangements', defaultValue: [] },
-  { key: STORAGE_KEYS.DECOR_PACKAGES, label: 'Decor Packages', defaultValue: [] },
-  { key: STORAGE_KEYS.EVENT_ROLES, label: 'Event Roles', defaultValue: [] },
-  { key: STORAGE_KEYS.EVENT_QUESTIONS, label: 'Event Questions', defaultValue: [] },
-  { key: STORAGE_KEYS.EVENT_ANSWERS, label: 'Event Answers', defaultValue: [] },
-  { key: STORAGE_KEYS.EVENT_SUBMISSIONS, label: 'Event Submissions', defaultValue: [] },
-  { key: STORAGE_KEYS.DIRECT_MESSAGES, label: 'Direct Messages', defaultValue: [] },
-  { key: STORAGE_KEYS.PORTAL_CONFIG, label: 'Guest Portal Config', defaultValue: null },
-  { key: STORAGE_KEYS.PORTAL_GUESTS, label: 'Guest Portal Guests', defaultValue: [] },
-  { key: STORAGE_KEYS.RSVP_SUBMISSIONS, label: 'RSVP Submissions', defaultValue: [] },
-  { key: STORAGE_KEYS.STAFF_TASKS, label: 'Staff Tasks', defaultValue: [] },
-  { key: STORAGE_KEYS.STAFF_AREAS, label: 'Staff Areas', defaultValue: [] },
-  { key: STORAGE_KEYS.STAFF_SHIFTS, label: 'Staff Shifts', defaultValue: [] },
-];
+}> = BACKUP_DOMAINS.filter((d) => d.recovery).map((d) => ({
+  key: d.storageKey,
+  label: d.label,
+  defaultValue: d.defaultValue,
+}));
 
 function estimateSize(value: string | null): number {
   return value ? new Blob([value]).size : 0;
