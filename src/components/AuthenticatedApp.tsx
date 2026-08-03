@@ -14,6 +14,7 @@ import { showToast } from './Toast';
 import AppStatusBar, { StatusBarItem } from './AppStatusBar';
 import SafeImage from './SafeImage';
 import ModalDialog from './ModalDialog';
+import { CenteredModal } from './CenteredModal';
 import { buildMessageThreadId } from '../models/DirectMessage';
 import { useSubmissionWorkflow } from '../hooks/useSubmissionWorkflow';
 import { getConfig } from '../config';
@@ -593,6 +594,61 @@ export default function AuthenticatedApp() {
               users={allUsers}
               venues={selectableVenues}
             />
+          )}
+          {showVendors && <VendorPanel onClose={() => close('vendors')} />}
+          {showTimeline && <TimelinePanel onClose={() => close('timeline')} />}
+          {showPrint && (
+            <PrintView
+              venue={layoutState.currentVenue}
+              tables={layoutState.layout.tables}
+              fixtures={layoutState.layout.fixtures}
+              guests={layoutState.guests}
+              layoutName={currentEventName}
+              onClose={() => close('print')}
+            />
+          )}
+          {showEventQuestions && (
+            <CenteredModal title="Event Questions" onClose={() => close('eventQuestions')}>
+              <EventQuestionsWizard
+                questions={eventQuestions}
+                initialAnswers={currentEventAnswers}
+                userId={user.id}
+                eventId={currentEventName}
+                onSaveAnswers={saveEventAnswers}
+                onVenueFilterChange={setSelectedVenueCategories}
+              />
+            </CenteredModal>
+          )}
+          {showSubmission && (
+            <CenteredModal title="Submission Status" onClose={() => close('submission')}>
+              <SubmissionStatusPanel
+                eventName={currentEventName}
+                selectedVenueIds={selectableVenues.map((v) => v.id)}
+                answers={currentEventAnswers}
+                submission={currentSubmission}
+                onSubmit={() => {
+                  submissionWorkflow.submit({
+                    eventName: currentEventName,
+                    masterUserId: user.id,
+                    masterUserName: user.name,
+                    selectedVenueIds: selectableVenues.map((v) => v.id),
+                    answers: currentEventAnswers,
+                  });
+                  showToast('Layout submitted for approval.', 'success');
+                }}
+              />
+            </CenteredModal>
+          )}
+          {showMessages && (
+            <CenteredModal title="Messages" onClose={() => close('messages')}>
+              <DirectMessagePanel
+                title="Messages"
+                threadId={masterThreadId}
+                currentUserId={user.id}
+                currentUserName={user.name}
+                currentUserRole="admin"
+              />
+            </CenteredModal>
           )}
           {showDecorDesigner && <DecorDesigner onClose={() => close('decorDesigner')} onSave={(a) => { const currentArrangements = layoutState.getDecorArrangements(); const nextArrangements = currentArrangements.find(x => x.id === a.id) ? currentArrangements.map(x => x.id === a.id ? a : x) : [...currentArrangements, a]; layoutState.setDecorArrangements(nextArrangements); close('decorDesigner'); }} initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null} />}
           {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }} />}
