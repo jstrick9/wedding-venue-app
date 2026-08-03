@@ -337,7 +337,14 @@ export const defaultUsers: User[] = [
   {
     id: 'admin-1',
     username: 'admin',
-    password: 'REPLACE_ON_FIRST_LOGIN',
+    // The default bootstrap password ("REPLACE_ON_FIRST_LOGIN") is stored only
+    // as a PBKDF2-SHA256 hash so no plaintext credential is persisted. The
+    // `requiresPasswordChange` gate forces the admin to set a real password on
+    // first login.
+    password: '',
+    passwordHash: '0phcUaiN+uuOOymayNAL/s0FekOajk3q47GMaLtameQ=',
+    passwordSalt: 'EHKX50w0PVWu0Bw71JfUyA==',
+    passwordAlgorithm: 'pbkdf2-sha256',
     requiresPasswordChange: true,
     role: 'admin',
     name: 'Administrator',

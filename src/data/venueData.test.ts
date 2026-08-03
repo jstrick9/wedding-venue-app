@@ -1,7 +1,31 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { defaultVenues, defaultLayoutTemplates } from './venueData';
+import { defaultVenues, defaultLayoutTemplates, defaultUsers } from './venueData';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { resetToDefaults } from '../hooks/useLayoutState';
+
+describe('defaultUsers', () => {
+  it('never seeds a plaintext password (bootstrap admin is hashed + forced change)', () => {
+    for (const user of defaultUsers) {
+      expect(user.password).toBe('');
+      if (user.passwordHash) {
+        expect(user.passwordAlgorithm).toBe('pbkdf2-sha256');
+        expect(user.passwordSalt).toBeTruthy();
+      }
+    }
+
+    const admin = defaultUsers.find((u) => u.role === 'admin');
+    expect(admin).toBeTruthy();
+    // The bootstrap admin must be forced to change its known password.
+    expect((admin as any).requiresPasswordChange).toBe(true);
+  });
+
+  it('bootstrap admin authenticates against the stored hash (no plaintext)', async () => {
+    const { verifyPassword } = await import('../utils/auth');
+    const admin = defaultUsers.find((u) => u.role === 'admin') as any;
+    expect(await verifyPassword(admin, 'REPLACE_ON_FIRST_LOGIN')).toBe(true);
+    expect(await verifyPassword(admin, 'wrong-password')).toBe(false);
+  });
+});
 
 describe('defaultVenues', () => {
   it('seeds a venue for every built-in layout template', () => {

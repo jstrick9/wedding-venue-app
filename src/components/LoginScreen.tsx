@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
-import { isUserLocked } from '../utils/auth';
+import { isUserLocked, MAX_FAILED_LOGINS } from '../utils/auth';
 import { getUsers } from '../hooks/useLayoutState';
 import PasswordReset from './PasswordReset';
 import Logo from './Logo';
@@ -143,8 +143,8 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
           const sLeft = Math.max(1, Math.ceil(msLeft / 1000));
           setLockoutSecondsLeft(sLeft);
           setError(`Too many failed attempts. Please wait ${sLeft} seconds.`);
-        } else if (found && (found as any).failedLoginCount >= 3) {
-          const remaining = 5 - ((found as any).failedLoginCount ?? 0);
+        } else if (found && (found as any).failedLoginCount >= MAX_FAILED_LOGINS - 2) {
+          const remaining = MAX_FAILED_LOGINS - ((found as any).failedLoginCount ?? 0);
           setError(
             `Invalid credentials. ${Math.max(0, remaining)} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`,
           );
