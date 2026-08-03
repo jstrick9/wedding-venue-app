@@ -15,7 +15,7 @@ import {
   DecorPackage
 } from '../types';
 import { STORAGE_KEYS } from '../constants/storageKeys';
-import { emitDataChanged } from '../utils/appEvents';
+import { emit, emitDataChanged } from '../utils/appEvents';
 
 // Default spacing settings
 export const defaultSpacingSettings: SpacingSettings = {
@@ -1038,11 +1038,37 @@ export const defaultLayoutTemplates: LayoutTemplate[] = [
 export function loadFromStorage<T>(key: string, defaultValue: T): T {
   try {
     const stored = localStorage.getItem(key);
-    if (stored) {
-      return JSON.parse(stored);
+    if (stored != null) {
+      const parsed = JSON.parse(stored);
+      // Treat the top-level value as corrupt when it's not an array/object and
+      // a non-empty array/object default is expected (e.g. "undefined").
+      if (parsed === undefined) {
+        throw new Error('Parsed value is undefined (corrupt JSON literal).');
+      }
+      return parsed;
     }
   } catch (e) {
     console.error(`Error loading ${key} from storage:`, e);
+    // Preserve the raw bytes for recovery before returning the default.
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw != null) {
+        localStorage.setItem(`spm_backup_${key}_${Date.now()}`, raw);
+      }
+    } catch {
+      // ignore backup failures
+    }
+    // Notify the UI (toast) that a load failed.
+    try {
+      emit('spm_storage_error', {
+        key,
+        error: e instanceof Error ? e.message : 'Unknown storage error',
+        action: 'load',
+        timestamp: new Date().toISOString(),
+      });
+    } catch {
+      // ignore dispatch errors
+    }
   }
   return defaultValue;
 }
@@ -1192,5 +1218,17 @@ export function saveToStorage<T>(key: string, value: T): void {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
     console.error(`Error saving ${key} to storage:`, e);
+    // Notify the UI (toast) that a save failed (e.g. quota exceeded).
+    try {
+      emit('spm_storage_error', {
+        key,
+        error: e instanceof Error ? e.message : 'Unknown storage error',
+        action: 'save',
+        timestamp: new Date().toISOString(),
+      });
+    } catch {
+      // ignore dispatch errors
+    }
+    throw e; // Re-throw so callers know the save failed.
   }
 }

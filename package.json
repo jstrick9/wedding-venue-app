@@ -22,9 +22,7 @@
     "clsx": "2.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "tailwind-merge": "3.4.0",
-    "y-websocket": "^1.5.0",
-    "yjs": "^13.6.10"
+    "tailwind-merge": "3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.17",

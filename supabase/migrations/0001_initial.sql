@@ -524,3 +524,36 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ---------- INDEXES ----------
+-- Performance: every org-scoped query and the email rate-limiter joins on
+-- these columns. Without indexes these degrade quickly as data grows.
+create index if not exists idx_org_memberships_org on public.organization_memberships (organization_id);
+create index if not exists idx_org_memberships_user on public.organization_memberships (user_id);
+create index if not exists idx_orgs_owner on public.organizations (owner_id);
+create index if not exists idx_venues_org on public.venues (organization_id);
+create index if not exists idx_events_org on public.events (organization_id);
+create index if not exists idx_event_memberships_event on public.event_memberships (event_id);
+create index if not exists idx_event_memberships_user on public.event_memberships (user_id);
+create index if not exists idx_layouts_org on public.layouts (organization_id);
+create index if not exists idx_layouts_event on public.layouts (event_id);
+create index if not exists idx_layouts_venue on public.layouts (venue_id);
+create index if not exists idx_layout_versions_layout on public.layout_versions (layout_id);
+create index if not exists idx_guests_org on public.guests (organization_id);
+create index if not exists idx_guests_event on public.guests (event_id);
+create index if not exists idx_rsvp_org on public.rsvp_submissions (organization_id);
+create index if not exists idx_rsvp_event on public.rsvp_submissions (event_id);
+create index if not exists idx_rsvp_guest on public.rsvp_submissions (guest_id);
+create index if not exists idx_portal_config_event on public.guest_portal_configs (event_id);
+create index if not exists idx_vendors_org on public.vendors (organization_id);
+create index if not exists idx_vendors_event on public.vendors (event_id);
+create index if not exists idx_timeline_org on public.timeline_events (organization_id);
+create index if not exists idx_timeline_event on public.timeline_events (event_id);
+create index if not exists idx_staff_tasks_org on public.staff_tasks (organization_id);
+create index if not exists idx_staff_tasks_event on public.staff_tasks (event_id);
+create index if not exists idx_questions_org on public.event_questions (organization_id);
+create index if not exists idx_answers_event on public.event_answers (event_id);
+create index if not exists idx_answers_question on public.event_answers (question_id);
+create index if not exists idx_audit_org on public.audit_logs (organization_id);
+create index if not exists idx_audit_actor on public.audit_logs (actor_id);
+create index if not exists idx_audit_created on public.audit_logs (created_at);

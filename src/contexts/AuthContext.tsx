@@ -40,6 +40,11 @@ interface AuthContextType {
   updateUser: (userId: string, updates: Partial<User>) => boolean;
   deleteUser: (userId: string) => boolean;
   getAllUsers: () => User[];
+  /**
+   * Replace a user's password and clear their `requiresPasswordChange` flag.
+   * Used by the forced "change your password on first login" gate.
+   */
+  changePassword: (userId: string, newPassword: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -298,6 +303,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return getUsers();
   };
 
+  const changePassword = async (
+    userId: string,
+    newPassword: string,
+  ): Promise<boolean> => {
+    const users = getUsers();
+    const index = users.findIndex((u) => u.id === userId);
+    if (index === -1) return false;
+
+    const passwordRecord = await createPasswordRecord(newPassword);
+
+    const updated = {
+      ...users[index],
+      password: '',
+      ...(passwordRecord as any),
+      requiresPasswordChange: false,
+      sessionVersion: ((users[index] as any).sessionVersion ?? 1) + 1,
+      updatedAt: new Date().toISOString(),
+    } as User;
+
+    users[index] = updated;
+    setUsers(users);
+
+    // If this is the signed-in user, refresh in-memory state so the forced
+    // change gate clears and the workspace can render.
+    if (user?.id === userId) {
+      setUser(updated);
+      saveSession(createSession(updated as any, false));
+    }
+
+    return true;
+  };
+
   const isAdmin = user?.role === 'admin';
   const isBasicUser = user?.role === 'basic';
   const isGuest = user?.role === 'guest';
@@ -320,6 +357,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         updateUser,
         deleteUser,
         getAllUsers,
+        changePassword,
       }}
     >
       {children}

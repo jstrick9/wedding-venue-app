@@ -9,6 +9,7 @@ import { lazy } from 'react';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
 const GuestPortal = lazy(() => import('./components/GuestPortal'));
+const ForcePasswordChange = lazy(() => import('./components/ForcePasswordChange'));
 
 function AppContent() {
   const { user, continueAsGuest } = useAuth();
@@ -44,6 +45,18 @@ function AppContent() {
 
   if (!user) {
     return <LoginScreen onContinueAsGuest={continueAsGuest} />;
+  }
+
+  // Force a password change before letting anyone past the login gate if the
+  // account still uses a default/temporary credential (security hardening).
+  if (user.requiresPasswordChange) {
+    return (
+      <Suspense
+        fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}
+      >
+        <ForcePasswordChange />
+      </Suspense>
+    );
   }
 
   return (

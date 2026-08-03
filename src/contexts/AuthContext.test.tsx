@@ -14,7 +14,7 @@ vi.mock('../hooks/useLayoutState', () => ({
 }));
 
 function TestConsumer() {
-  const { user, login, logout, continueAsGuest, createUser, updateUser } = useAuth();
+  const { user, login, logout, continueAsGuest, createUser, updateUser, changePassword } = useAuth();
 
   return (
     <div>
@@ -22,6 +22,10 @@ function TestConsumer() {
 
       <button type="button" onClick={() => void login('jane', 'secret')}>
         Login
+      </button>
+
+      <button type="button" onClick={() => void changePassword('u1', 'NewPass123!')}>
+        Change Password
       </button>
 
       <button type="button" onClick={() => void login('jane', 'wrong-password')}>
@@ -214,6 +218,40 @@ describe('AuthContext', () => {
       expect(created.passwordAlgorithm).toBe('pbkdf2-sha256');
       expect(created.sessionVersion).toBe(1);
     });
+  });
+
+  it('changePassword hashes the new password and clears requiresPasswordChange', async () => {
+    const user = userEvent.setup();
+
+    // Simulate the default-admin state that must be remediated on first login.
+    (mockUsers[0] as any).requiresPasswordChange = true;
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    );
+
+    // Sign in as the user first (so the in-memory user updates too).
+    await user.click(screen.getByRole('button', { name: 'Login' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('current-user')).toHaveTextContent('Jane Doe');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Change Password' }));
+
+    await waitFor(() => {
+      const updated = mockUsers[0] as any;
+      expect(updated.requiresPasswordChange).toBe(false);
+      expect(updated.password).toBe('');
+      expect(updated.passwordHash).toBeTruthy();
+      expect(updated.passwordSalt).toBeTruthy();
+      expect(updated.passwordAlgorithm).toBe('pbkdf2-sha256');
+      expect(updated.sessionVersion).toBe(3);
+    });
+
+    // The in-memory session user reflects the cleared flag so the gate unmounts.
+    expect(screen.getByTestId('current-user')).toHaveTextContent('Jane Doe');
   });
 
   it('bumps sessionVersion for auth-sensitive updates', async () => {
