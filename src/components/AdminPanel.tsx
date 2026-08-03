@@ -86,6 +86,7 @@ import { BrandingManagement } from './admin/BrandingManagement';
 import { AccessControlPanel } from './admin/AccessControlPanel';
 import { GuestPortalManagement } from './admin/GuestPortalManagement';
 import { BackupManagement } from './admin/BackupManagement';
+import { uploadImage } from '../services/storage/imageStorage';
 import { emitDataChanged } from '../utils/appEvents';
 import type { AdminCommonProps, AdminDialogOptions, AdminTabDefinition } from './admin/AdminTabTypes';
 
@@ -141,7 +142,7 @@ type AdminDialogState = AdminDialogOptions & {
 };
 
 export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layoutState }: AdminPanelProps) {
-  const { createUser, deleteUser, getAllUsers, user, isAdmin } = useAuth();
+  const { createUser, deleteUser, getAllUsers, user, isAdmin, organizationId } = useAuth();
   const canAccessThisPanel = canAccessAdminPanel(user);
   const EVENT_ROLES_STORAGE_KEY = 'spm_event_roles';
   const EVENT_QUESTIONS_STORAGE_KEY = 'spm_event_questions';
@@ -554,9 +555,11 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
         showInfo('File too large', 'Maximum image size is 5MB.', 'warning');
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (event) => callback(event.target?.result as string);
-      reader.readAsDataURL(file);
+      // In Supabase mode the image is uploaded to the private bucket and the
+      // returned storage ref is stored; in local mode it stays a data URL.
+      void uploadImage(file, { bucket: 'venue-images', organizationId: organizationId || undefined })
+        .then((ref) => callback(ref))
+        .catch(() => showInfo('Upload failed', 'Could not upload the image.', 'warning'));
     };
     input.click();
   };

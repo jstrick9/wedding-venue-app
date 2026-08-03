@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import SafeImage from './SafeImage';
 import { showToast } from './Toast';
+import { uploadImage } from '../services/storage/imageStorage';
+import { getPlatformProvider } from '../services/platform';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ImageItem {
   id: string;
@@ -13,6 +16,8 @@ interface MultiImageUploadProps {
   onChange: (images: ImageItem[]) => void;
   maxImages?: number;
   itemName?: string;
+  /** RLS scope used when uploading to the platform storage bucket. */
+  organizationId?: string;
 }
 
 export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
@@ -20,10 +25,15 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
   onChange,
   maxImages = 4,
   itemName = 'item',
+  organizationId,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
   const [zoom, setZoom] = useState(1);
+  // RLS scope for platform bucket uploads (optional; falls back to local data
+  // URLs when the platform backend is disabled).
+  const { organizationId: authOrgId } = useAuth();
+  const effectiveOrgId = organizationId || authOrgId || undefined;
 
   const handleImageUpload = () => {
     if (images.length >= maxImages) {
@@ -44,16 +54,20 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      try {
+        const url = await uploadImage(file, {
+          bucket: 'venue-images',
+          organizationId: effectiveOrgId,
+        });
         const newImage: ImageItem = {
           id: `img-${Date.now()}`,
-          url: reader.result as string,
+          url,
           label: `Image ${images.length + 1}`,
         };
         onChange([...images, newImage]);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        showToast(`Could not upload image: ${err instanceof Error ? err.message : 'unknown error'}`, 'warning');
+      }
     };
 
     input.click();
