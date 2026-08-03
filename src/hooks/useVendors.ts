@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Vendor, VendorCategory, VendorPayment } from '../types/vendor';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
-const VENDORS_KEY = 'spm_vendors';
-const PAYMENTS_KEY = 'spm_vendor_payments';
+const VENDORS_KEY = STORAGE_KEYS.VENDORS;
+const PAYMENTS_KEY = STORAGE_KEYS.VENDOR_PAYMENTS;
 
 function loadVendors(): Vendor[] {
   try {

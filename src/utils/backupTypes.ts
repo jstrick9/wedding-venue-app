@@ -55,6 +55,8 @@ export interface BackupPayload {
   staffTasks?: unknown;
   staffAreas?: unknown;
   staffShifts?: unknown;
+  vendors?: unknown;
+  vendorPayments?: unknown;
 }
 
 export interface BackupBundle {

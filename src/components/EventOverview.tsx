@@ -1,7 +1,29 @@
 import { useMemo } from 'react';
 import type { Guest, PlacedTable, TableSpec, Venue } from '../types';
 import { computeEventDashboard, type EventDashboard } from '../utils/eventDashboard';
+import { computeVendorBudget, type VendorBudget } from '../utils/vendorBudget';
+import type { Vendor, VendorPayment } from '../types/vendor';
 import { getConfig } from '../config';
+
+const money = (n: number) =>
+  n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
+function readVendors(): Vendor[] {
+  try {
+    const raw = localStorage.getItem('spm_vendors');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+function readPayments(): VendorPayment[] {
+  try {
+    const raw = localStorage.getItem('spm_vendor_payments');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
 
 interface EventOverviewProps {
   guests: Guest[];
@@ -12,6 +34,7 @@ interface EventOverviewProps {
   venueName: string;
   onOpenGuests: () => void;
   onOpenTemplates: () => void;
+  onOpenVendors?: () => void;
   onClose: () => void;
 }
 
@@ -54,12 +77,17 @@ export function EventOverview({
   venueName,
   onOpenGuests,
   onOpenTemplates,
+  onOpenVendors,
   onClose,
 }: EventOverviewProps) {
   const config = getConfig();
   const dash: EventDashboard = useMemo(
     () => computeEventDashboard(guests, [], tables, tableSpecs),
     [guests, tables, tableSpecs],
+  );
+  const budget: VendorBudget = useMemo(
+    () => computeVendorBudget(readVendors(), readPayments()),
+    [],
   );
 
   const healthMeta =
@@ -132,9 +160,43 @@ export function EventOverview({
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold text-gray-700">Vendor budget</div>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                budget.health === 'ready' ? 'bg-green-100 text-green-800' : budget.health === 'warning' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+              }`}>
+                {budget.vendorCount === 0 ? 'No vendors' : budget.overduePayments > 0 ? `${budget.overduePayments} overdue` : budget.outstanding === 0 ? 'Paid in full' : 'Balance due'}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <Stat label="Contract" value={money(budget.totalContract)} />
+              <Stat label="Paid" value={money(budget.totalPaid)} tone="good" />
+              <Stat
+                label="Balance"
+                value={money(budget.outstanding)}
+                tone={budget.outstanding > 0 ? 'warn' : 'default'}
+              />
+            </div>
+            {budget.vendorCount > 0 && (
+              <div className="mt-2 text-xs text-gray-500">
+                <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${100 - budget.balancePct}%`,
+                      backgroundColor: budget.outstanding === 0 ? '#22c55e' : '#f59e0b',
+                    }}
+                  />
+                </div>
+                <div className="mt-1 text-right">{budget.balancePct}% of budget outstanding</div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
             <div className="text-sm font-semibold text-gray-700 mb-2">Notes</div>
             <ul className="space-y-1 text-sm text-gray-600">
-              {dash.messages.map((m, i) => (
+              {[...dash.messages, ...budget.messages].map((m, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span>•</span>
                   <span>{m}</span>
@@ -159,6 +221,15 @@ export function EventOverview({
             >
               Load a Template
             </button>
+            {onOpenVendors && (
+              <button
+                type="button"
+                onClick={onOpenVendors}
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Manage Vendors
+              </button>
+            )}
           </div>
         </div>
       </div>

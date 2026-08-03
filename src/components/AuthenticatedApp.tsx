@@ -525,6 +525,7 @@ export default function AuthenticatedApp() {
               eventName={currentEventName}
               venueName={layoutState.currentVenue.name}
               onOpenGuests={() => { close('overview'); open('guests'); }}
+              onOpenVendors={() => { close('overview'); open('vendors'); }}
               onOpenTemplates={() => { close('overview'); open('templates'); }}
               onClose={() => close('overview')}
             />

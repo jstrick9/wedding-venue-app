@@ -356,4 +356,22 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     read: () => readJson(STORAGE_KEYS.STAFF_SHIFTS, []),
     write: (v) => writeJson(STORAGE_KEYS.STAFF_SHIFTS, v),
   },
+  {
+    key: 'vendors',
+    storageKey: STORAGE_KEYS.VENDORS,
+    label: 'Vendors',
+    defaultValue: [],
+    recovery: true,
+    read: () => readJson(STORAGE_KEYS.VENDORS, []),
+    write: (v) => writeJson(STORAGE_KEYS.VENDORS, v),
+  },
+  {
+    key: 'vendorPayments',
+    storageKey: STORAGE_KEYS.VENDOR_PAYMENTS,
+    label: 'Vendor Payments',
+    defaultValue: [],
+    recovery: true,
+    read: () => readJson(STORAGE_KEYS.VENDOR_PAYMENTS, []),
+    write: (v) => writeJson(STORAGE_KEYS.VENDOR_PAYMENTS, v),
+  },
 ];
