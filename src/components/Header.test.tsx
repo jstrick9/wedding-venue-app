@@ -190,4 +190,21 @@ describe('Header', () => {
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText('My Layout')).toBeInTheDocument();
   });
+
+  it('labels a basic master user accurately in the signed-in line', async () => {
+    const user = userEvent.setup();
+    renderHeader({
+      currentUser: {
+        id: 'u1',
+        role: 'basic',
+        userRole: 'master',
+        name: 'Jane',
+        isActive: true,
+      } as any,
+    });
+
+    await user.click(screen.getByRole('button', { name: /menu/i }));
+
+    expect(screen.getByText(/Signed in as: Jane \(Master\)/)).toBeInTheDocument();
+  });
 });

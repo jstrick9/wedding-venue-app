@@ -148,6 +148,22 @@ export function Header({
       ? visibleVenues.filter((v) => selectedVenueCategories.includes(v.category))
       : visibleVenues;
 
+  // Accurately label the current user's access level (used in both menus) so
+  // admins can see at a glance which role is signed in during multi-role testing.
+  const roleLabel = (() => {
+    const role = currentUser?.role;
+    if (role === 'guest') return 'Guest';
+    if (role === 'staff') return 'Staff';
+    if (role === 'admin') return 'Admin';
+    if (role === 'basic') {
+      if (currentUser?.userRole === 'master' || currentUser?.isMasterUser) return 'Master';
+      if (currentUser?.userRole === 'read-only') return 'Read Only';
+      if (currentUser?.userRole === 'shared') return 'Shared';
+      return 'Basic';
+    }
+    return isAdmin ? 'Admin' : isStaff ? 'Staff' : 'User';
+  })();
+
   return (
     <>
       <header
@@ -553,7 +569,7 @@ export function Header({
                   <hr className="my-1" />
 
                   <div className="px-4 py-2 text-xs text-gray-500">
-                    Signed in as: {userName} ({isAdmin ? 'Admin' : isStaff ? 'Staff' : 'User'})
+                    Signed in as: {userName} ({roleLabel})
                   </div>
 
                   <button
@@ -806,7 +822,7 @@ export function Header({
 
               <div className="pt-2 border-t border-white/20 mt-2">
                 <div className="text-white/60 text-xs mb-2 px-2">
-                  Signed in as: {userName} ({isAdmin ? 'Admin' : isStaff ? 'Staff' : 'User'})
+                  Signed in as: {userName} ({roleLabel})
                 </div>
                 <button
                   type="button"
