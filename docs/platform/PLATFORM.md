@@ -106,21 +106,26 @@ Email (invitations, RSVP confirmations, staff notifications) uses a Supabase
 | Server-side guest portal (identity + RSVP) | ✅ Built + tested | `services/portal/guestPortalBackend.ts`, migration `0002_guest_portal.sql` |
 | Object storage for images | ✅ Built + tested | `services/storage/imageStorage.ts`, `SafeImage`, `MultiImageUpload` |
 | Entity repository (venues/decor/vendors/staff/settings) | ✅ Built + tested | `services/repository/entityRepository.ts`, `services/sync/entitySync.ts`, migration `0003_org_data.sql` |
+| Multi-org invites | ✅ Built + tested | `services/org/inviteService.ts`, `InviteMembers`, `AcceptInvite`, migration `0004_invites.sql` |
 | DB schema + Row-Level Security + storage buckets | ✅ Ready (migration) | `supabase/migrations/0001_initial.sql` |
 | Transactional email Edge Function | ✅ Ready | `supabase/functions/send-email/` |
 | Object storage service | ✅ Ready | `services/storage/ObjectStorageService.ts` |
 
-## What still needs a live project to finish (next milestones)
+## What still needs a live project (just apply migrations + test)
 
-The code for layout persistence + real-time sync is **built and unit-tested**
-against mocks, but final verification requires running against your real
-project (paste your URL + anon key). Remaining milestones:
+All platform code is **built and unit-tested** against mocks. Final verification
+only requires running against your real project (paste your URL + anon key) and
+applying the remaining migrations alongside `0001_initial.sql`:
 
-1. **Apply migration `0002_guest_portal.sql`** — enables the secure public guest
-   portal (token-verified identity RPC + RSVP RPC). Already coded + unit-tested;
-   just run the migration against your project.
-2. **Multi-org invites** — use the email Edge Function to invite staff/planners
-   into an organization (the `organization_memberships` + `invitation` tables).
+1. **`0002_guest_portal.sql`** — secure public guest portal (token-verified
+   identity RPC + RSVP RPC).
+2. **`0003_org_data.sql`** — generic org-scoped catalog/asset key-value store.
+3. **`0004_invites.sql`** — organization invites + accept-invite RPC.
+
+Apply all four (`supabase db push`, or paste each into the SQL editor). The
+feature code (layout sync, real-time, guest portal backend, entity repository,
+object storage, invites) is already wired into the app and enabled automatically
+when `VITE_BACKEND_PROVIDER=supabase` is set.
 
 ---
 

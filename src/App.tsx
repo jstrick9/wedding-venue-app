@@ -12,6 +12,7 @@ import { lazy } from 'react';
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
 const GuestPortal = lazy(() => import('./components/GuestPortal'));
 const ForcePasswordChange = lazy(() => import('./components/ForcePasswordChange'));
+const AcceptInvite = lazy(() => import('./components/AcceptInvite').then((m) => ({ default: m.AcceptInvite })));
 
 /**
  * Surfaces `spm_storage_error` events as toasts no matter which screen is
@@ -40,6 +41,22 @@ function AppContent() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  // Accept-invite route: requires the user to be signed in.
+  if (hash.startsWith('#/accept-invite/')) {
+    if (!user) {
+      return <LoginScreen onContinueAsGuest={continueAsGuest} />;
+    }
+    const token = hash.slice('#/accept-invite/'.length).split('/')[0];
+    return (
+      <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+        <AcceptInvite
+          token={token}
+          onDone={() => { window.location.hash = ''; }}
+        />
+      </Suspense>
+    );
+  }
 
   if (hash.startsWith('#/guest-portal')) {
     return (

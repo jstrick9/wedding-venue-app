@@ -86,6 +86,7 @@ import { BrandingManagement } from './admin/BrandingManagement';
 import { AccessControlPanel } from './admin/AccessControlPanel';
 import { GuestPortalManagement } from './admin/GuestPortalManagement';
 import { BackupManagement } from './admin/BackupManagement';
+import { InviteMembers } from './admin/InviteMembers';
 import { uploadImage } from '../services/storage/imageStorage';
 import { emitDataChanged } from '../utils/appEvents';
 import type { AdminCommonProps, AdminDialogOptions, AdminTabDefinition } from './admin/AdminTabTypes';
@@ -1004,6 +1005,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps, group: 'Design & Content' },
     { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'People & Access' },
     { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'People & Access' },
+    { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'People & Access' },
     {
       id: 'guest-portal',
       label: '💍 Guest Portal',

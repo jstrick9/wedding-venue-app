@@ -56,4 +56,4 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | F | Server-side guest portal auth + RSVP | ✅ built + tested: token-verified identity RPC + secure RSVP RPC (migration 0002), backend seam + wired into GuestPortal |
 | G | Object storage for images | ✅ built + tested: imageStorage seam (local data-URL / Supabase bucket), SafeImage resolves signed URLs, uploads wired into MultiImageUpload + AdminPanel |
 | H | Extend repository to venues/guests/vendors/staff/decor | ✅ built + tested: generic org_data repository (migration 0003) + entitySync + useEntityBackendSync, wired into AuthenticatedApp |
-| I | Multi-org invites via email | ⏳ ready to wire |
+| I | Multi-org invites via email | ✅ built + tested: org_invites migration (0004) + accept RPC, inviteService (local + Supabase + email), InviteMembers admin tab + AcceptInvite route |
