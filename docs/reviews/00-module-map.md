@@ -29,6 +29,7 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | 15 | Operations: staff, timeline, vendors | StaffOperationsPanel, TimelinePanel, VendorPanel | |
 | 16 | Communication: direct messages, submissions | DirectMessagePanel, SubmissionStatusPanel | |
 | 17 | Print/export + backup UI + onboarding | PrintView, backup UI, welcome, empty states | |
+| 18 | NEW — Event Overview dashboard | EventOverview, eventDashboard util | ✅ RSVP/capacity reconciliation, response rate, health grade, quick actions |
 
 ## New feature candidates (Intelligence Platform additions)
 - Dashboard: capacity vs RSVP reconciliation, event health score.

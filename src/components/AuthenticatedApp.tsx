@@ -40,6 +40,7 @@ import { useModals } from '../contexts/ModalContext';
 // ─── Lazy-loaded modal / portal components ───────────────────────────────────
 const DecorDesigner = lazy(() => import('./DecorDesigner').then((m) => ({ default: m.DecorDesigner })));
 const GuestPanel = lazy(() => import('./GuestPanel').then((m) => ({ default: m.GuestPanel })));
+const EventOverview = lazy(() => import('./EventOverview').then((m) => ({ default: m.EventOverview })));
 const StaffOperationsPanel = lazy(() => import('./StaffOperationsPanel'));
 const AdminPanel = lazy(() => import('./AdminPanel').then((m) => ({ default: m.AdminPanel })));
 const PrintView = lazy(() => import('./PrintView').then((m) => ({ default: m.PrintView })));
@@ -84,6 +85,7 @@ export default function AuthenticatedApp() {
   const showSubmission = modals.submission;
   const showEventQuestions = modals.eventQuestions;
   const showDecorDesigner = modals.decorDesigner;
+  const showOverview = modals.overview;
 
   // Local UI state
   const [zoom, setZoom] = useState(1);
@@ -469,8 +471,18 @@ export default function AuthenticatedApp() {
               venue={layoutState.currentVenue} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} decor={layoutState.layout.decor} guests={layoutState.guests} selectedId={layoutState.selectedId} zoom={zoom} showGrid={showGrid} gridSize={gridSize} gridContrast={gridContrast}
               onSelect={handleSelectItem} onDoubleClick={handleDoubleClickItem} onMove={handleMoveItem} onDrop={handleDrop} onClickToPlace={handleDrop} onDragStart={pushUndoSnapshot} isDragging={!!dragItem} isDraggingExterior={dragItem?.isExterior || false} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })} panOffset={panOffset} onPanChange={setPanOffset} onZoomChange={setZoom}
             />
-            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-lg text-sm">
-              <span className="font-medium">Capacity:</span> <span className={getTotalCapacity() > layoutState.currentVenue.capacity ? 'text-red-600 font-bold' : 'text-green-600'}>{getTotalCapacity()} / {layoutState.currentVenue.capacity}</span>
+            <div className="absolute bottom-4 left-4 flex items-center gap-2">
+              <div className="bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-lg text-sm">
+                <span className="font-medium">Capacity:</span> <span className={getTotalCapacity() > layoutState.currentVenue.capacity ? 'text-red-600 font-bold' : 'text-green-600'}>{getTotalCapacity()} / {layoutState.currentVenue.capacity}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => open('overview')}
+                className="bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-lg text-sm font-medium hover:bg-white"
+                aria-label="Open event overview dashboard"
+              >
+                📊 Overview
+              </button>
             </div>
             {layoutState.warnings.length > 0 && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-[min(28rem,92%)] pointer-events-none">
@@ -504,6 +516,19 @@ export default function AuthenticatedApp() {
           {showGuests && <GuestPanel guests={layoutState.guests} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} venue={layoutState.currentVenue} eventName={currentEventName} venueName={layoutState.currentVenue.name} onAddGuest={layoutState.addGuest} onUpdateGuest={layoutState.updateGuest} onRemoveGuest={layoutState.removeGuest} onAssignToTable={layoutState.assignGuestToTable} onAssignToRoom={layoutState.assignGuestToRoom} onImportCSV={layoutState.importGuestsFromCSV} onExportCSV={layoutState.exportGuestsToCSV} onClose={() => close('guests')} />}
           {showDecorDesigner && <DecorDesigner onClose={() => close('decorDesigner')} onSave={(a) => { const currentArrangements = layoutState.getDecorArrangements(); const nextArrangements = currentArrangements.find(x => x.id === a.id) ? currentArrangements.map(x => x.id === a.id ? a : x) : [...currentArrangements, a]; layoutState.setDecorArrangements(nextArrangements); close('decorDesigner'); }} initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null} />}
           {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }} />}
+          {showOverview && (
+            <EventOverview
+              guests={layoutState.guests}
+              tables={layoutState.layout.tables}
+              tableSpecs={getTableSpecs()}
+              venue={layoutState.currentVenue}
+              eventName={currentEventName}
+              venueName={layoutState.currentVenue.name}
+              onOpenGuests={() => { close('overview'); open('guests'); }}
+              onOpenTemplates={() => { close('overview'); open('templates'); }}
+              onClose={() => close('overview')}
+            />
+          )}
           {/* ... other modals similarly refactored ... */}
         </Suspense>
       </div>

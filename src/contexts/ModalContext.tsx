@@ -11,7 +11,8 @@ export type ModalType =
   | 'messages' 
   | 'submission' 
   | 'eventQuestions' 
-  | 'decorDesigner';
+  | 'decorDesigner'
+  | 'overview';
 
 interface ModalContextType {
   modals: Record<ModalType, boolean>;
@@ -37,6 +38,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     submission: false,
     eventQuestions: false,
     decorDesigner: false,
+    overview: false,
   });
   const [editingArrangementId, setEditingArrangementId] = useState<string | undefined>();
 
