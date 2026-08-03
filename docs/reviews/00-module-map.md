@@ -44,3 +44,16 @@ simplify UI/UX and for **new features** to make the platform more complete.
 
 ## Deferred (documented, not implemented)
 - **Deep physical merge of admin asset editors** (e.g. Chairs→Tables/Seating, Linens→Tables, Walls→Fixtures). The 15 admin tabs are already grouped into 4 labeled sections (Module 10), which delivers the main UX consolidation. Physically merging the ~800-line editor components is high-risk and would need substantial new test coverage, so it is intentionally deferred rather than done right before the final QA sweep.
+
+## Platform (Supabase) workstream
+| # | Feature | Status |
+|---|---|---|
+| A | Account registration + org bootstrap (multi-tenant) | ✅ built + tested |
+| B | Data repository seam (local + Supabase providers) + layout sync | ✅ built + tested |
+| C | From-scratch go-live guide & architecture (docs/platform/PLATFORM.md) | ✅ written |
+| D | Wire repository into app UI (useLayoutState → repository when enabled) | ⏳ needs live project |
+| E | Real-time layout collaboration (Supabase Realtime) | ⏳ scaffolded (DatabaseService) |
+| F | Server-side guest portal auth + RSVP | ⏳ schema ready |
+| G | Object storage for images | ⏳ service ready |
+| H | Extend repository to venues/guests/vendors/staff/decor | ⏳ pattern proven |
+| I | Multi-org invites via email | ⏳ ready to wire |
