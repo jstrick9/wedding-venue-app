@@ -27,6 +27,7 @@ import {
   setPortalRSVPSubmissions,
 } from '../utils/guestPortal';
 import { verifySecret } from '../utils/auth';
+import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
 import {
   guestCanAccessLodging,
   guestCanAccessPortal,
@@ -296,17 +297,25 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
       specialNeeds: rsvpForm.specialNeeds.trim() || undefined,
       notes: rsvpForm.notes.trim() || undefined,
       submittedAt: new Date().toISOString(),
+      // Carry the guest's opaque portal token so the server-side backend can
+      // verify and persist the submission (when the platform is enabled).
+      token: identifiedGuest.token,
     };
 
     const updatedSubmissions = guestRSVP
       ? portalData.submissions.map((s) => (s.id === guestRSVP.id ? newSubmission : s))
       : [newSubmission, ...portalData.submissions];
 
+    // Keep the UI in sync locally for responsiveness, and persist through the
+    // backend (local or Supabase RPC) depending on the active provider.
     setPortalData((prev) => ({ ...prev, submissions: updatedSubmissions }));
     setPortalRSVPSubmissions(updatedSubmissions);
+    void getGuestPortalBackend()
+      .submitRSVP({ eventName }, newSubmission)
+      .then(() => setIsSubmittingRSVP(false))
+      .catch(() => setIsSubmittingRSVP(false));
 
     setRsvpSuccess(newSubmission);
-    setIsSubmittingRSVP(false);
   };
 
   const handleAddToCalendar = (item: {

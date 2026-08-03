@@ -842,6 +842,8 @@ export interface RSVPSubmission {
   specialNeeds?: string;
   notes?: string;
   submittedAt: string;
+  /** Opaque portal token used to submit to the server-side backend (when enabled). */
+  token?: string;
 }
 
 /** A single entry on the guest-facing event schedule. */

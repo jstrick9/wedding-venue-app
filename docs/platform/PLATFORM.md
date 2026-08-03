@@ -103,6 +103,7 @@ Email (invitations, RSVP confirmations, staff notifications) uses a Supabase
 | Data persistence seam (local + Supabase providers) | ✅ Built + tested | `services/repository/layoutRepository.ts`, `services/platform.ts` |
 | Layout sync wired into the app UI | ✅ Built + tested | `services/sync/layoutSync.ts`, `hooks/useLayoutBackendSync.ts` |
 | Real-time layout collaboration | ✅ Built + tested | `services/sync/layoutRealtime.ts` |
+| Server-side guest portal (identity + RSVP) | ✅ Built + tested | `services/portal/guestPortalBackend.ts`, migration `0002_guest_portal.sql` |
 | DB schema + Row-Level Security + storage buckets | ✅ Ready (migration) | `supabase/migrations/0001_initial.sql` |
 | Transactional email Edge Function | ✅ Ready | `supabase/functions/send-email/` |
 | Object storage service | ✅ Ready | `services/storage/ObjectStorageService.ts` |
@@ -113,9 +114,9 @@ The code for layout persistence + real-time sync is **built and unit-tested**
 against mocks, but final verification requires running against your real
 project (paste your URL + anon key). Remaining milestones:
 
-1. **Server-side guest portal** — move portal password/token auth + RSVP
-   submissions into the DB (`guests.portal_token_hash`, `rsvp_submissions`) so a
-   guest's access is enforced by RLS, not the browser.
+1. **Apply migration `0002_guest_portal.sql`** — enables the secure public guest
+   portal (token-verified identity RPC + RSVP RPC). Already coded + unit-tested;
+   just run the migration against your project.
 2. **Object storage for images** — route venue/table/fixture/decor image uploads
    through `ObjectStorageService` into the private buckets.
 3. **Extend the repository** to venues, guests, vendors, staff, decor (the
