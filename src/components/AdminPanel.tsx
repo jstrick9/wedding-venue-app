@@ -191,6 +191,10 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [showDrawingTool, setShowDrawingTool] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  // Debounce the auto-save success message: asset managers auto-save on every
+  // keystroke, so without this the "saved" indicator would keep re-appearing
+  // while the user types. The message now surfaces once, after a brief idle.
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [customShapeVenueId, setCustomShapeVenueId] = useState<string | null>(null);
   const [expandedVenues, setExpandedVenues] = useState<Set<string>>(new Set());
@@ -333,9 +337,24 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const collapseAllLinens = () => setExpandedLinens(new Set());
 
   const showSuccess = (msg: string) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    // Debounce: continuous auto-saves (typing in any asset editor) should not
+    // keep the message flashing. The final save within the window surfaces once
+    // after a short idle, then clears after 3 seconds.
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => {
+      setSuccessMessage(msg);
+      successTimerRef.current = setTimeout(() => {
+        setSuccessMessage('');
+        successTimerRef.current = null;
+      }, 3000);
+    }, 600);
   };
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
 
   const showInfo = (title: string, message: string, kind: AdminDialogState['kind'] = 'info') => {
     setDialog({ title, message, kind, confirmLabel: 'OK' });
