@@ -66,3 +66,9 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | 08 | Layout canvas | capacity counter honors customCapacity + seating rows (M22) |
 | 18 | Event Overview | use STORAGE_KEYS instead of hardcoded keys (M23) |
 | app shell | saved-layouts dropdown refreshes on same-tab data change (M24) |
+
+## Pass 2 (fresh full re-review) — complete
+✅ Full re-audit done; findings 21–30 fixed & committed (data reset, capacity
+counters, storage-key constants, stale-UI refresh, timelines data-safety,
+portal-guest provisioning, vendor-payments UI, guest-portal date-safety).
+See docs/reviews/31-pass2-summary.md.
