@@ -20,6 +20,7 @@ import {
   shouldUseSupabaseAuth,
   signInWithSupabase,
   signOutSupabase,
+  signUpWithSupabase,
 } from '../services/backend/AuthBackend';
 
 interface AuthContextType {
@@ -28,6 +29,13 @@ interface AuthContextType {
   isBasicUser: boolean;
   isGuest: boolean;
   login: (username: string, password: string) => Promise<boolean>;
+  /** Register a new account (Supabase backend). Returns an error message or null on success. */
+  register: (params: {
+    email: string;
+    password: string;
+    fullName: string;
+    organizationName?: string;
+  }) => Promise<string | null>;
   logout: () => void;
   continueAsGuest: () => void;
   createUser: (
@@ -191,6 +199,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const register: AuthContextType['register'] = async ({ email, password, fullName, organizationName }) => {
+    if (!shouldUseSupabaseAuth()) {
+      return 'Account registration requires the Supabase backend. Contact the venue administrator.';
+    }
+    try {
+      const session = await signUpWithSupabase({ email, password, fullName, organizationName });
+      setUser(session.user);
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : 'Unable to create your account.';
+    }
+  };
+
   const continueAsGuest = () => {
     const guestUser = buildGuestUser();
     setUser(guestUser);
@@ -351,6 +372,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isBasicUser,
         isGuest,
         login,
+        register,
         logout,
         continueAsGuest,
         createUser,

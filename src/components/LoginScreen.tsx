@@ -13,7 +13,7 @@ export interface LoginScreenProps {
 }
 
 export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
-  const { login, continueAsGuest } = useAuth();
+  const { login, register, continueAsGuest } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,6 +22,16 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
   const [rememberMe, setRememberMe] = useState(false);
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  // Sign-up form state (Supabase backend only).
+  const [signUpForm, setSignUpForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    organizationName: '',
+  });
+  const [signUpError, setSignUpError] = useState('');
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   // Lockout countdown displayed to the user (seconds remaining).
   // Driven by the persisted User.lockedUntil field rather than a local counter
@@ -169,6 +179,28 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
 
   const handleOpenGuestPortal = () => {
     window.location.hash = '#/guest-portal';
+  };
+
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignUpError('');
+    if (!signUpForm.fullName.trim() || !signUpForm.email.trim() || !signUpForm.password.trim()) {
+      setSignUpError('Please fill in your name, email, and password.');
+      return;
+    }
+    if (signUpForm.password.length < 8) {
+      setSignUpError('Password must be at least 8 characters.');
+      return;
+    }
+    setIsSigningUp(true);
+    const err = await register({
+      email: signUpForm.email.trim(),
+      password: signUpForm.password,
+      fullName: signUpForm.fullName.trim(),
+      organizationName: signUpForm.organizationName.trim() || undefined,
+    });
+    setIsSigningUp(false);
+    if (err) setSignUpError(err);
   };
 
   return (
@@ -350,7 +382,71 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
             <div className="h-px flex-1 bg-gray-200" />
           </div>
 
+          {showSignUp && (
+            <form onSubmit={(e) => void handleSignUpSubmit(e)} className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm font-semibold text-gray-800">Create an account</p>
+              <input
+                type="text"
+                value={signUpForm.fullName}
+                onChange={(e) => setSignUpForm((f) => ({ ...f, fullName: e.target.value }))}
+                placeholder="Your name"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                autoComplete="name"
+              />
+              <input
+                type="email"
+                value={signUpForm.email}
+                onChange={(e) => setSignUpForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="Email address"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                autoComplete="email"
+              />
+              <input
+                type="password"
+                value={signUpForm.password}
+                onChange={(e) => setSignUpForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="Password (min 8 chars)"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                autoComplete="new-password"
+              />
+              <input
+                type="text"
+                value={signUpForm.organizationName}
+                onChange={(e) => setSignUpForm((f) => ({ ...f, organizationName: e.target.value }))}
+                placeholder="Venue / organization name (optional)"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+              {signUpError && (
+                <p role="alert" className="text-xs text-red-600">{signUpError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={isSigningUp}
+                className="w-full rounded-lg bg-[#4A1942] px-4 py-2 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50"
+              >
+                {isSigningUp ? 'Creating account…' : 'Create Account'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSignUp(false)}
+                className="w-full text-center text-xs text-gray-500 hover:underline"
+              >
+                Back to sign in
+              </button>
+            </form>
+          )}
+
           <div className="space-y-3">
+            {usingSupabaseAuth && (
+              <button
+                type="button"
+                onClick={() => setShowSignUp((v) => !v)}
+                className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-[#4A1942] hover:bg-gray-50 transition-colors"
+              >
+                {showSignUp ? 'Cancel account creation' : 'Create a new account'}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleGuestAccess}

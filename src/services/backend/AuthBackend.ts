@@ -103,6 +103,82 @@ export async function signOutSupabase(): Promise<void> {
   await getSupabaseClient().auth.signOut();
 }
 
+export interface SignUpParams {
+  email: string;
+  password: string;
+  fullName: string;
+  /** Display name for the new organization (defaults to the user's name). */
+  organizationName?: string;
+}
+
+function slugify(value: string): string {
+  const base = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `${base}-${Date.now().toString(36)}`;
+}
+
+/**
+ * Create a new auth user via Supabase Auth, then bootstrap a personal
+ * organization + admin membership for them (the profiles row is created by the
+ * `handle_new_user` trigger in the migration). This is the entry point for
+ * turning the app into a multi-tenant platform: every new user gets their own
+ * org scope and RLS picks it up automatically.
+ */
+export async function signUpWithSupabase({
+  email,
+  password,
+  fullName,
+  organizationName,
+}: SignUpParams): Promise<BackendAuthSession> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+  if (error) throw error;
+  if (!data.session || !data.user) {
+    throw new Error('Sign-up succeeded but no session was returned (email confirmation may be required).');
+  }
+
+  // Bootstrap an organization + owner membership so the new user has an RLS
+  // scope. The profile row was created by the auth trigger.
+  const orgName = (organizationName || fullName || email.split('@')[0]).trim() || 'My Venue';
+  const { error: orgError } = await supabase
+    .from('organizations')
+    .insert({ name: orgName, slug: slugify(orgName), owner_id: data.user.id });
+  if (orgError) throw orgError;
+
+  const { data: orgRow } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('owner_id', data.user.id)
+    .maybeSingle();
+
+  if (orgRow) {
+    await supabase.from('organization_memberships').insert({
+      organization_id: orgRow.id,
+      user_id: data.user.id,
+      role: 'owner',
+      status: 'active',
+    });
+  }
+
+  const session: BackendAuthSession = {
+    user: mapProfileToUser(
+      { full_name: fullName, app_role: 'admin' },
+      data.user.id,
+      data.user.email || email,
+    ),
+    accessToken: data.session.access_token,
+  };
+  return session;
+}
+
 export async function requestSupabasePasswordReset(email: string): Promise<void> {
   const redirectTo = `${window.location.origin}${window.location.pathname}#/password-reset`;
   const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email, {
