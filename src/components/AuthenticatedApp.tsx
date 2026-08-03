@@ -469,6 +469,20 @@ export default function AuthenticatedApp() {
             <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-lg text-sm">
               <span className="font-medium">Capacity:</span> <span className={getTotalCapacity() > layoutState.currentVenue.capacity ? 'text-red-600 font-bold' : 'text-green-600'}>{getTotalCapacity()} / {layoutState.currentVenue.capacity}</span>
             </div>
+            {layoutState.warnings.length > 0 && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-[min(28rem,92%)] pointer-events-none">
+                <div className="bg-amber-50 border border-amber-300 rounded-xl shadow-lg p-3 text-sm text-amber-900 pointer-events-auto">
+                  <div className="font-semibold mb-1">
+                    ⚠️ {layoutState.warnings.length} layout warning{layoutState.warnings.length === 1 ? '' : 's'}
+                  </div>
+                  <ul className="text-xs space-y-0.5 max-h-24 overflow-y-auto">
+                    {layoutState.warnings.slice(0, 5).map((w) => (
+                      <li key={w.id}>• {w.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             {isMasterBasicUser && (
               <div className="absolute bottom-4 left-44 z-20 flex gap-2">
                 <button onClick={() => open('messages')} className="bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium">💬 Messages</button>

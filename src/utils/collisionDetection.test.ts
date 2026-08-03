@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { checkFixtureCollision, getFixtureBoundingBox, boxesOverlap } from './collisionDetection';
+import { checkFixtureCollision, getFixtureBoundingBox, boxesOverlap, validateLayout } from './collisionDetection';
 
 vi.mock('../hooks/useLayoutState', () => ({
   getFixtureTypes: vi.fn(() => [
@@ -55,5 +55,25 @@ describe('collisionDetection', () => {
   it('detects overlap correctly with epsilon-safe comparison', () => {
     expect(boxesOverlap({ x: 0, y: 0, width: 10, height: 10 }, { x: 5, y: 5, width: 5, height: 5 })).toBe(true);
     expect(boxesOverlap({ x: 0, y: 0, width: 10, height: 10 }, { x: 10.01, y: 0, width: 5, height: 5 })).toBe(false);
+  });
+
+  it('validateLayout flags a table too close to the wall', () => {
+    const venue = { id: 'v1', width: 40, height: 40 } as any;
+    // Table at the very edge (spec not found -> default 4x4 box at x=0).
+    const table = { id: 't1', specId: 'unknown', x: 0, y: 0 } as any;
+
+    const { tableWarnings } = validateLayout([table], [], venue);
+
+    expect(tableWarnings.has('t1')).toBe(true);
+    expect(tableWarnings.get('t1')?.toLowerCase()).toContain('wall');
+  });
+
+  it('validateLayout reports nothing for a clear layout', () => {
+    const venue = { id: 'v1', width: 40, height: 40 } as any;
+    const table = { id: 't1', specId: 'unknown', x: 20, y: 20 } as any;
+
+    const { tableWarnings, fixtureWarnings } = validateLayout([table], [], venue);
+    expect(tableWarnings.size).toBe(0);
+    expect(fixtureWarnings.size).toBe(0);
   });
 });

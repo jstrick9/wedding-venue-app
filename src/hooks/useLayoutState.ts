@@ -41,6 +41,7 @@ import {
 } from '../utils/collaboration';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
+import { validateLayout } from '../utils/collisionDetection';
 
 // Position type
 export interface Position {
@@ -331,6 +332,27 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+
+  // Keep the layout-health warnings in sync with the current layout + venue.
+  // Collision rules are also enforced at placement time (toasts); this provides
+  // a persistent summary of any issues that exist in the current layout.
+  useEffect(() => {
+    const { tableWarnings, fixtureWarnings } = validateLayout(
+      layout.tables,
+      layout.fixtures,
+      currentVenue,
+    );
+
+    const next: ValidationWarning[] = [];
+    tableWarnings.forEach((message, id) => {
+      next.push({ id: `table-${id}`, type: 'spacing', message, itemIds: [id] });
+    });
+    fixtureWarnings.forEach((message, id) => {
+      next.push({ id: `fixture-${id}`, type: 'spacing', message, itemIds: [id] });
+    });
+
+    setWarnings(next);
+  }, [layout.tables, layout.fixtures, currentVenue]);
 
   // Track venue change for reset
   const venueChangeCallback = useRef<(() => void) | null>(null);
