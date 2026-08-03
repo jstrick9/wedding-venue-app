@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { WeddingTimeline, TimelineDay, TimelineEvent, TimelineCategory } from '../types/timeline';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 
-const STORAGE_KEY = 'spm_timelines';
+const STORAGE_KEY = STORAGE_KEYS.TIMELINES;
 
 function loadTimelines(): WeddingTimeline[] {
   try {

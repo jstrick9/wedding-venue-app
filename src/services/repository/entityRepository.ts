@@ -50,6 +50,7 @@ const SYNCABLE_PREFIXES = [
   'staffShifts',
   'vendors',
   'vendorPayments',
+  'timelines',
 ];
 
 export function isSyncableDomain(domain: EntityDomain): boolean {

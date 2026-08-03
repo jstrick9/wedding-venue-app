@@ -57,6 +57,7 @@ export interface BackupPayload {
   staffShifts?: unknown;
   vendors?: unknown;
   vendorPayments?: unknown;
+  timelines?: unknown;
 }
 
 export interface BackupBundle {
