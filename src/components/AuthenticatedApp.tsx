@@ -41,6 +41,7 @@ import { useModals } from '../contexts/ModalContext';
 const DecorDesigner = lazy(() => import('./DecorDesigner').then((m) => ({ default: m.DecorDesigner })));
 const GuestPanel = lazy(() => import('./GuestPanel').then((m) => ({ default: m.GuestPanel })));
 const EventOverview = lazy(() => import('./EventOverview').then((m) => ({ default: m.EventOverview })));
+const WorkspaceHelp = lazy(() => import('./WorkspaceHelp').then((m) => ({ default: m.WorkspaceHelp })));
 const StaffOperationsPanel = lazy(() => import('./StaffOperationsPanel'));
 const AdminPanel = lazy(() => import('./AdminPanel').then((m) => ({ default: m.AdminPanel })));
 const PrintView = lazy(() => import('./PrintView').then((m) => ({ default: m.PrintView })));
@@ -554,6 +555,7 @@ export default function AuthenticatedApp() {
               onClose={() => close('templates')}
             />
           )}
+          {showWorkspaceHelp && <WorkspaceHelp onClose={() => setShowWorkspaceHelp(false)} />}
           {/* ... other modals similarly refactored ... */}
         </Suspense>
       </div>
