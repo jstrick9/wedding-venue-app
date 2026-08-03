@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MessageRole } from '../models/DirectMessage';
 import { useDirectMessages } from '../hooks/useDirectMessages';
 
@@ -31,8 +31,16 @@ export const DirectMessagePanel: React.FC<DirectMessagePanelProps> = ({
   const { getThreadMessages, sendMessage } = useDirectMessages();
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
+  const listRef = useRef<HTMLDivElement>(null);
 
   const threadMessages = useMemo(() => getThreadMessages(threadId), [getThreadMessages, threadId]);
+
+  // Auto-scroll to the newest message so a long thread always shows the latest.
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [threadMessages, threadId]);
 
   const onSend = () => {
     if (!draft.trim()) {
@@ -59,7 +67,7 @@ export const DirectMessagePanel: React.FC<DirectMessagePanelProps> = ({
         </span>
       </div>
 
-      <div className="h-72 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
+      <div ref={listRef} className="h-72 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
         {threadMessages.length === 0 ? (
           <p className="text-sm text-gray-600">No messages yet. Start the conversation.</p>
         ) : (
