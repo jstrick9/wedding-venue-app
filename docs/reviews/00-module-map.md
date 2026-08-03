@@ -58,3 +58,11 @@ simplify UI/UX and for **new features** to make the platform more complete.
 | G | Object storage for images | ✅ built + tested: imageStorage seam (local data-URL / Supabase bucket), SafeImage resolves signed URLs, uploads wired into MultiImageUpload + AdminPanel |
 | H | Extend repository to venues/guests/vendors/staff/decor | ✅ built + tested: generic org_data repository (migration 0003) + entitySync + useEntityBackendSync, wired into AuthenticatedApp |
 | I | Multi-org invites via email | ✅ built + tested: org_invites migration (0004) + accept RPC, inviteService (local + Supabase + email), InviteMembers admin tab + AcceptInvite route |
+
+## Fresh full re-review (pass 2) — status
+| # | Module | Finding / fix |
+|---|---|---|
+| 01 | Data & persistence | resetToDefaults now writes versioned keys in envelope format (M21) |
+| 08 | Layout canvas | capacity counter honors customCapacity + seating rows (M22) |
+| 18 | Event Overview | use STORAGE_KEYS instead of hardcoded keys (M23) |
+| app shell | saved-layouts dropdown refreshes on same-tab data change (M24) |
