@@ -677,8 +677,14 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     }
 
     const days = isMultiDay
-      ? Array.from(new Set(scheduleItems.map((i) => i.dayIndex || 0)))
+      ? Array.from(new Set(scheduleItems.map((i) => i.dayIndex || 0))).sort(
+          (a, b) => a - b,
+        )
       : [0];
+
+    // If the current selection isn't a real day (e.g. the schedule starts on a
+    // later day), fall back to the first available day so the list isn't empty.
+    const effectiveDay = days.includes(selectedDayIndex) ? selectedDayIndex : (days[0] ?? 0);
 
     const itemsForDay = (dayIdx: number) =>
       scheduleItems
@@ -698,7 +704,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                 type="button"
                 onClick={() => setSelectedDayIndex(d)}
                 className={`px-3 py-1.5 text-xs rounded-full border ${
-                  selectedDayIndex === d
+                  effectiveDay === d
                     ? 'bg-indigo-600 text-white border-indigo-600'
                     : 'bg-white text-gray-700 border-gray-200'
                 }`}
@@ -710,7 +716,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
         )}
 
         <div className="space-y-3 mt-2">
-          {itemsForDay(selectedDayIndex).map((item) => (
+          {itemsForDay(effectiveDay).map((item) => (
             <div
               key={item.id}
               className="bg-white rounded-xl shadow p-4 flex flex-col gap-1"
@@ -757,7 +763,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             </div>
           ))}
 
-          {itemsForDay(selectedDayIndex).length === 0 && (
+          {itemsForDay(effectiveDay).length === 0 && (
             <div className="bg-white rounded-xl shadow p-4">
               <p className="text-sm text-gray-700">No schedule items for this day yet.</p>
             </div>
