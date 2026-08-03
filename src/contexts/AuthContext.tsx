@@ -25,6 +25,8 @@ import {
 
 interface AuthContextType {
   user: User | null;
+  /** The user's active organization id (RLS scope), when on the Supabase backend. */
+  organizationId: string | null;
   isAdmin: boolean;
   isBasicUser: boolean;
   isGuest: boolean;
@@ -86,6 +88,7 @@ function buildGuestUser(): User {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -94,8 +97,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .then((session) => {
           if (session?.user) {
             setUser(session.user);
+            setOrganizationId(session.organizationId ?? null);
           } else {
             clearSession();
+            setOrganizationId(null);
           }
         })
         .finally(() => setInitialized(true));
@@ -137,6 +142,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const session = await signInWithSupabase(username, password);
       if (!session) return false;
       setUser(session.user);
+      setOrganizationId(session.organizationId ?? null);
       return true;
     }
 
@@ -193,6 +199,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = () => {
     setUser(null);
+    setOrganizationId(null);
     clearSession();
     if (shouldUseSupabaseAuth()) {
       void signOutSupabase();
@@ -206,6 +213,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const session = await signUpWithSupabase({ email, password, fullName, organizationName });
       setUser(session.user);
+      setOrganizationId(session.organizationId ?? null);
       return null;
     } catch (err) {
       return err instanceof Error ? err.message : 'Unable to create your account.';
@@ -368,6 +376,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     <AuthContext.Provider
       value={{
         user,
+        organizationId,
         isAdmin,
         isBasicUser,
         isGuest,

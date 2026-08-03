@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useLayoutState, getSavedLayouts, setSavedLayouts, getTemplates, getTableSpecs, getFixtureTypes } from '../hooks/useLayoutState';
+import { useLayoutBackendSync } from '../hooks/useLayoutBackendSync';
 import { LayoutTemplate, EventAnswer, EventQuestion, PlacedTable, PlacedFixture } from '../types';
 import { layoutCategories, getSpacingSettings } from '../data/venueData';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,7 +57,7 @@ interface Position { x: number; y: number; }
 interface DragItem { type: 'table' | 'fixture' | 'arrangement'; specId: string; isExterior?: boolean; }
 
 export default function AuthenticatedApp() {
-  const { user: authUser, isAdmin, isGuest, logout, getAllUsers } = useAuth();
+  const { user: authUser, organizationId, isAdmin, isGuest, logout, getAllUsers } = useAuth();
   const user = authUser!;
   const allUsers = getAllUsers();
   const isStaff = user?.role === 'staff';
@@ -290,6 +291,14 @@ export default function AuthenticatedApp() {
   }, [layoutState]);
 
   const refreshSavedLayouts = useCallback(() => setSavedLayoutsState(getSavedLayouts()), []);
+
+  // Platform layout sync: pulls shared layouts on load and exposes a push for
+  // the save/delete handlers (no-op in local mode).
+  const layoutBackendSync = useLayoutBackendSync({
+    userId: user.id,
+    organizationId,
+    onLoaded: refreshSavedLayouts,
+  });
   const pushUndoSnapshot = useCallback(() => {
     const snapshot = {
       tables: [...layoutState.layout.tables], fixtures: [...layoutState.layout.fixtures],
@@ -449,14 +458,37 @@ export default function AuthenticatedApp() {
 
   useEffect(() => { rootStyles(brandingConfig); }, [brandingConfig]);
 
+  // Save/delete wrappers that flush to the shared backend after the local
+  // localStorage write (no-op when the platform backend is disabled).
+  const handleSaveLayoutWithSync = useCallback(
+    (name: string) => {
+      const id = layoutState.saveLayout(name);
+      void layoutBackendSync.saveToBackend();
+      return id;
+    },
+    [layoutState, layoutBackendSync],
+  );
+
+  const handleDeleteSavedLayoutWithSync = useCallback(
+    (id: string) => {
+      setSavedLayoutsState((prev) => {
+        const next = prev.filter((l) => l.id !== id);
+        setSavedLayouts(next);
+        void layoutBackendSync.saveToBackend();
+        return next;
+      });
+    },
+    [layoutBackendSync],
+  );
+
   return (
     <UndoRedoProvider onRestore={handleRestoreSnapshot}>
       <div className="h-screen flex flex-col overflow-hidden" style={{ fontFamily: brandingConfig.fontFamily, backgroundColor: brandingConfig.backgroundColor, color: brandingConfig.bodyTextColor }}>
         <Header
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
-          onSaveLayout={layoutState.saveLayout} onSaveMasterLayout={isAdmin ? layoutState.saveMasterLayout : undefined} onClearMasterLayout={isAdmin ? layoutState.clearMasterLayout : undefined} onPrint={() => open('print')}
+          onSaveLayout={handleSaveLayoutWithSync} onSaveMasterLayout={isAdmin ? layoutState.saveMasterLayout : undefined} onClearMasterLayout={isAdmin ? layoutState.clearMasterLayout : undefined} onPrint={() => open('print')}
           onShowTemplates={() => open('templates')} onShowGuests={() => open('guests')} onShowAdmin={canOpenAdminPanel ? () => open('admin') : undefined} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
-          onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={layoutState.loadLayout} onDeleteSavedLayout={(id) => setSavedLayoutsState(prev => prev.filter(l => l.id !== id))}
+          onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={layoutState.loadLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
         />
         <AppStatusBar items={statusItems} />

@@ -4,6 +4,8 @@ import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 export interface BackendAuthSession {
   user: User;
   accessToken: string;
+  /** The user's active organization id (RLS scope) when known. */
+  organizationId?: string;
 }
 
 function mapRole(rawRole: unknown): UserRole {
@@ -53,7 +55,7 @@ export async function signInWithSupabase(
 
   const { data: membership } = await supabase
     .from('organization_memberships')
-    .select('role,status')
+    .select('role,status,organization_id')
     .eq('user_id', data.user.id)
     .eq('status', 'active')
     .limit(1)
@@ -65,7 +67,11 @@ export async function signInWithSupabase(
     data.user.email || email,
   );
 
-  return { user, accessToken: data.session.access_token };
+  return {
+    user,
+    accessToken: data.session.access_token,
+    organizationId: membership?.organization_id,
+  };
 }
 
 export async function restoreSupabaseSession(): Promise<BackendAuthSession | null> {
@@ -82,7 +88,7 @@ export async function restoreSupabaseSession(): Promise<BackendAuthSession | nul
 
   const { data: membership } = await supabase
     .from('organization_memberships')
-    .select('role,status')
+    .select('role,status,organization_id')
     .eq('user_id', session.user.id)
     .eq('status', 'active')
     .limit(1)
@@ -95,6 +101,7 @@ export async function restoreSupabaseSession(): Promise<BackendAuthSession | nul
       session.user.email || '',
     ),
     accessToken: session.access_token,
+    organizationId: membership?.organization_id,
   };
 }
 
@@ -175,6 +182,7 @@ export async function signUpWithSupabase({
       data.user.email || email,
     ),
     accessToken: data.session.access_token,
+    organizationId: orgRow?.id,
   };
   return session;
 }
