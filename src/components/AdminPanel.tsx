@@ -88,6 +88,7 @@ import { GuestPortalManagement } from './admin/GuestPortalManagement';
 import { BackupManagement } from './admin/BackupManagement';
 import { InviteMembers } from './admin/InviteMembers';
 import { uploadImage } from '../services/storage/imageStorage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged } from '../utils/appEvents';
 import type { AdminCommonProps, AdminDialogOptions, AdminTabDefinition } from './admin/AdminTabTypes';
 
@@ -145,8 +146,8 @@ type AdminDialogState = AdminDialogOptions & {
 export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layoutState }: AdminPanelProps) {
   const { createUser, deleteUser, getAllUsers, user, isAdmin, organizationId } = useAuth();
   const canAccessThisPanel = canAccessAdminPanel(user);
-  const EVENT_ROLES_STORAGE_KEY = 'spm_event_roles';
-  const EVENT_QUESTIONS_STORAGE_KEY = 'spm_event_questions';
+  const EVENT_ROLES_STORAGE_KEY = STORAGE_KEYS.EVENT_ROLES;
+  const EVENT_QUESTIONS_STORAGE_KEY = STORAGE_KEYS.EVENT_QUESTIONS;
 
   const [activeTab, setActiveTab] = useState('venues');
   const [tabSearch, setTabSearch] = useState('');
