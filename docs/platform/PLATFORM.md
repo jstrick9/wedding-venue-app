@@ -99,31 +99,28 @@ Email (invitations, RSVP confirmations, staff notifications) uses a Supabase
 |---|---|---|
 | Account registration + org bootstrap | ✅ Built + tested | `AuthBackend.signUpWithSupabase`, `AuthContext.register`, LoginScreen sign-up |
 | Sign in / session restore / sign out / password reset | ✅ Built | `AuthBackend` (existing) |
+| Org scope (RLS) in auth/session | ✅ Built + tested | `AuthBackend` / `AuthContext.organizationId` |
 | Data persistence seam (local + Supabase providers) | ✅ Built + tested | `services/repository/layoutRepository.ts`, `services/platform.ts` |
+| Layout sync wired into the app UI | ✅ Built + tested | `services/sync/layoutSync.ts`, `hooks/useLayoutBackendSync.ts` |
+| Real-time layout collaboration | ✅ Built + tested | `services/sync/layoutRealtime.ts` |
 | DB schema + Row-Level Security + storage buckets | ✅ Ready (migration) | `supabase/migrations/0001_initial.sql` |
 | Transactional email Edge Function | ✅ Ready | `supabase/functions/send-email/` |
 | Object storage service | ✅ Ready | `services/storage/ObjectStorageService.ts` |
 
 ## What still needs a live project to finish (next milestones)
 
-These are scaffolded and designed, but connecting them requires running against
-your real project:
+The code for layout persistence + real-time sync is **built and unit-tested**
+against mocks, but final verification requires running against your real
+project (paste your URL + anon key). Remaining milestones:
 
-1. **Wire the repository into the app UI** — hook `useLayoutState` save/load to
-   call `getLayoutRepository()` when the platform is enabled, so layouts persist
-   to Supabase and load across devices.
-2. **Real-time layout collaboration** — replace the in-browser `BroadcastChannel`
-   with a Supabase **Realtime** channel on the `layouts` table (sub-second sync
-   between users/devices). The `DatabaseService.subscribeToLayout` already has a
-   Supabase realtime implementation ready.
-3. **Server-side guest portal** — move portal password/token auth + RSVP
+1. **Server-side guest portal** — move portal password/token auth + RSVP
    submissions into the DB (`guests.portal_token_hash`, `rsvp_submissions`) so a
    guest's access is enforced by RLS, not the browser.
-4. **Object storage for images** — route venue/table/fixture/decor image uploads
+2. **Object storage for images** — route venue/table/fixture/decor image uploads
    through `ObjectStorageService` into the private buckets.
-5. **Extend the repository** to venues, guests, vendors, staff, decor (the
+3. **Extend the repository** to venues, guests, vendors, staff, decor (the
    pattern in Feature B generalizes to all entities).
-6. **Multi-org invites** — use the email Edge Function to invite staff/planners
+4. **Multi-org invites** — use the email Edge Function to invite staff/planners
    into an organization (the `organization_memberships` + `invitation` tables).
 
 ---
