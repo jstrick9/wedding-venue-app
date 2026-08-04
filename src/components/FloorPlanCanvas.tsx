@@ -1713,6 +1713,21 @@ export function FloorPlanCanvas({
         </g>
       </svg>
 
+      {/* Empty-state onboarding hint: shown when the canvas has no items yet. */}
+      {!isDragging && tables.length === 0 && fixtures.length === 0 && decor.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
+          <div className="max-w-sm rounded-2xl border border-gray-200 bg-white/90 p-5 text-center shadow-sm backdrop-blur">
+            <div className="text-4xl mb-2">🪑</div>
+            <p className="text-base font-semibold text-gray-800">Let's build your layout</p>
+            <p className="mt-2 text-sm text-gray-600">
+              Drag a <strong>table</strong>, <strong>fixture</strong>, or{' '}
+              <strong>decor item</strong> from the left sidebar onto this canvas to get
+              started — or click an item, then click on the canvas to place it.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Status bar when dragging */}
       {isDragging && (
         <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-10 text-sm font-medium">

@@ -125,6 +125,10 @@ See docs/reviews/58-escape-to-close.md.
 (Ctrl/Cmd+D duplicate, P properties, ? help) + kept the guide in sync.
 See docs/reviews/59-keyboard-shortcuts.md.
 
+## Autonomous gap pass — round 12 (canvas empty state + deps)
+✅ Added an in-canvas onboarding hint for empty layouts; fixed 5 dev-tooling
+vulnerabilities (npm audit 5→0). See docs/reviews/60-canvas-empty-state-deps.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
