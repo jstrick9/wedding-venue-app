@@ -5,6 +5,7 @@ import {
   resolveUserPermissions,
   hasGranularPermission,
 } from './rbacBridge';
+import type { User } from '../types';
 
 const ROLES_KEY = 'spm_rbac_roles';
 
@@ -12,7 +13,18 @@ function seedRoles(roles: unknown[]) {
   localStorage.setItem(ROLES_KEY, JSON.stringify(roles));
 }
 
-const makeUser = (over: Record<string, unknown>) => ({ name: 'U', role: 'basic', ...over });
+const makeUser = (over: Record<string, unknown>): User =>
+  ({
+    id: 'u1',
+    username: 'u1',
+    email: 'u1@example.com',
+    password: '',
+    name: 'U',
+    role: 'basic',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    ...over,
+  }) as User;
 
 describe('rbacBridge', () => {
   beforeEach(() => localStorage.clear());

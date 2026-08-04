@@ -5,7 +5,6 @@ import EmojiPicker from '../EmojiPicker';
 import MultiImageUpload from '../MultiImageUpload';
 import { CustomVenueBuilder } from '../CustomVenueBuilder';
 import { DirectMessagePanel } from '../DirectMessagePanel';
-import { AdminDecorSection } from '../AdminDecorSection';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
