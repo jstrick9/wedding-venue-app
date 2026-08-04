@@ -30,6 +30,7 @@ import {
 } from '../utils/permissions';
 import SafeImage from './SafeImage';
 import { showToast } from './Toast';
+import { ConfirmDialog } from './ConfirmDialog';
 import { emit, on } from '../utils/appEvents';
 
 interface DragItem {
@@ -117,6 +118,7 @@ export function Sidebar({
   const [activeSection, setActiveSection] = useState<string>('tables');
   const [zoomInput, setZoomInput] = useState(String(Math.round(zoom * 100)));
   const [catalogSearch, setCatalogSearch] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const config = getConfig();
   const showFullLabels = width > 320;
@@ -1129,7 +1131,7 @@ export function Sidebar({
             {/* Clear layout */}
             <div className="bg-white rounded-lg p-3 border border-gray-200">
               <button
-                onClick={onClearLayout}
+                onClick={() => setShowClearConfirm(true)}
                 className="w-full px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
                 type="button"
               >
@@ -1186,6 +1188,19 @@ export function Sidebar({
       <div
         className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-gray-400/30 transition-colors"
         onMouseDown={handleMouseDown as (e: ReactMouseEvent<HTMLDivElement>) => void}
+      />
+
+      <ConfirmDialog
+        open={showClearConfirm}
+        title="Clear all items"
+        message="Remove every table, fixture, and decor item from this layout? This cannot be undone."
+        confirmLabel="Clear All"
+        tone="danger"
+        onConfirm={() => {
+          onClearLayout();
+          setShowClearConfirm(false);
+        }}
+        onCancel={() => setShowClearConfirm(false)}
       />
     </div>
   );

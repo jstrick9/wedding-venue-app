@@ -157,6 +157,10 @@ Settings tab tooltips; synced the WorkspaceHelp guide. See docs/reviews/66-reset
 ✅ Added a "Preview Portal" button to the Guest Portal admin hero so admins can see how
 the configured portal will look to guests. See docs/reviews/67-guest-portal-preview.md.
 
+## Autonomous gap pass — round 20 (clear-layout confirm)
+✅ Replaced the last native confirm() in the main workspace flow ("Clear All Items")
+with the reusable ConfirmDialog. See docs/reviews/68-clear-layout-confirm.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
