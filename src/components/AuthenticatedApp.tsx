@@ -367,6 +367,20 @@ export default function AuthenticatedApp() {
 
   useEffect(() => on('spm_open_workspace_help', () => setShowWorkspaceHelp(true)), []);
 
+  // Event-bus → modal wiring (the Header/Sidebar/PropertiesPanel emit these to
+  // open modals without prop-drilling). Previously handled by useAppModals.
+  useEffect(() => {
+    const offs = [
+      on('spm_open_vendors', () => open('vendors')),
+      on('spm_open_timeline', () => open('timeline')),
+      on('spm_open_decor_designer', (detail) => {
+        if (detail?.arrangementId) setEditingArrangementId(detail.arrangementId);
+        open('decorDesigner');
+      }),
+    ];
+    return () => offs.forEach((off) => off());
+  }, [open]);
+
   const getTotalCapacity = useCallback(() => {
     const tableSpecs = getTableSpecs();
     return layoutState.layout.tables.reduce((sum, table) => {
