@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Venue, LodgingFloor, LodgingRoom, LodgingFurniture, LodgingFurnitureType, Guest } from '../types';
+import { ConfirmDialog } from './ConfirmDialog';
 import { getSavedLayouts } from '../hooks/useLayoutState';
 
 interface LodgingBuilderProps {
@@ -39,6 +40,7 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
   const [floors, setFloors] = useState<LodgingFloor[]>(initialFloors);
   const [activeFloorId, setActiveFloorId] = useState<string>(initialFloors[0]?.id || 'f1');
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [pendingDeleteRoomId, setPendingDeleteRoomId] = useState<string | null>(null);
   const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
   const [draggingRoomId, setDraggingRoomId] = useState<string | null>(null);
   const [draggingFurnitureId, setDraggingFurnitureId] = useState<string | null>(null);
@@ -137,12 +139,16 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
 
   const deleteRoom = (roomId: string) => {
     if (!activeFloor) return;
-    if (!confirm('Delete this room?')) return;
+    setPendingDeleteRoomId(roomId);
+  };
+
+  const confirmDeleteRoom = () => {
+    if (!pendingDeleteRoomId) return;
     updateFloors(prev => prev.map(f => f.id === activeFloorId ? {
       ...f,
-      rooms: f.rooms.filter(r => r.id !== roomId),
+      rooms: f.rooms.filter(r => r.id !== pendingDeleteRoomId),
     } : f));
-    if (selectedRoomId === roomId) {
+    if (selectedRoomId === pendingDeleteRoomId) {
       setSelectedRoomId(null);
       setSelectedFurnitureId(null);
     }
@@ -664,6 +670,19 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDeleteRoomId}
+        title="Delete room"
+        message="Are you sure you want to delete this room and its furniture? This cannot be undone."
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={() => {
+          confirmDeleteRoom();
+          setPendingDeleteRoomId(null);
+        }}
+        onCancel={() => setPendingDeleteRoomId(null)}
+      />
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { canAccessOperationsPanel, canManageOperationsData } from '../utils/perm
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
 import { showToast } from './Toast';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface Props {
   onClose: () => void;
@@ -69,6 +70,8 @@ const StaffOperationsPanel: React.FC<Props> = ({
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [shiftView, setShiftView] = useState<'timeline' | 'list'>('timeline');
+  const [pendingDelete, setPendingDelete] = useState<{ kind: 'task' | 'area' | 'shift'; id: string } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{ tasks: any[]; areas: any[]; shifts: any[] } | null>(null);
   
   // Load Data
   useEffect(() => {
@@ -143,10 +146,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
   const handleDeleteTask = (id: string) => {
     if (!canMutateOperations) return;
-    if (confirm('Delete this task?')) {
-      saveTasks(tasks.filter(t => t.id !== id));
-      setSelectedId(null);
-    }
+    setPendingDelete({ kind: 'task', id });
   };
 
   const handleAddArea = () => {
@@ -170,10 +170,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
   const handleDeleteArea = (id: string) => {
     if (!canMutateOperations) return;
-    if (confirm('Delete this area?')) {
-      saveAreas(areas.filter(a => a.id !== id));
-      setSelectedAreaId(null);
-    }
+    setPendingDelete({ kind: 'area', id });
   };
 
   const handleAddShift = () => {
@@ -200,10 +197,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
   const handleDeleteShift = (id: string) => {
     if (!canMutateOperations) return;
-    if (confirm('Delete this shift?')) {
-      saveShifts(shifts.filter(s => s.id !== id));
-      setSelectedShiftId(null);
-    }
+    setPendingDelete({ kind: 'shift', id });
   };
 
   // --- Helpers ---
@@ -893,11 +887,8 @@ const StaffOperationsPanel: React.FC<Props> = ({
                   reader.onload = (event) => {
                     try {
                       const data = JSON.parse(event.target?.result as string);
-                      if (data.tasks && confirm('Import will merge with existing data. Continue?')) {
-                        saveTasks([...(data.tasks || []), ...tasks]);
-                        if (data.areas) saveAreas([...(data.areas || []), ...areas]);
-                        if (data.shifts) saveShifts([...(data.shifts || []), ...shifts]);
-                        showToast('Operations data imported successfully.', 'success');
+                      if (data.tasks) {
+                        setPendingImport({ tasks: data.tasks || [], areas: data.areas || [], shifts: data.shifts || [] });
                       }
                     } catch (err) {
                       showToast('Invalid JSON file.', 'warning');
@@ -984,6 +975,45 @@ const StaffOperationsPanel: React.FC<Props> = ({
           </div>
         </main>
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={`Delete ${pendingDelete?.kind ?? 'item'}`}
+        message={`Are you sure you want to delete this ${pendingDelete?.kind ?? 'item'}? This cannot be undone.`}
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          if (pendingDelete.kind === 'task') {
+            saveTasks(tasks.filter(t => t.id !== pendingDelete.id));
+            setSelectedId(null);
+          } else if (pendingDelete.kind === 'area') {
+            saveAreas(areas.filter(a => a.id !== pendingDelete.id));
+            setSelectedAreaId(null);
+          } else if (pendingDelete.kind === 'shift') {
+            saveShifts(shifts.filter(s => s.id !== pendingDelete.id));
+            setSelectedShiftId(null);
+          }
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={!!pendingImport}
+        title="Import operations data"
+        message="Import will merge with your existing tasks, areas, and shifts. Continue?"
+        confirmLabel="Import"
+        onConfirm={() => {
+          if (!pendingImport) return;
+          saveTasks([...pendingImport.tasks, ...tasks]);
+          if (pendingImport.areas.length) saveAreas([...pendingImport.areas, ...areas]);
+          if (pendingImport.shifts.length) saveShifts([...pendingImport.shifts, ...shifts]);
+          setPendingImport(null);
+          showToast('Operations data imported successfully.', 'success');
+        }}
+        onCancel={() => setPendingImport(null)}
+      />
     </div>
   );
 };

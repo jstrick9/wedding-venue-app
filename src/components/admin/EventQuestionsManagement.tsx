@@ -6,6 +6,7 @@ import {
 } from '../../types';
 import { Config } from '../../config';
 import { BrandedSectionHeader } from './shared/AdminSharedComponents';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 interface EventQuestionsManagementProps {
   eventQuestions: EventQuestion[];
@@ -62,6 +63,7 @@ function validate(draft: Draft): string | null {
 export function EventQuestionsManagement({ eventQuestions, config, setEventQuestions }: EventQuestionsManagementProps) {
   const [draft, setDraft] = useState<Draft>(emptyDraft());
   const [error, setError] = useState<string>('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const resetDraft = () => {
     setDraft(emptyDraft());
@@ -126,14 +128,13 @@ export function EventQuestionsManagement({ eventQuestions, config, setEventQuest
   };
 
   const handleDelete = (id: string) => {
-    if (!window.confirm('Delete this event question?')) return;
-    setEventQuestions(eventQuestions.filter((q) => q.id !== id));
-    if (draft.id === id) resetDraft();
+    setDeleteTarget(id);
   };
 
   return (
-    <div className="space-y-4">
-      <BrandedSectionHeader icon="❓" title="Event Questions" description="Dynamic questionnaire that planning users answer to tailor their layouts" config={config} />
+    <>
+      <div className="space-y-4">
+        <BrandedSectionHeader icon="❓" title="Event Questions" description="Dynamic questionnaire that planning users answer to tailor their layouts" config={config} />
 
       {/* Add/Edit form */}
       <div className="bg-white p-4 rounded-xl border space-y-3">
@@ -219,7 +220,23 @@ export function EventQuestionsManagement({ eventQuestions, config, setEventQuest
             </div>
           ))
         )}
+        </div>
       </div>
-    </div>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete event question"
+        message="Are you sure you want to delete this question? Planning users will no longer be asked it."
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={() => {
+          if (deleteTarget) {
+            setEventQuestions(eventQuestions.filter((q) => q.id !== deleteTarget));
+            if (draft.id === deleteTarget) resetDraft();
+          }
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </>
   );
 }

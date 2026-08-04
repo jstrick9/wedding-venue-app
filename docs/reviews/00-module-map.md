@@ -106,6 +106,11 @@ See docs/reviews/54-decor-starter-catalog.md.
 (color-mix preserves alpha); replaced bare "Loading…" text with a branded LoadingScreen.
 See docs/reviews/55-branding-hover-loading.md.
 
+## Autonomous gap pass — round 8 (polished ConfirmDialog)
+✅ Replaced native window.confirm() across panels with an accessible, on-brand
+ConfirmDialog (delete vendor/timeline/task/area/shift/question/room + template
+overwrite + import merge). See docs/reviews/56-confirm-dialog.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

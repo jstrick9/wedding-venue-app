@@ -80,4 +80,20 @@ describe('VendorPanel edit flow', () => {
     expect(screen.queryByText('✏️ Edit Vendor')).toBeNull();
     expect(storedVendors()[0].name).toBe('Elegant Flowers');
   });
+
+  it('deletes a vendor via the confirm dialog', () => {
+    render(<VendorPanel onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Elegant Flowers' }));
+
+    // Confirm dialog appears.
+    expect(screen.getByText('Delete vendor')).toBeTruthy();
+    // Cancel keeps the vendor.
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(storedVendors()).toHaveLength(1);
+
+    // Confirm removes it.
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Elegant Flowers' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(storedVendors()).toHaveLength(0);
+  });
 });

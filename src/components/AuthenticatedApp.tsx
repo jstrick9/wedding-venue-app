@@ -11,6 +11,7 @@ import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { PropertiesPanel } from './PropertiesPanel';
 import { WelcomeModal } from './WelcomeModal';
 import { showToast } from './Toast';
+import { ConfirmDialog } from './ConfirmDialog';
 import AppStatusBar, { StatusBarItem } from './AppStatusBar';
 import { CenteredModal } from './CenteredModal';
 import { buildMessageThreadId } from '../models/DirectMessage';
@@ -107,6 +108,7 @@ export default function AuthenticatedApp() {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
   const [showWorkspaceHelp, setShowWorkspaceHelp] = useState(false);
+  const [pendingOverwrite, setPendingOverwrite] = useState<(() => void) | null>(null);
   const [showWelcome, setShowWelcome] = useState(() => {
     const config = getConfig();
     return config.showWelcomeByDefault !== false;
@@ -703,7 +705,8 @@ export default function AuthenticatedApp() {
                   handleResetView();
                   close('templates');
                 };
-                if (hasWork && !window.confirm('Loading a template will replace your current layout. Continue?')) {
+                if (hasWork) {
+                  setPendingOverwrite(() => proceed);
                   return;
                 }
                 proceed();
@@ -732,6 +735,18 @@ export default function AuthenticatedApp() {
             />
           )}
           {/* ... other modals similarly refactored ... */}
+
+          <ConfirmDialog
+            open={!!pendingOverwrite}
+            title="Replace current layout?"
+            message="Loading a template will replace your current layout. This cannot be undone."
+            confirmLabel="Replace"
+            onConfirm={() => {
+              pendingOverwrite?.();
+              setPendingOverwrite(null);
+            }}
+            onCancel={() => setPendingOverwrite(null)}
+          />
         </Suspense>
       </div>
     </UndoRedoProvider>

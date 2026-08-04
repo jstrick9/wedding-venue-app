@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useVendors } from '../hooks/useVendors';
 import { Vendor, VendorCategory, VENDOR_CATEGORIES } from '../types/vendor';
 import { showToast } from './Toast';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface VendorPanelProps {
   onClose: () => void;
@@ -26,6 +27,7 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
   const [filterCategory, setFilterCategory] = useState<VendorCategory | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Vendor | null>(null);
   const [editForm, setEditForm] = useState({
     name: '',
     category: 'other' as VendorCategory,
@@ -290,12 +292,9 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
                             ✏️ Edit
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm(`Delete ${vendor.name}?`)) {
-                                deleteVendor(vendor.id);
-                              }
-                            }}
+                            onClick={() => setPendingDelete(vendor)}
                             className="px-3 py-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg text-xs transition-colors"
+                            aria-label={`Delete ${vendor.name}`}
                           >
                             🗑️
                           </button>
@@ -675,6 +674,19 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
             </div>
           </div>
         )}
+
+        <ConfirmDialog
+          open={!!pendingDelete}
+          title="Delete vendor"
+          message={`Are you sure you want to delete ${pendingDelete?.name ?? 'this vendor'}? This cannot be undone.`}
+          confirmLabel="Delete"
+          tone="danger"
+          onConfirm={() => {
+            if (pendingDelete) deleteVendor(pendingDelete.id);
+            setPendingDelete(null);
+          }}
+          onCancel={() => setPendingDelete(null)}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTimeline } from '../hooks/useTimeline';
 import { TimelineEvent, TIMELINE_CATEGORIES, TimelineCategory } from '../types/timeline';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface TimelinePanelProps {
   onClose: () => void;
@@ -23,6 +24,7 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
   } = useTimeline();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newTimelineName, setNewTimelineName] = useState('');
   const [newTimelineDate, setNewTimelineDate] = useState('');
   const [showAddEvent, setShowAddEvent] = useState<string | null>(null);
@@ -377,11 +379,7 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
               {/* Delete timeline */}
               <div className="pt-4 border-t border-gray-200">
                 <button
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this timeline?') && activeTimelineId) {
-                      deleteTimeline(activeTimelineId);
-                    }
-                  }}
+                  onClick={() => setShowDeleteConfirm(true)}
                   className="text-sm text-red-600 hover:text-red-800"
                 >
                   🗑️ Delete this timeline
@@ -501,6 +499,20 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
             </div>
           </div>
         )}
+
+        <ConfirmDialog
+          open={showDeleteConfirm}
+          title="Delete timeline"
+          message={`Delete "${activeTimeline?.name ?? 'this timeline'}" and all of its events? This cannot be undone.`}
+          confirmLabel="Delete"
+          tone="danger"
+          onConfirm={() => {
+            if (activeTimelineId) deleteTimeline(activeTimelineId);
+            setShowDeleteConfirm(false);
+            setActiveTimelineId(null);
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       </div>
     </div>
   );
