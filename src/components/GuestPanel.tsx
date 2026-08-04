@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 import type { GuestImportResult } from '../hooks/useLayoutState';
 import { showToast } from './Toast';
-import { Guest, PlacedFixture, PlacedTable, Venue } from '../types';
+import { Guest, PlacedFixture, PlacedTable, Venue, DEFAULT_MEAL_OPTIONS } from '../types';
 import { getFixtureTypes, getTableSpecs } from '../hooks/useLayoutState';
+import { getGuestPortalConfig } from '../utils/guestPortal';
 
 export interface GuestPanelProps {
   guests: Guest[];
@@ -51,6 +52,14 @@ export function GuestPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tableSpecs = getTableSpecs();
   const fixtureTypes = getFixtureTypes();
+
+  // Meal choices follow the venue's configured guest-portal options (falling back to
+  // the shared defaults), so the planner's guest editor stays consistent with the RSVP.
+  const mealOptions = useMemo(() => {
+    const cfg = getGuestPortalConfig();
+    if (cfg?.mealOptions && cfg.mealOptions.length > 0) return cfg.mealOptions;
+    return DEFAULT_MEAL_OPTIONS;
+  }, []);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('guests');
   const [search, setSearch] = useState('');
@@ -495,12 +504,9 @@ export function GuestPanel({
                       <div>
                         <label className="block text-sm font-medium mb-1">Meal Choice</label>
                         <select value={editingGuest.mealChoice || 'standard'} onChange={(e) => onUpdateGuest(editingGuest.id, { mealChoice: e.target.value as any })} className="w-full px-3 py-2 border rounded-lg">
-                          <option value="standard">Standard</option>
-                          <option value="vegetarian">Vegetarian</option>
-                          <option value="vegan">Vegan</option>
-                          <option value="gluten-free">Gluten-free</option>
-                          <option value="kids">Kids</option>
-                          <option value="other">Other</option>
+                          {mealOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
