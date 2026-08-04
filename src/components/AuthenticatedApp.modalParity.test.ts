@@ -67,4 +67,30 @@ describe('AuthenticatedApp modal render parity', () => {
     // Every known modal must be present.
     for (const k of known) expect(modals).toContain(k);
   });
+
+  it('renders every non-modal boolean show flag (e.g. showWelcome, showWorkspaceHelp)', () => {
+    const source = readFileSync(APP_PATH, 'utf8');
+    // Flags declared as useState booleans used in conditional renders.
+    const flagPattern = /const \[(show\w+), set\w+\] = useState[^;]*/g;
+    const flags: string[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = flagPattern.exec(source)) !== null) {
+      flags.push(match[1]);
+    }
+
+    expect(flags.length).toBeGreaterThan(0);
+    expect(flags).toContain('showWorkspaceHelp');
+
+    const missing: string[] = [];
+    for (const flag of flags) {
+      // A flag is "rendered" if it's referenced anywhere other than its own
+      // declaration (covers `{showX && ...}`, `visible={showX}`, etc.).
+      const useLines = source.split('\n').filter((line) => {
+        const t = line.trim();
+        return t.includes(flag) && !t.includes(`const [${flag}`);
+      });
+      if (useLines.length === 0) missing.push(flag);
+    }
+    expect(missing).toEqual([]);
+  });
 });

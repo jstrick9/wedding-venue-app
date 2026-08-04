@@ -107,7 +107,7 @@ export default function AuthenticatedApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedVenueCategories, setSelectedVenueCategories] = useState<string[]>([]);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [showFloatingViewControls, setShowFloatingViewControls] = useState(true);
+
   const [floatingViewControlsPos, setFloatingViewControlsPos] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
   const [draggingViewControls, setDraggingViewControls] = useState(false);
   const [showWorkspaceHelp, setShowWorkspaceHelp] = useState(false);
@@ -707,6 +707,13 @@ export default function AuthenticatedApp() {
             />
           )}
           {showWorkspaceHelp && <WorkspaceHelp onClose={() => setShowWorkspaceHelp(false)} />}
+          {showWelcome && (
+            <WelcomeModal
+              onClose={() => setShowWelcome(false)}
+              isAdmin={isAdmin}
+              isGuest={isGuest}
+            />
+          )}
           {/* ... other modals similarly refactored ... */}
         </Suspense>
       </div>
