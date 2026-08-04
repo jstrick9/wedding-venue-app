@@ -86,6 +86,11 @@ no-op Sidebar handlers; now state-backed with a Sidebar "Grid & Snap" card), rem
 dead data setters (venueData) and 8 dead permission helpers (permissions.ts).
 See docs/reviews/51-grid-snap-enable.md.
 
+## Autonomous gap pass — round 4 (Event Overview access gating)
+✅ Event Overview "Manage Guests" quick action now hidden when the user lacks
+canManageGuests (was shown to everyone but the gated modal no longer opened).
+See docs/reviews/52-overview-access-gating.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

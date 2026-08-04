@@ -679,6 +679,7 @@ export default function AuthenticatedApp() {
               eventName={currentEventName}
               venueName={layoutState.currentVenue.name}
               onOpenGuests={() => { close('overview'); open('guests'); }}
+              canManageGuests={canOpenGuestPanel}
               onOpenVendors={() => { close('overview'); open('vendors'); }}
               onOpenTemplates={() => { close('overview'); open('templates'); }}
               onClose={() => close('overview')}

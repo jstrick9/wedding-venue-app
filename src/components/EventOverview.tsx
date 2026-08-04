@@ -37,6 +37,8 @@ interface EventOverviewProps {
   onOpenTemplates: () => void;
   onOpenVendors?: () => void;
   onClose: () => void;
+  /** When false, the "Manage Guests" action is hidden (user lacks canManageGuests). */
+  canManageGuests?: boolean;
 }
 
 function Stat({
@@ -80,6 +82,7 @@ export function EventOverview({
   onOpenTemplates,
   onOpenVendors,
   onClose,
+  canManageGuests = true,
 }: EventOverviewProps) {
   const config = getConfig();
   const dash: EventDashboard = useMemo(
@@ -207,14 +210,16 @@ export function EventOverview({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onOpenGuests}
-              className="px-4 py-2 rounded-lg text-white text-sm font-medium"
-              style={{ backgroundColor: config.primaryColor }}
-            >
-              Manage Guests
-            </button>
+            {canManageGuests && (
+              <button
+                type="button"
+                onClick={onOpenGuests}
+                className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+                style={{ backgroundColor: config.primaryColor }}
+              >
+                Manage Guests
+              </button>
+            )}
             <button
               type="button"
               onClick={onOpenTemplates}
