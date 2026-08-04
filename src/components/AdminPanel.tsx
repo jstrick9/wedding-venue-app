@@ -204,6 +204,8 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [showDrawingTool, setShowDrawingTool] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const activeTabRef = useRef<HTMLButtonElement>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
   // Debounce the auto-save success message: asset managers auto-save on every
   // keystroke, so without this the "saved" indicator would keep re-appearing
   // while the user types. The message now surfaces once, after a brief idle.
@@ -318,6 +320,18 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
       // ignore storage failures
     }
   }, [activeTab]);
+
+  // Keep the active section's tab visible when the tab bar overflows (15+ tabs).
+  useEffect(() => {
+    if (activeTabRef.current && tabBarRef.current) {
+      const el = activeTabRef.current;
+      const bar = tabBarRef.current;
+      const left = el.offsetLeft - 8;
+      const right = left + el.offsetWidth;
+      if (left < bar.scrollLeft) bar.scrollLeft = left;
+      else if (right > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = right - bar.clientWidth;
+    }
+  }, [activeTab, tabSearch]);
 
   useEffect(() => {
     localStorage.setItem(EVENT_QUESTIONS_STORAGE_KEY, JSON.stringify(eventQuestions));
@@ -1105,7 +1119,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
           </div>
         </div>
 
-        <div className="flex items-center overflow-x-auto border-b" style={{ backgroundColor: config.primaryColor }}>
+        <div ref={tabBarRef} className="flex items-center overflow-x-auto border-b" style={{ backgroundColor: config.primaryColor }}>
           {filteredTabs.map((tab, idx) => {
             const prev = idx > 0 ? filteredTabs[idx - 1] : null;
             const showGroupHeader = prev?.group !== tab.group;
@@ -1122,6 +1136,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                 <button
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
+                  ref={activeTab === tab.id ? activeTabRef : undefined}
                   className="px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2"
                   style={{
                     backgroundColor: activeTab === tab.id ? 'white' : 'transparent',

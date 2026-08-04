@@ -20,6 +20,12 @@ binding, so nothing filtered. Implemented live filtering (by name/username/email
 role, by active status) with a "Showing X of Y users" indicator, a "Clear filters" link,
 and a "No users match" empty state distinct from the true "No Users Yet" onboarding.
 
+## 4. Auto-scroll the active admin tab into view
+With 15+ sections, the horizontal tab bar could leave the active section's tab scrolled
+out of view (especially after a Quick-find jump or reopening on the last-visited tab).
+Added refs + an effect that gently scrolls the active tab into view whenever the active
+tab or the search query changes.
+
 ## Validation
 - `npm run typecheck` clean; build green (~1.34 MB / ~304 KB gzip).
 - `npx vitest run`: 325 passed / 11 skipped (storage-keys uniqueness test still green).
