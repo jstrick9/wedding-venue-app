@@ -150,6 +150,19 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     : null;
 
   const isMultiDay = !!config?.isMultiDay && !!eventEndDate && !!eventStartDate;
+  // Number of event days for the RSVP "which days" checkboxes (capped so a bad date
+  // range can't render an unwieldy list).
+  const eventDayCount = isMultiDay
+    ? Math.min(
+        7,
+        Math.max(
+          1,
+          Math.round(
+            (eventEndDate!.getTime() - eventStartDate!.getTime()) / (1000 * 60 * 60 * 24),
+          ) + 1,
+        ),
+      )
+    : 1;
   const mealOptions: PortalMealOption[] =
     config?.mealOptions && config.mealOptions.length > 0
       ? config.mealOptions
@@ -1085,23 +1098,28 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                     Which days will you attend?
                   </label>
                   <div className="flex flex-col gap-2">
-                    <label className="inline-flex items-center gap-2 text-xs text-gray-700">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300"
-                        checked={rsvpForm.attendingDays.includes('day1')}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          handleRSVPChange(
-                            'attendingDays',
-                            checked
-                              ? Array.from(new Set([...rsvpForm.attendingDays, 'day1']))
-                              : rsvpForm.attendingDays.filter((d) => d !== 'day1'),
-                          );
-                        }}
-                      />
-                      Day 1
-                    </label>
+                    {Array.from({ length: eventDayCount }).map((_, idx) => {
+                      const dayId = `day${idx + 1}`;
+                      return (
+                        <label key={dayId} className="inline-flex items-center gap-2 text-xs text-gray-700">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300"
+                            checked={rsvpForm.attendingDays.includes(dayId)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              handleRSVPChange(
+                                'attendingDays',
+                                checked
+                                  ? Array.from(new Set([...rsvpForm.attendingDays, dayId]))
+                                  : rsvpForm.attendingDays.filter((d) => d !== dayId),
+                              );
+                            }}
+                          />
+                          Day {idx + 1}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -190,6 +190,10 @@ modal (last native prompt/alert removed from interactive flows). See docs/review
 ✅ Switching venues with unsaved placed items now asks for confirmation instead of
 silently discarding layout work. See docs/reviews/75-venue-switch-guard.md.
 
+## Autonomous gap pass — round 28 (RSVP attending-days)
+✅ Fixed multi-day RSVP "which days" checkboxes — now one per event day (was hardcoded
+to Day 1 only). See docs/reviews/76-rsvp-attending-days.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
