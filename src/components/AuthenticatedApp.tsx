@@ -520,6 +520,7 @@ export default function AuthenticatedApp() {
     (name: string) => {
       const id = layoutState.saveLayout(name);
       void layoutBackendSync.saveToBackend();
+      showToast(`Layout "${name}" saved.`, 'success');
       return id;
     },
     [layoutState, layoutBackendSync],
@@ -530,9 +531,10 @@ export default function AuthenticatedApp() {
       setSavedLayoutsState((prev) => {
         const next = prev.filter((l) => l.id !== id);
         setSavedLayouts(next);
-        void layoutBackendSync.saveToBackend();
         return next;
       });
+      void layoutBackendSync.saveToBackend();
+      showToast('Saved layout deleted.', 'success');
     },
     [layoutBackendSync],
   );

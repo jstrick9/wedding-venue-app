@@ -111,6 +111,10 @@ See docs/reviews/55-branding-hover-loading.md.
 ConfirmDialog (delete vendor/timeline/task/area/shift/question/room + template
 overwrite + import merge). See docs/reviews/56-confirm-dialog.md.
 
+## Autonomous gap pass — round 9 (action feedback toasts)
+✅ Added success toasts for layout save, saved-layout delete, and guest CSV export
+(these actions previously gave no confirmation). See docs/reviews/57-action-feedback-toasts.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

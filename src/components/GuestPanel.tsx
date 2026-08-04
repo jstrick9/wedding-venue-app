@@ -266,7 +266,15 @@ export function GuestPanel({
                 <button onClick={() => setShowAdd(true)} className="px-4 py-2 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#5c2a54]">➕ Add Guest</button>
                 <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" />
                 <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100">📥 Import</button>
-                <button onClick={onExportCSV} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100">📤 Export</button>
+                <button
+                  onClick={() => {
+                    onExportCSV();
+                    showToast('Guest list exported as CSV.', 'success');
+                  }}
+                  className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100"
+                >
+                  📤 Export
+                </button>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 text-xs">
