@@ -194,6 +194,10 @@ silently discarding layout work. See docs/reviews/75-venue-switch-guard.md.
 ✅ Fixed multi-day RSVP "which days" checkboxes — now one per event day (was hardcoded
 to Day 1 only). See docs/reviews/76-rsvp-attending-days.md.
 
+## Autonomous gap pass — round 29 (copy portal link)
+✅ Added a "Copy Portal Link" button to the Guest Portal admin so coordinators can share
+the guest portal URL. See docs/reviews/77-copy-portal-link.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

@@ -300,14 +300,30 @@ export function GuestPortalManagement({
               lodging, map, and wayfinding.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => { window.location.hash = '#/guest-portal'; }}
-            className="shrink-0 inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 rounded-lg px-3 py-2 text-xs font-medium text-white transition-colors"
-            title="Open the guest portal in a new screen to preview it"
-          >
-            👁️ Preview Portal
-          </button>
+          <div className="shrink-0 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => { window.location.hash = '#/guest-portal'; }}
+              className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 rounded-lg px-3 py-2 text-xs font-medium text-white transition-colors"
+              title="Open the guest portal in a new screen to preview it"
+            >
+              👁️ Preview Portal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const url = `${window.location.origin}${window.location.pathname}#/guest-portal`;
+                void navigator.clipboard?.writeText(url).then(
+                  () => onShowSuccess('Guest portal link copied to clipboard.'),
+                  () => onShowSuccess('Copy failed — portal link: ' + url),
+                );
+              }}
+              className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 rounded-lg px-3 py-2 text-xs font-medium text-white transition-colors"
+              title="Copy the guest portal URL to share with guests"
+            >
+              🔗 Copy Portal Link
+            </button>
+          </div>
         </div>
       </div>
 
