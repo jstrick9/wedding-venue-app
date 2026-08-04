@@ -790,15 +790,19 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
 
   // Export guests to CSV
   const exportGuestsToCSV = useCallback(() => {
-    const headers = ['Name', 'Group', 'Table', 'Dietary Restrictions', 'Accessibility', 'RSVP'];
+    const headers = ['Name', 'Group', 'Email', 'Phone', 'Table', 'Dietary Restrictions', 'Accessibility', 'Meal Choice', 'Special Needs', 'RSVP'];
     const rows = guests.map((g) => {
       const table = layout.tables.find((t) => t.guests.includes(g.id));
       return [
         g.name,
         g.group || '',
+        g.email || '',
+        g.phone || '',
         table?.label || 'Unassigned',
         g.dietaryRestrictions || '',
         g.accessibility ? 'Yes' : 'No',
+        g.mealChoice || '',
+        g.specialNeeds || '',
         g.rsvpStatus || 'pending',
       ].map(csvEscape).join(',');
     });

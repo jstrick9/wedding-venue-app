@@ -458,6 +458,53 @@ export function GuestPanel({
                       <label className="block text-sm font-medium mb-1">Group</label>
                       <input value={editingGuest.group || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { group: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" value={editingGuest.email || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { email: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Phone</label>
+                        <input value={editingGuest.phone || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { phone: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">RSVP Status</label>
+                        <select value={editingGuest.rsvpStatus || 'pending'} onChange={(e) => onUpdateGuest(editingGuest.id, { rsvpStatus: e.target.value as any })} className="w-full px-3 py-2 border rounded-lg">
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="declined">Declined</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Meal Choice</label>
+                        <select value={editingGuest.mealChoice || 'standard'} onChange={(e) => onUpdateGuest(editingGuest.id, { mealChoice: e.target.value as any })} className="w-full px-3 py-2 border rounded-lg">
+                          <option value="standard">Standard</option>
+                          <option value="vegetarian">Vegetarian</option>
+                          <option value="vegan">Vegan</option>
+                          <option value="gluten-free">Gluten-free</option>
+                          <option value="kids">Kids</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Dietary Restrictions</label>
+                      <input value={editingGuest.dietaryRestrictions || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { dietaryRestrictions: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Special Needs</label>
+                      <input value={editingGuest.specialNeeds || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { specialNeeds: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={editingGuest.accessibility === true} onChange={(e) => onUpdateGuest(editingGuest.id, { accessibility: e.target.checked })} />
+                      Requires accessibility
+                    </label>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Notes</label>
+                      <textarea value={editingGuest.notes || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { notes: e.target.value })} className="w-full px-3 py-2 border rounded-lg" rows={2} />
+                    </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">{isLodging ? 'Room Assignment' : 'Table Assignment'}</label>
                       <select
