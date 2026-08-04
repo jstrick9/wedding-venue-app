@@ -34,6 +34,7 @@ import {
   canPrintLayouts,
 } from '../utils/permissions';
 import { UndoRedoProvider } from '../contexts/UndoRedoContext';
+import { UndoRedoToolbar } from './UndoRedoToolbar';
 import { emit, emitDataChanged, on, type UndoSnapshot } from '../utils/appEvents';
 import { useModals } from '../contexts/ModalContext';
 
@@ -570,6 +571,7 @@ export default function AuthenticatedApp() {
                 📊 Overview
               </button>
             </div>
+            <UndoRedoToolbar />
             {layoutState.warnings.length > 0 && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-[min(28rem,92%)] pointer-events-none">
                 <div className="bg-amber-50 border border-amber-300 rounded-xl shadow-lg p-3 text-sm text-amber-900 pointer-events-auto">

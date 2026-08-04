@@ -91,6 +91,10 @@ See docs/reviews/51-grid-snap-enable.md.
 canManageGuests (was shown to everyone but the gated modal no longer opened).
 See docs/reviews/52-overview-access-gating.md.
 
+## Autonomous gap pass — round 5 (visible Undo/Redo toolbar)
+✅ Rendered the previously-dead UndoRedoToolbar over the canvas — undo/redo were only
+reachable via keyboard shortcuts before. See docs/reviews/53-undo-redo-toolbar.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
