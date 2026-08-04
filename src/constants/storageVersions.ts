@@ -7,4 +7,5 @@ export const STORAGE_VERSIONS = {
   PORTAL_CONFIG: 2,
   PORTAL_GUESTS: 1,
   RSVP_SUBMISSIONS: 1,
+  COUPLE_EVENTS: 1,
 } as const;

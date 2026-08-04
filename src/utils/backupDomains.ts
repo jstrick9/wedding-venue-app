@@ -10,6 +10,7 @@
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../constants/storageVersions';
 import { getConfig } from '../config';
+import { getCoupleEvents } from '../services/couples/coupleService';
 import {
   getDecorArrangements,
   getDecorCategories,
@@ -318,6 +319,16 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     version: STORAGE_VERSIONS.PORTAL_GUESTS,
     read: () => getPortalGuests(),
     write: (v) => writeVersioned(STORAGE_KEYS.PORTAL_GUESTS, STORAGE_VERSIONS.PORTAL_GUESTS, v),
+  },
+  {
+    key: 'coupleEvents',
+    storageKey: STORAGE_KEYS.COUPLE_EVENTS,
+    label: 'Couple Events',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.COUPLE_EVENTS,
+    read: () => getCoupleEvents(),
+    write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_EVENTS, STORAGE_VERSIONS.COUPLE_EVENTS, v),
   },
   {
     key: 'rsvpSubmissions',

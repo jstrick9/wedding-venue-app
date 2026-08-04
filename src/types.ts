@@ -927,6 +927,54 @@ export interface GuestPortalGuestRecord extends Guest {
   allowLodgingAccess?: boolean;
 }
 
+// ── Couples / Events platform ────────────────────────────────────────────────
+// A booked couple's event. The wedding venue creates one when a couple books; the
+// couple then logs into their own couples portal, invites collaborators (planner,
+// parents), picks venue spaces, answers the venue's questions, and manages their own
+// guest portal. These entities layer on top of the existing venue workspace.
+
+export type CoupleEventStatus = 'invited' | 'active' | 'completed';
+
+export type CoupleCollaboratorRole = 'couple' | 'planner' | 'family' | 'vendor';
+
+export interface CoupleCollaborator {
+  id: string;
+  name: string;
+  email: string;
+  role: CoupleCollaboratorRole;
+  /** Opaque token used to access the couples portal for this collaborator. */
+  inviteToken: string;
+  accepted?: boolean;
+  invitedAt: string;
+}
+
+export interface CoupleEvent {
+  id: string;
+  coupleName: string;
+  /** Token embedded in the venue→couple invitation link. */
+  inviteToken: string;
+  status: CoupleEventStatus;
+  eventDate?: string;
+  eventEndDate?: string;
+  guestCount?: number;
+  /** Venue ids the couple is eligible to use / has selected for their spaces. */
+  availableSpaces: string[];
+  selectedSpaces: string[];
+  collaborators: CoupleCollaborator[];
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoupleSession {
+  v: 1;
+  eventId: string;
+  collaboratorId: string;
+  role: CoupleCollaboratorRole;
+  coupleName: string;
+  expiresAt: string;
+}
+
 export interface PlacedDecor {
   id: string;
   decorItemId: string;

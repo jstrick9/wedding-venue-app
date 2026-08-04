@@ -6,11 +6,13 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { LiveRegion } from './components/LiveRegion';
 import { ModalProvider } from './contexts/ModalContext';
 import { getGuestPortalTokenFromLocation } from './utils/guestPortal';
+import { getCoupleTokenFromLocation } from './services/couples/coupleService';
 import { ToastContainer, showToast } from './components/Toast';
 import { on } from './utils/appEvents';
 import { lazy } from 'react';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
+const CouplesPortal = lazy(() => import('./components/CouplesPortal'));
 const GuestPortal = lazy(() => import('./components/GuestPortal'));
 const ForcePasswordChange = lazy(() => import('./components/ForcePasswordChange'));
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then((m) => ({ default: m.AcceptInvite })));
@@ -54,6 +56,28 @@ function AppContent() {
         <AcceptInvite
           token={token}
           onDone={() => { window.location.hash = ''; }}
+        />
+      </Suspense>
+    );
+  }
+
+  if (hash.startsWith('#/couples-portal')) {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-slate-100 flex items-center justify-center">
+            <div className="text-center space-y-3">
+              <div className="text-4xl animate-pulse">💍</div>
+              <p className="text-sm text-gray-500">Loading Couples Portal…</p>
+            </div>
+          </div>
+        }
+      >
+        <CouplesPortal
+          coupleToken={getCoupleTokenFromLocation(window.location)}
+          onExitPortal={() => {
+            window.location.hash = '';
+          }}
         />
       </Suspense>
     );

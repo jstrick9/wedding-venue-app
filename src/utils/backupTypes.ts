@@ -52,6 +52,7 @@ export interface BackupPayload {
   portalConfig?: unknown;
   portalGuests?: unknown;
   rsvpSubmissions?: unknown;
+  coupleEvents?: unknown;
   staffTasks?: unknown;
   staffAreas?: unknown;
   staffShifts?: unknown;
