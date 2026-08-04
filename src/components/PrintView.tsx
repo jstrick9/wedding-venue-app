@@ -75,6 +75,15 @@ export function PrintView({
     return tables.reduce((sum, table) => sum + tableCapacity(table), 0);
   };
 
+  // Compact dietary/meal/accessibility notes for a printable guest row.
+  const guestNotes = (g: Guest): string => {
+    const parts: string[] = [];
+    if (g.mealChoice && g.mealChoice !== 'standard') parts.push(`Meal: ${g.mealChoice}`);
+    if (g.dietaryRestrictions) parts.push(g.dietaryRestrictions);
+    if (g.accessibility) parts.push('Accessibility');
+    return parts.length ? ` — ${parts.join('; ')}` : '';
+  };
+
   const getSeatedGuests = () => {
     return guests.filter((g) => tables.some((t) => t.guests.includes(g.id))).length;
   };
@@ -324,7 +333,7 @@ export function PrintView({
                   {tableGuests.length > 0 ? (
                     <ul className="mt-3 space-y-1 text-sm text-gray-700">
                       {tableGuests.map((guest) => (
-                        <li key={guest.id}>• {guest.name}</li>
+                        <li key={guest.id}>• {guest.name}{guestNotes(guest)}</li>
                       ))}
                     </ul>
                   ) : (
@@ -344,7 +353,7 @@ export function PrintView({
                 {guests
                   .filter((g) => !g.tableId)
                   .map((guest) => (
-                    <li key={guest.id}>• {guest.name}</li>
+                    <li key={guest.id}>• {guest.name}{guestNotes(guest)}</li>
                   ))}
               </ul>
             </div>
