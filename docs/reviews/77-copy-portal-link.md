@@ -8,6 +8,9 @@ guests — they'd have to construct the `#/guest-portal` link by hand.
 clipboard and shows a success confirmation. Fallback shows the URL in the message if the
 clipboard API isn't available.
 
+Also added a **📋 Copy** button to the local-mode invitation link shown in the Invite
+Members section (it previously displayed the URL with no way to copy it).
+
 ## Validation
 - `npm run typecheck` clean; build green.
 - `npx vitest run`: 331 passed / 11 skipped.

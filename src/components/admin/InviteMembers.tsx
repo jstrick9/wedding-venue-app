@@ -130,8 +130,22 @@ export function InviteMembers() {
 
       {result?.inviteUrl && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-          <p className="font-medium mb-1">Invitation link (local mode)</p>
-          <p className="text-xs break-all">{result.inviteUrl}</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-medium mb-1">Invitation link (local mode)</p>
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard?.writeText(result.inviteUrl!).then(
+                  () => showToast('Invitation link copied to clipboard.', 'success'),
+                  () => showToast('Copy failed — copy the link below.', 'warning'),
+                );
+              }}
+              className="shrink-0 rounded-lg border border-green-300 bg-white px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100"
+            >
+              📋 Copy
+            </button>
+          </div>
+          <p className="text-xs break-all mt-1">{result.inviteUrl}</p>
         </div>
       )}
     </div>
