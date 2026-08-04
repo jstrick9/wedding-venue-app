@@ -324,6 +324,11 @@ export function Sidebar({
     );
   });
 
+  // Distinguish "no catalog items configured" from "search/category filtered out"
+  // so the empty state guides the right next action.
+  const catalogHasNoTables = tableSpecs.length === 0;
+  const catalogHasNoVenueFixtures = fixtureTypes.filter((f) => f.category !== 'exterior' && f.category !== 'lodging').length === 0;
+
   const lodgingFixtures = fixtureTypes.filter((f) =>
     f.category === 'lodging' && matchesCatalogSearch(f.name, [f.category || '', f.icon || '']),
   );
@@ -777,7 +782,9 @@ export function Sidebar({
 
             {visibleTables.length === 0 && (
               <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
-                No tables or seating styles match this search.
+                {catalogHasNoTables
+                  ? (isAdmin ? 'No table types yet. Add them in the Admin Panel → Tables/Seating.' : 'No table types have been configured yet. Please check back later.')
+                  : 'No tables or seating styles match this search.'}
               </div>
             )}
           </>
@@ -789,7 +796,9 @@ export function Sidebar({
             {venueFixtures.map((fixture) => renderItem(fixture, 'fixture'))}
             {venueFixtures.length === 0 && (
               <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
-                No venue fixtures match this search.
+                {catalogHasNoVenueFixtures
+                  ? (isAdmin ? 'No fixtures yet. Add them in the Admin Panel → Fixtures.' : 'No fixtures have been configured yet. Please check back later.')
+                  : 'No venue fixtures match this search.'}
               </div>
             )}
           </>
