@@ -3,6 +3,8 @@ import {
   CoupleEvent,
   CoupleCollaborator,
   CoupleCollaboratorRole,
+  EventQuestion,
+  EventAnswer,
 } from '../types';
 import {
   getCoupleEvents,
@@ -13,11 +15,18 @@ import {
   addCoupleCollaborator,
   removeCoupleCollaborator,
   updateCoupleEvent,
+  deriveRecommendedVenueCategories,
+  submitCoupleLayout,
 } from '../services/couples/coupleService';
+import { getCoupleAnswers, saveCoupleAnswers } from '../services/couples/coupleAnswersService';
+import { getCoupleMessages, sendCoupleMessage } from '../services/couples/coupleChatService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { EventQuestionsWizard } from './EventQuestionsWizard';
+import { showToast } from './Toast';
 
-type TabId = 'overview' | 'spaces' | 'collaborators' | 'design' | 'guests';
+type TabId = 'overview' | 'spaces' | 'questions' | 'design' | 'chat' | 'collaborators';
 
 interface CouplesPortalProps {
   coupleToken?: string;
@@ -64,6 +73,60 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const venues = useMemo(() => getVenues(), []);
 
   const refresh = () => setEvents(getCoupleEvents());
+
+  // ── Questions (reuse venue's Event Questions, scoped per couple event) ──────
+  const eventQuestions = useMemo<EventQuestion[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.EVENT_QUESTIONS);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as EventQuestion[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const coupleAnswers = useMemo<EventAnswer[]>(
+    () => (event ? getCoupleAnswers(event.id) : []),
+    [event],
+  );
+
+  const handleSaveAnswers = (answers: EventAnswer[]) => {
+    if (!event) return;
+    saveCoupleAnswers(event.id, answers);
+    // Derive recommended venue categories from answers and narrow availableSpaces
+    // to the venues whose category was selected by the couple's answers.
+    const cats = deriveRecommendedVenueCategories(answers);
+    if (cats.length > 0) {
+      const recommended = venues.filter((v) => cats.includes(v.category)).map((v) => v.id);
+      if (recommended.length > 0) {
+        updateCoupleEvent(event.id, { availableSpaces: recommended });
+        refresh();
+      }
+    }
+  };
+
+  // ── Chat (venue ↔ couple) ──────────────────────────────────────────────────
+  const [chatDraft, setChatDraft] = useState('');
+  const [msgTick, setMsgTick] = useState(0);
+  const messages = useMemo(
+    () => (event ? getCoupleMessages(event.id) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [event, msgTick],
+  );
+
+  const handleSendMessage = () => {
+    if (!event || !chatDraft.trim()) return;
+    sendCoupleMessage({
+      coupleEventId: event.id,
+      senderId: me?.id || 'couple',
+      senderName: me?.name || event.coupleName,
+      senderSide: 'couple',
+      message: chatDraft,
+    });
+    setChatDraft('');
+    setMsgTick((t) => t + 1);
+  };
 
   const handleLogout = () => {
     clearCoupleSession();
@@ -149,10 +212,11 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
   const tabs: { id: TabId; label: string; icon: string }[] = [
     { id: 'overview', label: 'Overview', icon: '🏠' },
+    { id: 'questions', label: 'Questions', icon: '❓' },
     { id: 'spaces', label: 'Venue Spaces', icon: '🏛️' },
-    { id: 'collaborators', label: 'People', icon: '👥' },
     { id: 'design', label: 'Design & Approval', icon: '🎨' },
-    { id: 'guests', label: 'Guest Portal', icon: '👰' },
+    { id: 'chat', label: 'Chat', icon: '💬' },
+    { id: 'collaborators', label: 'People', icon: '👥' },
   ];
 
   const roleLabel = (r: CoupleCollaboratorRole) =>
@@ -392,24 +456,153 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
             </div>
           )}
 
-          {activeTab === 'design' && (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500">
-              <div className="text-3xl mb-2">🎨</div>
-              <p className="font-semibold text-gray-700">Design & Approval coming next</p>
-              <p className="text-sm mt-1">
-                Soon you'll answer the venue's questions, design each space, and submit your
-                layouts for venue approval.
+          {activeTab === 'questions' && (
+            <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+              <h3 className="font-semibold text-sm mb-1">Tell us about your event</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Answer the venue's questions to narrow down which spaces and layouts suit
+                your guest count and plans. Your answers also recommend venue spaces.
               </p>
+              {eventQuestions.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-300 px-6 py-8 text-center text-gray-500 text-sm">
+                  The venue hasn't set up any event questions yet.
+                </div>
+              ) : (
+                <EventQuestionsWizard
+                  questions={eventQuestions}
+                  initialAnswers={coupleAnswers}
+                  userId={me?.id || 'couple'}
+                  eventId={event.id}
+                  onSaveAnswers={handleSaveAnswers}
+                  onVenueFilterChange={() => {}}
+                  onComplete={() => refresh()}
+                />
+              )}
             </div>
           )}
 
-          {activeTab === 'guests' && (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500">
-              <div className="text-3xl mb-2">👰</div>
-              <p className="font-semibold text-gray-700">Guest Portal coming next</p>
-              <p className="text-sm mt-1">
-                You'll be able to manage your own guest list and guest portal here.
-              </p>
+          {activeTab === 'design' && (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-1">Design & Approval</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Design each of your selected spaces in the layout planner, then submit for
+                  the venue's approval. The venue reviews your layouts in their work queue.
+                </p>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${
+                      event.layoutStatus === 'approved'
+                        ? 'bg-green-100 text-green-700'
+                        : event.layoutStatus === 'pending'
+                          ? 'bg-amber-100 text-amber-700'
+                          : event.layoutStatus === 'changes_requested'
+                            ? 'bg-blue-100 text-blue-700'
+                            : event.layoutStatus === 'rejected'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {event.layoutStatus === 'none'
+                      ? 'Not started'
+                      : event.layoutStatus === 'draft'
+                        ? 'Draft'
+                        : event.layoutStatus === 'pending'
+                          ? 'Submitted — awaiting venue review'
+                          : event.layoutStatus === 'approved'
+                            ? 'Approved 🎉'
+                            : event.layoutStatus === 'changes_requested'
+                              ? 'Changes requested'
+                              : 'Rejected'}
+                  </span>
+                </div>
+                {event.layoutComment && (
+                  <p className="mt-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                    <span className="font-semibold">Venue note:</span> {event.layoutComment}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!event.selectedSpaces.length) {
+                      showToast('Please select at least one venue space before submitting.', 'warning');
+                      return;
+                    }
+                    submitCoupleLayout(event.id, { byName: me?.name });
+                    refresh();
+                  }}
+                  className="mt-3 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  disabled={event.layoutStatus === 'pending'}
+                >
+                  {event.layoutStatus === 'pending' ? 'Submitted…' : 'Submit layouts for approval'}
+                </button>
+              </div>
+
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-2">Your event days</h3>
+                <div className="space-y-2">
+                  {(event.days && event.days.length > 0 ? event.days : []).map((day) => (
+                    <div key={day.id} className="flex items-center gap-3 text-sm">
+                      <span className="w-20 text-gray-500">{day.date}</span>
+                      <span className="font-medium text-gray-700">{day.label}</span>
+                    </div>
+                  ))}
+                  {(!event.days || event.days.length === 0) && (
+                    <p className="text-xs text-gray-500">
+                      No event days configured yet (the venue sets these up).
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'chat' && (
+            <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm flex flex-col">
+              <h3 className="font-semibold text-sm mb-2">Chat with the venue</h3>
+              <div className="flex-1 max-h-[40vh] overflow-y-auto space-y-2 border border-gray-100 rounded-lg p-3 bg-gray-50">
+                {messages.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">
+                    No messages yet. Say hello to your venue coordinator!
+                  </p>
+                ) : (
+                  messages.map((m) => (
+                    <div
+                      key={m.id}
+                      className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
+                        m.senderSide === 'couple'
+                          ? 'ml-auto bg-indigo-600 text-white'
+                          : 'bg-white border border-gray-200 text-gray-800'
+                      }`}
+                    >
+                      <div className={`text-[10px] font-semibold ${m.senderSide === 'couple' ? 'text-indigo-200' : 'text-gray-400'}`}>
+                        {m.senderName} · {m.senderSide === 'venue' ? 'Venue' : 'Couple'}
+                      </div>
+                      <div>{m.message}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="text"
+                  value={chatDraft}
+                  onChange={(e) => setChatDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSendMessage();
+                  }}
+                  placeholder="Message the venue..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  aria-label="Chat message"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendMessage}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                >
+                  Send
+                </button>
+              </div>
             </div>
           )}
         </div>

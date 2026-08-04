@@ -42,6 +42,9 @@ export const STORAGE_KEYS = {
 
   COUPLE_EVENTS: 'spm_couple_events',
   COUPLE_SESSION: 'spm_couple_session',
+  COUPLE_ANSWERS: 'spm_couple_answers',
+  COUPLE_SUBMISSIONS: 'spm_couple_submissions',
+  COUPLE_MESSAGES: 'spm_couple_messages',
 
   STAFF_TASKS: 'spm_staff_tasks',
   STAFF_AREAS: 'spm_staff_areas',

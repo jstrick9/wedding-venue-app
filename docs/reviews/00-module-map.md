@@ -204,6 +204,13 @@ venue "Couples & Events" admin, a #/couples-portal route, and the Couples Portal
 (token access, overview, venue-space selection, invite collaborators).
 See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Phase 1
+✅ Question-driven space selection (reuses venue Event Questions; answers narrow
+recommended spaces), multi-day events (days across the date span), per-couple layout
+submission + venue approval work queue (approve / request changes / reject), and
+venue↔couple chat (per-event thread, both sides, unread badge).
+See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

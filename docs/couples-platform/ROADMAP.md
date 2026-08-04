@@ -21,12 +21,20 @@ so each booked couple gets their own space.
   section (create event, copy invite link, list collaborators), a `#/couples-portal`
   route, and the Couples Portal shell (token access, overview, **Venue Spaces** selection,
   **People** invite/collaborators) with placeholders for Design & Guest Portal.
-- 🚧 **Next phases** (in priority order):
-  1. **Question-driven space selection** — venue writes questions (guest count, style,
-     etc.); couple answers and gets recommended/eligible spaces.
-  2. **Design & approval per couple** — tie the existing layout designer + submission
-     workflow to a couple event; couple designs spaces, venue approves/changes.
-  3. **Per-couple guest portal** — each couple manages their own guest list + guest portal
+- ✅ **Phase 1 (delivered):**
+  - **Question-driven space selection** — the Couples Portal reuses the venue's existing
+    **Event Questions** admin; the couple answers them and the answers **narrow
+    recommended venue spaces** (`deriveRecommendedVenueCategories`).
+  - **Multi-day events** — a couple event can span multiple days (e.g. rehearsal dinner
+    Friday + ceremony Saturday); days are derived across the date span and shown in both
+    the venue admin and the couple's Design tab.
+  - **Layout per couple event + approval work queue** — each couple submits their layout
+    (`layoutStatus`), which appears in the venue's **Layout Approval Queue** with
+    approve / request changes / reject + comments.
+  - **Venue ↔ couple chat** — a message thread per couple event, available in both the
+    venue admin (with unread badge) and the couple's Chat tab.
+- 🚧 **Next phases:**
+  1. **Per-couple guest portal** — each couple manages their own guest list + guest portal
      (reuse the existing GuestPortal, scoped per couple event).
 
 ## Data model (see src/types.ts)

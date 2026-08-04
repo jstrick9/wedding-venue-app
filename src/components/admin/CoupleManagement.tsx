@@ -1,41 +1,56 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { AdminCommonProps } from './AdminTabTypes';
-import {
-  CoupleEvent,
-} from '../../types';
+import { CoupleEvent, CoupleLayoutStatus } from '../../types';
 import {
   getCoupleEvents,
   createCoupleEvent,
   deleteCoupleEvent,
-  updateCoupleEvent,
+  reviewCoupleLayout,
 } from '../../services/couples/coupleService';
+import {
+  getCoupleMessages,
+  sendCoupleMessage,
+  getUnreadCoupleMessageCounts,
+} from '../../services/couples/coupleChatService';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
   venues: AdminCommonProps['venues'];
   user: AdminCommonProps['user'];
+  isAdmin?: boolean;
   onShowSuccess: (msg: string) => void;
 }
 
+const LAYOUT_BADGE: Record<CoupleLayoutStatus, { label: string; cls: string }> = {
+  none: { label: 'Not started', cls: 'bg-gray-100 text-gray-600' },
+  draft: { label: 'Draft', cls: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'Awaiting review', cls: 'bg-amber-100 text-amber-700' },
+  approved: { label: 'Approved', cls: 'bg-green-100 text-green-700' },
+  changes_requested: { label: 'Changes requested', cls: 'bg-blue-100 text-blue-700' },
+  rejected: { label: 'Rejected', cls: 'bg-red-100 text-red-700' },
+};
+
 /**
- * Couples & Events — venue-side management of booked couples. The venue creates a
- * couple event (booking), which generates an invitation link the couple uses to
- * open their own couples portal. This is the foundation for the multi-couple
- * platform; space selection, questions, approvals, and per-couple guest portals
- * layer on from here.
+ * Couples & Events — venue-side management of booked couples, including the layout
+ * approval work queue and venue↔couple chat. Multi-day events are supported via an
+ * end date (days are derived across the span).
  */
-export function CoupleManagement({ config, venues, user, onShowSuccess }: CoupleManagementProps) {
+export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess }: CoupleManagementProps) {
   const [events, setEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
     coupleName: '',
     eventDate: '',
+    eventEndDate: '',
     guestCount: '',
     availableSpaces: [] as string[],
   });
   const [error, setError] = useState('');
+  const [openChat, setOpenChat] = useState<string | null>(null);
+  const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
 
   const refresh = () => setEvents(getCoupleEvents());
+  const unreadCounts = getUnreadCoupleMessageCounts(events.map((e) => e.id));
 
   const portalUrl = (token: string) =>
     `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
@@ -55,11 +70,12 @@ export function CoupleManagement({ config, venues, user, onShowSuccess }: Couple
     createCoupleEvent({
       coupleName: form.coupleName,
       eventDate: form.eventDate || undefined,
+      eventEndDate: form.eventEndDate || undefined,
       guestCount: form.guestCount ? parseInt(form.guestCount, 10) || undefined : undefined,
       availableSpaces: form.availableSpaces,
       createdBy: user?.id,
     });
-    setForm({ coupleName: '', eventDate: '', guestCount: '', availableSpaces: [] });
+    setForm({ coupleName: '', eventDate: '', eventEndDate: '', guestCount: '', availableSpaces: [] });
     setError('');
     setShowCreate(false);
     refresh();
@@ -75,16 +91,164 @@ export function CoupleManagement({ config, venues, user, onShowSuccess }: Couple
     }));
   };
 
+  // Chat pane for an event
+  const renderChat = (ev: CoupleEvent) => {
+    const messages = getCoupleMessages(ev.id);
+    const draft = chatDrafts[ev.id] || '';
+    const send = () => {
+      if (!draft.trim()) return;
+      sendCoupleMessage({
+        coupleEventId: ev.id,
+        senderId: user?.id || 'venue',
+        senderName: user?.name || 'Venue',
+        senderSide: 'venue',
+        message: draft,
+      });
+      setChatDrafts((p) => ({ ...p, [ev.id]: '' }));
+    };
+    return (
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-gray-500">Chat with {ev.coupleName}</span>
+          <button
+            type="button"
+            onClick={() => setOpenChat(null)}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            Close
+          </button>
+        </div>
+        <div className="max-h-56 overflow-y-auto space-y-2 bg-gray-50 rounded-lg p-3">
+          {messages.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">No messages yet.</p>
+          ) : (
+            messages.map((m) => (
+              <div
+                key={m.id}
+                className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
+                  m.senderSide === 'venue'
+                    ? 'ml-auto bg-rose-600 text-white'
+                    : 'bg-white border border-gray-200 text-gray-800'
+                }`}
+              >
+                <div className={`text-[10px] font-semibold ${m.senderSide === 'venue' ? 'text-rose-100' : 'text-gray-400'}`}>
+                  {m.senderName} · {m.senderSide === 'venue' ? 'Venue' : 'Couple'}
+                </div>
+                <div>{m.message}</div>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="flex gap-2 mt-2">
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setChatDrafts((p) => ({ ...p, [ev.id]: e.target.value }))}
+            onKeyDown={(e) => e.key === 'Enter' && send()}
+            placeholder="Reply to the couple..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            aria-label={`Chat with ${ev.coupleName}`}
+          />
+          <button
+            type="button"
+            onClick={send}
+            className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700"
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Approval queue (pending / changes_requested)
+  const approvalQueue = events.filter((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested');
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 p-4 text-white">
         <h2 className="text-base font-bold">💍 Couples &amp; Events</h2>
         <p className="text-xs text-white/80 mt-1">
-          Create a booked couple's event and send them an invitation link to their own
-          couples portal. They'll pick spaces, invite their planner/parents, and manage
-          their guest portal.
+          Create booked couples' events, review their submitted layouts in the work queue,
+          and chat with each couple. Multi-day events (e.g. rehearsal dinner + ceremony)
+          are supported.
         </p>
       </div>
+
+      {/* Layout Approval Work Queue */}
+      {approvalQueue.length > 0 && (
+        <div className="rounded-xl bg-white border border-amber-200 p-4 shadow-sm">
+          <h3 className="font-semibold text-sm mb-1">📋 Layout Approval Queue</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            {approvalQueue.length} layout{approvalQueue.length === 1 ? '' : 's'} awaiting venue review.
+          </p>
+          <div className="space-y-3">
+            {approvalQueue.map((ev) => (
+              <div key={ev.id} className="rounded-lg border border-gray-200 p-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="font-medium text-gray-800">{ev.coupleName}</div>
+                    <div className="text-xs text-gray-500">
+                      {ev.selectedSpaces.length} space{ev.selectedSpaces.length === 1 ? '' : 's'} · {ev.guestCount || '—'} guests
+                      {ev.layoutStatus === 'changes_requested' ? ' · changes requested' : ''}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => window.open(portalUrl(ev.inviteToken), '_blank')}
+                    className="text-xs text-rose-600 hover:underline"
+                  >
+                    Open couple portal
+                  </button>
+                </div>
+                {ev.layoutComment && (
+                  <p className="mt-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                    <span className="font-semibold">Previous note:</span> {ev.layoutComment}
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      reviewCoupleLayout(ev.id, 'approve', { byName: user?.name || 'Venue' });
+                      refresh();
+                      onShowSuccess(`${ev.coupleName}'s layouts approved.`);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+                  >
+                    ✓ Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      reviewCoupleLayout(ev.id, 'request_changes', {
+                        byName: user?.name || 'Venue',
+                        comment: 'Please revise your layouts.',
+                      });
+                      refresh();
+                      onShowSuccess(`Changes requested for ${ev.coupleName}.`);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                  >
+                    ↻ Request changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      reviewCoupleLayout(ev.id, 'reject', { byName: user?.name || 'Venue' });
+                      refresh();
+                      onShowSuccess(`${ev.coupleName}'s layouts rejected.`);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
+                  >
+                    ✕ Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Action */}
       <div className="flex items-center justify-between gap-3">
@@ -115,7 +279,7 @@ export function CoupleManagement({ config, venues, user, onShowSuccess }: Couple
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Event date</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Start date</label>
               <input
                 type="date"
                 value={form.eventDate}
@@ -123,6 +287,17 @@ export function CoupleManagement({ config, venues, user, onShowSuccess }: Couple
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">End date (multi-day)</label>
+              <input
+                type="date"
+                value={form.eventEndDate}
+                onChange={(e) => setForm({ ...form, eventEndDate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Guest count</label>
               <input
@@ -188,73 +363,97 @@ export function CoupleManagement({ config, venues, user, onShowSuccess }: Couple
         </div>
       ) : (
         <div className="space-y-3">
-          {events.map((ev) => (
-            <div key={ev.id} className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-800">{ev.coupleName}</span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        ev.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {ev.status}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
-                    {ev.eventDate && <span>📅 {new Date(ev.eventDate).toLocaleDateString()}</span>}
-                    {ev.guestCount && <span>👥 {ev.guestCount} guests</span>}
-                    <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
-                    <span>👥 {ev.collaborators.length} people</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(ev.inviteToken)}
-                    className="text-xs text-rose-600 hover:underline"
-                  >
-                    Copy invite
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(portalUrl(ev.inviteToken), '_blank');
-                    }}
-                    className="text-xs text-gray-600 hover:underline"
-                  >
-                    Open
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm(`Delete the event for ${ev.coupleName}?`)) {
-                        deleteCoupleEvent(ev.id);
-                        refresh();
-                      }
-                    }}
-                    className="text-xs text-red-500 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-
-              {ev.collaborators.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Collaborators</div>
-                  <div className="flex flex-wrap gap-2">
-                    {ev.collaborators.map((c) => (
-                      <span key={c.id} className="text-xs bg-gray-100 rounded-full px-2 py-0.5 text-gray-700">
-                        {c.name} ({c.role})
+          {events.map((ev) => {
+            const badge = LAYOUT_BADGE[ev.layoutStatus];
+            return (
+              <div key={ev.id} className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-800">{ev.coupleName}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${ev.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {ev.status}
                       </span>
-                    ))}
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
+                      {ev.eventDate && <span>📅 {new Date(ev.eventDate).toLocaleDateString()}</span>}
+                      {ev.eventEndDate && ev.eventEndDate !== ev.eventDate && (
+                        <span>– {new Date(ev.eventEndDate).toLocaleDateString()}</span>
+                      )}
+                      {ev.guestCount && <span>👥 {ev.guestCount} guests</span>}
+                      <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
+                      <span>👥 {ev.collaborators.length} people</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button type="button" onClick={() => handleCopy(ev.inviteToken)} className="text-xs text-rose-600 hover:underline">
+                      Copy invite
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.open(portalUrl(ev.inviteToken), '_blank')}
+                      className="text-xs text-gray-600 hover:underline"
+                    >
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOpenChat(openChat === ev.id ? null : ev.id)}
+                      className="text-xs text-gray-600 hover:underline relative"
+                    >
+                      💬 Chat
+                      {(unreadCounts[ev.id] || 0) > 0 && (
+                        <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px]">
+                          {unreadCounts[ev.id]}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Delete the event for ${ev.coupleName}?`)) {
+                          deleteCoupleEvent(ev.id);
+                          refresh();
+                        }
+                      }}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {ev.collaborators.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Collaborators</div>
+                    <div className="flex flex-wrap gap-2">
+                      {ev.collaborators.map((c) => (
+                        <span key={c.id} className="text-xs bg-gray-100 rounded-full px-2 py-0.5 text-gray-700">
+                          {c.name} ({c.role})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ev.days && ev.days.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Event days</div>
+                    <div className="flex flex-wrap gap-2">
+                      {ev.days.map((d) => (
+                        <span key={d.id} className="text-xs bg-indigo-50 text-indigo-700 rounded-full px-2 py-0.5">
+                          {d.date} · {d.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {openChat === ev.id && renderChat(ev)}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

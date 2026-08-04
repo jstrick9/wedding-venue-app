@@ -11,6 +11,8 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../constants/storageVersions';
 import { getConfig } from '../config';
 import { getCoupleEvents } from '../services/couples/coupleService';
+import { getCoupleAnswersForBackup } from '../services/couples/coupleAnswersService';
+import { getCoupleMessagesForBackup } from '../services/couples/coupleChatService';
 import {
   getDecorArrangements,
   getDecorCategories,
@@ -329,6 +331,26 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     version: STORAGE_VERSIONS.COUPLE_EVENTS,
     read: () => getCoupleEvents(),
     write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_EVENTS, STORAGE_VERSIONS.COUPLE_EVENTS, v),
+  },
+  {
+    key: 'coupleAnswers',
+    storageKey: STORAGE_KEYS.COUPLE_ANSWERS,
+    label: 'Couple Answers',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.COUPLE_ANSWERS,
+    read: () => getCoupleAnswersForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_ANSWERS, STORAGE_VERSIONS.COUPLE_ANSWERS, v),
+  },
+  {
+    key: 'coupleMessages',
+    storageKey: STORAGE_KEYS.COUPLE_MESSAGES,
+    label: 'Couple Chat Messages',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.COUPLE_MESSAGES,
+    read: () => getCoupleMessagesForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_MESSAGES, STORAGE_VERSIONS.COUPLE_MESSAGES, v),
   },
   {
     key: 'rsvpSubmissions',

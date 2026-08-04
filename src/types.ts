@@ -948,6 +948,22 @@ export interface CoupleCollaborator {
   invitedAt: string;
 }
 
+export interface CoupleEventDay {
+  id: string;
+  label: string;
+  date: string;
+}
+
+export type CoupleLayoutStatus = 'none' | 'draft' | 'pending' | 'approved' | 'changes_requested' | 'rejected';
+
+export interface CoupleLayoutReview {
+  action: 'approve' | 'request_changes' | 'reject';
+  byUserId?: string;
+  byName: string;
+  comment?: string;
+  at: string;
+}
+
 export interface CoupleEvent {
   id: string;
   coupleName: string;
@@ -957,9 +973,15 @@ export interface CoupleEvent {
   eventDate?: string;
   eventEndDate?: string;
   guestCount?: number;
+  /** Named days of the event (e.g. Rehearsal Dinner Friday, Ceremony Saturday). */
+  days?: CoupleEventDay[];
   /** Venue ids the couple is eligible to use / has selected for their spaces. */
   availableSpaces: string[];
   selectedSpaces: string[];
+  /** Current layout-submission status for this couple event (approval work queue). */
+  layoutStatus: CoupleLayoutStatus;
+  layoutComment?: string;
+  layoutHistory: CoupleLayoutReview[];
   collaborators: CoupleCollaborator[];
   createdBy?: string;
   createdAt: string;
@@ -973,6 +995,18 @@ export interface CoupleSession {
   role: CoupleCollaboratorRole;
   coupleName: string;
   expiresAt: string;
+}
+
+/** A message in the venue↔couple chat thread for a couple event. */
+export interface CoupleMessage {
+  id: string;
+  coupleEventId: string;
+  senderId: string;
+  senderName: string;
+  /** 'venue' for messages from the venue, 'couple' for messages from the couple/collaborators. */
+  senderSide: 'venue' | 'couple';
+  message: string;
+  createdAt: string;
 }
 
 export interface PlacedDecor {

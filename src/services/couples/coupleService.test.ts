@@ -11,6 +11,10 @@ import {
   loadCoupleSession,
   clearCoupleSession,
   getCoupleTokenFromLocation,
+  buildEventDays,
+  submitCoupleLayout,
+  reviewCoupleLayout,
+  deriveRecommendedVenueCategories,
 } from './coupleService';
 
 describe('coupleService', () => {
@@ -69,5 +73,39 @@ describe('coupleService', () => {
     const token = getCoupleTokenFromLocation({ hash: '#/couples-portal?token=abc123' } as Location);
     expect(token).toBe('abc123');
     expect(getCoupleTokenFromLocation({ hash: '#/couples-portal' } as Location)).toBeUndefined();
+  });
+
+  it('builds event days across a multi-day span', () => {
+    const days = buildEventDays('2026-06-05', '2026-06-07');
+    expect(days).toHaveLength(3);
+    expect(days[0].date).toBe('2026-06-05');
+    expect(days[2].date).toBe('2026-06-07');
+  });
+
+  it('creates an event with days for multi-day spans', () => {
+    const ev = createCoupleEvent({ coupleName: 'Multi Day', eventDate: '2026-06-05', eventEndDate: '2026-06-06' });
+    expect(ev.days).toHaveLength(2);
+  });
+
+  it('submits and reviews a couple layout through the work queue', () => {
+    const ev = createCoupleEvent({ coupleName: 'Approval Test' });
+    submitCoupleLayout(ev.id, { byName: 'Couple' });
+    expect(getCoupleEvents()[0].layoutStatus).toBe('pending');
+    reviewCoupleLayout(ev.id, 'approve', { byName: 'Venue', comment: 'Looks great' });
+    const updated = getCoupleEvents()[0];
+    expect(updated.layoutStatus).toBe('approved');
+    expect(updated.layoutComment).toBe('Looks great');
+    expect(updated.layoutHistory).toHaveLength(1);
+  });
+
+  it('derives recommended venue categories from answers', () => {
+    const cats = deriveRecommendedVenueCategories([
+      { eventId: 'e1', userId: 'u1', questionId: 'ceremony-question', answerValue: 'yes' },
+      { eventId: 'e1', userId: 'u1', questionId: 'reception-question', answerValue: 'yes' },
+      { eventId: 'e1', userId: 'u1', questionId: 'lodging-question', answerValue: 'no' },
+    ]);
+    expect(cats).toContain('ceremony');
+    expect(cats).toContain('reception');
+    expect(cats).not.toContain('lodging');
   });
 });
