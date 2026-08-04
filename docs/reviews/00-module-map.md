@@ -161,6 +161,10 @@ the configured portal will look to guests. See docs/reviews/67-guest-portal-prev
 ✅ Replaced the last native confirm() in the main workspace flow ("Clear All Items")
 with the reusable ConfirmDialog. See docs/reviews/68-clear-layout-confirm.md.
 
+## Autonomous gap pass — round 21 (dismissible layout warnings)
+✅ The canvas layout-warning banner is now dismissible; it reappears only when the set
+of warnings changes. See docs/reviews/69-dismissible-warnings.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

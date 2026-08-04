@@ -74,6 +74,9 @@ export default function AuthenticatedApp() {
   const floorPlanSvgRef = useRef<SVGSVGElement>(null);
   const [brandingConfig, setBrandingConfig] = useState(() => getConfig());
   const [projectHealth, setProjectHealth] = useState<ProjectHealthReport | null>(null);
+  // Lets a user dismiss the layout-warning banner; it reappears if the set of
+  // warnings changes (a fresh collision/overlap the user hasn't acknowledged).
+  const [dismissedWarningsKey, setDismissedWarningsKey] = useState<string | null>(null);
   const [safeMode, setSafeMode] = useState(false);
 
   const { modals, editingArrangementId, setEditingArrangementId, open, close } = useModals();
@@ -620,13 +623,27 @@ export default function AuthenticatedApp() {
               </button>
             </div>
             <UndoRedoToolbar />
-            {layoutState.warnings.length > 0 && (
+            {layoutState.warnings.length > 0 &&
+              dismissedWarningsKey !== layoutState.warnings.map((w) => w.id).join('|') && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 w-[min(28rem,92%)] pointer-events-none">
                 <div className="bg-amber-50 border border-amber-300 rounded-xl shadow-lg p-3 text-sm text-amber-900 pointer-events-auto">
-                  <div className="font-semibold mb-1">
-                    ⚠️ {layoutState.warnings.length} layout warning{layoutState.warnings.length === 1 ? '' : 's'}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-semibold mb-1">
+                      ⚠️ {layoutState.warnings.length} layout warning{layoutState.warnings.length === 1 ? '' : 's'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDismissedWarningsKey(layoutState.warnings.map((w) => w.id).join('|'))
+                      }
+                      className="text-amber-700 hover:text-amber-900 font-bold leading-none"
+                      aria-label="Dismiss layout warnings"
+                      title="Dismiss (warnings reappear if new issues arise)"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <ul className="text-xs space-y-0.5 max-h-24 overflow-y-auto">
+                  <ul className="text-xs space-y-0.5 max-h-24 overflow-y-auto mt-1">
                     {layoutState.warnings.slice(0, 5).map((w) => (
                       <li key={w.id}>• {w.message}</li>
                     ))}
