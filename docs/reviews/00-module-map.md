@@ -141,6 +141,10 @@ layout. See docs/reviews/62-layout-duplicate-warning.md.
 ✅ Sidebar width/collapsed and grid/snap settings persist across sessions via a new
 spm_ui_prefs storage key. See docs/reviews/63-ui-prefs-persist.md.
 
+## Autonomous gap pass — round 16 (helpful Load empty state)
+✅ The Load Layout modal now guides users to Save Layout when they have no saved layouts.
+See docs/reviews/64-load-empty-state.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

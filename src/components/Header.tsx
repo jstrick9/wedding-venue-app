@@ -898,7 +898,14 @@ export function Header({
         >
           <div className="space-y-4">
             {savedLayouts.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No saved layouts found.</p>
+              <div className="text-center py-8">
+                <div className="text-4xl mb-2">🗂️</div>
+                <p className="text-gray-500">No saved layouts found.</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Use <strong>💾 Save Layout</strong> in the header to save the current
+                  layout, then it will appear here to load anytime.
+                </p>
+              </div>
             ) : (
               <div className="space-y-2 max-h-[50vh] overflow-y-auto">
                 {savedLayouts.map((layout) => (
