@@ -280,6 +280,18 @@ export function FixtureManagement(props: AdminCommonProps) {
     AdminPanel
   } = props;
 
+  // Live search for fixtures across the venue/lodging/exterior sections.
+  const [fixtureSearch, setFixtureSearch] = React.useState('');
+  const matchesFixtureSearch = (f: FixtureType) => {
+    const q = fixtureSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      f.name?.toLowerCase().includes(q) ||
+      (f.id || '').toLowerCase().includes(q) ||
+      (f.description || '').toLowerCase().includes(q)
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-4">
@@ -500,6 +512,30 @@ export function FixtureManagement(props: AdminCommonProps) {
                    </button>
                 </div>
               </div>
+
+              {/* Fixture search */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                  <input
+                    type="search"
+                    value={fixtureSearch}
+                    onChange={(e) => setFixtureSearch(e.target.value)}
+                    placeholder="Search fixtures by name..."
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
+                    aria-label="Search fixtures"
+                  />
+                </div>
+                {fixtureSearch.trim() && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Showing{' '}
+                    <strong>
+                      {fixtureTypes.filter((f) => matchesFixtureSearch(f)).length}
+                    </strong>{' '}
+                    of {fixtureTypes.length} fixtures
+                  </div>
+                )}
+              </div>
               
               {/* Venue Fixtures */}
               <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
@@ -533,7 +569,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                 </div>
                 {showVenueFixturesSection && (
                 <div className="p-4 bg-purple-50/50">
-                {fixtureTypes.filter(f => f.category !== 'exterior' && f.category !== 'lodging').map(fixture => (
+                {fixtureTypes.filter(f => f.category !== 'exterior' && f.category !== 'lodging').filter(matchesFixtureSearch).map(fixture => (
                   <div key={fixture.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3">
                     <div 
                       className="bg-purple-50 px-4 py-3 border-b border-purple-200 flex items-center justify-between cursor-pointer hover:bg-purple-100 transition-colors"
@@ -892,7 +928,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                 </div>
                 {showLodgingFixturesSection && (
                 <div className="p-4 bg-cyan-50/50">
-                  {fixtureTypes.filter(f => f.category === 'lodging').map(fixture => (
+                  {fixtureTypes.filter(f => f.category === 'lodging').filter(matchesFixtureSearch).map(fixture => (
                     <div key={fixture.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3">
                       <div
                         className="bg-cyan-50 px-4 py-3 border-b border-cyan-200 flex items-center justify-between cursor-pointer hover:bg-cyan-100 transition-colors"
@@ -1139,7 +1175,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                 </div>
                 {showExteriorFixturesSection && (
                 <div className="p-4 bg-green-50/50">
-                {fixtureTypes.filter(f => f.category === 'exterior').map(fixture => (
+                {fixtureTypes.filter(f => f.category === 'exterior').filter(matchesFixtureSearch).map(fixture => (
                   <div key={fixture.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3">
                     <div 
                       className="bg-green-50 px-4 py-3 border-b border-green-200 flex items-center justify-between cursor-pointer hover:bg-green-100 transition-colors"

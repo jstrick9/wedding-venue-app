@@ -26,6 +26,12 @@ out of view (especially after a Quick-find jump or reopening on the last-visited
 Added refs + an effect that gently scrolls the active tab into view whenever the active
 tab or the search query changes.
 
+## 5. Fixture search (FixtureManagement)
+The largest admin section lists fixtures in three big collapsible groups (venue,
+lodging, exterior) with no way to find one. Added a live "Search fixtures by name…"
+box (matches name/id/description) that filters all three groups simultaneously, with a
+"Showing N of M fixtures" counter.
+
 ## Validation
 - `npm run typecheck` clean; build green (~1.34 MB / ~304 KB gzip).
 - `npx vitest run`: 325 passed / 11 skipped (storage-keys uniqueness test still green).
