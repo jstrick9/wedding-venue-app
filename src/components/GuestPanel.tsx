@@ -381,15 +381,21 @@ export function GuestPanel({
                 </div>
               </div>
 
-              {tableAssignments.map(dest => (
-                <div key={dest.id} className={`border rounded-lg p-4 ${dest.available === 0 ? 'bg-green-50 border-green-200' : dest.available < 3 ? 'bg-yellow-50 border-yellow-200' : ''}`}>
+              {tableAssignments.map(dest => {
+                const overBy = Math.max(0, dest.assignedGuests.length - dest.capacity);
+                return (
+                <div key={dest.id} className={`border rounded-lg p-4 ${overBy > 0 ? 'bg-red-50 border-red-200' : dest.available === 0 ? 'bg-green-50 border-green-200' : dest.available < 3 ? 'bg-yellow-50 border-yellow-200' : ''}`}>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold">{dest.label}</h3>
-                    <span className={`text-sm px-2 py-1 rounded ${dest.available === 0 ? 'bg-green-200 text-green-800' : dest.available < 3 ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200'}`}>
+                    <span className={`text-sm px-2 py-1 rounded ${overBy > 0 ? 'bg-red-200 text-red-800' : dest.available === 0 ? 'bg-green-200 text-green-800' : dest.available < 3 ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200'}`}>
                       {dest.assignedGuests.length}/{dest.capacity}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-500 mb-2">{dest.available} space{dest.available !== 1 ? 's' : ''} available</div>
+                  <div className={`text-xs mb-2 ${overBy > 0 ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                    {overBy > 0
+                      ? `⚠️ Over capacity by ${overBy}`
+                      : `${dest.available} space${dest.available !== 1 ? 's' : ''} available`}
+                  </div>
                   <div className="space-y-1 max-h-[220px] overflow-auto">
                     {dest.assignedGuests.map(guest => (
                       <div key={guest.id} className="flex items-center justify-between p-1.5 bg-white rounded border text-sm">
@@ -403,7 +409,8 @@ export function GuestPanel({
                     {dest.assignedGuests.length === 0 && <p className="text-center text-gray-400 py-2 text-sm">No guests assigned</p>}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

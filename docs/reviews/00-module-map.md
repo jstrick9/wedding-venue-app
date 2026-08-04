@@ -165,6 +165,10 @@ with the reusable ConfirmDialog. See docs/reviews/68-clear-layout-confirm.md.
 ✅ The canvas layout-warning banner is now dismissible; it reappears only when the set
 of warnings changes. See docs/reviews/69-dismissible-warnings.md.
 
+## Autonomous gap pass — round 22 (over-capacity warning)
+✅ Over-capacity tables in the guest assignments view are now flagged red with a
+"Over capacity by N" label (previously shown as green/full). See docs/reviews/70-overcapacity-warning.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
