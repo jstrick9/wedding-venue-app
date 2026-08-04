@@ -29,6 +29,8 @@ import {
   GuestPortalGuestRecord,
   PortalScheduleItem,
   PortalWayfindingPoint,
+  PortalMealOption,
+  DEFAULT_MEAL_OPTIONS,
 } from '../types';
 import {
   clearGuestPortalSession,
@@ -148,6 +150,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     : null;
 
   const isMultiDay = !!config?.isMultiDay && !!eventEndDate && !!eventStartDate;
+  const mealOptions: PortalMealOption[] =
+    config?.mealOptions && config.mealOptions.length > 0
+      ? config.mealOptions
+      : DEFAULT_MEAL_OPTIONS;
   const rsvpDeadline = (config as any)?.rsvpDeadlineDate
     ? new Date((config as any).rsvpDeadlineDate)
     : null;
@@ -1112,12 +1118,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
   						value={rsvpForm.mealChoice}
   						onChange={(e) => handleRSVPChange('mealChoice', e.target.value)}
 		>
-                  <option value="standard">Standard</option>
-                  <option value="vegetarian">Vegetarian</option>
-                  <option value="vegan">Vegan</option>
-                  <option value="gluten-free">Gluten-free</option>
-                  <option value="kids">Kids</option>
-                  <option value="other">Other</option>
+                  {mealOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -1148,12 +1151,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                         handleRSVPChange('plusOneMealChoice', e.target.value)
                       }
                     >
-                      <option value="standard">Standard</option>
-                      <option value="vegetarian">Vegetarian</option>
-                      <option value="vegan">Vegan</option>
-                      <option value="gluten-free">Gluten-free</option>
-                      <option value="kids">Kids</option>
-                      <option value="other">Other</option>
+                      {mealOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   </div>
                 )}

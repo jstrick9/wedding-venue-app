@@ -847,6 +847,25 @@ export interface RSVPSubmission {
 }
 
 /** A single entry on the guest-facing event schedule. */
+/** A meal choice offered in the guest RSVP. */
+export interface PortalMealOption {
+  value: string;
+  label: string;
+}
+
+/** Default meal options used when a venue hasn't configured its own. */
+export const DEFAULT_MEAL_OPTIONS: PortalMealOption[] = [
+  { value: 'standard', label: 'Standard' },
+  { value: 'chicken', label: 'Chicken' },
+  { value: 'beef', label: 'Beef' },
+  { value: 'fish', label: 'Fish' },
+  { value: 'vegetarian', label: 'Vegetarian' },
+  { value: 'vegan', label: 'Vegan' },
+  { value: 'gluten-free', label: 'Gluten-free' },
+  { value: 'kids', label: 'Kids' },
+  { value: 'other', label: 'Other' },
+];
+
 export interface PortalScheduleItem {
   id: string;
   title: string;
@@ -887,6 +906,8 @@ export interface GuestPortalConfig {
   enabledVenueCategories?: string[];
   /** Schedule items published to guests (B-09 fix). */
   scheduleItems?: PortalScheduleItem[];
+  /** Meal choices offered in the RSVP (value + display label). */
+  mealOptions?: PortalMealOption[];
   /** Named wayfinding destinations (B-09 fix). */
   wayfindingPoints?: PortalWayfindingPoint[];
   /**

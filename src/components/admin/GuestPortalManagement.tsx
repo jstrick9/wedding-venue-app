@@ -8,6 +8,8 @@ import {
   GuestPortalGuestRecord,
   PortalScheduleItem,
   PortalWayfindingPoint,
+  PortalMealOption,
+  DEFAULT_MEAL_OPTIONS,
 } from '../../types';
 import {
   getGuestPortalConfig,
@@ -120,6 +122,9 @@ export function GuestPortalManagement({
   // ── Wayfinding points state ───────────────────────────────────────────────
   const [newPoint, setNewPoint] = useState<Partial<PortalWayfindingPoint>>({});
   const [showAddPoint, setShowAddPoint] = useState(false);
+
+  // ── Meal options state ────────────────────────────────────────────────────
+  const [newMealOption, setNewMealOption] = useState('');
 
   // ── Portal guests state ───────────────────────────────────────────────────
   const [portalGuests, setPortalGuestsState] = useState<GuestPortalGuestRecord[]>(
@@ -432,6 +437,96 @@ export function GuestPortalManagement({
             onChange={(e) => update({ rsvpMessage: e.target.value })}
             placeholder="Please let us know if you can make it by the deadline."
           />
+        </div>
+
+        {/* Meal Options */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Meal Choices
+          </label>
+          <p className="text-xs text-gray-400 mb-2">
+            These are offered to guests in the RSVP. Add or remove options to match your
+            catering menu.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(cfg.mealOptions && cfg.mealOptions.length > 0
+              ? cfg.mealOptions
+              : DEFAULT_MEAL_OPTIONS
+            ).map((opt: PortalMealOption) => (
+              <span
+                key={opt.value}
+                className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm text-indigo-800"
+              >
+                {opt.label}
+                <button
+                  type="button"
+                  onClick={() =>
+                    update({
+                      mealOptions: (cfg.mealOptions && cfg.mealOptions.length > 0
+                        ? cfg.mealOptions
+                        : DEFAULT_MEAL_OPTIONS
+                      ).filter((o) => o.value !== opt.value),
+                    })
+                  }
+                  className="text-indigo-400 hover:text-indigo-700 font-bold leading-none"
+                  aria-label={`Remove meal option ${opt.label}`}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <input
+              type="text"
+              value={newMealOption}
+              onChange={(e) => setNewMealOption(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const label = newMealOption.trim();
+                  if (!label) return;
+                  const value = label
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+                  const current =
+                    cfg.mealOptions && cfg.mealOptions.length > 0
+                      ? cfg.mealOptions
+                      : DEFAULT_MEAL_OPTIONS;
+                  if (!current.some((o) => o.value === value)) {
+                    update({ mealOptions: [...current, { value, label }] });
+                  }
+                  setNewMealOption('');
+                }
+              }}
+              placeholder="Add a meal option (press Enter)"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+              aria-label="Add a meal option"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const label = newMealOption.trim();
+                if (!label) return;
+                const value = label
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, '-')
+                  .replace(/^-+|-+$/g, '');
+                const current =
+                  cfg.mealOptions && cfg.mealOptions.length > 0
+                    ? cfg.mealOptions
+                    : DEFAULT_MEAL_OPTIONS;
+                if (!current.some((o) => o.value === value)) {
+                  update({ mealOptions: [...current, { value, label }] });
+                }
+                setNewMealOption('');
+              }}
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+            >
+              Add
+            </button>
+          </div>
         </div>
       </div>
 
