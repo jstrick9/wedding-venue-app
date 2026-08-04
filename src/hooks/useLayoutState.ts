@@ -15,7 +15,6 @@ import {
   DecorCategoryDef,
   DecorArrangement,
   DecorPackage,
-  ChairSpec,
   defaultAlignmentSettings,
 } from '../types';
 import {
@@ -32,6 +31,8 @@ import {
   defaultSpacingSettings,
   defaultIndoorFeatureTemplates,
   defaultOutdoorFeatureTemplates,
+  defaultDecorCategories,
+  defaultDecorItems,
   loadFromStorage,
   saveToStorage,
 } from '../data/venueData';
@@ -206,15 +207,6 @@ export function setSavedLayouts(layouts: SavedLayout[]): void {
   setSavedLayoutDocuments(nextDocs);
 }
 
-export function getChairSpecsFromLayout(): ChairSpec[] {
-  return loadFromStorage(STORAGE_KEYS.CHAIR_SPECS_LEGACY, defaultChairSpecs);
-}
-
-export function setChairSpecsInLayout(specs: ChairSpec[]): void {
-  saveToStorage(STORAGE_KEYS.CHAIR_SPECS_LEGACY, specs);
-  emitDataChanged('chairSpecs');
-}
-
 export function getLinenColors(): LinenColor[] {
   return loadFromStorage(STORAGE.LINEN_COLORS, defaultLinenColors);
 }
@@ -225,8 +217,8 @@ export function setLinenColors(colors: LinenColor[]): void {
 }
 
 export function getDecorItems(): DecorItem[] {
-  const items = loadFromStorage(STORAGE.DECOR_ITEMS, []) as DecorItem[];
-  return Array.isArray(items) ? items : [];
+  const items = loadFromStorage(STORAGE.DECOR_ITEMS, defaultDecorItems) as DecorItem[];
+  return Array.isArray(items) ? items : defaultDecorItems;
 }
 
 export function setDecorItems(items: DecorItem[]): void {
@@ -235,7 +227,7 @@ export function setDecorItems(items: DecorItem[]): void {
 }
 
 export function getDecorCategories(): DecorCategoryDef[] {
-  return loadFromStorage(STORAGE.DECOR_CATEGORIES, []) as DecorCategoryDef[];
+  return loadFromStorage(STORAGE.DECOR_CATEGORIES, defaultDecorCategories) as DecorCategoryDef[];
 }
 
 export function setDecorCategories(categories: DecorCategoryDef[]): void {

@@ -95,6 +95,12 @@ See docs/reviews/52-overview-access-gating.md.
 ✅ Rendered the previously-dead UndoRedoToolbar over the canvas — undo/redo were only
 reachable via keyboard shortcuts before. See docs/reviews/53-undo-redo-toolbar.md.
 
+## Autonomous gap pass — round 6 (decor starter catalog)
+✅ Wired dead defaultDecorCategories/defaultDecorItems as first-use seeds — new users
+now get a starter decor catalog instead of empty (explicitly-saved data never
+overwritten). Removed dead legacy chair-spec functions.
+See docs/reviews/54-decor-starter-catalog.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

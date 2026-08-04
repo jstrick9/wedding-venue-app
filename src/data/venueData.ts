@@ -12,7 +12,8 @@ import {
   AlignmentSettings,
   defaultAlignmentSettings,
   DecorItem,
-  DecorPackage
+  DecorPackage,
+  DecorCategoryDef
 } from '../types';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emit, emitDataChanged } from '../utils/appEvents';
@@ -1108,21 +1109,21 @@ export function loadFromStorage<T>(key: string, defaultValue: T): T {
   return defaultValue;
 }
 
-// Default decor categories
-export const defaultDecorCategories: LayoutCategoryInfo[] = [
-  { id: 'florals' as any, name: 'Florals', icon: '🌸', color: '#ec4899', description: 'Flower arrangements and floral accents' },
-  { id: 'vases' as any, name: 'Vases', icon: '🏺', color: '#0ea5e9', description: 'Vases and containers' },
-  { id: 'candles' as any, name: 'Candles', icon: '🕯️', color: '#f59e0b', description: 'Taper, pillar, and votive candles' },
-  { id: 'centerpieces' as any, name: 'Centerpieces', icon: '💐', color: '#8b5cf6', description: 'Table centerpieces and focal points' },
-  { id: 'table-numbers' as any, name: 'Table Numbers', icon: '🔢', color: '#64748b', description: 'Numerical indicators for tables' },
-  { id: 'signage' as any, name: 'Signage', icon: '🪧', color: '#475569', description: 'Informational and decorative signs' },
-  { id: 'lighting' as any, name: 'Lighting', icon: '💡', color: '#eab308', description: 'Decorative and ambient lighting' },
-  { id: 'backdrop' as any, name: 'Backdrop', icon: '🖼️', color: '#d946ef', description: 'Background displays and photo walls' },
-  { id: 'arch' as any, name: 'Arch', icon: '⛩️', color: '#10b981', description: 'Ceremony arches and arbors' },
-  { id: 'aisle' as any, name: 'Aisle', icon: '🚶', color: '#f43f5e', description: 'Aisle runners and floor decor' },
-  { id: 'custom' as any, name: 'Custom', icon: '✨', color: '#6366f1', description: 'Bespoke decorative elements' },
+// Default decor categories (starter catalog for first-time users; existing user
+// data is never overwritten - see getDecorCategories in useLayoutState).
+export const defaultDecorCategories: DecorCategoryDef[] = [
+  { id: 'florals', name: 'Florals', icon: '🌸', color: '#ec4899', description: 'Flower arrangements and floral accents' },
+  { id: 'vases', name: 'Vases', icon: '🏺', color: '#0ea5e9', description: 'Vases and containers' },
+  { id: 'candles', name: 'Candles', icon: '🕯️', color: '#f59e0b', description: 'Taper, pillar, and votive candles' },
+  { id: 'centerpieces', name: 'Centerpieces', icon: '💐', color: '#8b5cf6', description: 'Table centerpieces and focal points' },
+  { id: 'table-numbers', name: 'Table Numbers', icon: '🔢', color: '#64748b', description: 'Numerical indicators for tables' },
+  { id: 'signage', name: 'Signage', icon: '🪧', color: '#475569', description: 'Informational and decorative signs' },
+  { id: 'lighting', name: 'Lighting', icon: '💡', color: '#eab308', description: 'Decorative and ambient lighting' },
+  { id: 'backdrop', name: 'Backdrop', icon: '🖼️', color: '#d946ef', description: 'Background displays and photo walls' },
+  { id: 'arch', name: 'Arch', icon: '⛩️', color: '#10b981', description: 'Ceremony arches and arbors' },
+  { id: 'aisle', name: 'Aisle', icon: '🚶', color: '#f43f5e', description: 'Aisle runners and floor decor' },
+  { id: 'custom', name: 'Custom', icon: '✨', color: '#6366f1', description: 'Bespoke decorative elements' },
 ];
-
 
 
 // Default decor items
