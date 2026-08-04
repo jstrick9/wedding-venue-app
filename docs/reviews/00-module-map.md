@@ -182,6 +182,10 @@ See docs/reviews/72-master-layout-toasts.md.
 ✅ The RSVP confirmation now shows the configured meal label (not the stored value).
 See docs/reviews/73-rsvp-meal-label.md.
 
+## Autonomous gap pass — round 26 (timeline Add Day modal)
+✅ Replaced the two native prompt() dialogs for adding a timeline day with a proper form
+modal (last native prompt/alert removed from interactive flows). See docs/reviews/74-timeline-add-day-modal.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

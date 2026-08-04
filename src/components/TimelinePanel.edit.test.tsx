@@ -75,4 +75,19 @@ describe('TimelinePanel event edit flow', () => {
     expect(screen.queryByText('✏️ Edit Event')).toBeNull();
     expect(storedTimelines()[0].days[0].events[0].title).toBe('Ceremony');
   });
+
+  it('adds a day via the form modal (no native prompt)', () => {
+    render(<TimelinePanel onClose={() => {}} />);
+    fireEvent.click(screen.getByText('Our Big Day'));
+    fireEvent.click(screen.getByRole('button', { name: '➕ Add Day' }));
+
+    // Modal is open (date input + label input present).
+    const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
+    const labelInput = screen.getByPlaceholderText('e.g., Day Before') as HTMLInputElement;
+    fireEvent.change(dateInput, { target: { value: '2026-06-07' } });
+    fireEvent.change(labelInput, { target: { value: 'Day After' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Day' }));
+
+    expect(storedTimelines()[0].days.some((d) => d.label === 'Day After')).toBe(true);
+  });
 });

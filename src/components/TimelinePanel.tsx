@@ -28,6 +28,8 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
   const [newTimelineName, setNewTimelineName] = useState('');
   const [newTimelineDate, setNewTimelineDate] = useState('');
   const [showAddEvent, setShowAddEvent] = useState<string | null>(null);
+  const [showAddDay, setShowAddDay] = useState(false);
+  const [newDay, setNewDay] = useState({ date: '', label: '' });
   const [newEvent, setNewEvent] = useState({
     title: '',
     startTime: '09:00',
@@ -57,6 +59,13 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
       notes: event.notes || '',
     });
     setEditingEvent({ dayId, event });
+  };
+
+  const handleSaveAddDay = () => {
+    if (!activeTimelineId || !newDay.date.trim() || !newDay.label.trim()) return;
+    addDay(activeTimelineId, newDay.date.trim(), newDay.label.trim());
+    setNewDay({ date: '', label: '' });
+    setShowAddDay(false);
   };
 
   const handleSaveEditEvent = () => {
@@ -190,13 +199,7 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      const date = prompt('Enter date (YYYY-MM-DD):');
-                      const label = prompt('Enter day label (e.g., "Day Before"):');
-                      if (date && label && activeTimelineId) {
-                        addDay(activeTimelineId, date, label);
-                      }
-                    }}
+                    onClick={() => setShowAddDay(true)}
                     className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
                   >
                     ➕ Add Day
@@ -492,6 +495,48 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
                     Save Changes
                   </button>
                   <button onClick={() => setEditingEvent(null)} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Day modal (replaces the two sequential native prompt() dialogs) */}
+        {showAddDay && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAddDay(false)}>
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">➕ Add Day</h3>
+                <button onClick={() => setShowAddDay(false)} className="text-gray-400 hover:text-gray-700 text-xl leading-none" aria-label="Close">✕</button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <input
+                    type="date"
+                    value={newDay.date}
+                    onChange={(e) => setNewDay((prev) => ({ ...prev, date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Day Label *</label>
+                  <input
+                    type="text"
+                    value={newDay.label}
+                    onChange={(e) => setNewDay((prev) => ({ ...prev, label: e.target.value }))}
+                    placeholder="e.g., Day Before"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={handleSaveAddDay} disabled={!newDay.date.trim() || !newDay.label.trim()} className="flex-1 py-2.5 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] disabled:opacity-50 transition-colors">
+                    Add Day
+                  </button>
+                  <button onClick={() => setShowAddDay(false)} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
                     Cancel
                   </button>
                 </div>
