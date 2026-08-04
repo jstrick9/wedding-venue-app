@@ -133,6 +133,10 @@ vulnerabilities (npm audit 5→0). See docs/reviews/60-canvas-empty-state-deps.m
 ✅ Added aria-labels to icon-only close/remove buttons across GuestPanel, LodgingBuilder,
 AccessControlPanel, and StaffOperationsPanel. See docs/reviews/61-icon-button-a11y.md.
 
+## Autonomous gap pass — round 14 (layout duplicate-name warning)
+✅ The Save Layout modal now warns inline when the typed name matches an existing saved
+layout. See docs/reviews/62-layout-duplicate-warning.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

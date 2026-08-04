@@ -858,6 +858,15 @@ export function Header({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
               autoFocus
             />
+            {layoutName.trim() &&
+              savedLayouts.some(
+                (l) => l.name.toLowerCase() === layoutName.trim().toLowerCase(),
+              ) && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  ⚠️ A saved layout named "{layoutName.trim()}" already exists. Saving
+                  will create a duplicate.
+                </p>
+              )}
 
             <div className="flex gap-3 justify-end">
               <button
