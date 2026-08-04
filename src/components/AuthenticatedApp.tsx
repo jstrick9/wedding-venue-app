@@ -148,6 +148,7 @@ export default function AuthenticatedApp() {
 
   const [showWorkspaceHelp, setShowWorkspaceHelp] = useState(false);
   const [pendingOverwrite, setPendingOverwrite] = useState<(() => void) | null>(null);
+  const [pendingVenueChange, setPendingVenueChange] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(() => {
     const config = getConfig();
     return config.showWelcomeByDefault !== false;
@@ -531,9 +532,28 @@ export default function AuthenticatedApp() {
   }, [layoutState, resolvePlacement, ensureCanEditLayout]);
 
   const handleVenueChange = useCallback((venueId: string) => {
+    // Changing venues loads that venue's master layout, which replaces the current
+    // layout. If the current layout has placed (unsaved) work, ask first so a user
+    // doesn't lose items silently.
+    const hasWork =
+      layoutState.layout.tables.length > 0 ||
+      layoutState.layout.fixtures.length > 0 ||
+      layoutState.layout.decor.length > 0;
+    if (hasWork && venueId !== layoutState.currentVenue.id) {
+      setPendingVenueChange(venueId);
+      return;
+    }
     layoutState.changeVenue(venueId);
     setTimeout(fitAndCenterVenue, 100);
   }, [layoutState, fitAndCenterVenue]);
+
+  const confirmVenueChange = useCallback(() => {
+    if (!pendingVenueChange) return;
+    const venueId = pendingVenueChange;
+    setPendingVenueChange(null);
+    layoutState.changeVenue(venueId);
+    setTimeout(fitAndCenterVenue, 100);
+  }, [pendingVenueChange, layoutState, fitAndCenterVenue]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -797,6 +817,14 @@ export default function AuthenticatedApp() {
               isGuest={isGuest}
             />
           )}
+          <ConfirmDialog
+            open={!!pendingVenueChange}
+            title="Switch venues?"
+            message="Your current layout has placed items that haven't been saved. Switching venues will load that venue's master layout and discard this work. Continue?"
+            confirmLabel="Discard & Switch"
+            onConfirm={() => confirmVenueChange()}
+            onCancel={() => setPendingVenueChange(null)}
+          />
           {/* ... other modals similarly refactored ... */}
 
           <ConfirmDialog
