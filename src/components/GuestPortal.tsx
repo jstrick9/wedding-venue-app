@@ -133,6 +133,13 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
   const eventEndDate = config?.eventEndDate ? new Date(config.eventEndDate) : null;
   const today = new Date();
 
+  // Browser tab title reflects the event (falls back to a generic label).
+  useEffect(() => {
+    document.title = config?.eventTitle
+      ? `${config.eventTitle} | Guest Portal`
+      : 'Wedding Guest Portal';
+  }, [config?.eventTitle]);
+
   const daysUntilEvent = eventStartDate
     ? Math.max(
         0,

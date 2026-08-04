@@ -510,6 +510,13 @@ export default function AuthenticatedApp() {
 
   useEffect(() => { rootStyles(brandingConfig); }, [brandingConfig]);
 
+  // Keep the browser tab title in sync with the configured venue name (branding).
+  useEffect(() => {
+    document.title = brandingConfig.venueName
+      ? `${brandingConfig.venueName} | Wedding Layout Planner`
+      : 'Wedding Layout Planner';
+  }, [brandingConfig.venueName]);
+
   // Save/delete wrappers that flush to the shared backend after the local
   // localStorage write (no-op when the platform backend is disabled).
   const handleSaveLayoutWithSync = useCallback(
