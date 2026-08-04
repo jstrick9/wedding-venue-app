@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useVendors } from '../hooks/useVendors';
 import { Vendor, VendorCategory, VENDOR_CATEGORIES } from '../types/vendor';
 import { showToast } from './Toast';
@@ -26,6 +26,58 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
   const [filterCategory, setFilterCategory] = useState<VendorCategory | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    category: 'other' as VendorCategory,
+    contactName: '',
+    email: '',
+    phone: '',
+    website: '',
+    notes: '',
+    contractAmount: 0,
+    contractSigned: false,
+    depositPaid: false,
+    rating: 0,
+    isPreferred: false,
+  });
+
+  const handleStartEdit = (vendor: Vendor) => {
+    setEditForm({
+      name: vendor.name,
+      category: vendor.category,
+      contactName: vendor.contactName || '',
+      email: vendor.email || '',
+      phone: vendor.phone || '',
+      website: vendor.website || '',
+      notes: vendor.notes || '',
+      contractAmount: vendor.contractAmount || 0,
+      contractSigned: vendor.contractSigned || false,
+      depositPaid: vendor.depositPaid || false,
+      rating: vendor.rating || 0,
+      isPreferred: vendor.isPreferred || false,
+    });
+    setEditingVendor(vendor);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingVendor || !editForm.name.trim()) return;
+    updateVendor(editingVendor.id, {
+      name: editForm.name.trim(),
+      category: editForm.category,
+      contactName: editForm.contactName,
+      email: editForm.email,
+      phone: editForm.phone,
+      website: editForm.website,
+      notes: editForm.notes,
+      contractAmount: editForm.contractAmount,
+      contractSigned: editForm.contractSigned,
+      depositPaid: editForm.depositPaid,
+      rating: editForm.rating,
+      isPreferred: editForm.isPreferred,
+    });
+    setEditingVendor(null);
+    showToast('Vendor updated.', 'success');
+  };
 
   // Payment recording state
   const [paymentVendorId, setPaymentVendorId] = useState<string>('');
@@ -232,7 +284,7 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
 
                         <div className="flex gap-2 mt-3">
                           <button
-                            onClick={() => setEditingVendor(vendor)}
+                            onClick={() => handleStartEdit(vendor)}
                             className="flex-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs transition-colors"
                           >
                             ✏️ Edit
@@ -521,6 +573,108 @@ export function VendorPanel({ onClose }: VendorPanelProps) {
             </div>
           )}
         </div>
+
+        {/* Edit Vendor modal */}
+        {editingVendor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditingVendor(null)}>
+            <div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">✏️ Edit Vendor</h3>
+                <button onClick={() => setEditingVendor(null)} className="text-gray-400 hover:text-gray-700 text-xl leading-none" aria-label="Close">✕</button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name *</label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={editForm.category}
+                    onChange={e => setEditForm(prev => ({ ...prev, category: e.target.value as VendorCategory }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  >
+                    {VENDOR_CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+                    <input type="text" value={editForm.contactName} onChange={e => setEditForm(prev => ({ ...prev, contactName: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input type="tel" value={editForm.phone} onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={editForm.email} onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                  <input type="text" value={editForm.website} onChange={e => setEditForm(prev => ({ ...prev, website: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contract Amount ($)</label>
+                  <input type="number" value={editForm.contractAmount || ''} onChange={e => setEditForm(prev => ({ ...prev, contractAmount: parseFloat(e.target.value) || 0 }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={editForm.contractSigned} onChange={e => setEditForm(prev => ({ ...prev, contractSigned: e.target.checked }))} /> ✓ Contract Signed
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={editForm.depositPaid} onChange={e => setEditForm(prev => ({ ...prev, depositPaid: e.target.checked }))} /> 💵 Deposit Paid
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={editForm.isPreferred} onChange={e => setEditForm(prev => ({ ...prev, isPreferred: e.target.checked }))} /> ⭐ Preferred
+                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                    <select value={editForm.rating} onChange={e => setEditForm(prev => ({ ...prev, rating: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                      <option value={0}>Unrated</option>
+                      {[1,2,3,4,5].map(n => <option key={n} value={n}>{'★'.repeat(n)}{'☆'.repeat(5-n)}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea value={editForm.notes} onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={handleSaveEdit} disabled={!editForm.name.trim()} className="flex-1 py-2.5 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] disabled:opacity-50 transition-colors">
+                    Save Changes
+                  </button>
+                  <button onClick={() => setEditingVendor(null)} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
