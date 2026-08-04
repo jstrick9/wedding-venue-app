@@ -75,3 +75,11 @@ See docs/reviews/31-pass2-summary.md.
 
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
+
+## Autonomous gap pass — status
+✅ Removed 3 dead modules (DecorManagement, useHistory, useAppModals + test) —
+verified no references; cleaned a stale smoke-test comment.
+✅ Reviewed builders (CustomVenueBuilder + LodgingBuilder) in depth; hardened
+CustomVenueBuilder and wired in the previously-dead LodgingBuilder (previous
+commit a4def88).
+See docs/reviews/39-builders-rereview.md + 40-deadcode-cleanup.md.
