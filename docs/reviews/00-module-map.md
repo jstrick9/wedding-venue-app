@@ -101,6 +101,11 @@ now get a starter decor catalog instead of empty (explicitly-saved data never
 overwritten). Removed dead legacy chair-spec functions.
 See docs/reviews/54-decor-starter-catalog.md.
 
+## Autonomous gap pass — round 7 (branding hover/translucency + loading screen)
+✅ Custom brand color now applies to hover/active states and translucency variants
+(color-mix preserves alpha); replaced bare "Loading…" text with a branded LoadingScreen.
+See docs/reviews/55-branding-hover-loading.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

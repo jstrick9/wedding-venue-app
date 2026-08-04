@@ -1257,3 +1257,42 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ============================================================
+   BRANDING: hover shades + translucency variants follow theme
+   The general #4A1942 overrides above force solid theme color,
+   which (a) loses alpha on opacity variants and (b) leaves hover
+   states in the default plum. These later, more specific rules
+   restore correct alpha and re-tint hover/active states.
+   ============================================================ */
+/* Hover / active states use the configured dark & light shades */
+[class*="hover:bg-\[#3b1435\]"]:hover,
+[class*="hover:bg-\[#3d1a45\]"]:hover {
+  background-color: var(--primary-dark) !important;
+}
+[class*="hover:bg-\[#4A1942\]"]:hover {
+  background-color: var(--primary-color) !important;
+}
+[class*="hover:bg-\[#5b2352\]"]:hover,
+[class*="hover:bg-\[#6b2c5c\]"]:hover {
+  background-color: var(--primary-light) !important;
+}
+
+/* Semi-transparent brand fills (preserve alpha via color-mix) */
+[class*="bg-\[#4A1942\]/5"] { background-color: color-mix(in srgb, var(--primary-color) 5%, transparent) !important; }
+[class*="bg-\[#4A1942\]/10"] { background-color: color-mix(in srgb, var(--primary-color) 10%, transparent) !important; }
+[class*="bg-\[#4A1942\]/50"] { background-color: color-mix(in srgb, var(--primary-color) 50%, transparent) !important; }
+
+/* Focus/soft rings stay translucent brand color */
+[class*="ring-\[#4A1942\]/20"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important; }
+[class*="ring-\[#4A1942\]/30"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 30%, transparent) !important; }
+[class*="ring-\[#4A1942\]/40"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important; }
+[class*="ring-\[#4A1942\]/50"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 50%, transparent) !important; }
+
+/* Borders */
+[class*="border-\[#4A1942\]/20"] { border-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important; }
+[class*="border-\[#4A1942\]/40"] { border-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important; }
+
+/* Gradient stops */
+[class*="from-\[#4A1942\]/5"] { --tw-gradient-from: color-mix(in srgb, var(--primary-color) 5%, transparent) !important; }
+[class*="to-\[#4A1942\]/10"] { --tw-gradient-to: color-mix(in srgb, var(--primary-color) 10%, transparent) !important; }

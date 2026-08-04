@@ -1,6 +1,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginScreen } from './components/LoginScreen';
+import { LoadingScreen } from './components/LoadingScreen';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { LiveRegion } from './components/LiveRegion';
 import { ModalProvider } from './contexts/ModalContext';
@@ -49,7 +50,7 @@ function AppContent() {
     }
     const token = hash.slice('#/accept-invite/'.length).split('/')[0];
     return (
-      <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+      <Suspense fallback={<LoadingScreen />}>
         <AcceptInvite
           token={token}
           onDone={() => { window.location.hash = ''; }}
@@ -89,7 +90,7 @@ function AppContent() {
   if (user.requiresPasswordChange) {
     return (
       <Suspense
-        fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}
+        fallback={<LoadingScreen />}
       >
         <ForcePasswordChange />
       </Suspense>
@@ -97,7 +98,7 @@ function AppContent() {
   }
 
   return (
-    <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading Application...</div>}>
+    <Suspense fallback={<LoadingScreen />}>
       <AuthenticatedApp />
     </Suspense>
   );
