@@ -58,11 +58,6 @@ export function getAlignmentSettings(): AlignmentSettings {
   return defaultAlignmentSettings;
 }
 
-export function setAlignmentSettings(settings: AlignmentSettings): void {
-  localStorage.setItem(STORAGE_KEYS.ALIGNMENT_SETTINGS, JSON.stringify(settings));
-  emitDataChanged('alignment');
-}
-
 // Default chair specifications
 export const defaultChairSpecs: ChairSpec[] = [
   { id: 'white-plastic', name: 'White Plastic', color: '#FFFFFF', width: 1.5, depth: 1.5, icon: '🪑' },
@@ -186,23 +181,6 @@ export function getIndoorFeatureTemplates(): IndoorFeatureTemplate[] {
   return defaultIndoorFeatureTemplates;
 }
 
-export function setIndoorFeatureTemplates(templates: IndoorFeatureTemplate[]): void {
-  // Only save custom templates (filter out defaults)
-  const customTemplates = templates.filter(t => t.isCustom);
-  localStorage.setItem(STORAGE_KEYS.INDOOR_FEATURE_TEMPLATES, JSON.stringify(customTemplates));
-  emitDataChanged('indoorTemplates');
-}
-
-export function addIndoorFeatureTemplate(template: IndoorFeatureTemplate): void {
-  const current = getIndoorFeatureTemplates().filter(t => t.isCustom);
-  setIndoorFeatureTemplates([...current, { ...template, isCustom: true }]);
-}
-
-export function deleteIndoorFeatureTemplate(id: string): void {
-  const current = getIndoorFeatureTemplates().filter(t => t.isCustom && t.id !== id);
-  setIndoorFeatureTemplates(current);
-}
-
 // Outdoor feature templates
 export interface OutdoorFeatureTemplate {
   id: string;
@@ -274,23 +252,6 @@ export function getOutdoorFeatureTemplates(): OutdoorFeatureTemplate[] {
     }
   }
   return defaultOutdoorFeatureTemplates;
-}
-
-export function setOutdoorFeatureTemplates(templates: OutdoorFeatureTemplate[]): void {
-  // Only save custom templates (filter out defaults)
-  const customTemplates = templates.filter(t => t.isCustom);
-  localStorage.setItem(STORAGE_KEYS.OUTDOOR_FEATURE_TEMPLATES, JSON.stringify(customTemplates));
-  emitDataChanged('outdoorTemplates');
-}
-
-export function addOutdoorFeatureTemplate(template: OutdoorFeatureTemplate): void {
-  const current = getOutdoorFeatureTemplates().filter(t => t.isCustom);
-  setOutdoorFeatureTemplates([...current, { ...template, isCustom: true }]);
-}
-
-export function deleteOutdoorFeatureTemplate(id: string): void {
-  const current = getOutdoorFeatureTemplates().filter(t => t.isCustom && t.id !== id);
-  setOutdoorFeatureTemplates(current);
 }
 
 // Linen Color type

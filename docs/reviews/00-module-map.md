@@ -80,6 +80,12 @@ applied permission gates to Guests/Print modals, removed dead `DatabaseService.t
 and swept ~20 unused vars/imports (found via `tsc --noUnusedLocals`).
 See docs/reviews/50-dead-edit-features.md.
 
+## Autonomous gap pass — round 3 (enable grid & snap + more dead code)
+✅ Enabled the fully-implemented-but-hidden Grid & Snap feature (was hardcoded off with
+no-op Sidebar handlers; now state-backed with a Sidebar "Grid & Snap" card), removed 7
+dead data setters (venueData) and 8 dead permission helpers (permissions.ts).
+See docs/reviews/51-grid-snap-enable.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

@@ -419,57 +419,8 @@ export const PERMISSIONS: PermissionDefinition[] = [
 ];
 
 // Helper functions
-export function getPermissionById(id: string): PermissionDefinition | undefined {
-  return PERMISSIONS.find(p => p.id === id);
-}
-
-export function getPermissionsByCategory(category: string): PermissionDefinition[] {
-  return PERMISSIONS.filter(p => p.category === category);
-}
-
-export function getFeaturePermissions(): PermissionDefinition[] {
-  return PERMISSIONS.filter(p => p.level === 'feature');
-}
-
-export function getSubFeaturePermissions(parentId: string): PermissionDefinition[] {
-  return PERMISSIONS.filter(p => p.parentId === parentId);
-}
-
 export function getChildPermissions(permissionId: string): PermissionDefinition[] {
   return PERMISSIONS.filter(p => p.parentId === permissionId);
-}
-
-export function getLockedPermissions(): string[] {
-  return PERMISSIONS.filter(p => p.isLocked).map(p => p.id);
-}
-
-export function getDefaultPermissions(): string[] {
-  return PERMISSIONS.filter(p => p.isDefault).map(p => p.id);
-}
-
-// Get all permission IDs for a feature (including sub-features)
-export function getAllPermissionIdsForFeature(featureId: string): string[] {
-  const ids: string[] = [featureId];
-  const children = getChildPermissions(featureId);
-  
-  for (const child of children) {
-    ids.push(...getAllPermissionIdsForFeature(child.id));
-  }
-  
-  return ids;
-}
-
-// Check if a permission has all its children selected
-export function hasAllChildrenSelected(
-  permissionId: string, 
-  selectedPermissions: string[]
-): boolean {
-  const children = getChildPermissions(permissionId);
-  if (children.length === 0) return selectedPermissions.includes(permissionId);
-  
-  return children.every(child => 
-    selectedPermissions.includes(child.id) || hasAllChildrenSelected(child.id, selectedPermissions)
-  );
 }
 
 // Get inherited permissions for a role

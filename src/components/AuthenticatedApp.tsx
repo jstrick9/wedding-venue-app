@@ -91,10 +91,10 @@ export default function AuthenticatedApp() {
 
   // Local UI state
   const [zoom, setZoom] = useState(1);
-  const showGrid = false;
-  const gridSize = 1;
-  const gridContrast = 0.45;
-  const snapToGrid = false;
+  const [showGrid, setShowGrid] = useState(false);
+  const [gridSize, setGridSize] = useState(5);
+  const [gridContrast, setGridContrast] = useState(0.45);
+  const [snapToGrid, setSnapToGrid] = useState(false);
   const [showProperties, setShowProperties] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -547,7 +547,7 @@ export default function AuthenticatedApp() {
         <AppStatusBar items={statusItems} />
         <div className="flex-1 flex overflow-hidden">
           <Sidebar
-            width={sidebarWidth} collapsed={sidebarCollapsed} onWidthChange={setSidebarWidth} onCollapsedChange={setSidebarCollapsed} zoom={zoom} onZoomChange={setZoom} showGrid={showGrid} onShowGridChange={() => {}} gridSize={gridSize} onGridSizeChange={() => {}} gridContrast={gridContrast} onGridContrastChange={() => {}} snapToGrid={snapToGrid} onSnapToGridChange={() => {}}
+            width={sidebarWidth} collapsed={sidebarCollapsed} onWidthChange={setSidebarWidth} onCollapsedChange={setSidebarCollapsed} zoom={zoom} onZoomChange={setZoom} showGrid={showGrid} onShowGridChange={setShowGrid} gridSize={gridSize} onGridSizeChange={setGridSize} gridContrast={gridContrast} onGridContrastChange={setGridContrast} snapToGrid={snapToGrid} onSnapToGridChange={setSnapToGrid}
             onDragStart={handleDragStart} onDragEnd={handleDragEnd} currentDragItem={dragItem} onClearLayout={layoutState.clearLayout} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })}
             layoutCategories={layoutCategories} currentVenueCategory={layoutState.currentVenue.category} venueWidth={layoutState.currentVenue.width} venueHeight={layoutState.currentVenue.height} canvasWidth={layoutState.currentVenue.canvasWidth} canvasHeight={layoutState.currentVenue.canvasHeight}
             onResetView={handleResetView} onResetToVenue={handleResetToVenue} onResetToCanvas={handleResetToCanvas} placedTables={layoutState.layout.tables} placedFixtures={layoutState.layout.fixtures} currentUser={user}

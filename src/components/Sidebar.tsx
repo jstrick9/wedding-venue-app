@@ -101,6 +101,14 @@ export function Sidebar({
   onResetToCanvas,
   placedTables,
   placedFixtures,
+  showGrid,
+  onShowGridChange,
+  gridSize,
+  onGridSizeChange,
+  gridContrast,
+  onGridContrastChange,
+  snapToGrid,
+  onSnapToGridChange,
 }: SidebarProps) {
   const [tableSpecs, setTableSpecsLocal] = useState<TableSpec[]>(() => getTableSpecs());
   const [fixtureTypes, setFixtureTypesState] = useState<FixtureType[]>(() => getFixtureTypes());
@@ -723,6 +731,59 @@ export function Sidebar({
               <div className="text-base font-bold text-gray-900">{Math.round(zoom * 100)}%</div>
               <div className="text-[11px] text-gray-500">Zoom</div>
             </div>
+          </div>
+        </div>
+
+        {/* Grid & Snap controls */}
+        <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              Grid &amp; Snap
+            </p>
+          </div>
+          <div className="mt-2 space-y-2">
+            <label className="flex items-center justify-between gap-3 text-sm text-gray-700 cursor-pointer">
+              <span>Show grid</span>
+              <input
+                type="checkbox"
+                checked={showGrid}
+                onChange={(e) => onShowGridChange(e.target.checked)}
+                className="w-4 h-4 accent-[#4A1942]"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-sm text-gray-700 cursor-pointer">
+              <span>Snap to grid</span>
+              <input
+                type="checkbox"
+                checked={snapToGrid}
+                onChange={(e) => onSnapToGridChange?.(e.target.checked)}
+                className="w-4 h-4 accent-[#4A1942]"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-sm text-gray-700">
+              <span>Grid size</span>
+              <select
+                value={gridSize}
+                onChange={(e) => onGridSizeChange(Number(e.target.value))}
+                className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+              >
+                {[1, 2, 5, 10, 20].map((size) => (
+                  <option key={size} value={size}>{size} ft</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center justify-between gap-3 text-sm text-gray-700">
+              <span>Grid contrast</span>
+              <input
+                type="range"
+                min={0.1}
+                max={1}
+                step={0.05}
+                value={gridContrast}
+                onChange={(e) => onGridContrastChange?.(Number(e.target.value))}
+                className="w-28 accent-[#4A1942]"
+              />
+            </label>
           </div>
         </div>
 
