@@ -1,11 +1,14 @@
 import type { FixtureType, TableSpec, User, UserPermissions } from '../types';
+import { resolveUserPermissions } from './rbacBridge';
 
 function permissionEnabled(value: boolean | undefined, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
 function getPermissions(user: User | null | undefined): UserPermissions {
-  return user?.permissions || {};
+  // Combine the user's explicit permissions with coarse flags derived from
+  // their assigned RBAC role (reconciling System A and System B).
+  return resolveUserPermissions(user);
 }
 
 export function isAdminUser(user: User | null | undefined): boolean {

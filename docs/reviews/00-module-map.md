@@ -72,3 +72,6 @@ simplify UI/UX and for **new features** to make the platform more complete.
 counters, storage-key constants, stale-UI refresh, timelines data-safety,
 portal-guest provisioning, vendor-payments UI, guest-portal date-safety).
 See docs/reviews/31-pass2-summary.md.
+
+## RBAC reconciliation (deep review)
+✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
