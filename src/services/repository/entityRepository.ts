@@ -51,6 +51,9 @@ const SYNCABLE_PREFIXES = [
   'vendors',
   'vendorPayments',
   'timelines',
+  'rbacRoles',
+  'rbacGroups',
+  'rbacAudit',
 ];
 
 export function isSyncableDomain(domain: EntityDomain): boolean {

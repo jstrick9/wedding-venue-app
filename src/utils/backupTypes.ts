@@ -58,6 +58,9 @@ export interface BackupPayload {
   vendors?: unknown;
   vendorPayments?: unknown;
   timelines?: unknown;
+  rbacRoles?: unknown;
+  rbacGroups?: unknown;
+  rbacAudit?: unknown;
 }
 
 export interface BackupBundle {

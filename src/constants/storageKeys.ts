@@ -24,6 +24,9 @@ export const STORAGE_KEYS = {
 
   EVENT_ROLES: 'spm_event_roles',
   EVENT_QUESTIONS: 'spm_event_questions',
+  RBAC_ROLES: 'spm_rbac_roles',
+  RBAC_GROUPS: 'spm_rbac_groups',
+  RBAC_AUDIT: 'spm_rbac_audit',
   EVENT_ANSWERS: 'spm_event_answers',
   EVENT_SUBMISSIONS: 'spm_event_submissions_v1',
 

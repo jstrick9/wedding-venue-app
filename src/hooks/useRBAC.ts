@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Role, PermissionGroup, AuditLogEntry, PermissionDefinition, DEFAULT_PERMISSION_GROUPS } from '../types/rbac';
 import { PERMISSIONS, getInheritedPermissions, getChildPermissions } from '../constants/permissions';
-const ROLES_KEY = 'spm_rbac_roles';
-const GROUPS_KEY = 'spm_rbac_groups';
-const AUDIT_KEY = 'spm_rbac_audit';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+const ROLES_KEY = STORAGE_KEYS.RBAC_ROLES;
+const GROUPS_KEY = STORAGE_KEYS.RBAC_GROUPS;
+const AUDIT_KEY = STORAGE_KEYS.RBAC_AUDIT;
 
 // Storage helpers
 function loadFromStorage<T>(key: string, defaultValue: T): T {
