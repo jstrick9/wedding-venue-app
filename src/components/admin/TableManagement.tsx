@@ -280,6 +280,14 @@ export function TableManagement(props: AdminCommonProps) {
     AdminPanel
   } = props;
 
+  // Live search for table types (large catalogs can be hard to scan).
+  const [tableSearch, setTableSearch] = React.useState('');
+  const filteredTables = tableSearch.trim()
+    ? tableTypes.filter((t) =>
+        (t.name || '').toLowerCase().includes(tableSearch.trim().toLowerCase()),
+      )
+    : tableTypes;
+
   return (
     <div className="space-y-4">
       <div className="space-y-4">
@@ -421,6 +429,17 @@ export function TableManagement(props: AdminCommonProps) {
                   </div>
                   <span className="text-sm text-gray-600 font-medium">{tableTypes.length} table types</span>
                 </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                  <input
+                    type="search"
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    placeholder="Search table types..."
+                    className="w-56 pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
+                    aria-label="Search table types"
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => expandedTables.size === tableTypes.length ? collapseAllTables() : expandAllTables()}
@@ -503,7 +522,7 @@ export function TableManagement(props: AdminCommonProps) {
                 </div>
               ) : (
               <div className="space-y-3">
-              {tableTypes.map((table) => (
+              {filteredTables.map((table) => (
                 <div key={table.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                   <div 
                     className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"

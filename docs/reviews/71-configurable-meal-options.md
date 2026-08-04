@@ -19,6 +19,11 @@ their catering menu.
 Adds GuestPortal.mealOptions.test.tsx (defaults rendered when unconfigured; venue
 options rendered instead of defaults).
 
+## 2. Table type search (TableManagement)
+Completing catalog-search coverage across the admin: Table Types now has a live
+"Search table types…" box that filters the list by name, matching the search added to
+Venues, Fixtures, and Users in earlier rounds.
+
 ## Validation
-- `npm run typecheck` clean; build green (~1.34 MB / ~305 KB gzip).
-- `npx vitest run`: 328 passed / 11 skipped (was 326; +2).
+- `npm run typecheck` clean; build green (~1.34 MB / ~306 KB gzip).
+- `npx vitest run`: 328 passed / 11 skipped.
