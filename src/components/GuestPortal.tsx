@@ -12,6 +12,14 @@ function safeTime(value?: string): string {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+// Safely format a date, falling back to the raw string for invalid input.
+function safeDate(value?: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
 import {
   Venue,
   LodgingFloor,
@@ -462,13 +470,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                 </h1>
                 {eventStartDate && (
                   <p className="text-sm opacity-90">
-                    {eventStartDate.toLocaleDateString(undefined, {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                    {eventEndDate && ` – ${eventEndDate.toLocaleDateString()}`}
+                    {safeDate(config?.eventStartDate)}
+                    {eventEndDate && ` – ${safeDate(config?.eventEndDate)}`}
                   </p>
                 )}
               </div>
@@ -504,7 +507,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
           <div className="bg-white rounded-xl shadow p-4">
             <h2 className="text-sm font-semibold text-gray-800 mb-2">Event Days</h2>
             <p className="text-sm text-gray-700">
-              {eventStartDate.toLocaleDateString()} – {eventEndDate.toLocaleDateString()}
+              {safeDate(config?.eventStartDate)} – {safeDate(config?.eventEndDate)}
             </p>
           </div>
         )}
@@ -907,11 +910,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
             {rsvpDeadline && (
               <p className="text-sm text-gray-700">
                 The RSVP deadline was{' '}
-                {rsvpDeadline.toLocaleDateString(undefined, {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {safeDate((config as any)?.rsvpDeadlineDate)}
                 .
               </p>
             )}
@@ -1331,14 +1330,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
               </h2>
               {config?.eventStartDate && (
                 <p className="text-xs text-gray-500">
-                  {new Date(config.eventStartDate).toLocaleDateString(undefined, {
-                    month: 'long', day: 'numeric', year: 'numeric',
-                  })}
+                  {safeDate(config?.eventStartDate)}
                   {config?.eventEndDate &&
                     config.eventEndDate !== config.eventStartDate &&
-                    ` – ${new Date(config.eventEndDate).toLocaleDateString(undefined, {
-                      month: 'long', day: 'numeric', year: 'numeric',
-                    })}`}
+                    ` – ${safeDate(config?.eventEndDate)}`}
                 </p>
               )}
             </div>

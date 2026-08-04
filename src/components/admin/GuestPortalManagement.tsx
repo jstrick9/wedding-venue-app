@@ -22,6 +22,25 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// Safely format a schedule item date/time, guarding against invalid input.
+function safeFormatDateTime(value?: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+function safeFormatTime(value?: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
 const EMPTY_CONFIG: GuestPortalConfig = {
   eventTitle: '',
   eventStartDate: '',
@@ -611,17 +630,9 @@ export function GuestPortalManagement({
                     {item.title}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {new Date(item.startTime).toLocaleString([], {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
+                    {safeFormatDateTime(item.startTime)}
                     {item.endTime &&
-                      ` – ${new Date(item.endTime).toLocaleTimeString([], {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}`}
+                      ` – ${safeFormatTime(item.endTime)}`}
                     {item.location && ` · ${item.location}`}
                   </p>
                 </div>
