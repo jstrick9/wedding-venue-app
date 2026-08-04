@@ -72,6 +72,7 @@ export default function AuthenticatedApp() {
   const canEditCurrentLayout = canEditLayout(user);
   
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const floorPlanSvgRef = useRef<SVGSVGElement>(null);
   const [brandingConfig, setBrandingConfig] = useState(() => getConfig());
   const [projectHealth, setProjectHealth] = useState<ProjectHealthReport | null>(null);
   const [safeMode, setSafeMode] = useState(false);
@@ -539,7 +540,7 @@ export default function AuthenticatedApp() {
           <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden">
             <FloorPlanCanvas
               venue={layoutState.currentVenue} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} decor={layoutState.layout.decor} guests={layoutState.guests} selectedId={layoutState.selectedId} zoom={zoom} showGrid={showGrid} gridSize={gridSize} gridContrast={gridContrast}
-              onSelect={handleSelectItem} onDoubleClick={handleDoubleClickItem} onMove={handleMoveItem} onDrop={handleDrop} onClickToPlace={handleDrop} onDragStart={pushUndoSnapshot} isDragging={!!dragItem} isDraggingExterior={dragItem?.isExterior || false} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })} panOffset={panOffset} onPanChange={setPanOffset} onZoomChange={setZoom}
+              onSelect={handleSelectItem} onDoubleClick={handleDoubleClickItem} onMove={handleMoveItem} onDrop={handleDrop} onClickToPlace={handleDrop} onDragStart={pushUndoSnapshot} isDragging={!!dragItem} isDraggingExterior={dragItem?.isExterior || false} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })} panOffset={panOffset} onPanChange={setPanOffset} onZoomChange={setZoom} svgRef={floorPlanSvgRef}
             />
             <div className="absolute bottom-4 left-4 flex items-center gap-2">
               <div className="bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-lg text-sm">
@@ -604,6 +605,7 @@ export default function AuthenticatedApp() {
               fixtures={layoutState.layout.fixtures}
               guests={layoutState.guests}
               layoutName={currentEventName}
+              exportSvgRef={floorPlanSvgRef}
               onClose={() => close('print')}
             />
           )}

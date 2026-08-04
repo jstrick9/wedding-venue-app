@@ -39,6 +39,8 @@ export interface FloorPlanCanvasProps {
    *  to nudge one, so the caller can push a single undo snapshot per gesture. */
   onDragStart?: () => void;
   containerRef?: React.RefObject<HTMLDivElement>;
+  /** Forwards the internal <svg> element (used for PNG/PDF layout export). */
+  svgRef?: React.RefObject<SVGSVGElement | null>;
   onMoveVenueFeature?: (featureType: 'indoor' | 'outdoor', featureId: string, position: Position) => void;
 }
 
@@ -68,10 +70,20 @@ export function FloorPlanCanvas({
   onZoomChange,
   onDragStart,
   containerRef: externalContainerRef,
+  svgRef: externalSvgRef,
 }: FloorPlanCanvasProps) {
   const internalContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = externalContainerRef || internalContainerRef;
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Keep both the internal ref and any forwarded ref pointing at the <svg>.
+  const setSvgRef = useCallback(
+    (node: SVGSVGElement | null) => {
+      svgRef.current = node;
+      if (externalSvgRef) externalSvgRef.current = node;
+    },
+    [externalSvgRef],
+  );
   // Tracks whether the current item drag has actually moved (so an undo
   // snapshot is pushed once per real drag, not on click-to-select).
   const dragMovedRef = useRef(false);
@@ -1048,7 +1060,7 @@ export function FloorPlanCanvas({
         }
       `}</style>
       <svg
-        ref={svgRef}
+        ref={setSvgRef}
         width={canvasWidth * zoom}
         height={canvasHeight * zoom}
         viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}

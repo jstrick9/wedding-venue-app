@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Venue, PlacedTable, PlacedFixture, Guest } from '../types';
 import { getTableSpecs, getFixtureTypes } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
 import SafeImage from './SafeImage';
+import { downloadLayoutPng, downloadLayoutPdf } from '../utils/layoutExport';
+import { showToast } from './Toast';
 
 export interface PrintViewProps {
   venue: Venue;
@@ -10,6 +13,8 @@ export interface PrintViewProps {
   guests: Guest[];
   layoutName: string;
   onClose: () => void;
+  /** The live floor-plan <svg> (used for high-fidelity PNG/PDF export). */
+  exportSvgRef?: React.RefObject<SVGSVGElement | null>;
 }
 
 export function PrintView({
@@ -19,13 +24,37 @@ export function PrintView({
   guests,
   layoutName,
   onClose,
+  exportSvgRef,
 }: PrintViewProps) {
   const tableSpecs = getTableSpecs();
   const fixtureTypes = getFixtureTypes();
   const config = getConfig();
+  const [exporting, setExporting] = useState<'png' | 'pdf' | null>(null);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const runExport = async (kind: 'png' | 'pdf') => {
+    const svg = exportSvgRef?.current;
+    if (!svg) {
+      showToast('Floor plan is not ready to export yet.', 'warning');
+      return;
+    }
+    setExporting(kind);
+    try {
+      const base = (layoutName || 'layout').trim().replace(/[^a-z0-9-_]+/gi, '-') || 'layout';
+      if (kind === 'png') {
+        await downloadLayoutPng(svg, base);
+      } else {
+        await downloadLayoutPdf(svg, base);
+      }
+      showToast(`Exported ${kind.toUpperCase()} successfully.`, 'success');
+    } catch (err) {
+      showToast(`Export failed: ${err instanceof Error ? err.message : 'unknown error'}`, 'warning');
+    } finally {
+      setExporting(null);
+    }
   };
 
   // Single source of truth for a table's capacity, consistent with the guest
@@ -54,7 +83,23 @@ export function PrintView({
     <div className="fixed inset-0 z-[10000] bg-white overflow-auto">
       <div className="print:hidden sticky top-0 z-10 bg-white border-b px-6 py-4 flex items-center justify-between">
         <div className="text-lg font-semibold text-gray-900">Print Preview</div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => void runExport('png')}
+            disabled={exporting !== null}
+            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {exporting === 'png' ? 'Exporting…' : '🖼️ PNG'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void runExport('pdf')}
+            disabled={exporting !== null}
+            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {exporting === 'pdf' ? 'Exporting…' : '📄 PDF'}
+          </button>
           <button
             type="button"
             onClick={handlePrint}
