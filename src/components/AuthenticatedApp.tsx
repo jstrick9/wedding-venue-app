@@ -499,11 +499,17 @@ export default function AuthenticatedApp() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
-      if (e.key === 'Delete' || e.key === 'Backspace') { if (layoutState.selectedId) { e.preventDefault(); layoutState.removeItem(layoutState.selectedId); } }
+      const mod = e.ctrlKey || e.metaKey;
+      if ((e.key === 'Delete' || e.key === 'Backspace')) { if (layoutState.selectedId) { e.preventDefault(); layoutState.removeItem(layoutState.selectedId); } }
+      else if (mod && (e.key === 'd' || e.key === 'D')) {
+        if (layoutState.selectedId) { e.preventDefault(); pushUndoSnapshot(); layoutState.duplicateItem(layoutState.selectedId); }
+      }
+      else if (e.key === 'p' || e.key === 'P') { if (!mod) { setShowProperties(v => !v); } }
+      else if (e.key === '?') { e.preventDefault(); setShowWorkspaceHelp(true); }
       else if (e.key === 'Escape') { layoutState.setSelectedId(null); setShowProperties(false); setDragItem(null); }
     };
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [layoutState]);
+  }, [layoutState, pushUndoSnapshot]);
 
   useEffect(() => { rootStyles(brandingConfig); }, [brandingConfig]);
 

@@ -120,6 +120,11 @@ overwrite + import merge). See docs/reviews/56-confirm-dialog.md.
 shared flag so ConfirmDialogs own Escape and don't double-close the panel underneath.
 See docs/reviews/58-escape-to-close.md.
 
+## Autonomous gap pass — round 11 (working keyboard shortcuts)
+✅ Implemented the shortcuts the Tips/help advertised but didn't implement
+(Ctrl/Cmd+D duplicate, P properties, ? help) + kept the guide in sync.
+See docs/reviews/59-keyboard-shortcuts.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
