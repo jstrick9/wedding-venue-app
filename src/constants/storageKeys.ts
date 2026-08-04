@@ -9,6 +9,8 @@ export const STORAGE_KEYS = {
   LINEN_COLORS: 'spm_linenColors',
   SAVED_LAYOUTS: 'spm_savedLayouts',
 
+  UI_PREFS: 'spm_ui_prefs',
+
   CHAIR_SPECS_PRIMARY: 'spm_chair_specs',
   CHAIR_SPECS_LEGACY: 'spm_chairSpecs',
   WALL_STYLES: 'spm_wall_styles',

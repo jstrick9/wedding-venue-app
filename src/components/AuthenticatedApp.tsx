@@ -100,6 +100,42 @@ export default function AuthenticatedApp() {
   const [showProperties, setShowProperties] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Persist lightweight UI preferences (sidebar width/collapsed, grid & snap)
+  // so a returning user's workspace layout is remembered across sessions.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.UI_PREFS);
+      if (!raw) return;
+      const prefs = JSON.parse(raw) as {
+        sidebarWidth?: number;
+        sidebarCollapsed?: boolean;
+        showGrid?: boolean;
+        gridSize?: number;
+        gridContrast?: number;
+        snapToGrid?: boolean;
+      };
+      if (typeof prefs.sidebarWidth === 'number') setSidebarWidth(prefs.sidebarWidth);
+      if (typeof prefs.sidebarCollapsed === 'boolean') setSidebarCollapsed(prefs.sidebarCollapsed);
+      if (typeof prefs.showGrid === 'boolean') setShowGrid(prefs.showGrid);
+      if (typeof prefs.gridSize === 'number') setGridSize(prefs.gridSize);
+      if (typeof prefs.gridContrast === 'number') setGridContrast(prefs.gridContrast);
+      if (typeof prefs.snapToGrid === 'boolean') setSnapToGrid(prefs.snapToGrid);
+    } catch {
+      // ignore corrupt prefs
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.UI_PREFS,
+        JSON.stringify({ sidebarWidth, sidebarCollapsed, showGrid, gridSize, gridContrast, snapToGrid }),
+      );
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [sidebarWidth, sidebarCollapsed, showGrid, gridSize, gridContrast, snapToGrid]);
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
   const [savedLayouts, setSavedLayoutsState] = useState(() => getSavedLayouts());
   const [imagePreview, setImagePreview] = useState<{ url: string; title: string } | null>(null);

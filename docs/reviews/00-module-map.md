@@ -137,6 +137,10 @@ AccessControlPanel, and StaffOperationsPanel. See docs/reviews/61-icon-button-a1
 ✅ The Save Layout modal now warns inline when the typed name matches an existing saved
 layout. See docs/reviews/62-layout-duplicate-warning.md.
 
+## Autonomous gap pass — round 15 (persist UI preferences)
+✅ Sidebar width/collapsed and grid/snap settings persist across sessions via a new
+spm_ui_prefs storage key. See docs/reviews/63-ui-prefs-persist.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
