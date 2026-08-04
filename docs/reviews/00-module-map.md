@@ -153,6 +153,10 @@ remembers the last-visited section. See docs/reviews/65-admin-panel-ux.md.
 ✅ Implemented Ctrl/Cmd+1 (fit venue) and Ctrl/Cmd+0 (fit canvas) advertised in the
 Settings tab tooltips; synced the WorkspaceHelp guide. See docs/reviews/66-reset-view-shortcuts.md.
 
+## Autonomous gap pass — round 19 (guest portal preview)
+✅ Added a "Preview Portal" button to the Guest Portal admin hero so admins can see how
+the configured portal will look to guests. See docs/reviews/67-guest-portal-preview.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

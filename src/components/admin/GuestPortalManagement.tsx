@@ -287,11 +287,23 @@ export function GuestPortalManagement({
     <div className="max-w-2xl mx-auto space-y-1 pb-24">
       {/* ── Hero ── */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 text-white mb-4">
-        <h2 className="text-base font-bold">💍 Guest Portal Configuration</h2>
-        <p className="text-xs text-white/80 mt-1">
-          Configure what wedding guests see when they visit the Guest Portal — RSVP, schedule,
-          lodging, map, and wayfinding.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold">💍 Guest Portal Configuration</h2>
+            <p className="text-xs text-white/80 mt-1">
+              Configure what wedding guests see when they visit the Guest Portal — RSVP, schedule,
+              lodging, map, and wayfinding.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { window.location.hash = '#/guest-portal'; }}
+            className="shrink-0 inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 rounded-lg px-3 py-2 text-xs font-medium text-white transition-colors"
+            title="Open the guest portal in a new screen to preview it"
+          >
+            👁️ Preview Portal
+          </button>
+        </div>
       </div>
 
       {/* ── Event Details ── */}
