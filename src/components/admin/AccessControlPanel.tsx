@@ -32,6 +32,7 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
   const [showCreateRole, setShowCreateRole] = useState(false);
   const [viewMode, setViewMode] = useState<'matrix' | 'tree'>('tree');
   const [confirmDeleteRole, setConfirmDeleteRole] = useState<Role | null>(null);
+  const [permissionSearch, setPermissionSearch] = useState('');
 
   const [newRole, setNewRole] = useState({
     name: '',
@@ -201,6 +202,19 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                     </button>
                   </div>
 
+                  {/* Permission search */}
+                  <div className="relative mb-3">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                    <input
+                      type="search"
+                      value={permissionSearch}
+                      onChange={(e) => setPermissionSearch(e.target.value)}
+                      placeholder="Search permissions by name or id..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
+                      aria-label="Search permissions"
+                    />
+                  </div>
+
                   {/* Permission Tree / Matrix (kept original logic) */}
                   {viewMode === 'tree' && (
                     <div className="space-y-4">
@@ -231,7 +245,14 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                           </tr>
                         </thead>
                         <tbody>
-                          {PERMISSIONS.map(perm => (
+                          {PERMISSIONS.filter((p) => {
+                            const q = permissionSearch.trim().toLowerCase();
+                            if (!q) return true;
+                            return (
+                              (p.label || '').toLowerCase().includes(q) ||
+                              (p.id || '').toLowerCase().includes(q)
+                            );
+                          }).map(perm => (
                             <tr key={perm.id} className="border-t border-gray-100">
                               <td className="p-2">
                                 <div className="font-medium">{perm.label}</div>

@@ -24,6 +24,10 @@ Completing catalog-search coverage across the admin: Table Types now has a live
 "Search table types…" box that filters the list by name, matching the search added to
 Venues, Fixtures, and Users in earlier rounds.
 
+## 3. Permission search (Access Control)
+The role editor's matrix view lists all 51 permissions in one table with no way to find
+one. Added a "Search permissions by name or id…" box that filters the matrix table live.
+
 ## Validation
 - `npm run typecheck` clean; build green (~1.34 MB / ~306 KB gzip).
 - `npx vitest run`: 328 passed / 11 skipped.
