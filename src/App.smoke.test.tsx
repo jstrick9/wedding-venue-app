@@ -16,9 +16,6 @@ import { render, screen, waitFor } from '@testing-library/react';
  * contract is still covered, but at the right granularity:
  *
  *   - `src/utils/appEvents.test.ts`           — typed bus delivery contract
- *   - `src/hooks/useAppModals.test.ts`        — modal opener subscribes & flips
- *     state when `spm_open_decor_designer` fires (regression test for the
- *     original Decor Designer bug)
  *   - `src/components/DecorDesigner.test.tsx` — the modal itself works once
  *     mounted (multi-select, duplicate, rulers, keyboard shortcuts)
  *
