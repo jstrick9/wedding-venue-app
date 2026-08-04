@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTimeline } from '../hooks/useTimeline';
-import { TimelineEvent, TimelineDay, TIMELINE_CATEGORIES, TimelineCategory } from '../types/timeline';
+import { TimelineEvent, TIMELINE_CATEGORIES, TimelineCategory } from '../types/timeline';
 
 interface TimelinePanelProps {
   onClose: () => void;
@@ -34,6 +34,41 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
     location: '',
     notes: '',
   });
+
+  const [editingEvent, setEditingEvent] = useState<{ dayId: string; event: TimelineEvent } | null>(null);
+  const [editEventForm, setEditEventForm] = useState({
+    title: '',
+    startTime: '09:00',
+    endTime: '10:00',
+    category: 'other' as TimelineCategory,
+    location: '',
+    notes: '',
+  });
+
+  const handleStartEditEvent = (dayId: string, event: TimelineEvent) => {
+    setEditEventForm({
+      title: event.title,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      category: event.category,
+      location: event.location || '',
+      notes: event.notes || '',
+    });
+    setEditingEvent({ dayId, event });
+  };
+
+  const handleSaveEditEvent = () => {
+    if (!activeTimelineId || !editingEvent || !editEventForm.title.trim()) return;
+    updateEvent(activeTimelineId, editingEvent.dayId, editingEvent.event.id, {
+      title: editEventForm.title.trim(),
+      startTime: editEventForm.startTime,
+      endTime: editEventForm.endTime,
+      category: editEventForm.category,
+      location: editEventForm.location || undefined,
+      notes: editEventForm.notes || undefined,
+    });
+    setEditingEvent(null);
+  };
 
   const handleCreateTimeline = () => {
     if (!newTimelineName.trim() || !newTimelineDate) return;
@@ -317,6 +352,13 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
                             </div>
                             <div className="flex items-center gap-1">
                               <button
+                                onClick={() => handleStartEditEvent(day.id, event)}
+                                className="p-1.5 text-gray-400 hover:text-[#4A1942] hover:bg-gray-100 rounded transition-colors"
+                                title="Edit event"
+                              >
+                                ✏️
+                              </button>
+                              <button
                                 onClick={() => activeTimelineId && removeEvent(activeTimelineId, day.id, event.id)}
                                 className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                                 title="Delete event"
@@ -389,6 +431,72 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
                 >
                   Create
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Event modal */}
+        {editingEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditingEvent(null)}>
+            <div
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">✏️ Edit Event</h3>
+                <button onClick={() => setEditingEvent(null)} className="text-gray-400 hover:text-gray-700 text-xl leading-none" aria-label="Close">✕</button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Event Title *</label>
+                  <input
+                    type="text"
+                    value={editEventForm.title}
+                    onChange={e => setEditEventForm(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start</label>
+                    <input type="time" value={editEventForm.startTime} onChange={e => setEditEventForm(prev => ({ ...prev, startTime: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">End</label>
+                    <input type="time" value={editEventForm.endTime} onChange={e => setEditEventForm(prev => ({ ...prev, endTime: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select value={editEventForm.category} onChange={e => setEditEventForm(prev => ({ ...prev, category: e.target.value as TimelineCategory }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    {TIMELINE_CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input type="text" value={editEventForm.location} onChange={e => setEditEventForm(prev => ({ ...prev, location: e.target.value }))} placeholder="Optional" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea value={editEventForm.notes} onChange={e => setEditEventForm(prev => ({ ...prev, notes: e.target.value }))} placeholder="Optional notes..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={handleSaveEditEvent} disabled={!editEventForm.title.trim()} className="flex-1 py-2.5 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] disabled:opacity-50 transition-colors">
+                    Save Changes
+                  </button>
+                  <button onClick={() => setEditingEvent(null)} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
