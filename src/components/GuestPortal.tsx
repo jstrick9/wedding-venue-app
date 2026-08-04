@@ -957,7 +957,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
                 {rsvpSuccess.attending && rsvpSuccess.mealChoice && (
                   <p>
                     <span className="font-semibold">Meal:</span>{' '}
-                    {rsvpSuccess.mealChoice}
+                    {mealOptions.find((o) => o.value === rsvpSuccess.mealChoice)?.label ||
+                      rsvpSuccess.mealChoice}
                   </p>
                 )}
 

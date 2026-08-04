@@ -178,6 +178,10 @@ See docs/reviews/71-configurable-meal-options.md.
 ✅ Save/clear master layout now show success toasts (previously no feedback).
 See docs/reviews/72-master-layout-toasts.md.
 
+## Autonomous gap pass — round 25 (RSVP meal label)
+✅ The RSVP confirmation now shows the configured meal label (not the stored value).
+See docs/reviews/73-rsvp-meal-label.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
