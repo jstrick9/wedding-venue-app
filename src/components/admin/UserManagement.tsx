@@ -281,6 +281,26 @@ export function UserManagement(props: AdminCommonProps) {
     AdminPanel
   } = props;
 
+  // Live search + role/status filters for the user list (the controls previously
+  // rendered but did nothing).
+  const [userSearch, setUserSearch] = React.useState('');
+  const [roleFilter, setRoleFilter] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('');
+
+  const filteredUsers = users.filter((u) => {
+    const q = userSearch.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      u.name?.toLowerCase().includes(q) ||
+      u.username?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q);
+    const matchesRole = !roleFilter || u.role === roleFilter;
+    const matchesStatus =
+      !statusFilter ||
+      (statusFilter === 'active' ? u.isActive !== false : u.isActive === false);
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
   return (
     <div className="space-y-4">
       <div className="space-y-4">
@@ -575,25 +595,48 @@ export function UserManagement(props: AdminCommonProps) {
                     <input
                       type="text"
                       placeholder="Search users by name, username, or email..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
-                      onChange={() => {
-                        // Filter logic - search state could be added
-                      }}
+                      aria-label="Search users"
                     />
                   </div>
                   <div className="flex gap-2">
-                    <select className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-white">
+                    <select
+                      value={roleFilter}
+                      onChange={(e) => setRoleFilter(e.target.value)}
+                      className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-white"
+                      aria-label="Filter by role"
+                    >
                       <option value="">All Roles</option>
                       <option value="admin">👑 Admins</option>
                       <option value="basic">👤 Basic Users</option>
                     </select>
-                    <select className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-white">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-white"
+                      aria-label="Filter by status"
+                    >
                       <option value="">All Status</option>
                       <option value="active">✅ Active</option>
                       <option value="inactive">⏸️ Inactive</option>
                     </select>
                   </div>
                 </div>
+                {(userSearch.trim() || roleFilter || statusFilter) && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Showing <strong>{filteredUsers.length}</strong> of {users.length} users
+                    {' '}
+                    <button
+                      type="button"
+                      onClick={() => { setUserSearch(''); setRoleFilter(''); setStatusFilter(''); }}
+                      className="text-[#4A1942] underline ml-1"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
               </div>
               
               {/* User List */}
@@ -609,9 +652,15 @@ export function UserManagement(props: AdminCommonProps) {
                     ➕ Create First User
                   </button>
                 </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+                  <div className="text-4xl mb-3">🔍</div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-1">No users match your filters</h3>
+                  <p className="text-gray-500 text-sm">Try adjusting the search or clearing the role/status filters.</p>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {users.map(u => {
+                  {filteredUsers.map(u => {
                     const isExpanded = expandedUsers.has(u.id);
                     const lastLoginDate = u.lastLogin ? new Date(u.lastLogin) : null;
                     const isOnline = lastLoginDate && (Date.now() - lastLoginDate.getTime()) < 86400000; // Within 24h

@@ -13,6 +13,13 @@ The Admin Panel always reopened on the "Venues" tab. Added persistence of the ac
 tab via a new `STORAGE_KEYS.ADMIN_LAST_TAB` so reopening the panel returns the admin to
 the section they were last working in.
 
+## 3. Fix non-functional user search / role / status filters (UserManagement)
+The User Management section rendered a search input and two filter dropdowns, but they
+were **dead** — the search `onChange` was empty and the selects had no value/onChange
+binding, so nothing filtered. Implemented live filtering (by name/username/email, by
+role, by active status) with a "Showing X of Y users" indicator, a "Clear filters" link,
+and a "No users match" empty state distinct from the true "No Users Yet" onboarding.
+
 ## Validation
-- `npm run typecheck` clean; build green (~1.33 MB / ~303 KB gzip).
+- `npm run typecheck` clean; build green (~1.34 MB / ~304 KB gzip).
 - `npx vitest run`: 325 passed / 11 skipped (storage-keys uniqueness test still green).
