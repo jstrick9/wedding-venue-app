@@ -1,6 +1,5 @@
 // src/components/AdminPanel.tsx - thin coordinator for extracted admin tab components.
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import {
   Venue,
   TableSpec,
@@ -13,7 +12,6 @@ import {
   PlacedTable,
   PlacedFixture,
   PatternColors,
-  ChairType,
   RectangularChairLayout,
   ChairSpec,
   User,

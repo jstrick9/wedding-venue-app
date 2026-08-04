@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { defaultVenues, defaultLayoutTemplates, defaultUsers } from './venueData';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { resetToDefaults } from '../hooks/useLayoutState';

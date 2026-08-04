@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import SafeImage from './SafeImage';
 import { showToast } from './Toast';
 import { uploadImage } from '../services/storage/imageStorage';
-import { getPlatformProvider } from '../services/platform';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ImageItem {

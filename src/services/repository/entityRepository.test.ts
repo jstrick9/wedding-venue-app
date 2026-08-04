@@ -5,7 +5,6 @@ vi.mock('../platform', () => ({
 }));
 
 const upsert = vi.fn();
-const select = vi.fn();
 const supabaseClient = {
   from: (table: string) => {
     if (table === 'org_data') {

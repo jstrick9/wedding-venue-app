@@ -73,6 +73,13 @@ counters, storage-key constants, stale-UI refresh, timelines data-safety,
 portal-guest provisioning, vendor-payments UI, guest-portal date-safety).
 See docs/reviews/31-pass2-summary.md.
 
+## Autonomous gap pass — round 2 (dead edit features + dead-code sweep)
+✅ Fixed 3 "wired but never rendered" bugs (image-preview lightbox, vendor Edit,
+password-reset expiry countdown), added timeline event editing (missing feature),
+applied permission gates to Guests/Print modals, removed dead `DatabaseService.ts`,
+and swept ~20 unused vars/imports (found via `tsc --noUnusedLocals`).
+See docs/reviews/50-dead-edit-features.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

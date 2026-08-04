@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { on } from '../utils/appEvents';
 
 interface LayoutSnapshot {

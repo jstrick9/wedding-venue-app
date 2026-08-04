@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } fro
 import { useLayoutState, getSavedLayouts, setSavedLayouts, getTemplates, getTableSpecs, getFixtureTypes } from '../hooks/useLayoutState';
 import { useLayoutBackendSync } from '../hooks/useLayoutBackendSync';
 import { useEntityBackendSync } from '../hooks/useEntityBackendSync';
-import { LayoutTemplate, EventAnswer, EventQuestion, PlacedTable, PlacedFixture } from '../types';
-import { layoutCategories, getSpacingSettings } from '../data/venueData';
+import { EventAnswer, EventQuestion } from '../types';
+import { layoutCategories } from '../data/venueData';
 import { useAuth } from '../contexts/AuthContext';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -12,8 +12,6 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { WelcomeModal } from './WelcomeModal';
 import { showToast } from './Toast';
 import AppStatusBar, { StatusBarItem } from './AppStatusBar';
-import SafeImage from './SafeImage';
-import ModalDialog from './ModalDialog';
 import { CenteredModal } from './CenteredModal';
 import { buildMessageThreadId } from '../models/DirectMessage';
 import { useSubmissionWorkflow } from '../hooks/useSubmissionWorkflow';
@@ -36,7 +34,6 @@ import {
   canPrintLayouts,
 } from '../utils/permissions';
 import { UndoRedoProvider } from '../contexts/UndoRedoContext';
-import { UndoRedoToolbar } from './UndoRedoToolbar';
 import { emit, emitDataChanged, on, type UndoSnapshot } from '../utils/appEvents';
 import { useModals } from '../contexts/ModalContext';
 
@@ -108,10 +105,7 @@ export default function AuthenticatedApp() {
   const [selectedVenueCategories, setSelectedVenueCategories] = useState<string[]>([]);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
-  const [floatingViewControlsPos, setFloatingViewControlsPos] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
-  const [draggingViewControls, setDraggingViewControls] = useState(false);
   const [showWorkspaceHelp, setShowWorkspaceHelp] = useState(false);
-  const [viewControlsDragOffset, setViewControlsDragOffset] = useState({ x: 0, y: 0 });
   const [showWelcome, setShowWelcome] = useState(() => {
     const config = getConfig();
     return config.showWelcomeByDefault !== false;
@@ -360,7 +354,7 @@ export default function AuthenticatedApp() {
   }, [refreshSavedLayouts, user.name]);
 
   useEffect(() => {
-    const onStorage = (event: StorageEvent) => { if (event.key === 'spm_savedLayouts') refreshSavedLayouts(); };
+    const onStorage = (event: StorageEvent) => { if (event.key === STORAGE_KEYS.SAVED_LAYOUTS) refreshSavedLayouts(); };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, [refreshSavedLayouts]);
@@ -605,7 +599,7 @@ export default function AuthenticatedApp() {
           />
         </div>
         <Suspense fallback={null}>
-          {showGuests && <GuestPanel guests={layoutState.guests} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} venue={layoutState.currentVenue} eventName={currentEventName} venueName={layoutState.currentVenue.name} onAddGuest={layoutState.addGuest} onUpdateGuest={layoutState.updateGuest} onRemoveGuest={layoutState.removeGuest} onAssignToTable={layoutState.assignGuestToTable} onAssignToRoom={layoutState.assignGuestToRoom} onImportCSV={layoutState.importGuestsFromCSV} onExportCSV={layoutState.exportGuestsToCSV} onClose={() => close('guests')} />}
+          {showGuests && canOpenGuestPanel && <GuestPanel guests={layoutState.guests} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} venue={layoutState.currentVenue} eventName={currentEventName} venueName={layoutState.currentVenue.name} onAddGuest={layoutState.addGuest} onUpdateGuest={layoutState.updateGuest} onRemoveGuest={layoutState.removeGuest} onAssignToTable={layoutState.assignGuestToTable} onAssignToRoom={layoutState.assignGuestToRoom} onImportCSV={layoutState.importGuestsFromCSV} onExportCSV={layoutState.exportGuestsToCSV} onClose={() => close('guests')} />}
           {showOperations && (
             <StaffOperationsPanel
               onClose={() => close('operations')}
@@ -619,7 +613,7 @@ export default function AuthenticatedApp() {
           )}
           {showVendors && <VendorPanel onClose={() => close('vendors')} />}
           {showTimeline && <TimelinePanel onClose={() => close('timeline')} />}
-          {showPrint && (
+          {showPrint && canPrintCurrentLayout && (
             <PrintView
               venue={layoutState.currentVenue}
               tables={layoutState.layout.tables}
@@ -715,6 +709,18 @@ export default function AuthenticatedApp() {
             />
           )}
           {showWorkspaceHelp && <WorkspaceHelp onClose={() => setShowWorkspaceHelp(false)} />}
+          {imagePreview && (
+            <CenteredModal title={imagePreview.title || 'Image Preview'} onClose={() => setImagePreview(null)}>
+              <div className="max-h-[70vh] overflow-auto">
+                <img
+                  src={imagePreview.url}
+                  alt={imagePreview.title || 'Preview'}
+                  className="mx-auto max-h-[65vh] rounded-lg object-contain shadow-lg"
+                  onClick={() => setImagePreview(null)}
+                />
+              </div>
+            </CenteredModal>
+          )}
           {showWelcome && (
             <WelcomeModal
               onClose={() => setShowWelcome(false)}

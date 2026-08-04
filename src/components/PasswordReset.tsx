@@ -334,12 +334,6 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
     setStep('success');
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div
@@ -536,6 +530,17 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                   maxLength={6}
                   autoFocus
                 />
+                {codeGenerated && timeRemaining > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    ⏳ Code expires in {Math.floor(timeRemaining / 60)}:
+                    {(timeRemaining % 60).toString().padStart(2, '0')}
+                  </p>
+                )}
+                {codeGenerated && timeRemaining <= 0 && (
+                  <p className="mt-1 text-xs text-red-500">
+                    ⚠️ This code has expired. Resend a new one to continue.
+                  </p>
+                )}
               </div>
 
               {userSecurityQuestion && (

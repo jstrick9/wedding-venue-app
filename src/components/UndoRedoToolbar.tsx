@@ -1,4 +1,3 @@
-import React from 'react';
 import { useUndoRedo } from '../contexts/UndoRedoContext';
 
 interface UndoRedoToolbarProps {

@@ -52,21 +52,6 @@ export function getRolePermissionIds(roleId: string): string[] {
   return Array.from(collected).filter((x) => !x.startsWith('role:'));
 }
 
-/** Map a granular permission id to the coarse UserPermissions flag it implies. */
-const PERMISSION_TO_FLAG: Record<string, keyof UserPermissions> = {
-  'layout.canvas.edit': 'canEditLayout',
-  'layout.canvas.view': 'canViewLayout',
-  'guests.manage': 'canManageGuests',
-  'export.print': 'canPrint',
-  'export.download': 'canExport',
-  'templates.create': 'canCreateTemplates',
-  'templates.manage': 'canEditTemplates',
-  'templates.delete': 'canDeleteTemplates',
-  'admin.users.manage': 'canInviteUsers',
-  'admin.users.invite': 'canInviteUsers',
-  'layout.view.all': 'canViewAllLayouts',
-};
-
 /** Read granular permission ids for a user's assigned RBAC role(s). */
 export function getUserPermissionIds(user: User | null | undefined): string[] {
   if (!user) return [];

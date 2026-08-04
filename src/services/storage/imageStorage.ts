@@ -1,7 +1,6 @@
 import { getPlatformProvider } from '../platform';
 import {
   getSignedObjectUrl,
-  uploadObject,
   type StorageBucket,
 } from './ObjectStorageService';
 
