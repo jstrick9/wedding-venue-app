@@ -28,6 +28,8 @@ interface EventQuestionsWizardProps {
   eventId: string;
   onSaveAnswers: (answers: EventAnswer[]) => void;
   onVenueFilterChange: (categories: string[]) => void;
+  /** Called when the user completes the last group. */
+  onComplete?: () => void;
 }
 
 export function EventQuestionsWizard({
@@ -37,6 +39,7 @@ export function EventQuestionsWizard({
   eventId,
   onSaveAnswers,
   onVenueFilterChange,
+  onComplete,
 }: EventQuestionsWizardProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [showAllLayouts, setShowAllLayouts] = useState(true);
@@ -263,11 +266,15 @@ export function EventQuestionsWizard({
             onClick={() => {
               if (!validateCurrentStep()) return;
               saveAnswers();
-              setActiveStep((s) => Math.min(GROUPS.length - 1, s + 1));
+              if (activeStep >= GROUPS.length - 1) {
+                onComplete?.();
+              } else {
+                setActiveStep((s) => s + 1);
+              }
             }}
             className="rounded-md bg-[#4A1942] px-4 py-2 text-sm font-medium text-white hover:bg-[#3b1435]"
           >
-            Save & Continue
+            {activeStep >= GROUPS.length - 1 ? 'Save & Finish' : 'Save & Continue'}
           </button>
         </div>
       </div>

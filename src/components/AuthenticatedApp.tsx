@@ -639,6 +639,7 @@ export default function AuthenticatedApp() {
                 eventId={currentEventName}
                 onSaveAnswers={saveEventAnswers}
                 onVenueFilterChange={setSelectedVenueCategories}
+                onComplete={() => close('eventQuestions')}
               />
             </CenteredModal>
           )}
