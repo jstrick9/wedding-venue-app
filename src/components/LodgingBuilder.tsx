@@ -243,7 +243,7 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
           </div>
           <div className="flex gap-2">
             <button onClick={saveAll} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium">💾 Save Lodging Layout</button>
-            <button onClick={onClose} className="px-3 py-2 hover:bg-white/15 rounded-lg">✕</button>
+            <button onClick={onClose} aria-label="Close lodging builder" className="px-3 py-2 hover:bg-white/15 rounded-lg">✕</button>
           </div>
         </div>
 

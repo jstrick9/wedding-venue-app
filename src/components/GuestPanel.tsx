@@ -208,7 +208,7 @@ export function GuestPanel({
                 {stats.total} guests • {stats.confirmed} confirmed • {stats.assigned} assigned
               </p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition-colors">✕</button>
+            <button onClick={onClose} aria-label="Close guest panel" className="p-2 hover:bg-white/20 rounded-full transition-colors">✕</button>
           </div>
           {(eventName || venueName) && (
             <div className="px-4 pb-4">
@@ -397,7 +397,7 @@ export function GuestPanel({
                           <span className={`w-2 h-2 rounded-full ${guest.rsvpStatus === 'confirmed' ? 'bg-green-500' : guest.rsvpStatus === 'declined' ? 'bg-red-500' : 'bg-yellow-500'}`}></span>
                           <span className="truncate">{guest.name}</span>
                         </div>
-                        <button onClick={() => handleQuickAssign(guest.id, '')} className="text-gray-400 hover:text-red-500 p-1" title="Remove assignment">✕</button>
+                        <button onClick={() => handleQuickAssign(guest.id, '')} className="text-gray-400 hover:text-red-500 p-1" title="Remove assignment" aria-label={`Remove assignment for ${guest.name}`}>✕</button>
                       </div>
                     ))}
                     {dest.assignedGuests.length === 0 && <p className="text-center text-gray-400 py-2 text-sm">No guests assigned</p>}
@@ -436,7 +436,7 @@ export function GuestPanel({
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
               <div className="p-4 border-b bg-gradient-to-r from-[#4A1942] to-[#3d1a45] text-white rounded-t-xl flex justify-between items-center">
                 <h3 className="font-bold">{showAdd ? 'Add New Guest' : 'Edit Guest'}</h3>
-                <button onClick={() => { setShowAdd(false); setSelectedGuestId(null); }} className="p-1 hover:bg-white/20 rounded">✕</button>
+                <button onClick={() => { setShowAdd(false); setSelectedGuestId(null); }} aria-label="Close guest editor" className="p-1 hover:bg-white/20 rounded">✕</button>
               </div>
               {showAdd ? (
                 <div className="p-4 space-y-3">

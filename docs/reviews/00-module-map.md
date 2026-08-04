@@ -129,6 +129,10 @@ See docs/reviews/59-keyboard-shortcuts.md.
 ✅ Added an in-canvas onboarding hint for empty layouts; fixed 5 dev-tooling
 vulnerabilities (npm audit 5→0). See docs/reviews/60-canvas-empty-state-deps.md.
 
+## Autonomous gap pass — round 13 (icon-button accessibility)
+✅ Added aria-labels to icon-only close/remove buttons across GuestPanel, LodgingBuilder,
+AccessControlPanel, and StaffOperationsPanel. See docs/reviews/61-icon-button-a11y.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

@@ -96,7 +96,7 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
           <p className="text-sm text-white/70">Manage roles, permissions, and user access</p>
         </div>
         {!inline && (
-          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">✕</button>
+          <button onClick={onClose} aria-label="Close access control" className="p-2 hover:bg-white/20 rounded-lg transition-colors">✕</button>
         )}
       </div>
 

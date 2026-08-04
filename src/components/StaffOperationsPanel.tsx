@@ -376,7 +376,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <div className="w-full max-w-lg h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
               <header className="p-6 border-b flex justify-between items-center bg-gray-50">
                 <h2 className="text-xl font-bold text-gray-900">Task Details</h2>
-                <button onClick={() => setSelectedId(null)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">✕</button>
+                <button onClick={() => setSelectedId(null)} aria-label="Close task details" className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">✕</button>
               </header>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 <div>
@@ -436,7 +436,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
                     {selectedTask.assignedStaff.map(id => (
                       <div key={id} className="flex items-center gap-2 px-2 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold border border-purple-100">
                         {getStaffName(id)}
-                        <button onClick={() => handleUpdateTask(selectedTask.id, { assignedStaff: selectedTask.assignedStaff.filter(sid => sid !== id) })} className="hover:text-red-500">✕</button>
+                        <button onClick={() => handleUpdateTask(selectedTask.id, { assignedStaff: selectedTask.assignedStaff.filter(sid => sid !== id) })} aria-label="Remove assigned staff" className="hover:text-red-500">✕</button>
                       </div>
                     ))}
                   </div>
@@ -475,7 +475,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
                         <span className={`flex-1 text-sm ${item.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>{item.label}</span>
                         <button onClick={() => {
                           handleUpdateTask(selectedTask.id, { checklist: selectedTask.checklist.filter(i => i.id !== item.id) });
-                        }} className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                        }} aria-label={`Remove checklist item ${item.label}`} className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                       </div>
                     ))}
                   </div>
@@ -568,7 +568,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
               <header className="p-6 border-b flex justify-between items-center bg-gray-50">
                 <h3 className="text-xl font-bold text-gray-900">Edit Area</h3>
-                <button onClick={() => setSelectedAreaId(null)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500">✕</button>
+                <button onClick={() => setSelectedAreaId(null)} aria-label="Close area editor" className="p-2 hover:bg-gray-200 rounded-full text-gray-500">✕</button>
               </header>
               <div className="p-8 space-y-4">
                 <div>
@@ -732,7 +732,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
               <header className="p-6 border-b flex justify-between items-center bg-gray-50">
                 <h3 className="text-xl font-bold text-gray-900">Edit Shift</h3>
-                <button onClick={() => setSelectedShiftId(null)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500">✕</button>
+                <button onClick={() => setSelectedShiftId(null)} aria-label="Close shift editor" className="p-2 hover:bg-gray-200 rounded-full text-gray-500">✕</button>
               </header>
               <div className="p-8 space-y-4">
                 <div>
