@@ -1,4 +1,5 @@
 import React from 'react';
+import { getConfig } from '../config';
 
 interface AppErrorBoundaryState {
   hasError: boolean;
@@ -58,10 +59,12 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
       return this.props.children;
     }
 
+    const primary = getConfig().primaryColor;
+    const primaryDark = getConfig().primaryDark;
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#4A1942] via-[#3d1a45] to-[#1a0a14] flex items-center justify-center p-4">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div className="p-6 text-white text-center" style={{ background: 'linear-gradient(135deg, #4A1942 0%, #3d1a45 100%)' }}>
+          <div className="p-6 text-white text-center" style={{ background: `linear-gradient(135deg, ${primary} 0%, ${primaryDark} 100%)` }}>
             <div className="text-5xl mb-3">⚠️</div>
             <h1 className="text-2xl font-bold">Application Recovery</h1>
             <p className="text-white/80 text-sm mt-2">
@@ -88,7 +91,7 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
               <button
                 onClick={this.handleReload}
                 className="px-4 py-3 rounded-xl font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: '#4A1942' }}
+                style={{ backgroundColor: primary }}
               >
                 Reload App
               </button>

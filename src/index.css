@@ -134,6 +134,24 @@ a:not([class*="text-"]):not([class*="bg-"]) {
   color: var(--primary-color) !important;
 }
 
+/* Brand color is also used for borders, rings, and gradient stops — map all of
+   them to the configured primary color so custom branding applies everywhere. */
+[class*="border-\\[#4A1942\\]"] {
+  border-color: var(--primary-color) !important;
+}
+[class*="ring-\\[#4A1942\\]"] {
+  --tw-ring-color: var(--primary-color) !important;
+}
+[class*="from-\\[#4A1942\\]"] {
+  --tw-gradient-from: var(--primary-color) !important;
+}
+[class*="to-\\[#4A1942\\]"] {
+  --tw-gradient-to: var(--primary-color) !important;
+}
+[class*="divide-\\[#4A1942\\]"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--primary-color) !important;
+}
+
 .font-serif {
   font-family: 'Playfair Display', Georgia, serif;
 }
