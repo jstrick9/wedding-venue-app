@@ -24,6 +24,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { DrawingTool } from './DrawingTool';
 import { CustomVenueBuilder } from './CustomVenueBuilder';
+import { LodgingBuilder } from './LodgingBuilder';
 import { WelcomeModal } from './WelcomeModal';
 import ModalDialog from './ModalDialog';
 import { buildMessageThreadId } from '../models/DirectMessage';
@@ -202,6 +203,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [customShapeVenueId, setCustomShapeVenueId] = useState<string | null>(null);
+  const [lodgingVenueId, setLodgingVenueId] = useState<string | null>(null);
   const [expandedVenues, setExpandedVenues] = useState<Set<string>>(new Set());
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
   const [expandedSeatingTypes, setExpandedSeatingTypes] = useState<Set<string>>(new Set());
@@ -873,6 +875,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     expandAllVenues,
     toggleVenueExpanded,
     setCustomShapeVenueId,
+    setLodgingVenueId,
     handleSaveTables,
     collapseAllTables,
     expandAllTables,
@@ -1189,6 +1192,17 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
               const customPath = points.length >= 3 ? `M ${points.map((p, i) => `${i === 0 ? '' : 'L '}${p.x} ${p.y}`).join(' ')} Z` : undefined;
               handleSaveVenues(venues.map((v) => v.id === customShapeVenueId ? { ...v, shape: 'custom', shapePoints: points, customPath, isCustomShape: true } : v));
               setCustomShapeVenueId(null);
+            }}
+          />
+        )}
+
+        {lodgingVenueId && venues.find((v) => v.id === lodgingVenueId) && (
+          <LodgingBuilder
+            venue={venues.find((v) => v.id === lodgingVenueId)!}
+            onClose={() => setLodgingVenueId(null)}
+            onSave={(floors) => {
+              handleSaveVenues(venues.map((v) => v.id === lodgingVenueId ? { ...v, floors } : v));
+              setLodgingVenueId(null);
             }}
           />
         )}

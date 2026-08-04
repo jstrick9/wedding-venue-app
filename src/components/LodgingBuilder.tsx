@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Venue, LodgingFloor, LodgingRoom, LodgingFurniture, LodgingFurnitureType, Guest } from '../types';
+import { getSavedLayouts } from '../hooks/useLayoutState';
 
 interface LodgingBuilderProps {
   venue: Venue;
@@ -51,10 +52,16 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
   const [zoom, setZoom] = useState(1);
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Guests come from the app's saved layouts (the real guest list), not a legacy
+  // localStorage key that the rest of the app no longer writes.
   const guests: Guest[] = useMemo(() => {
     try {
-      const raw = localStorage.getItem('wedding-layout-guest-list');
-      return raw ? JSON.parse(raw) : [];
+      const layouts = getSavedLayouts() as { guests?: Guest[] }[];
+      const merged = new Map<string, Guest>();
+      layouts.forEach((l) => {
+        (l.guests || []).forEach((g) => merged.set(g.id, g));
+      });
+      return Array.from(merged.values());
     } catch {
       return [];
     }

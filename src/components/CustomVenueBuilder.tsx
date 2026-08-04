@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Point, Venue } from '../types';
+import { showToast } from './Toast';
 
 interface NormalizedPoint {
   x: number; // 0..1
@@ -116,6 +117,18 @@ const shapeToAbsolute = (points: NormalizedPoint[], venue: Venue): Point[] =>
 
 export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, onSave, onClose }) => {
   const [points, setPoints] = useState<NormalizedPoint[]>(normalizePoints(venue));
+  // Reference to the shape as loaded, for the "unsaved changes" close guard.
+  const initialPointsRef = useRef<NormalizedPoint[]>(normalizePoints(venue));
+  const isDirty = useMemo(
+    () =>
+      JSON.stringify(points) !== JSON.stringify(initialPointsRef.current),
+    [points],
+  );
+
+  const requestClose = () => {
+    if (isDirty && !window.confirm('You have unsaved shape changes. Discard them and close?')) return;
+    onClose();
+  };
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
   const [hoverSegmentIndex, setHoverSegmentIndex] = useState<number | null>(null);
@@ -139,6 +152,19 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
     window.addEventListener('resize', updateViewport);
     return () => window.removeEventListener('resize', updateViewport);
   }, []);
+
+  // Escape closes the builder (with the unsaved-changes guard).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        requestClose();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty]);
 
   useEffect(() => {
     if (!isResizingSidebar) return;
@@ -194,7 +220,27 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
 
   const absolutePoints = useMemo(() => shapeToAbsolute(points, venue), [points, venue]);
 
+  // Basic polygon validity: at least 3 distinct points and a non-zero area.
+  const isValidShape = useMemo(() => {
+    if (points.length < 3) return false;
+    const distinct = new Set(points.map((p) => `${p.x.toFixed(4)},${p.y.toFixed(4)}`));
+    if (distinct.size < 3) return false;
+    // Shoelace area
+    let area = 0;
+    for (let i = 0; i < points.length; i += 1) {
+      const a = points[i];
+      const b = points[(i + 1) % points.length];
+      area += a.x * b.y - b.x * a.y;
+    }
+    return Math.abs(area) > 0.0001;
+  }, [points]);
+
   const saveShape = () => {
+    if (!isValidShape) {
+      showToast('The shape needs at least 3 distinct points with a non-zero area before saving.', 'warning');
+      return;
+    }
+    initialPointsRef.current = points.map((p) => ({ ...p }));
     onSave(absolutePoints);
   };
 
@@ -280,7 +326,7 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
             </button>
             <button onClick={resetToRectangle} className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium">Reset</button>
             <button onClick={saveShape} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm">💾 Save Shape</button>
-            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors" aria-label="Close shape builder">✕</button>
+            <button onClick={requestClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors" aria-label="Close shape builder">✕</button>
           </div>
         </div>
 

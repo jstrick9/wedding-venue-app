@@ -132,6 +132,7 @@ export function VenueManagement(props: AdminCommonProps) {
     expandAllVenues,
     toggleVenueExpanded,
     setCustomShapeVenueId,
+    setLodgingVenueId,
     handleSaveTables,
     collapseAllTables,
     expandAllTables,
@@ -666,7 +667,14 @@ export function VenueManagement(props: AdminCommonProps) {
                               className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors font-medium shadow-sm whitespace-nowrap"
                               title="Open venue shape builder"
                             >
-                              ✏️ Open Shape Builder
+                              ✏️ Shape Builder
+                            </button>
+                            <button
+                              onClick={() => setLodgingVenueId(venue.id)}
+                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors font-medium shadow-sm whitespace-nowrap"
+                              title="Open lodging builder (floors, rooms, furniture, guest assignments)"
+                            >
+                              🏨 Lodging
                             </button>
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">

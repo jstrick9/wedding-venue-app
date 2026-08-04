@@ -167,6 +167,7 @@ export interface AdminCommonProps {
   expandAllVenues: () => void;
   toggleVenueExpanded: (id: string) => void;
   setCustomShapeVenueId: Dispatch<SetStateAction<string | null>>;
+  setLodgingVenueId: Dispatch<SetStateAction<string | null>>;
   handleSaveTables: (updated: TableSpec[]) => void;
   collapseAllTables: () => void;
   expandAllTables: () => void;
