@@ -591,7 +591,7 @@ export default function AuthenticatedApp() {
       <div className="h-screen flex flex-col overflow-hidden" style={{ fontFamily: brandingConfig.fontFamily, backgroundColor: brandingConfig.backgroundColor, color: brandingConfig.bodyTextColor }}>
         <Header
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
-          onSaveLayout={handleSaveLayoutWithSync} onSaveMasterLayout={isAdmin ? layoutState.saveMasterLayout : undefined} onClearMasterLayout={isAdmin ? layoutState.clearMasterLayout : undefined} onPrint={() => open('print')}
+          onSaveLayout={handleSaveLayoutWithSync} onSaveMasterLayout={isAdmin ? () => { layoutState.saveMasterLayout(); showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success'); } : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
           onShowTemplates={() => open('templates')} onShowGuests={() => open('guests')} onShowAdmin={canOpenAdminPanel ? () => open('admin') : undefined} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
           onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={layoutState.loadLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
