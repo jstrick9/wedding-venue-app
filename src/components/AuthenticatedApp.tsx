@@ -542,10 +542,12 @@ export default function AuthenticatedApp() {
       }
       else if (e.key === 'p' || e.key === 'P') { if (!mod) { setShowProperties(v => !v); } }
       else if (e.key === '?') { e.preventDefault(); setShowWorkspaceHelp(true); }
+      else if (mod && e.key === '1') { e.preventDefault(); handleResetToVenue(); }
+      else if (mod && e.key === '0') { e.preventDefault(); handleResetToCanvas(); }
       else if (e.key === 'Escape') { layoutState.setSelectedId(null); setShowProperties(false); setDragItem(null); }
     };
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [layoutState, pushUndoSnapshot]);
+  }, [layoutState, pushUndoSnapshot, handleResetToVenue, handleResetToCanvas]);
 
   useEffect(() => { rootStyles(brandingConfig); }, [brandingConfig]);
 

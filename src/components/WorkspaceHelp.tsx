@@ -17,6 +17,8 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
   { keys: ['← ↑ → ↓'], label: 'Nudge selected item (Shift = 1 ft)' },
   { keys: ['Ctrl/Cmd', '+ mouse wheel'], label: 'Zoom (anchored to cursor)' },
   { keys: ['Shift', 'drag'], label: 'Pan the canvas' },
+  { keys: ['Ctrl/Cmd', '1'], label: 'Reset view to venue' },
+  { keys: ['Ctrl/Cmd', '0'], label: 'Reset view to canvas' },
 ];
 
 function Kbd({ children }: { children: string }) {

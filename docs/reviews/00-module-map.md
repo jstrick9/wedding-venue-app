@@ -149,6 +149,10 @@ See docs/reviews/64-load-empty-state.md.
 ✅ Venue Management gains a live name-search + "no matches" empty state; the Admin Panel
 remembers the last-visited section. See docs/reviews/65-admin-panel-ux.md.
 
+## Autonomous gap pass — round 18 (reset-view shortcuts)
+✅ Implemented Ctrl/Cmd+1 (fit venue) and Ctrl/Cmd+0 (fit canvas) advertised in the
+Settings tab tooltips; synced the WorkspaceHelp guide. See docs/reviews/66-reset-view-shortcuts.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
