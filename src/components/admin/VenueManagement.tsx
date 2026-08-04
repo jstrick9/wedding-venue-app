@@ -281,6 +281,12 @@ export function VenueManagement(props: AdminCommonProps) {
     AdminPanel
   } = props;
 
+  // Local search for the venues list (many venues can be hard to scan).
+  const [venueSearch, setVenueSearch] = React.useState('');
+  const filteredVenues = venueSearch.trim()
+    ? venues.filter(v => v.name.toLowerCase().includes(venueSearch.trim().toLowerCase()))
+    : venues;
+
   return (
     <div className="space-y-4">
       <div className="space-y-4">
@@ -475,6 +481,16 @@ export function VenueManagement(props: AdminCommonProps) {
                   </div>
                   <span className="text-sm text-gray-600 font-medium">{venues.length} Venues</span>
                 </div>
+                <div className="relative">
+                  <input
+                    type="search"
+                    value={venueSearch}
+                    onChange={(e) => setVenueSearch(e.target.value)}
+                    placeholder="Search venues..."
+                    className="w-56 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
+                    aria-label="Search venues"
+                  />
+                </div>
                 
                 <div className="flex items-center gap-2">
                   <button
@@ -517,9 +533,15 @@ export function VenueManagement(props: AdminCommonProps) {
               </div>
 
               {/* Venues List */}
+              {filteredVenues.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center text-gray-500">
+                  <div className="text-3xl mb-2">🔍</div>
+                  <p className="font-semibold text-gray-700">No venues match “{venueSearch}”</p>
+                  <p className="text-sm mt-1">Try a different name, or clear the search to see all venues.</p>
+                </div>
+              ) : (
               <div className="space-y-3">
-              
-              {venues.map(venue => {
+              {filteredVenues.map(venue => {
                 const category = layoutCategories.find(c => c.id === venue.category);
                 return (
                 <div key={venue.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
@@ -1103,6 +1125,7 @@ export function VenueManagement(props: AdminCommonProps) {
               );
               })}
               </div>
+              )}
               
               {/* Tips Section */}
               <BrandedTips

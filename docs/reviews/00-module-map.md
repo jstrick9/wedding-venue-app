@@ -145,6 +145,10 @@ spm_ui_prefs storage key. See docs/reviews/63-ui-prefs-persist.md.
 ✅ The Load Layout modal now guides users to Save Layout when they have no saved layouts.
 See docs/reviews/64-load-empty-state.md.
 
+## Autonomous gap pass — round 17 (Admin Panel UX)
+✅ Venue Management gains a live name-search + "no matches" empty state; the Admin Panel
+remembers the last-visited section. See docs/reviews/65-admin-panel-ux.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

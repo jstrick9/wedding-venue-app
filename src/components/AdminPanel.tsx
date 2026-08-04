@@ -148,7 +148,16 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const EVENT_ROLES_STORAGE_KEY = STORAGE_KEYS.EVENT_ROLES;
   const EVENT_QUESTIONS_STORAGE_KEY = STORAGE_KEYS.EVENT_QUESTIONS;
 
-  const [activeTab, setActiveTab] = useState('venues');
+  // Remember the last-visited admin section so reopening the panel returns to it.
+  const [activeTab, setActiveTab] = useState<string>(
+    () => {
+      try {
+        return localStorage.getItem(STORAGE_KEYS.ADMIN_LAST_TAB) || 'venues';
+      } catch {
+        return 'venues';
+      }
+    },
+  );
   const [tabSearch, setTabSearch] = useState('');
   const [venues, setVenuesState] = useState(() => getVenues());
   const [tableSpecs, setTableSpecsState] = useState(() => getTableSpecs());
@@ -300,6 +309,15 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   useEffect(() => {
     localStorage.setItem(EVENT_ROLES_STORAGE_KEY, JSON.stringify(eventRoles));
   }, [eventRoles]);
+
+  // Persist the last-visited admin section.
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ADMIN_LAST_TAB, activeTab);
+    } catch {
+      // ignore storage failures
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     localStorage.setItem(EVENT_QUESTIONS_STORAGE_KEY, JSON.stringify(eventQuestions));

@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   SAVED_LAYOUTS: 'spm_savedLayouts',
 
   UI_PREFS: 'spm_ui_prefs',
+  ADMIN_LAST_TAB: 'spm_admin_last_tab',
 
   CHAIR_SPECS_PRIMARY: 'spm_chair_specs',
   CHAIR_SPECS_LEGACY: 'spm_chairSpecs',
