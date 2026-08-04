@@ -174,6 +174,10 @@ of warnings changes. See docs/reviews/69-dismissible-warnings.md.
 defaults), and the guest/plus-one selects render the configured options.
 See docs/reviews/71-configurable-meal-options.md.
 
+## Autonomous gap pass — round 24 (master-layout toasts)
+✅ Save/clear master layout now show success toasts (previously no feedback).
+See docs/reviews/72-master-layout-toasts.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
