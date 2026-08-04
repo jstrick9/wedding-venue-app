@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { isConfirmDialogOpen } from '../utils/modalEscape';
 
 export type ModalType = 
   | 'vendors' 
@@ -54,6 +55,25 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
   const toggle = useCallback((type: ModalType) => {
     setModals(prev => ({ ...prev, [type]: !prev[type] }));
+  }, []);
+
+  // Pressing Escape closes the open panel modal(s). When a ConfirmDialog is on
+  // top it owns the Escape key (cancels the confirm) and defers the modal close
+  // so pressing Escape doesn't accidentally close the panel underneath.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (isConfirmDialogOpen()) return;
+      setModals(prev => {
+        const hasOpen = Object.values(prev).some(Boolean);
+        if (!hasOpen) return prev;
+        return Object.fromEntries(
+          Object.entries(prev).map(([k]) => [k, false]),
+        ) as Record<ModalType, boolean>;
+      });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   return (

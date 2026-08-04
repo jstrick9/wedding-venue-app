@@ -115,6 +115,11 @@ overwrite + import merge). See docs/reviews/56-confirm-dialog.md.
 ✅ Added success toasts for layout save, saved-layout delete, and guest CSV export
 (these actions previously gave no confirmation). See docs/reviews/57-action-feedback-toasts.md.
 
+## Autonomous gap pass — round 10 (Escape closes panel modals)
+✅ Pressing Escape now closes open panel modals (ModalProvider global handler), with a
+shared flag so ConfirmDialogs own Escape and don't double-close the panel underneath.
+See docs/reviews/58-escape-to-close.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

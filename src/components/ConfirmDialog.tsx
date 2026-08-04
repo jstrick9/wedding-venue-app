@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { openConfirmDialog, closeConfirmDialog } from '../utils/modalEscape';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -31,11 +32,15 @@ export function ConfirmDialog({
   useEffect(() => {
     if (open) {
       confirmRef.current?.focus();
+      openConfirmDialog();
       const onKey = (e: KeyboardEvent) => {
         if (e.key === 'Escape') onCancel();
       };
       window.addEventListener('keydown', onKey);
-      return () => window.removeEventListener('keydown', onKey);
+      return () => {
+        closeConfirmDialog();
+        window.removeEventListener('keydown', onKey);
+      };
     }
   }, [open, onCancel]);
 
