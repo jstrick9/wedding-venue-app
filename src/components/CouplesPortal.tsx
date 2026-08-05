@@ -260,7 +260,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
   const [portalDraft, setPortalDraft] = useState<GuestPortalConfig | null>(null);
   const [newMealOption, setNewMealOption] = useState('');
-  const [newScheduleItem, setNewScheduleItem] = useState<{ title: string; startTime: string; location: string }>({ title: '', startTime: '', location: '' });
+  const [newScheduleItem, setNewScheduleItem] = useState<{ title: string; startTime: string; location: string; dayIndex: number }>({ title: '', startTime: '', location: '', dayIndex: 0 });
   const [portalSaved, setPortalSaved] = useState(false);
 
   useEffect(() => {
@@ -1337,6 +1337,20 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                           aria-label="Schedule item location"
                         />
+                        {event?.days && event.days.length > 1 ? (
+                          <select
+                            value={newScheduleItem.dayIndex}
+                            onChange={(e) => setNewScheduleItem({ ...newScheduleItem, dayIndex: Number(e.target.value) })}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                            aria-label="Schedule item day"
+                          >
+                            {event.days.map((d, idx) => (
+                              <option key={d.id} value={idx}>{idx + 1}. {d.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span />
+                        )}
                         <button
                           type="button"
                           onClick={() => {
@@ -1346,9 +1360,10 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               title: newScheduleItem.title.trim(),
                               startTime: newScheduleItem.startTime ? new Date(newScheduleItem.startTime).toISOString() : new Date().toISOString(),
                               location: newScheduleItem.location || undefined,
+                              dayIndex: newScheduleItem.dayIndex,
                             };
                             setPortalDraft({ ...portalDraft, scheduleItems: [...(portalDraft.scheduleItems || []), item] });
-                            setNewScheduleItem({ title: '', startTime: '', location: '' });
+                            setNewScheduleItem({ title: '', startTime: '', location: '', dayIndex: 0 });
                           }}
                           className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
                         >
