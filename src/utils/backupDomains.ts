@@ -19,6 +19,9 @@ import {
 } from '../services/couples/coupleGuestService';
 import { getVenueMapConfig, getVenueRules } from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather } from '../services/weather/venueWeatherService';
+import { getCoupleChecklistsForBackup } from '../services/couples/coupleChecklistService';
+import { getCoupleVendorsForBackup } from '../services/couples/coupleVendorService';
+import { getCoupleSetupTasksForBackup } from '../services/couples/coupleSetupService';
 import {
   getDecorArrangements,
   getDecorCategories,
@@ -407,6 +410,36 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     version: STORAGE_VERSIONS.VENUE_WEATHER,
     read: () => getVenueWeather(),
     write: (v) => writeVersioned(STORAGE_KEYS.VENUE_WEATHER, STORAGE_VERSIONS.VENUE_WEATHER, v),
+  },
+  {
+    key: 'coupleChecklists',
+    storageKey: STORAGE_KEYS.COUPLE_CHECKLISTS,
+    label: 'Couple Checklists',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.COUPLE_CHECKLISTS,
+    read: () => getCoupleChecklistsForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_CHECKLISTS, STORAGE_VERSIONS.COUPLE_CHECKLISTS, v),
+  },
+  {
+    key: 'coupleVendors',
+    storageKey: STORAGE_KEYS.COUPLE_VENDORS,
+    label: 'Couple Vendors',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.COUPLE_VENDORS,
+    read: () => getCoupleVendorsForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_VENDORS, STORAGE_VERSIONS.COUPLE_VENDORS, v),
+  },
+  {
+    key: 'coupleSetupTasks',
+    storageKey: STORAGE_KEYS.COUPLE_SETUP_TASKS,
+    label: 'Couple Setup & Staffing',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.COUPLE_SETUP_TASKS,
+    read: () => getCoupleSetupTasksForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_SETUP_TASKS, STORAGE_VERSIONS.COUPLE_SETUP_TASKS, v),
   },
   {
     key: 'rsvpSubmissions',

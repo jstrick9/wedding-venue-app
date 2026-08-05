@@ -999,6 +999,71 @@ export interface CoupleSession {
   expiresAt: string;
 }
 
+// ── Couple's own event checklist ─────────────────────────────────────────────
+// The couple (or their planner) creates their own prep checklist, often derived
+// from their approved layouts and chosen decor. The venue keeps a separate
+// setup/staffing plan (CoupleSetupTask) for what the venue itself must do.
+export interface CoupleChecklistItem {
+  id: string;
+  coupleEventId: string;
+  title: string;
+  done: boolean;
+  /** Free-form phase/group label (e.g. "Planning", "Setup", "Day-of", "Take-down"). */
+  phase?: string;
+  /** Optional date relative to the event (ISO date or free text). */
+  dueDate?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Couple vendors ───────────────────────────────────────────────────────────
+// The couple can pick from the venue's preferred vendor list (read-only picks)
+// and/or add their own custom vendors.
+export type CoupleVendorSource = 'preferred' | 'custom';
+
+export interface CoupleVendor {
+  id: string;
+  coupleEventId: string;
+  name: string;
+  category: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  notes?: string;
+  /** 'preferred' = picked from the venue's preferred list; 'custom' = couple-added. */
+  source: CoupleVendorSource;
+  /** The venue vendor id when source === 'preferred'. */
+  venueVendorId?: string;
+  status: 'requested' | 'contacted' | 'booked' | 'declined';
+  cost?: number;
+  createdAt: string;
+}
+
+// ── Venue per-couple setup & staffing ────────────────────────────────────────
+// The venue controls its own setup/staffing per couple event: what needs doing
+// (moving tables/chairs, decor install, etc.), which space/day, who, and when —
+// driven by what the couple selected (their spaces, days, decor, vendors).
+export type CoupleSetupStatus = 'not-started' | 'in-progress' | 'done';
+
+export interface CoupleSetupTask {
+  id: string;
+  coupleEventId: string;
+  title: string;
+  /** Which venue space (id) the task concerns, if any. */
+  spaceId?: string;
+  /** Which event day (0-based index) the task belongs to, if any. */
+  dayIndex?: number;
+  assignee?: string;
+  /** Scheduled start (ISO date-time) for completing setup before the event. */
+  scheduledFor?: string;
+  status: CoupleSetupStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Venue-controlled wayfinding, rain contingency & rules ──────────────────
 // The venue (not the couple) defines the full property map, its spaces/parking/entry
 // points, rain-contingency backups, and the venue rules/regulations. The couple's
