@@ -917,9 +917,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: 'Invited', value: coupleGuests.length, color: 'text-gray-800', icon: '👥' },
-                  { label: 'Attending', value: coupleRsvps.filter((r) => r.attending).length, color: 'text-green-600', icon: '✅' },
-                  { label: 'Not attending', value: coupleRsvps.filter((r) => !r.attending).length, color: 'text-red-600', icon: '❌' },
-                  { label: 'No response', value: coupleGuests.length - coupleRsvps.length, color: 'text-amber-600', icon: '⏳' },
+                  { label: 'Attending', value: coupleGuests.filter((g) => coupleRsvps.some((r) => r.guestId === g.id && r.attending)).length, color: 'text-green-600', icon: '✅' },
+                  { label: 'Not attending', value: coupleGuests.filter((g) => coupleRsvps.some((r) => r.guestId === g.id && !r.attending)).length, color: 'text-red-600', icon: '❌' },
+                  { label: 'No response', value: coupleGuests.filter((g) => !coupleRsvps.some((r) => r.guestId === g.id)).length, color: 'text-amber-600', icon: '⏳' },
                 ].map((s) => (
                   <div key={s.label} className="rounded-xl bg-white border border-gray-200 p-4 text-center shadow-sm">
                     <div className="text-xl">{s.icon}</div>
