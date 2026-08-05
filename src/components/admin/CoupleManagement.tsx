@@ -44,6 +44,7 @@ const LAYOUT_BADGE: Record<CoupleLayoutStatus, { label: string; cls: string }> =
  */
 export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess }: CoupleManagementProps) {
   const [events, setEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
+  const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
     coupleName: '',
@@ -499,16 +500,31 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
         </div>
       )}
 
+      {/* Search */}
+      {events.length > 0 && (
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search couples by name…"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          aria-label="Search couples"
+        />
+      )}
+
       {/* List */}
-      {events.length === 0 && !showCreate ? (
+      {(() => {
+        const q = search.trim().toLowerCase();
+        const filtered = q ? events.filter((ev) => ev.coupleName.toLowerCase().includes(q)) : events;
+        return filtered.length === 0 && !showCreate ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500">
           <div className="text-4xl mb-3">💌</div>
-          <p className="font-semibold text-gray-700">No couple events yet</p>
-          <p className="text-sm mt-1">Create a couple event to invite your first booked couple.</p>
+          <p className="font-semibold text-gray-700">{q ? 'No matching couples' : 'No couple events yet'}</p>
+          <p className="text-sm mt-1">{q ? 'Try a different name.' : 'Create a couple event to invite your first booked couple.'}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {events.map((ev) => {
+          {filtered.map((ev) => {
             const badge = LAYOUT_BADGE[ev.layoutStatus];
             return (
               <div key={ev.id} className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
@@ -810,7 +826,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
             );
           })}
         </div>
-      )}
+      );
+      })()}
     </div>
   );
 }
