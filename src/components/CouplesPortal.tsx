@@ -28,6 +28,7 @@ import { getCoupleMessages, sendCoupleMessage } from '../services/couples/couple
 import {
   getCoupleGuests,
   addCoupleGuest,
+  updateCoupleGuest,
   removeCoupleGuest,
   importCoupleGuests,
   exportCoupleGuestsCsv,
@@ -182,6 +183,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [guestForm, setGuestForm] = useState({ name: '', email: '', phone: '' });
   const [expandedGuestRsvp, setExpandedGuestRsvp] = useState<string | null>(null);
   const [guestError, setGuestError] = useState('');
+  const [editingGuest, setEditingGuest] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
 
   const handleAddGuest = () => {
     if (!event || !guestForm.name.trim()) {
@@ -195,6 +197,21 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     });
     setGuestForm({ name: '', email: '', phone: '' });
     setGuestError('');
+    setGuestTick((t) => t + 1);
+  };
+
+  const handleSaveGuestEdit = () => {
+    if (!event || !editingGuest) return;
+    if (!editingGuest.name.trim()) {
+      showToast('Please enter the guest’s name.', 'warning');
+      return;
+    }
+    updateCoupleGuest(event.id, editingGuest.id, {
+      name: editingGuest.name.trim(),
+      email: editingGuest.email.trim(),
+      phone: editingGuest.phone.trim(),
+    });
+    setEditingGuest(null);
     setGuestTick((t) => t + 1);
   };
 
@@ -446,7 +463,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     { label: 'Venue spaces selected', done: event.selectedSpaces.length > 0, tab: 'spaces' as TabId },
                     { label: 'Layouts submitted for approval', done: event.layoutStatus === 'pending' || event.layoutStatus === 'approved', tab: 'design' as TabId },
                     { label: 'Guests invited', done: coupleGuests.length > 0, tab: 'guests' as TabId },
-                    { label: 'Portal personalized', done: !!portalConfig?.welcomeMessage || (portalConfig?.mealOptions?.length ?? 0) > 0, tab: 'portal' as TabId },
+                    { label: 'Portal personalized', done: !!portalConfig?.welcomeMessage || !!portalConfig?.heroImageUrl || (portalConfig?.mealOptions?.length ?? 0) > 0, tab: 'portal' as TabId },
                   ].map((step) => (
                     <button
                       key={step.label}
@@ -986,6 +1003,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             )}
                             <button
                               type="button"
+                              onClick={() => setEditingGuest({ id: g.id, name: g.name, email: g.email || '', phone: g.phone || '' })}
+                              className="text-xs text-gray-500 hover:underline"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => {
                                 removeCoupleGuest(event!.id, g.id);
                                 removeCoupleRsvp(event!.id, g.id);
@@ -998,6 +1022,50 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             </button>
                             </div>
                           </div>
+                          {editingGuest && editingGuest.id === g.id && (
+                            <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-4 gap-2">
+                              <input
+                                type="text"
+                                value={editingGuest.name}
+                                onChange={(e) => setEditingGuest({ ...editingGuest, name: e.target.value })}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Name"
+                                aria-label="Edit guest name"
+                              />
+                              <input
+                                type="email"
+                                value={editingGuest.email}
+                                onChange={(e) => setEditingGuest({ ...editingGuest, email: e.target.value })}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Email"
+                                aria-label="Edit guest email"
+                              />
+                              <input
+                                type="tel"
+                                value={editingGuest.phone}
+                                onChange={(e) => setEditingGuest({ ...editingGuest, phone: e.target.value })}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Phone"
+                                aria-label="Edit guest phone"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={handleSaveGuestEdit}
+                                  className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingGuest(null)}
+                                  className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
                           {expandedGuestRsvp === g.id && rsvp && (
                             <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600 space-y-1">
                               {rsvp.mealChoice && <p>🍽️ Meal: {(portalConfig?.mealOptions && portalConfig.mealOptions.find((o) => o.value === rsvp.mealChoice)?.label) || rsvp.mealChoice}</p>}
