@@ -493,7 +493,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                         const declined = rsvps.filter((r) => !r.attending).length;
                         return (
                           <span>
-                            🎟️ {g} guests · ✅ {attending} attending · ❌ {declined} · ⏳ {g - rsvps.length} no reply
+                            🎟️ {g} guests · ✅ {attending} attending · ❌ {declined} · ⏳ {Math.max(0, g - rsvps.length)} no reply
                           </span>
                         );
                       })()}
