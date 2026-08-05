@@ -912,6 +912,18 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     <span className="font-semibold">Venue note:</span> {event.layoutComment}
                   </p>
                 )}
+                {(event.layoutStatus === 'changes_requested' || event.layoutStatus === 'rejected') && (
+                  <p className="mt-2 text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
+                    {event.layoutStatus === 'changes_requested'
+                      ? 'The venue asked for changes. Revise your layouts above and resubmit for approval.'
+                      : 'The venue didn\'t approve these layouts. Review their note, revise, and resubmit when ready.'}
+                  </p>
+                )}
+                {event.layoutStatus === 'approved' && (
+                  <p className="mt-2 text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+                    These layouts are approved. If your plans change, you can revise and submit updated layouts for a new review.
+                  </p>
+                )}
                 {event.layoutHistory && event.layoutHistory.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {event.layoutHistory.map((h, i) => (
@@ -935,9 +947,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     refresh();
                   }}
                   className="mt-3 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-                  disabled={event.layoutStatus === 'pending' || !canEditDesign}
+                  disabled={event.layoutStatus === 'pending' || event.layoutStatus === 'approved' || !canEditDesign}
                 >
-                  {event.layoutStatus === 'pending' ? 'Submitted…' : 'Submit layouts for approval'}
+                  {event.layoutStatus === 'pending'
+                    ? 'Submitted — awaiting venue review'
+                    : event.layoutStatus === 'approved'
+                      ? 'Approved ✓'
+                      : event.layoutStatus === 'changes_requested' || event.layoutStatus === 'rejected'
+                        ? 'Resubmit for approval'
+                        : 'Submit layouts for approval'}
                 </button>
               </div>
 
