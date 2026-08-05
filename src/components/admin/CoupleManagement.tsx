@@ -133,11 +133,14 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const handleSaveEdit = () => {
     if (!editEventId) return;
     const updated = findCoupleEventById(editEventId);
+    const availableSet = new Set(editForm.availableSpaces);
     updateCoupleEvent(editEventId, {
       eventDate: editForm.eventDate || undefined,
       eventEndDate: editForm.eventEndDate || undefined,
       guestCount: editForm.guestCount ? parseInt(editForm.guestCount, 10) || undefined : undefined,
       availableSpaces: editForm.availableSpaces,
+      // Drop any selected spaces that are no longer available to avoid orphaned selections.
+      selectedSpaces: (updated?.selectedSpaces || []).filter((id) => availableSet.has(id)),
       days: buildEventDays(editForm.eventDate || undefined, editForm.eventEndDate || undefined),
     });
     // Propagate date changes to the couple's guest portal config so guests see the
