@@ -367,7 +367,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       email: guestRSVP?.email || identifiedGuest?.email || prev.email,
       phone: guestRSVP?.phone || prev.phone,
       attending: guestRSVP?.attending === false ? 'no' : 'yes',
-      attendingDays: guestRSVP?.attendingDays || prev.attendingDays,
+      // If the guest isn't attending, don't pre-fill stale days from a prior "yes".
+      attendingDays: guestRSVP?.attending === false ? [] : (guestRSVP?.attendingDays || prev.attendingDays),
       mealChoice: guestRSVP?.mealChoice || prev.mealChoice,
       plusOne: !!guestRSVP?.plusOneName,
       plusOneName: guestRSVP?.plusOneName || prev.plusOneName,
