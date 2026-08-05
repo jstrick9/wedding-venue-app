@@ -720,6 +720,11 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             </span>
                           )}
                         </div>
+                        {selected && event.guestCount && space.capacity > 0 && space.capacity < event.guestCount && (
+                          <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1">
+                            ⚠️ This space seats {space.capacity} but you expect {event.guestCount} guests.
+                          </div>
+                        )}
                         {(() => {
                           const backup = findRainContingency(getVenueMapConfig(), space.id);
                           if (backup) {
