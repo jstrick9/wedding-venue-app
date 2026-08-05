@@ -304,6 +304,10 @@ the guest's room. See docs/couples-platform/78-bugfix-batch.md.
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
+## Couples & Events platform — Continued gap pass (round 11)
+✅ Couples can manually record a guest's RSVP (upsertCoupleRsvp); wayfinding
+walkway route requires ≥2 points. See docs/reviews/89-continued-gap-pass-11.md.
+
 ## Couples & Events platform — Continued gap pass (round 10)
 ✅ GPS coordinate validation on wayfinding points; richer manual weather forecast
 entry; forecast list shows low–high range. See docs/reviews/88-continued-gap-pass-10.md.
