@@ -7,6 +7,7 @@ import {
   CoupleLayoutReview,
   CoupleLayoutStatus,
   EventAnswer,
+  EventQuestion,
 } from '../../types';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { saveVersionedStorage, loadVersionedStorage } from '../../utils/storage';
@@ -64,20 +65,30 @@ export function buildEventDays(eventDate?: string, eventEndDate?: string): Coupl
  * Mirrors the wizard's space logic: each group/answer that the couple confirms
  * "uses" adds a corresponding venue category.
  */
-export function deriveRecommendedVenueCategories(answers: EventAnswer[]): string[] {
+/**
+ * Derive recommended venue categories from a couple's Event Question answers.
+ * Mirrors the wizard's space logic: it inspects each answered question's GROUP and
+ * TEXT to add a corresponding venue category (the answers alone only store the
+ * questionId, which is an opaque `eq-<timestamp>` and can't be matched by text).
+ */
+export function deriveRecommendedVenueCategories(
+  answers: EventAnswer[],
+  questions?: EventQuestion[],
+): string[] {
   const set = new Set<string>();
+  const byId = new Map((questions || []).map((q) => [q.id, q]));
   answers.forEach((a) => {
     const v = a.answerValue;
     if (v === undefined || v === null || String(v).trim() === '') return;
     const answer = String(v).toLowerCase();
-    // The wizard only records the question id; re-derive group from the question
-    // isn't available here, so map via common text heuristics on the questionId.
-    const id = a.questionId.toLowerCase();
-    if (/ceremony/.test(id) && (answer.includes('yes') || answer.includes('use'))) set.add('ceremony');
-    if (/reception/.test(id) && (answer.includes('yes') || answer.includes('use'))) set.add('reception');
-    if (/lodging/.test(id) && (answer.includes('yes') || answer.includes('use'))) set.add('lodging');
-    if (/rehearsal/.test(id) && (answer.includes('yes') || answer.includes('use'))) set.add('rehearsal-dinner');
-    if (/cocktail/.test(id) && (answer.includes('yes') || answer.includes('use') || answer.includes('cocktail'))) set.add('cocktail-hour');
+    const q = byId.get(a.questionId);
+    const text = (q?.text || a.questionId).toLowerCase();
+
+    if (q?.group === 'Ceremony' && (answer.includes('yes') || answer.includes('use'))) set.add('ceremony');
+    if (q?.group === 'Reception' && (answer.includes('yes') || answer.includes('use'))) set.add('reception');
+    if (q?.group === 'Lodging' && (answer.includes('yes') || answer.includes('use'))) set.add('lodging');
+    if (q?.group === 'Rehearsal Dinner' && (answer.includes('yes') || answer.includes('use'))) set.add('rehearsal-dinner');
+    if (text.includes('cocktail') && (answer.includes('yes') || answer.includes('use') || answer.includes('cocktail'))) set.add('cocktail-hour');
     if (answer.includes('outdoor')) set.add('outdoor');
   });
   return [...set];

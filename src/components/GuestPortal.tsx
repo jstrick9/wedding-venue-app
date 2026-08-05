@@ -389,12 +389,14 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     setIsSubmittingRSVP(true);
 
     const eventName = activeEventName || config?.eventTitle || '';
-    const eventKey = normalizeEventKey(eventName);
+    // For a couple-scoped portal, scope the submission by the couple event id so it
+    // round-trips with getCoupleRsvpSubmissions (which keys on coupleEventId).
+    const eventKey = isCouplePortal && coupleEventId ? coupleEventId : normalizeEventKey(eventName);
 
     const newSubmission: RSVPSubmission = {
       id: guestRSVP?.id || `rsvp-${Date.now()}`,
       guestId: identifiedGuest.id,
-      eventName,
+      eventName: isCouplePortal && coupleEventId ? coupleEventId : eventName,
       eventKey,
       fullName: rsvpForm.fullName.trim(),
       email: rsvpForm.email.trim(),
@@ -1515,9 +1517,35 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
 
             <div className="space-y-2">
               <p className="text-xs font-semibold text-gray-800">Rooms</p>
-              <p className="text-xs text-gray-600">
-                Room list and amenities will appear here based on saved lodging layout.
-              </p>
+              {(venue.floors && venue.floors.length > 0) ? (
+                venue.floors.map((floor) => (
+                  <div key={floor.id} className="rounded-lg border border-gray-200 p-2">
+                    <p className="text-[11px] font-semibold text-gray-600 mb-1">{floor.name}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {floor.rooms.map((room) => (
+                        <div
+                          key={room.id}
+                          className={`rounded border px-2 py-1.5 text-xs ${
+                            guestRoomInfo?.room.id === room.id
+                              ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                              : 'border-gray-200 text-gray-700'
+                          }`}
+                        >
+                          <div className="font-medium">{room.name}</div>
+                          <div className="text-gray-500">
+                            Capacity {room.capacity} · {room.assignedGuests?.length || 0} assigned
+                            {guestRoomInfo?.room.id === room.id && <span className="text-emerald-600 font-semibold"> · Your room</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-gray-600">
+                  Room list and amenities will appear here based on saved lodging layout.
+                </p>
+              )}
             </div>
           </div>
         ))}

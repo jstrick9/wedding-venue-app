@@ -114,11 +114,19 @@ describe('coupleService', () => {
   });
 
   it('derives recommended venue categories from answers', () => {
-    const cats = deriveRecommendedVenueCategories([
-      { eventId: 'e1', userId: 'u1', questionId: 'ceremony-question', answerValue: 'yes' },
-      { eventId: 'e1', userId: 'u1', questionId: 'reception-question', answerValue: 'yes' },
-      { eventId: 'e1', userId: 'u1', questionId: 'lodging-question', answerValue: 'no' },
-    ]);
+    const questions = [
+      { id: 'eq-1', text: 'Will you use a ceremony space?', group: 'Ceremony' },
+      { id: 'eq-2', text: 'Do you need a reception space?', group: 'Reception' },
+      { id: 'eq-3', text: 'Do you need lodging?', group: 'Lodging' },
+    ];
+    const cats = deriveRecommendedVenueCategories(
+      [
+        { eventId: 'e1', userId: 'u1', questionId: 'eq-1', answerValue: 'yes' },
+        { eventId: 'e1', userId: 'u1', questionId: 'eq-2', answerValue: 'yes' },
+        { eventId: 'e1', userId: 'u1', questionId: 'eq-3', answerValue: 'no' },
+      ],
+      questions as any,
+    );
     expect(cats).toContain('ceremony');
     expect(cats).toContain('reception');
     expect(cats).not.toContain('lodging');

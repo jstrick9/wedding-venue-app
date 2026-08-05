@@ -31,6 +31,8 @@ describe('coupleGuestService', () => {
     expect(g.token).toBeTruthy();
     const { buildGuestInviteUrl } = await import('./coupleGuestService');
     expect(buildGuestInviteUrl(g.token!)).toContain('#/guest-portal?token=');
+    // Couple-scoped link must include the couple param so the guest opens the couple portal.
+    expect(buildGuestInviteUrl(g.token!, 'e1')).toContain('couple=e1');
   });
 
   it('updates and removes guests', () => {

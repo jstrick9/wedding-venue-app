@@ -37,8 +37,9 @@ export function getCoupleGuestsForBackup(): GuestPortalGuestRecord[] {
 }
 
 /** A guest invitation link that auto-identifies the guest in their couple's portal. */
-export function buildGuestInviteUrl(guestToken: string): string {
-  return `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(guestToken)}`;
+export function buildGuestInviteUrl(guestToken: string, coupleEventId?: string): string {
+  const couple = coupleEventId ? `&couple=${encodeURIComponent(coupleEventId)}` : '';
+  return `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(guestToken)}${couple}`;
 }
 
 /** Extract a couple event id from the guest-portal URL (?couple= in the hash). */

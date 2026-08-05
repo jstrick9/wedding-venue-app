@@ -295,6 +295,12 @@ the couple's configured meal options. See docs/couples-platform/ROADMAP.md.
 ✅ The venue admin can copy a collaborator's invite link for any couple.
 See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Bug-fix batch + lodging rooms
+✅ Fixed: guest copy-link couple scope; answer→space recommendation (was broken by opaque
+question ids); couple RSVP keying (couple never saw guest RSVPs); space-narrowing
+dropping selected spaces. UI: guest lodging tab lists real rooms/occupancy + highlights
+the guest's room. See docs/couples-platform/78-bugfix-batch.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

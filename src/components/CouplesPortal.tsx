@@ -114,11 +114,17 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     saveCoupleAnswers(event.id, answers);
     // Derive recommended venue categories from answers and narrow availableSpaces
     // to the venues whose category was selected by the couple's answers.
-    const cats = deriveRecommendedVenueCategories(answers);
+    const cats = deriveRecommendedVenueCategories(answers, eventQuestions);
     if (cats.length > 0) {
       const recommended = venues.filter((v) => cats.includes(v.category)).map((v) => v.id);
-      if (recommended.length > 0) {
-        updateCoupleEvent(event.id, { availableSpaces: recommended });
+      // Preserve any spaces the couple already selected so a narrowing never leaves a
+      // selected space unavailable (which would orphan it in selectedSpaces).
+      const preserved = (event.selectedSpaces || []).filter((id) =>
+        venues.some((v) => v.id === id),
+      );
+      const merged = Array.from(new Set([...preserved, ...recommended]));
+      if (merged.length > 0) {
+        updateCoupleEvent(event.id, { availableSpaces: merged });
         refresh();
       }
     }
@@ -191,7 +197,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   };
 
   const handleCopyGuestLink = (token: string) => {
-    void navigator.clipboard?.writeText(buildGuestInviteUrl(token)).then(
+    void navigator.clipboard?.writeText(buildGuestInviteUrl(token, event?.id)).then(
       () => showToast('Guest invite link copied to clipboard.', 'success'),
       () => showToast('Could not copy — copy the link below.', 'warning'),
     );
