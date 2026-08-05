@@ -1079,6 +1079,12 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   </div>
                 ))}
               </div>
+              {event.guestCount && coupleGuests.length > event.guestCount && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
+                  ⚠️ You've invited {coupleGuests.length} guests, which is above your expected
+                  headcount of {event.guestCount}. Let the venue know if you'll need extra space.
+                </div>
+              )}
               {/* Meal summary (for catering) */}
               {(() => {
                 const attending = coupleRsvps.filter((r) => r.attending);
