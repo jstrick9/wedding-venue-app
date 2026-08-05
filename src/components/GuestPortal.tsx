@@ -1,6 +1,7 @@
 // src/components/GuestPortal.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import SafeImage from './SafeImage';
+import { showToast } from './Toast';
 
 // Safely format a time for a schedule item. Guards against invalid/incomplete
 // date strings (e.g. a malformed or time-only value) so the schedule never
@@ -384,6 +385,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   const handleRSVPSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!rsvpForm.fullName.trim() || !rsvpForm.email.trim() || !identifiedGuest) return;
+
+    // A checked "plus one" needs a name so the couple can plan for them.
+    if (rsvpForm.plusOne && !rsvpForm.plusOneName.trim()) {
+      showToast('Please enter your plus one\'s name.', 'warning');
+      return;
+    }
 
     setIsSubmittingRSVP(true);
 
