@@ -657,6 +657,24 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                   return (
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <div className="text-xs font-medium text-gray-500 mb-2">Guests ({guests.length})</div>
+                      {/* Per-meal catering summary for the venue */}
+                      {(() => {
+                        const counts = new Map<string, number>();
+                        rsvps.filter((r) => r.attending).forEach((r) => {
+                          if (r.mealChoice) counts.set(r.mealChoice, (counts.get(r.mealChoice) || 0) + 1);
+                          if (r.plusOneMealChoice) counts.set(r.plusOneMealChoice, (counts.get(r.plusOneMealChoice) || 0) + 1);
+                        });
+                        if (counts.size === 0) return null;
+                        return (
+                          <div className="mb-2 flex flex-wrap gap-1.5">
+                            {Array.from(counts.entries()).map(([k, n]) => (
+                              <span key={k} className="text-[11px] bg-indigo-50 text-indigo-700 rounded-full px-2 py-0.5">
+                                {k}: {n}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {guests.length === 0 ? (
                         <p className="text-xs text-gray-400">No guests added yet.</p>
                       ) : (
