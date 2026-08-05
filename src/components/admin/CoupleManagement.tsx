@@ -461,23 +461,27 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
               Spaces available to this couple
             </label>
             <div className="flex flex-wrap gap-2">
-              {venues.map((v) => {
-                const selected = form.availableSpaces.includes(v.id);
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => toggleSpace(v.id)}
-                    className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
-                      selected
-                        ? 'border-rose-500 bg-rose-50 text-rose-700'
-                        : 'border-gray-300 bg-white text-gray-600 hover:border-rose-300'
-                    }`}
-                  >
-                    {v.name}
-                  </button>
-                );
-              })}
+              {venues.length === 0 ? (
+                <p className="text-xs text-gray-400">No venue spaces exist yet — add them in the Venue management section first.</p>
+              ) : (
+                venues.map((v) => {
+                  const selected = form.availableSpaces.includes(v.id);
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => toggleSpace(v.id)}
+                      className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
+                        selected
+                          ? 'border-rose-500 bg-rose-50 text-rose-700'
+                          : 'border-gray-300 bg-white text-gray-600 hover:border-rose-300'
+                      }`}
+                    >
+                      {v.name}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
@@ -785,23 +789,27 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Available spaces</label>
                       <div className="flex flex-wrap gap-2">
-                        {venues.map((v) => {
-                          const sel = editForm.availableSpaces.includes(v.id);
-                          return (
-                            <button
-                              key={v.id}
-                              type="button"
-                              onClick={() => toggleEditSpace(v.id)}
-                              className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
-                                sel
-                                  ? 'border-rose-500 bg-rose-50 text-rose-700'
-                                  : 'border-gray-300 bg-white text-gray-600'
-                              }`}
-                            >
-                              {v.name}
-                            </button>
-                          );
-                        })}
+                        {venues.length === 0 ? (
+                          <p className="text-xs text-gray-400">No venue spaces exist yet — add them in Venue management first.</p>
+                        ) : (
+                          venues.map((v) => {
+                            const sel = editForm.availableSpaces.includes(v.id);
+                            return (
+                              <button
+                                key={v.id}
+                                type="button"
+                                onClick={() => toggleEditSpace(v.id)}
+                                className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
+                                  sel
+                                    ? 'border-rose-500 bg-rose-50 text-rose-700'
+                                    : 'border-gray-300 bg-white text-gray-600'
+                                }`}
+                              >
+                                {v.name}
+                              </button>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">
