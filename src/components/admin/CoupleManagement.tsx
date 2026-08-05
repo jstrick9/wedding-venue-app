@@ -50,6 +50,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   });
   const [error, setError] = useState('');
   const [openChat, setOpenChat] = useState<string | null>(null);
+  const [openGuests, setOpenGuests] = useState<string | null>(null);
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
   // Optional review comment per couple event in the approval queue.
   const [reviewComments, setReviewComments] = useState<Record<string, string>>({});
@@ -457,6 +458,13 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     </button>
                     <button
                       type="button"
+                      onClick={() => setOpenGuests(openGuests === ev.id ? null : ev.id)}
+                      className="text-xs text-gray-600 hover:underline"
+                    >
+                      👥 Guests
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setOpenChat(openChat === ev.id ? null : ev.id)}
                       className="text-xs text-gray-600 hover:underline relative"
                     >
@@ -519,6 +527,35 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     </div>
                   </div>
                 )}
+
+                {openGuests === ev.id && (() => {
+                  const guests = getCoupleGuests(ev.id);
+                  const rsvps = getCoupleRsvpSubmissions(ev.id);
+                  return (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="text-xs font-medium text-gray-500 mb-2">Guests ({guests.length})</div>
+                      {guests.length === 0 ? (
+                        <p className="text-xs text-gray-400">No guests added yet.</p>
+                      ) : (
+                        <div className="space-y-1 max-h-64 overflow-auto">
+                          {guests.map((g) => {
+                            const rsvp = rsvps.find((r) => r.guestId === g.id);
+                            return (
+                              <div key={g.id} className="flex items-center justify-between text-sm">
+                                <span className="text-gray-700">{g.name}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  rsvp ? (rsvp.attending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-500'
+                                }`}>
+                                  {rsvp ? (rsvp.attending ? 'Attending' : 'Not attending') : 'No response'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {openChat === ev.id && renderChat(ev)}
               </div>

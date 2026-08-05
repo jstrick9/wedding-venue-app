@@ -267,6 +267,10 @@ See docs/couples-platform/ROADMAP.md.
 no response); the venue's Couple Management card shows the same breakdown per couple.
 See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Venue guest viewer
+✅ The venue can expand a couple to view their guest list with RSVP status inline.
+See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

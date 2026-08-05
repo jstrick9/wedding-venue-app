@@ -82,6 +82,8 @@ so each booked couple gets their own space.
 - ✅ **RSVP summary dashboards (delivered):** the couple's Guests tab shows an RSVP summary
   (invited / attending / not attending / no response); the venue's Couple Management card
   shows the same breakdown per couple.
+- ✅ **Venue guest viewer (delivered):** the venue can expand a couple to view their guest
+  list with RSVP status inline.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 
