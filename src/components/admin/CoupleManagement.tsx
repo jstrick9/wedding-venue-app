@@ -7,6 +7,7 @@ import {
   deleteCoupleEvent,
   updateCoupleEvent,
   reviewCoupleLayout,
+  buildEventDays,
 } from '../../services/couples/coupleService';
 import {
   getCoupleMessages,
@@ -49,6 +50,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
     availableSpaces: [] as string[],
   });
   const [error, setError] = useState('');
+  const [editEventId, setEditEventId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ eventDate: '', eventEndDate: '', guestCount: '', availableSpaces: [] as string[] });
   const [openChat, setOpenChat] = useState<string | null>(null);
   const [openGuests, setOpenGuests] = useState<string | null>(null);
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
@@ -95,6 +98,39 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
         ? prev.availableSpaces.filter((v) => v !== venueId)
         : [...prev.availableSpaces, venueId],
     }));
+  };
+
+  const startEdit = (ev: CoupleEvent) => {
+    setEditForm({
+      eventDate: ev.eventDate || '',
+      eventEndDate: ev.eventEndDate || '',
+      guestCount: ev.guestCount != null ? String(ev.guestCount) : '',
+      availableSpaces: [...ev.availableSpaces],
+    });
+    setEditEventId(ev.id);
+  };
+
+  const toggleEditSpace = (venueId: string) => {
+    setEditForm((prev) => ({
+      ...prev,
+      availableSpaces: prev.availableSpaces.includes(venueId)
+        ? prev.availableSpaces.filter((v) => v !== venueId)
+        : [...prev.availableSpaces, venueId],
+    }));
+  };
+
+  const handleSaveEdit = () => {
+    if (!editEventId) return;
+    updateCoupleEvent(editEventId, {
+      eventDate: editForm.eventDate || undefined,
+      eventEndDate: editForm.eventEndDate || undefined,
+      guestCount: editForm.guestCount ? parseInt(editForm.guestCount, 10) || undefined : undefined,
+      availableSpaces: editForm.availableSpaces,
+      days: buildEventDays(editForm.eventDate || undefined, editForm.eventEndDate || undefined),
+    });
+    setEditEventId(null);
+    refresh();
+    onShowSuccess('Couple event updated.');
   };
 
   // Chat pane for an event
@@ -458,6 +494,13 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     </button>
                     <button
                       type="button"
+                      onClick={() => startEdit(ev)}
+                      className="text-xs text-gray-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setOpenGuests(openGuests === ev.id ? null : ev.id)}
                       className="text-xs text-gray-600 hover:underline"
                     >
@@ -566,6 +609,80 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                 })()}
 
                 {openChat === ev.id && renderChat(ev)}
+
+                {editEventId === ev.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                    <div className="text-xs font-medium text-gray-500">Edit event</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Start date</label>
+                        <input
+                          type="date"
+                          value={editForm.eventDate}
+                          onChange={(e) => setEditForm({ ...editForm, eventDate: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">End date</label>
+                        <input
+                          type="date"
+                          value={editForm.eventEndDate}
+                          onChange={(e) => setEditForm({ ...editForm, eventEndDate: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Guest count</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={editForm.guestCount}
+                        onChange={(e) => setEditForm({ ...editForm, guestCount: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Available spaces</label>
+                      <div className="flex flex-wrap gap-2">
+                        {venues.map((v) => {
+                          const sel = editForm.availableSpaces.includes(v.id);
+                          return (
+                            <button
+                              key={v.id}
+                              type="button"
+                              onClick={() => toggleEditSpace(v.id)}
+                              className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
+                                sel
+                                  ? 'border-rose-500 bg-rose-50 text-rose-700'
+                                  : 'border-gray-300 bg-white text-gray-600'
+                              }`}
+                            >
+                              {v.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveEdit}
+                        className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditEventId(null)}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
