@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CoupleEvent,
   CoupleCollaborator,
@@ -147,6 +147,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
   // ── Chat (venue ↔ couple) ──────────────────────────────────────────────────
   const [chatDraft, setChatDraft] = useState('');
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const [msgTick, setMsgTick] = useState(0);
   const messages = useMemo(
     () => (event ? getCoupleMessages(event.id) : []),
@@ -172,6 +173,14 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     }, 5000);
     return () => clearInterval(id);
   }, [activeTab === 'chat', event?.id]);
+
+  // Auto-scroll the couple chat to the newest message when it updates.
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      const el = chatScrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+  }, [activeTab, msgTick]);
 
   const handleSendMessage = () => {
     if (!event || !chatDraft.trim()) return;
@@ -1483,7 +1492,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
           {activeTab === 'chat' && (
             <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm flex flex-col">
               <h3 className="font-semibold text-sm mb-2">Chat with the venue</h3>
-              <div className="flex-1 max-h-[40vh] overflow-y-auto space-y-2 border border-gray-100 rounded-lg p-3 bg-gray-50">
+              <div ref={chatScrollRef} className="flex-1 max-h-[40vh] overflow-y-auto space-y-2 border border-gray-100 rounded-lg p-3 bg-gray-50">
                 {messages.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-6">
                     No messages yet. Say hello to your venue coordinator!

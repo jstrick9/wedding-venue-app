@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AdminCommonProps } from './AdminTabTypes';
 import { CoupleEvent, CoupleLayoutStatus } from '../../types';
 import {
@@ -59,6 +59,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [openGuests, setOpenGuests] = useState<string | null>(null);
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
   const [chatTick, setChatTick] = useState(0);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Refresh the chat pane while open so new couple messages appear without the venue
   // having to reload or send. Opening the pane marks the venue side as "read"
@@ -73,6 +74,12 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
     const id = setInterval(mark, 5000);
     return () => clearInterval(id);
   }, [openChat]);
+
+  // Auto-scroll the open chat pane to the newest message.
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [chatTick, openChat]);
   // Optional review comment per couple event in the approval queue.
   const [reviewComments, setReviewComments] = useState<Record<string, string>>({});
 
@@ -198,7 +205,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
             Close
           </button>
         </div>
-        <div className="max-h-56 overflow-y-auto space-y-2 bg-gray-50 rounded-lg p-3">
+        <div ref={chatScrollRef} className="max-h-56 overflow-y-auto space-y-2 bg-gray-50 rounded-lg p-3">
           {messages.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">No messages yet.</p>
           ) : (
