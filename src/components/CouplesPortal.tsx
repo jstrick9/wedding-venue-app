@@ -3,6 +3,7 @@ import {
   CoupleEvent,
   CoupleCollaborator,
   CoupleCollaboratorRole,
+  CoupleVendor,
   EventQuestion,
   EventAnswer,
   GuestPortalConfig,
@@ -39,7 +40,11 @@ import {
 import { getGuestPortalConfig } from '../utils/guestPortal';
 import { parseGuestCsv } from '../utils/guestCsv';
 import { getCoupleRsvpSubmissions, removeCoupleRsvp, upsertCoupleRsvp } from '../services/couples/coupleRsvpService';
+import { getCoupleChecklist, addCoupleChecklistItem, toggleCoupleChecklistItem, removeCoupleChecklistItem } from '../services/couples/coupleChecklistService';
+import { getCoupleVendors, addCoupleVendor, updateCoupleVendor, removeCoupleVendor, getVenuePreferredVendors } from '../services/couples/coupleVendorService';
+import { VENDOR_CATEGORIES } from '../types/vendor';
 import { getVenues } from '../hooks/useLayoutState';
+import { getVenueVendors } from '../hooks/useVendors';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import { getConfig } from '../config';
@@ -47,7 +52,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
 
-type TabId = 'overview' | 'spaces' | 'questions' | 'design' | 'guests' | 'portal' | 'chat' | 'collaborators';
+type TabId = 'overview' | 'spaces' | 'questions' | 'design' | 'checklist' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
 
 interface CouplesPortalProps {
   coupleToken?: string;
@@ -237,6 +242,76 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   // Manual RSVP recording (e.g. a guest responded by phone).
   const [rsvpGuestId, setRsvpGuestId] = useState<string | null>(null);
   const [rsvpRecord, setRsvpRecord] = useState({ attending: true as boolean, meal: '', plusOne: '', notes: '' });
+
+  // ── Checklist (couple's own prep checklist) ───────────────────────────────
+  const [checklistTick, setChecklistTick] = useState(0);
+  const coupleChecklist = useMemo(
+    () => (event ? getCoupleChecklist(event.id) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [event, checklistTick],
+  );
+  const [newCheckItem, setNewCheckItem] = useState({ title: '', phase: '', dueDate: '' });
+  const addCheckItem = () => {
+    if (!event || !newCheckItem.title.trim()) {
+      showToast('Enter a checklist item.', 'warning');
+      return;
+    }
+    addCoupleChecklistItem(event.id, {
+      title: newCheckItem.title,
+      phase: newCheckItem.phase,
+      dueDate: newCheckItem.dueDate,
+      createdBy: me?.id,
+    });
+    setNewCheckItem({ title: '', phase: '', dueDate: '' });
+    setChecklistTick((t) => t + 1);
+  };
+
+  // ── Vendors (couple's vendors; pick from venue preferred or add custom) ───
+  const [vendorTick, setVendorTick] = useState(0);
+  const coupleVendors = useMemo(
+    () => (event ? getCoupleVendors(event.id) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [event, vendorTick],
+  );
+  const preferredVendors = useMemo(() => getVenuePreferredVendors(getVenueVendors()), []);
+  const [customVendor, setCustomVendor] = useState({ name: '', category: 'other', contactName: '', email: '', phone: '', notes: '' });
+  const addCustomVendor = () => {
+    if (!event || !customVendor.name.trim()) {
+      showToast('Enter a vendor name.', 'warning');
+      return;
+    }
+    addCoupleVendor(event.id, {
+      name: customVendor.name,
+      category: customVendor.category,
+      source: 'custom',
+      contactName: customVendor.contactName,
+      email: customVendor.email,
+      phone: customVendor.phone,
+      notes: customVendor.notes,
+    });
+    setCustomVendor({ name: '', category: 'other', contactName: '', email: '', phone: '', notes: '' });
+    setVendorTick((t) => t + 1);
+  };
+  const pickPreferredVendor = (v: { id: string; name: string; category: string; contactName?: string; email?: string; phone?: string; website?: string }) => {
+    if (!event) return;
+    const added = addCoupleVendor(event.id, {
+      name: v.name,
+      category: v.category,
+      source: 'preferred',
+      venueVendorId: v.id,
+      contactName: v.contactName,
+      email: v.email,
+      phone: v.phone,
+      website: v.website,
+    });
+    setVendorTick((t) => t + 1);
+    showToast(added ? `${v.name} added to your vendors.` : `${v.name} is already on your list.`, added ? 'success' : 'info');
+  };
+  const setVendorStatus = (vendorId: string, status: CoupleVendor['status']) => {
+    if (!event) return;
+    updateCoupleVendor(event.id, vendorId, { status });
+    setVendorTick((t) => t + 1);
+  };
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
@@ -489,6 +564,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     { id: 'questions', label: 'Questions', icon: '❓' },
     { id: 'spaces', label: 'Venue Spaces', icon: '🏛️' },
     { id: 'design', label: 'Design & Approval', icon: '🎨' },
+    { id: 'checklist', label: 'Checklist', icon: '✅' },
+    { id: 'vendors', label: 'Vendors', icon: '🧰' },
     { id: 'guests', label: 'Guests', icon: '👥' },
     { id: 'portal', label: 'Portal Settings', icon: '🎛️' },
     { id: 'chat', label: 'Chat', icon: '💬' },
@@ -1093,6 +1170,289 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   </ul>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'checklist' && (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-1">Your event checklist</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Build your own prep checklist — based on your approved layouts and chosen decor.
+                  The venue keeps its own separate setup/staffing plan.
+                </p>
+                {!canManageGuests && (
+                  <p className="text-xs text-gray-500 italic mb-3">View-only — your role cannot edit the checklist.</p>
+                )}
+                {canManageGuests && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      value={newCheckItem.title}
+                      onChange={(e) => setNewCheckItem({ ...newCheckItem, title: e.target.value })}
+                      placeholder="Checklist item (e.g. Finalize seating chart)"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Checklist item title"
+                    />
+                    <input
+                      type="text"
+                      value={newCheckItem.phase}
+                      onChange={(e) => setNewCheckItem({ ...newCheckItem, phase: e.target.value })}
+                      placeholder="Phase (e.g. Planning, Setup, Day-of)"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Checklist phase"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        value={newCheckItem.dueDate}
+                        onChange={(e) => setNewCheckItem({ ...newCheckItem, dueDate: e.target.value })}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        aria-label="Checklist due date"
+                      />
+                      <button
+                        type="button"
+                        onClick={addCheckItem}
+                        className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-sm">Items ({coupleChecklist.length})</h3>
+                  {coupleChecklist.length > 0 && (
+                    <span className="text-xs text-gray-500">
+                      {coupleChecklist.filter((i) => i.done).length} of {coupleChecklist.length} done
+                    </span>
+                  )}
+                </div>
+                {coupleChecklist.length === 0 ? (
+                  <p className="text-xs text-gray-400">No checklist items yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {coupleChecklist.map((item) => (
+                      <div key={item.id} className="rounded-lg border border-gray-200 p-3 flex items-center gap-3">
+                        <button
+                          type="button"
+                          disabled={!canManageGuests}
+                          onClick={() => {
+                            toggleCoupleChecklistItem(event!.id, item.id);
+                            setChecklistTick((t) => t + 1);
+                          }}
+                          className={`shrink-0 w-5 h-5 rounded border flex items-center justify-center text-xs ${
+                            item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-transparent'
+                          }`}
+                          aria-label={`Toggle ${item.title}`}
+                        >
+                          ✓
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-sm ${item.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{item.title}</div>
+                          <div className="text-xs text-gray-500">
+                            {item.phase && <span>{item.phase}</span>}
+                            {item.phase && item.dueDate && ' · '}
+                            {item.dueDate && <span>📅 {new Date(item.dueDate + 'T00:00:00').toLocaleDateString()}</span>}
+                          </div>
+                        </div>
+                        {canManageGuests && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              removeCoupleChecklistItem(event!.id, item.id);
+                              setChecklistTick((t) => t + 1);
+                            }}
+                            className="text-xs text-red-500 hover:underline"
+                            aria-label={`Remove ${item.title}`}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'vendors' && (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-1">Your vendors</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Pick from the venue's preferred vendors, or add your own. Track who you've
+                  booked for your event.
+                </p>
+                {!canManageGuests && (
+                  <p className="text-xs text-gray-500 italic mb-3">View-only — your role cannot edit vendors.</p>
+                )}
+              </div>
+
+              {/* Venue preferred vendors (read-only picks) */}
+              {preferredVendors.length > 0 && (
+                <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                  <h3 className="font-semibold text-sm mb-1">🏛️ Venue preferred vendors</h3>
+                  <p className="text-xs text-gray-500 mb-3">One-tap to add any of these to your list.</p>
+                  <div className="space-y-2">
+                    {preferredVendors.map((v) => {
+                      const already = coupleVendors.some((cv) => cv.venueVendorId === v.id);
+                      return (
+                        <div key={v.id} className="rounded-lg border border-gray-200 p-3 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-800">{v.name}</div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {VENDOR_CATEGORIES.find((c) => c.id === v.category)?.label || v.category}
+                              {v.contactName ? ` · ${v.contactName}` : ''}
+                              {v.email ? ` · ${v.email}` : ''}
+                            </div>
+                          </div>
+                          {canManageGuests && (
+                            <button
+                              type="button"
+                              disabled={already}
+                              onClick={() => pickPreferredVendor(v)}
+                              className={`shrink-0 text-xs px-3 py-1.5 rounded-lg ${
+                                already
+                                  ? 'bg-gray-100 text-gray-500 cursor-default'
+                                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                              }`}
+                            >
+                              {already ? '✓ Added' : '+ Add'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Add custom vendor */}
+              {canManageGuests && (
+                <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                  <h3 className="font-semibold text-sm mb-2">➕ Add your own vendor</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={customVendor.name}
+                      onChange={(e) => setCustomVendor({ ...customVendor, name: e.target.value })}
+                      placeholder="Vendor name"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Custom vendor name"
+                    />
+                    <select
+                      value={customVendor.category}
+                      onChange={(e) => setCustomVendor({ ...customVendor, category: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                      aria-label="Custom vendor category"
+                    >
+                      {VENDOR_CATEGORIES.map((c) => (
+                        <option key={c.id} value={c.id}>{c.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={customVendor.contactName}
+                      onChange={(e) => setCustomVendor({ ...customVendor, contactName: e.target.value })}
+                      placeholder="Contact name"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Custom vendor contact"
+                    />
+                    <input
+                      type="email"
+                      value={customVendor.email}
+                      onChange={(e) => setCustomVendor({ ...customVendor, email: e.target.value })}
+                      placeholder="Email"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Custom vendor email"
+                    />
+                    <input
+                      type="tel"
+                      value={customVendor.phone}
+                      onChange={(e) => setCustomVendor({ ...customVendor, phone: e.target.value })}
+                      placeholder="Phone"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Custom vendor phone"
+                    />
+                    <input
+                      type="text"
+                      value={customVendor.notes}
+                      onChange={(e) => setCustomVendor({ ...customVendor, notes: e.target.value })}
+                      placeholder="Notes"
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Custom vendor notes"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addCustomVendor}
+                    className="mt-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                  >
+                    Add vendor
+                  </button>
+                </div>
+              )}
+
+              {/* Couple's vendor list */}
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-3">Your vendor list ({coupleVendors.length})</h3>
+                {coupleVendors.length === 0 ? (
+                  <p className="text-xs text-gray-400">No vendors yet. Add your own or pick from the venue's list.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {coupleVendors.map((v) => (
+                      <div key={v.id} className="rounded-lg border border-gray-200 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-800">{v.name}</div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {VENDOR_CATEGORIES.find((c) => c.id === v.category)?.label || v.category}
+                              {v.source === 'preferred' ? ' · venue preferred' : ' · your own'}
+                              {v.contactName ? ` · ${v.contactName}` : ''}
+                              {v.email ? ` · ${v.email}` : ''}
+                              {v.phone ? ` · ${v.phone}` : ''}
+                              {v.cost != null ? ` · $${v.cost}` : ''}
+                            </div>
+                            {v.notes && <div className="text-xs text-gray-600 mt-1">{v.notes}</div>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <select
+                              value={v.status}
+                              disabled={!canManageGuests}
+                              onChange={(e) => setVendorStatus(v.id, e.target.value as CoupleVendor['status'])}
+                              className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white disabled:bg-gray-50"
+                              aria-label={`Status for ${v.name}`}
+                            >
+                              <option value="requested">Requested</option>
+                              <option value="contacted">Contacted</option>
+                              <option value="booked">Booked</option>
+                              <option value="declined">Declined</option>
+                            </select>
+                            {canManageGuests && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  removeCoupleVendor(event!.id, v.id);
+                                  setVendorTick((t) => t + 1);
+                                }}
+                                className="text-xs text-red-500 hover:underline"
+                                aria-label={`Remove ${v.name}`}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

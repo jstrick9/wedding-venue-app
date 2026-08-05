@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AdminCommonProps } from './AdminTabTypes';
-import { CoupleEvent, CoupleLayoutStatus } from '../../types';
+import { CoupleEvent, CoupleLayoutStatus, CoupleSetupStatus } from '../../types';
 import {
   getCoupleEvents,
   createCoupleEvent,
@@ -19,6 +19,7 @@ import {
 import { getCoupleGuests, getCouplePortalConfig, setCouplePortalConfig } from '../../services/couples/coupleGuestService';
 import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
 import { getGuestPortalConfig } from '../../utils/guestPortal';
+import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeCoupleSetupTask } from '../../services/couples/coupleSetupService';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
@@ -58,6 +59,9 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [editForm, setEditForm] = useState({ eventDate: '', eventEndDate: '', guestCount: '', availableSpaces: [] as string[] });
   const [openChat, setOpenChat] = useState<string | null>(null);
   const [openGuests, setOpenGuests] = useState<string | null>(null);
+  const [openSetup, setOpenSetup] = useState<string | null>(null);
+  const [setupDrafts, setSetupDrafts] = useState<Record<string, { title: string; spaceId: string; dayIndex: string; assignee: string; scheduledFor: string; notes: string }>>({});
+  const [setupTick, setSetupTick] = useState(0);
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
   const [chatTick, setChatTick] = useState(0);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
@@ -600,6 +604,13 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     </button>
                     <button
                       type="button"
+                      onClick={() => setOpenSetup(openSetup === ev.id ? null : ev.id)}
+                      className="text-xs text-gray-600 hover:underline"
+                    >
+                      🛠️ Setup & Staffing
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setOpenChat(openChat === ev.id ? null : ev.id)}
                       className="text-xs text-gray-600 hover:underline relative"
                     >
@@ -745,6 +756,99 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                               </div>
                             );
                           })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {openSetup === ev.id && (() => {
+                  const tasks = getCoupleSetupTasks(ev.id);
+                  void setupTick;
+                  const draft = setupDrafts[ev.id] || { title: '', spaceId: '', dayIndex: '', assignee: '', scheduledFor: '', notes: '' };
+                  const setDraft = (p: Partial<typeof draft>) => setSetupDrafts((prev) => ({ ...prev, [ev.id]: { ...(prev[ev.id] || { title: '', spaceId: '', dayIndex: '', assignee: '', scheduledFor: '', notes: '' }), ...p } }));
+                  const addTask = () => {
+                    if (!draft.title.trim()) { onShowSuccess('Enter a task description.'); return; }
+                    addCoupleSetupTask(ev.id, {
+                      title: draft.title,
+                      spaceId: draft.spaceId || undefined,
+                      dayIndex: draft.dayIndex !== '' ? Number(draft.dayIndex) : undefined,
+                      assignee: draft.assignee,
+                      scheduledFor: draft.scheduledFor || undefined,
+                      notes: draft.notes,
+                    });
+                    setSetupDrafts((prev) => ({ ...prev, [ev.id]: { title: '', spaceId: '', dayIndex: '', assignee: '', scheduledFor: '', notes: '' } }));
+                    setSetupTick((t) => t + 1);
+                    onShowSuccess('Setup task added.');
+                  };
+                  const doneCount = tasks.filter((t) => t.status === 'done').length;
+                  return (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="text-xs font-medium text-gray-500 mb-1">
+                        Setup & Staffing ({tasks.length}) — what the venue must do before/at each space
+                      </div>
+                      {tasks.length > 0 && (
+                        <div className="mb-2 text-xs text-gray-600">{doneCount} of {tasks.length} complete</div>
+                      )}
+                      <div className="rounded-lg border border-gray-200 p-3 space-y-2 mb-3">
+                        <div className="text-xs font-semibold text-gray-600">Add a setup task</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input type="text" value={draft.title} onChange={(e) => setDraft({ title: e.target.value })} placeholder="Task (e.g. Move tables to reception)" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Setup task title" />
+                          <select value={draft.spaceId} onChange={(e) => setDraft({ spaceId: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" aria-label="Setup task space">
+                            <option value="">Space (optional)</option>
+                            {venues.filter((v) => ev.availableSpaces.includes(v.id)).map((v) => (
+                              <option key={v.id} value={v.id}>{v.name}</option>
+                            ))}
+                          </select>
+                          <select value={draft.dayIndex} onChange={(e) => setDraft({ dayIndex: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" aria-label="Setup task day">
+                            <option value="">Day (optional)</option>
+                            {(ev.days || []).map((d, idx) => (
+                              <option key={d.id} value={idx}>{idx + 1}. {d.date}</option>
+                            ))}
+                          </select>
+                          <input type="text" value={draft.assignee} onChange={(e) => setDraft({ assignee: e.target.value })} placeholder="Who (staff name)" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Setup assignee" />
+                          <input type="datetime-local" value={draft.scheduledFor} onChange={(e) => setDraft({ scheduledFor: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Setup scheduled time" />
+                          <input type="text" value={draft.notes} onChange={(e) => setDraft({ notes: e.target.value })} placeholder="Notes" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Setup notes" />
+                        </div>
+                        <button type="button" onClick={addTask} className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700">
+                          + Add task
+                        </button>
+                      </div>
+                      {tasks.length === 0 ? (
+                        <p className="text-xs text-gray-400">No setup tasks yet. Add tasks for what needs doing (moving tables/chairs, decor install) before each event/space.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {tasks.map((t) => (
+                            <div key={t.id} className="rounded-lg border border-gray-200 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className={`text-sm ${t.status === 'done' ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{t.title}</div>
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {(() => { const v = venues.find((x) => x.id === t.spaceId); return v ? `🏛️ ${v.name}` : ''; })()}
+                                    {t.dayIndex != null && ev.days?.[t.dayIndex] ? ` · Day ${t.dayIndex + 1} (${ev.days[t.dayIndex].date})` : ''}
+                                    {t.assignee ? ` · 👤 ${t.assignee}` : ''}
+                                    {t.scheduledFor ? ` · 🕒 ${new Date(t.scheduledFor).toLocaleString()}` : ''}
+                                  </div>
+                                  {t.notes && <div className="text-xs text-gray-600 mt-1">{t.notes}</div>}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <select
+                                    value={t.status}
+                                    onChange={(e) => { updateCoupleSetupTask(ev.id, t.id, { status: e.target.value as CoupleSetupStatus }); setSetupTick((x) => x + 1); }}
+                                    className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white"
+                                    aria-label={`Status for ${t.title}`}
+                                  >
+                                    <option value="not-started">Not started</option>
+                                    <option value="in-progress">In progress</option>
+                                    <option value="done">Done</option>
+                                  </select>
+                                  <button type="button" onClick={() => { removeCoupleSetupTask(ev.id, t.id); setSetupTick((x) => x + 1); }} className="text-xs text-red-500 hover:underline" aria-label={`Remove ${t.title}`}>
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>

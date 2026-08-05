@@ -18,6 +18,16 @@ function saveVendors(vendors: Vendor[]): void {
   localStorage.setItem(VENDORS_KEY, JSON.stringify(vendors));
 }
 
+/** Synchronous read of the venue's vendor list (for read-only reference in the couples portal). */
+export function getVenueVendors(): Vendor[] {
+  try {
+    const raw = localStorage.getItem(VENDORS_KEY);
+    return raw ? (JSON.parse(raw) as Vendor[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 function loadPayments(): VendorPayment[] {
   try {
     const raw = localStorage.getItem(PAYMENTS_KEY);
