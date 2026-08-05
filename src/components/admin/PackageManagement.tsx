@@ -12,7 +12,6 @@ import {
   seedDefaultWeddingPackages,
   INCLUDED_ITEMS,
   PACKAGE_DURATIONS,
-  emptySeasonPrice,
   suggestSetupTaskTitles,
 } from '../../services/couples/couplePackageService';
 import {

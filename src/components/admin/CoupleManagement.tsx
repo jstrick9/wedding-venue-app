@@ -20,7 +20,7 @@ import { getCoupleGuests, getCouplePortalConfig, setCouplePortalConfig } from '.
 import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
 import { getGuestPortalConfig } from '../../utils/guestPortal';
 import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeCoupleSetupTask } from '../../services/couples/coupleSetupService';
-import { getWeddingPackages, getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
+import { getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
 import { findPackageAddOn } from '../../services/couples/coupleAddOnService';
 
 interface CoupleManagementProps {
