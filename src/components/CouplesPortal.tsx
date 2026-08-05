@@ -1730,6 +1730,29 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   </div>
                 );
               })()}
+              {/* Per-event RSVP headcount */}
+              {coupleGuestEvents.length > 0 && (() => {
+                const attending = coupleRsvps.filter((r) => r.attending);
+                return (
+                  <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                    <h3 className="font-semibold text-sm mb-2">🎟️ RSVPs per event</h3>
+                    <div className="space-y-1.5">
+                      {coupleGuestEvents.map((ge) => {
+                        const count = attending.filter((r) => (r.attendingEvents || []).includes(ge.id)).length;
+                        const assigned = getAssignedGuestCount(event!.id, ge.id);
+                        return (
+                          <div key={ge.id} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700">{ge.title}</span>
+                            <span className="text-xs text-gray-600">
+                              {count} attending / {assigned} invited{ge.capacity ? ` / ${ge.capacity} cap` : ''}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
               {/* Guest events & itinerary */}
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
