@@ -32,6 +32,7 @@ import {
   PortalWayfindingPoint,
   PortalMealOption,
   VenueMapPoint,
+  CoupleGuestEvent,
   DEFAULT_MEAL_OPTIONS,
 } from '../types';
 import {
@@ -57,6 +58,7 @@ import {
   getCoupleGuests,
   getCouplePortalConfig,
 } from '../services/couples/coupleGuestService';
+import { getCoupleGuestEvents } from '../services/couples/coupleGuestEventService';
 import {
   getCoupleRsvpSubmissions,
   setCoupleRsvpSubmissions,
@@ -93,6 +95,7 @@ interface PortalData {
   venues: Venue[];
   guests: GuestPortalGuestRecord[];
   submissions: RSVPSubmission[];
+  guestEvents: CoupleGuestEvent[];
 }
 
 const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, onExitPortal, preview = false }) => {
@@ -102,6 +105,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     venues: [],
     guests: [],
     submissions: [],
+    guestEvents: [],
   });
 
   const [activeTab, setActiveTab] = useState<TabId>('home');
@@ -151,8 +155,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         const venues = getPortalVenues();
         const guests = getCoupleGuests(coupleEventId);
         const submissions = getCoupleRsvpSubmissions(coupleEventId);
+        const guestEvents = getCoupleGuestEvents(coupleEventId);
 
-        setPortalData({ venues, guests, submissions });
+        setPortalData({ venues, guests, submissions, guestEvents });
 
       if (loadedConfig && isGuestPortalEventActive(loadedConfig)) {
         const session = loadGuestPortalSession(loadedConfig, loadedConfig.eventTitle);
@@ -191,6 +196,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         venues,
         guests,
         submissions,
+        guestEvents: [],
       });
 
       if (loadedConfig && isGuestPortalEventActive(loadedConfig)) {
@@ -284,6 +290,13 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
 
   const activeEventLabel = activeEventName || config?.eventTitle || '';
 
+  // The guest events this guest is invited to (per-couple itinerary).
+  const guestAssignedEvents = useMemo(() => {
+    if (!identifiedGuest || !isCouplePortal) return [];
+    const ids = identifiedGuest.guestEventIds || [];
+    return portalData.guestEvents.filter((e) => ids.includes(e.id));
+  }, [identifiedGuest, portalData.guestEvents, isCouplePortal]);
+
   // In preview mode the couple browses as a generic visitor: access-controlled tabs
   // (map/schedule/rsvp/lodging) are shown as long as the venue enabled them.
   const canViewTab = (allow: (g: GuestPortalGuestRecord | undefined, ev: string) => boolean) =>
@@ -364,6 +377,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     phone: '',
     attending: 'yes' as 'yes' | 'no',
     attendingDays: [] as string[],
+    attendingEvents: [] as string[],
     mealChoice: 'standard',
     plusOne: false,
     plusOneName: '',
@@ -392,6 +406,17 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       attending: guestRSVP?.attending === false ? 'no' : 'yes',
       // If the guest isn't attending, don't pre-fill stale days from a prior "yes".
       attendingDays: guestRSVP?.attending === false ? [] : (guestRSVP?.attendingDays || prev.attendingDays),
+      // For a per-couple portal, default attending events to the guest's assigned events.
+      attendingEvents:
+        guestRSVP?.attending === false
+          ? []
+          : guestRSVP?.attendingEvents
+            ? guestRSVP.attendingEvents
+            : prev.attendingEvents.length > 0
+              ? prev.attendingEvents
+              : isCouplePortal
+                ? guestAssignedEvents.map((e) => e.id)
+                : prev.attendingEvents,
       mealChoice: guestRSVP?.mealChoice || prev.mealChoice,
       plusOne: !!guestRSVP?.plusOneName,
       plusOneName: guestRSVP?.plusOneName || prev.plusOneName,
@@ -400,7 +425,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       specialNeeds: guestRSVP?.specialNeeds || prev.specialNeeds,
       notes: guestRSVP?.notes || prev.notes,
     }));
-  }, [identifiedGuest, guestRSVP]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identifiedGuest, guestRSVP, guestAssignedEvents]);
 
   const handleRSVPChange = (field: keyof typeof rsvpForm, value: any) => {
     setRsvpForm((prev) => ({ ...prev, [field]: value }));
@@ -438,6 +464,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       phone: rsvpForm.phone.trim(),
       attending: rsvpForm.attending === 'yes',
       attendingDays: rsvpForm.attending === 'yes' ? rsvpForm.attendingDays : [],
+      attendingEvents: rsvpForm.attending === 'yes' ? rsvpForm.attendingEvents : [],
       mealChoice: rsvpForm.attending === 'yes' ? rsvpForm.mealChoice : undefined,
       plusOneName:
         rsvpForm.plusOne && rsvpForm.attending === 'yes'
@@ -934,7 +961,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     // B-09 fix: read schedule items from config instead of a hardcoded empty array.
     const scheduleItems: PortalScheduleItem[] = config.scheduleItems ?? [];
 
-    if (!scheduleItems.length) {
+    // In a per-couple portal, show the guest's assigned events as their personal
+    // itinerary at the top (even before the venue's general schedule).
+    const personalEvents = isCouplePortal ? guestAssignedEvents : [];
+
+    if (!scheduleItems.length && personalEvents.length === 0) {
       return (
         <div className="pb-24">
           <div className="bg-white rounded-xl shadow p-4 mt-4 text-center space-y-2">
@@ -968,6 +999,28 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
 
     return (
       <div className="space-y-4 pb-24">
+        {personalEvents.length > 0 && (
+          <div className="rounded-xl bg-white shadow p-4 mt-2">
+            <h2 className="text-sm font-semibold text-gray-800 mb-2">Your invited events</h2>
+            <div className="space-y-2">
+              {personalEvents.map((e) => (
+                <div key={e.id} className="flex items-center justify-between gap-3 text-sm">
+                  <div>
+                    <div className="font-medium text-gray-800">{e.title}</div>
+                    <div className="text-xs text-gray-500">
+                      {e.dayIndex != null ? `Day ${e.dayIndex + 1}` : ''}
+                      {e.startTime ? ` · ${new Date(e.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                      {e.location ? ` · ${e.location}` : ''}
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                    {rsvpForm.attendingEvents?.includes(e.id) ? 'Attending' : 'Invited'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {isMultiDay && (
           <div className="flex gap-2 mt-2 overflow-x-auto">
             {days.map((d, idx) => (
@@ -1417,7 +1470,39 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
 
           {rsvpForm.attending === 'yes' && (
             <>
-              {isMultiDay && (
+              {isCouplePortal && guestAssignedEvents.length > 0 ? (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-700">
+                    Which events will you attend?
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {guestAssignedEvents.map((e) => {
+                      const checked = rsvpForm.attendingEvents.includes(e.id);
+                      return (
+                        <label key={e.id} className="inline-flex items-center gap-2 text-xs text-gray-700">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300"
+                            checked={checked}
+                            onChange={() =>
+                              handleRSVPChange(
+                                'attendingEvents',
+                                checked
+                                  ? rsvpForm.attendingEvents.filter((x) => x !== e.id)
+                                  : Array.from(new Set([...rsvpForm.attendingEvents, e.id])),
+                              )
+                            }
+                          />
+                          <span>
+                            {e.title}
+                            {e.startTime ? <span className="text-gray-400"> · {new Date(e.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> : ''}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : isMultiDay ? (
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-gray-700">
                     Which days will you attend?
@@ -1455,7 +1540,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                     })}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               <div className="space-y-2">
 		<label
