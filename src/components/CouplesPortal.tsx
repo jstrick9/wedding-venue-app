@@ -46,6 +46,19 @@ import { VENDOR_CATEGORIES } from '../types/vendor';
 import { findWeddingPackage, PACKAGE_DURATIONS, INCLUDED_ITEMS } from '../services/couples/couplePackageService';
 import { getActivePackageAddOns, findPackageAddOn, ADD_ON_CATEGORIES } from '../services/couples/coupleAddOnService';
 import { getCoupleSetupTasks, addCoupleSetupTask } from '../services/couples/coupleSetupService';
+import {
+  getCoupleGuestEvents,
+  addCoupleGuestEvent,
+  updateCoupleGuestEvent,
+  removeCoupleGuestEvent,
+  assignGuestToEvent,
+  removeGuestFromEvent,
+  setGuestEvents,
+  getAssignedGuestCount,
+  findCoupleGuestEvent,
+  ensureDerivedGuestEvents,
+  GUEST_EVENT_KIND_LABELS,
+} from '../services/couples/coupleGuestEventService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getVenueVendors } from '../hooks/useVendors';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
@@ -321,6 +334,40 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const bookedPackage = useMemo(() => (event ? findWeddingPackage(event.packageId) : undefined), [event, pkgTick]);
   const addOnCatalog = useMemo(() => getActivePackageAddOns(), []);
   const coupleAddOns = useMemo(() => event?.addOns || [], [event, pkgTick]);
+
+  // ── Guest events (itinerary) ───────────────────────────────────────────────
+  const [guestEventTick, setGuestEventTick] = useState(0);
+  const coupleGuestEvents = useMemo(
+    () => (event ? getCoupleGuestEvents(event.id) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [event, guestEventTick],
+  );
+  const [newGuestEvent, setNewGuestEvent] = useState({ title: '', capacity: '25' });
+  const addGuestEvent = () => {
+    if (!event || !newGuestEvent.title.trim()) {
+      showToast('Enter an event name.', 'warning');
+      return;
+    }
+    addCoupleGuestEvent(event.id, {
+      title: newGuestEvent.title,
+      kind: 'custom',
+      capacity: newGuestEvent.capacity ? Number(newGuestEvent.capacity) : 25,
+    });
+    setNewGuestEvent({ title: '', capacity: '25' });
+    setGuestEventTick((t) => t + 1);
+  };
+  // Resolve the couple's selected add-ons to their catalog entries.
+  const resolvedAddOns = useMemo(
+    () => coupleAddOns.map((a) => findPackageAddOn(a.addOnId)).filter((x): x is NonNullable<typeof x> => !!x),
+    [coupleAddOns],
+  );
+  // Auto-derive default guest events from the package + the couple's add-ons (once).
+  useEffect(() => {
+    if (!event) return;
+    ensureDerivedGuestEvents(event.id, bookedPackage, resolvedAddOns);
+    setGuestEventTick((t) => t + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id, bookedPackage?.id, resolvedAddOns.length]);
   const hasAddOn = (id: string) => coupleAddOns.some((a) => a.addOnId === id);
   const toggleAddOn = (addOnId: string) => {
     if (!event) return;
@@ -1683,6 +1730,79 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   </div>
                 );
               })()}
+              {/* Guest events & itinerary */}
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-semibold text-sm">📅 Guest events &amp; itinerary</h3>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  These are the events your guests are invited to (from your package &amp; add-ons).
+                  Set each event's capacity and assign specific guests to each one — e.g. a limited
+                  rehearsal dinner or overnight lodging. Guests see only their assigned events and
+                  RSVP to each.
+                </p>
+                {!canManageGuests && <p className="text-xs text-gray-500 italic mb-3">View-only — your role cannot edit guest events.</p>}
+                <div className="space-y-2">
+                  {coupleGuestEvents.length === 0 && <p className="text-xs text-gray-400">No guest events yet. Assign a package to auto-create them.</p>}
+                  {coupleGuestEvents.map((ge) => {
+                    const assigned = getAssignedGuestCount(event!.id, ge.id);
+                    const over = assigned > ge.capacity;
+                    return (
+                      <div key={ge.id} className="rounded-lg border border-gray-200 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-gray-800">{ge.title}</span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{GUEST_EVENT_KIND_LABELS[ge.kind]}</span>
+                              {ge.derived && <span className="text-xs text-indigo-400">auto</span>}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {ge.dayIndex != null && event.days?.[ge.dayIndex] ? `Day ${ge.dayIndex + 1} (${event.days[ge.dayIndex].date})` : 'All days'}
+                              {ge.startTime ? ` · ${new Date(ge.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                              {ge.location ? ` · ${ge.location}` : ''}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${over ? 'bg-red-100 text-red-700' : 'bg-indigo-50 text-indigo-700'}`}>
+                              {assigned}/{ge.capacity} assigned
+                            </span>
+                            {canManageGuests && (
+                              <button type="button" onClick={() => { removeCoupleGuestEvent(event!.id, ge.id); setGuestEventTick((t) => t + 1); }} className="text-xs text-red-500 hover:underline" aria-label={`Remove ${ge.title}`}>
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {/* Edit capacity */}
+                        {canManageGuests && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <label className="text-xs text-gray-500">Capacity</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={ge.capacity}
+                              onChange={(e) => { updateCoupleGuestEvent(event!.id, ge.id, { capacity: Number(e.target.value) }); setGuestEventTick((t) => t + 1); }}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-xs"
+                              aria-label={`Capacity for ${ge.title}`}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {canManageGuests && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Add a custom guest event</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input type="text" value={newGuestEvent.title} onChange={(e) => setNewGuestEvent({ ...newGuestEvent, title: e.target.value })} placeholder="Event name" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Custom event name" />
+                      <input type="number" value={newGuestEvent.capacity} min={1} onChange={(e) => setNewGuestEvent({ ...newGuestEvent, capacity: e.target.value })} placeholder="Capacity" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Custom event capacity" />
+                    </div>
+                    <button type="button" onClick={addGuestEvent} className="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700">+ Add event</button>
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
                 <h3 className="font-semibold text-sm mb-1">Manage your guests</h3>
                 <p className="text-xs text-gray-500 mb-3">
@@ -2013,6 +2133,54 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               )}
                               {!rsvp.mealChoice && !rsvp.plusOneName && !rsvp.dietaryNotes && !rsvp.specialNeeds && !rsvp.notes && (
                                 <p className="text-gray-400">No meal/dietary details provided.</p>
+                              )}
+                              {rsvp.attendingEvents && rsvp.attendingEvents.length > 0 && (
+                                <p>📅 Attending: {rsvp.attendingEvents.map((id) => findCoupleGuestEvent(id)?.title || id).join(', ')}</p>
+                              )}
+                            </div>
+                          )}
+                          {/* Per-guest event assignment (which events this guest is invited to) */}
+                          {canManageGuests && (
+                            <div className="mt-2 pt-2 border-t border-gray-100">
+                              <div className="text-xs font-medium text-gray-500 mb-1">Invited to events</div>
+                              {coupleGuestEvents.length === 0 ? (
+                                <p className="text-xs text-gray-400">No guest events defined yet.</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {coupleGuestEvents.map((ge) => {
+                                    const checked = (g.guestEventIds || []).includes(ge.id);
+                                    const atCap = !checked && getAssignedGuestCount(event!.id, ge.id) >= ge.capacity;
+                                    return (
+                                      <button
+                                        key={ge.id}
+                                        type="button"
+                                        onClick={() => {
+                                          const ids = g.guestEventIds || [];
+                                          if (checked) {
+                                            removeGuestFromEvent(event!.id, g.id, ge.id);
+                                          } else {
+                                            if (atCap) {
+                                              showToast(`${ge.title} is at capacity (${ge.capacity}).`, 'warning');
+                                              return;
+                                            }
+                                            assignGuestToEvent(event!.id, g.id, ge.id);
+                                          }
+                                          setGuestEventTick((t) => t + 1);
+                                          setGuestTick((t) => t + 1);
+                                        }}
+                                        className={`text-[11px] px-2 py-1 rounded-full border ${
+                                          checked
+                                            ? 'bg-indigo-600 text-white border-indigo-600'
+                                            : atCap
+                                              ? 'bg-gray-100 text-gray-400 border-gray-200'
+                                              : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-300'
+                                        }`}
+                                      >
+                                        {checked ? '✓ ' : ''}{ge.title}{atCap && !checked ? ` (full)` : ''}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               )}
                             </div>
                           )}
