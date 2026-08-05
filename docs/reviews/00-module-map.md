@@ -253,6 +253,11 @@ inline. See docs/couples-platform/ROADMAP.md.
 couple sees the full review history (action, who, note, timestamp) on their Design tab.
 See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Couple overview dashboard
+✅ The Overview tab now shows a progress checklist (questions, spaces, submission, guests,
+personalization) with quick jumps, plus Copy portal link / Preview portal actions.
+See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

@@ -426,6 +426,64 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   <div className="text-xs text-gray-500 mt-1">Expected guests</div>
                 </div>
               </div>
+
+              {/* Progress + quick links */}
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-3">Your progress</h3>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Questions answered', done: coupleAnswers.length > 0, tab: 'questions' as TabId },
+                    { label: 'Venue spaces selected', done: event.selectedSpaces.length > 0, tab: 'spaces' as TabId },
+                    { label: 'Layouts submitted for approval', done: event.layoutStatus === 'pending' || event.layoutStatus === 'approved', tab: 'design' as TabId },
+                    { label: 'Guests invited', done: coupleGuests.length > 0, tab: 'guests' as TabId },
+                    { label: 'Portal personalized', done: !!portalConfig?.welcomeMessage || (portalConfig?.mealOptions?.length ?? 0) > 0, tab: 'portal' as TabId },
+                  ].map((step) => (
+                    <button
+                      key={step.label}
+                      type="button"
+                      onClick={() => setActiveTab(step.tab)}
+                      className="w-full flex items-center gap-2 text-sm text-left hover:bg-gray-50 rounded-lg px-2 py-1.5"
+                    >
+                      <span className="text-base">{step.done ? '✅' : '⬜'}</span>
+                      <span className={`flex-1 ${step.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{step.label}</span>
+                      <span className="text-gray-300">→</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Share / preview guest portal */}
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-2">Guest portal</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Send your guests their invite links from the Guests tab, or preview your
+                  guest portal to see it as they will.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}#/guest-portal?couple=${encodeURIComponent(event.id)}`;
+                      void navigator.clipboard?.writeText(url).then(
+                        () => showToast('Guest portal link copied to clipboard.', 'success'),
+                        () => showToast('Could not copy — copy the link below.', 'warning'),
+                      );
+                    }}
+                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                  >
+                    🔗 Copy portal link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(`${window.location.origin}${window.location.pathname}#/guest-portal?couple=${encodeURIComponent(event.id)}`, '_blank');
+                    }}
+                    className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    👁️ Preview portal
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

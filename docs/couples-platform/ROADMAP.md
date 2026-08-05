@@ -74,6 +74,9 @@ so each booked couple gets their own space.
 - ✅ **Approval review notes (delivered):** the venue can write a per-couple note with
   approve / request changes / reject; the couple sees the full review history (action,
   who, note, timestamp) on their Design tab.
+- ✅ **Couple overview dashboard (delivered):** the Overview tab now shows a progress
+  checklist (questions, spaces, submission, guests, personalization) with quick jumps,
+  plus "Copy portal link" and "Preview portal" actions.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 
