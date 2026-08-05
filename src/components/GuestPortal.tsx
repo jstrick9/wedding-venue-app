@@ -1441,7 +1441,15 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                               );
                             }}
                           />
-                          Day {idx + 1}
+                          <span>
+                            Day {idx + 1}
+                            {(() => {
+                              const d = eventDates(config.eventStartDate, config.eventEndDate)[idx];
+                              return d ? (
+                                <span className="text-gray-400"> · {new Date(d + 'T00:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                              ) : null;
+                            })()}
+                          </span>
                         </label>
                       );
                     })}

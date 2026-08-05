@@ -77,10 +77,9 @@ describe('GuestPortal multi-day attending-days', () => {
     await user.click(screen.getByRole('button', { name: /rsvp now/i }));
 
     expect(screen.getByText('Which days will you attend?')).toBeTruthy();
-    // 3-day event => Day 1, Day 2, Day 3
-    expect(screen.getByLabelText('Day 1')).toBeTruthy();
-    expect(screen.getByLabelText('Day 2')).toBeTruthy();
-    expect(screen.getByLabelText('Day 3')).toBeTruthy();
+    // 3-day event => 3 attending-day checkboxes
+    const dayCheckboxes = screen.getAllByRole('checkbox', { name: /^Day \d/ });
+    expect(dayCheckboxes).toHaveLength(3);
   });
 
   it('hides the attending-days section for single-day events', async () => {
