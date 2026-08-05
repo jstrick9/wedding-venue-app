@@ -718,6 +718,28 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 </div>
               </div>
 
+              {/* Package summary */}
+              {bookedPackage && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('package')}
+                  className="w-full rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 p-4 text-left shadow-sm hover:border-indigo-300"
+                >
+                  <div className="text-xs text-indigo-500 font-medium mb-1">Your package</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-gray-800">{bookedPackage.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {PACKAGE_DURATIONS.find((d) => d.id === bookedPackage.durationType)?.label} → add add-ons
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    {bookedPackage.maxGuests} guests{bookedPackage.maxOvernightGuests > 0 ? ` · ${bookedPackage.maxOvernightGuests} overnight` : ''}
+                    {bookedPackage.lodgingIncluded ? ' · 🛏️ lodging included' : ''}
+                    {(event.addOns?.length || 0) > 0 ? ` · ${event.addOns!.length} add-on(s)` : ''}
+                  </div>
+                </button>
+              )}
+
               {/* Progress + quick links */}
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
                 <h3 className="font-semibold text-sm mb-3">Your progress</h3>
