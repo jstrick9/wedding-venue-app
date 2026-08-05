@@ -79,6 +79,9 @@ so each booked couple gets their own space.
   plus "Copy portal link" and "Preview portal" actions.
 - ✅ **Venue event lifecycle (delivered):** the venue can mark a couple event complete /
   reopen it from the Couple Management card.
+- ✅ **RSVP summary dashboards (delivered):** the couple's Guests tab shows an RSVP summary
+  (invited / attending / not attending / no response); the venue's Couple Management card
+  shows the same breakdown per couple.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 

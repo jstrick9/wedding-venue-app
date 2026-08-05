@@ -431,10 +431,17 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       {ev.guestCount && <span>👥 {ev.guestCount} guests</span>}
                       <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
                       <span>👥 {ev.collaborators.length} people</span>
-                      <span>
-                        🎟️ {getCoupleGuests(ev.id).length} guests ·{' '}
-                        {getCoupleRsvpSubmissions(ev.id).filter((r) => r.attending).length} attending
-                      </span>
+                      {(() => {
+                        const g = getCoupleGuests(ev.id).length;
+                        const rsvps = getCoupleRsvpSubmissions(ev.id);
+                        const attending = rsvps.filter((r) => r.attending).length;
+                        const declined = rsvps.filter((r) => !r.attending).length;
+                        return (
+                          <span>
+                            🎟️ {g} guests · ✅ {attending} attending · ❌ {declined} · ⏳ {g - rsvps.length} no reply
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

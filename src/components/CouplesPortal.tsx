@@ -810,6 +810,21 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
           {activeTab === 'guests' && (
             <div className="space-y-3">
+              {/* RSVP summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Invited', value: coupleGuests.length, color: 'text-gray-800', icon: '👥' },
+                  { label: 'Attending', value: coupleRsvps.filter((r) => r.attending).length, color: 'text-green-600', icon: '✅' },
+                  { label: 'Not attending', value: coupleRsvps.filter((r) => !r.attending).length, color: 'text-red-600', icon: '❌' },
+                  { label: 'No response', value: coupleGuests.length - coupleRsvps.length, color: 'text-amber-600', icon: '⏳' },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl bg-white border border-gray-200 p-4 text-center shadow-sm">
+                    <div className="text-xl">{s.icon}</div>
+                    <div className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-gray-500 mt-1">{s.label}</div>
+                  </div>
+                ))}
+              </div>
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
                 <h3 className="font-semibold text-sm mb-1">Manage your guests</h3>
                 <p className="text-xs text-gray-500 mb-3">
