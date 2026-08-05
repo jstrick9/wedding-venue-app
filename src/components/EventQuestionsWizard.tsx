@@ -4,7 +4,7 @@ import type { EventAnswer, EventQuestion, EventQuestionGroup } from '../types';
 type VenueCategory =
   | 'reception'
   | 'ceremony'
-  | 'cocktail-hour'
+  | 'cocktail'
   | 'lodging'
   | 'rehearsal-dinner'
   | 'outdoor'
@@ -112,7 +112,7 @@ export function EventQuestionsWizard({
       if (q.group === 'Rehearsal Dinner' && (answer.includes('yes') || answer.includes('use'))) set.add('rehearsal-dinner');
 
       if (text.includes('cocktail') && (answer.includes('yes') || answer.includes('use') || answer.includes('cocktail'))) {
-        set.add('cocktail-hour');
+        set.add('cocktail');
       }
       if (answer.includes('outdoor')) set.add('outdoor');
     });

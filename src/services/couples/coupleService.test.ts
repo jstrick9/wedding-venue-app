@@ -167,4 +167,14 @@ describe('coupleService', () => {
     expect(cats).toContain('reception');
     expect(cats).not.toContain('lodging');
   });
+
+  it('maps a cocktail question to the cocktail venue category (not cocktail-hour)', () => {
+    const questions = [{ id: 'eq-9', text: 'Do you want a cocktail hour space?', group: 'Reception' }];
+    const cats = deriveRecommendedVenueCategories(
+      [{ eventId: 'e1', userId: 'u1', questionId: 'eq-9', answerValue: 'yes' }],
+      questions as any,
+    );
+    expect(cats).toContain('cocktail');
+    expect(cats).not.toContain('cocktail-hour');
+  });
 });

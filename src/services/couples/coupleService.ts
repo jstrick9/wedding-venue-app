@@ -92,7 +92,8 @@ export function deriveRecommendedVenueCategories(
     if (q?.group === 'Reception' && (answer.includes('yes') || answer.includes('use'))) set.add('reception');
     if (q?.group === 'Lodging' && (answer.includes('yes') || answer.includes('use'))) set.add('lodging');
     if (q?.group === 'Rehearsal Dinner' && (answer.includes('yes') || answer.includes('use'))) set.add('rehearsal-dinner');
-    if (text.includes('cocktail') && (answer.includes('yes') || answer.includes('use') || answer.includes('cocktail'))) set.add('cocktail-hour');
+    // Venue category is 'cocktail' (LayoutCategory); normalize so cocktail venues match.
+    if (text.includes('cocktail') && (answer.includes('yes') || answer.includes('use') || answer.includes('cocktail'))) set.add('cocktail');
     if (answer.includes('outdoor')) set.add('outdoor');
   });
   return [...set];
