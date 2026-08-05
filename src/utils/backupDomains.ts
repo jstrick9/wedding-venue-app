@@ -18,6 +18,7 @@ import {
   getCouplePortalConfigsForBackup,
 } from '../services/couples/coupleGuestService';
 import { getVenueMapConfig, getVenueRules } from '../services/wayfinding/venueWayfindingService';
+import { getVenueWeather } from '../services/weather/venueWeatherService';
 import {
   getDecorArrangements,
   getDecorCategories,
@@ -396,6 +397,16 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     version: STORAGE_VERSIONS.VENUE_RULES,
     read: () => getVenueRules(),
     write: (v) => writeVersioned(STORAGE_KEYS.VENUE_RULES, STORAGE_VERSIONS.VENUE_RULES, v),
+  },
+  {
+    key: 'venueWeather',
+    storageKey: STORAGE_KEYS.VENUE_WEATHER,
+    label: 'Venue Weather Forecasts',
+    defaultValue: { forecasts: {} },
+    recovery: true,
+    version: STORAGE_VERSIONS.VENUE_WEATHER,
+    read: () => getVenueWeather(),
+    write: (v) => writeVersioned(STORAGE_KEYS.VENUE_WEATHER, STORAGE_VERSIONS.VENUE_WEATHER, v),
   },
   {
     key: 'rsvpSubmissions',

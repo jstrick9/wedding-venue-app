@@ -1015,6 +1015,9 @@ export interface VenueMapPoint {
   kind: VenueMapPointKind;
   /** When kind === 'space', the venue id this point represents. */
   venueId?: string;
+  /** Optional real-world GPS coordinates for "Open in Maps". */
+  lat?: number;
+  lng?: number;
 }
 
 export interface RainContingency {
@@ -1037,6 +1040,22 @@ export interface VenueMapConfig {
 
 export interface VenueRulesConfig {
   rules: string[];
+  updatedAt: string;
+}
+
+/** A day's weather forecast (venue/coordinator-entered, or from a free API). */
+export interface DayWeatherForecast {
+  condition: string; // e.g. "Sunny", "Partly Cloudy", "Rain"
+  tempHigh?: number;
+  tempLow?: number;
+  rainChance?: number; // 0-100
+}
+
+/** Venue-level weather forecasts keyed by event date (YYYY-MM-DD). */
+export interface VenueWeatherConfig {
+  /** Location label, e.g. "Charlotte, NC" — used by the optional API hook. */
+  location?: string;
+  forecasts: Record<string, DayWeatherForecast>;
   updatedAt: string;
 }
 

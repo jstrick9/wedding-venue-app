@@ -4,6 +4,7 @@ import {
   VenueMapConfig,
   VenueMapPoint,
   RainContingency,
+  VenueWeatherConfig,
 } from '../../types';
 import {
   getVenueMapConfig,
@@ -12,6 +13,13 @@ import {
   getVenueRules,
   saveVenueRules,
 } from '../../services/wayfinding/venueWayfindingService';
+import {
+  getVenueWeather,
+  setDayWeather,
+  removeDayWeather,
+  saveVenueWeather,
+  fetchWeatherForecast,
+} from '../../services/weather/venueWeatherService';
 
 interface Props {
   config: AdminCommonProps['config'];
@@ -37,7 +45,18 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
   const [map, setMap] = useState<VenueMapConfig | null>(() => getVenueMapConfig());
   const [rules, setRules] = useState<string[]>(() => getVenueRules().rules);
   const [newRule, setNewRule] = useState('');
-  const [newPoint, setNewPoint] = useState({ label: '', kind: 'space' as VenueMapPoint['kind'], x: 50, y: 50, venueId: '' });
+  const [newPoint, setNewPoint] = useState({ label: '', kind: 'space' as VenueMapPoint['kind'], x: 50, y: 50, venueId: '', lat: '', lng: '' });
+
+  // Weather state
+  const [weather, setWeather] = useState(() => getVenueWeather());
+  const [weatherLocation, setWeatherLocation] = useState(() => getVenueWeather().location || '');
+  const [weatherDates, setWeatherDates] = useState<string[]>([]);
+  const [weatherFetching, setWeatherFetching] = useState(false);
+
+  const updateWeather = (cfg: VenueWeatherConfig) => {
+    setWeather(cfg);
+    saveVenueWeather(cfg);
+  };
 
   const ensureMap = (): VenueMapConfig => map || emptyVenueMapConfig();
   const update = (next: VenueMapConfig) => {
@@ -54,9 +73,11 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
       x: newPoint.x,
       y: newPoint.y,
       venueId: newPoint.kind === 'space' ? newPoint.venueId || undefined : undefined,
+      lat: newPoint.lat !== '' ? Number(newPoint.lat) : undefined,
+      lng: newPoint.lng !== '' ? Number(newPoint.lng) : undefined,
     };
     update({ ...m, points: [...m.points, p], updatedAt: new Date().toISOString() });
-    setNewPoint({ label: '', kind: 'space', x: 50, y: 50, venueId: '' });
+    setNewPoint({ label: '', kind: 'space', x: 50, y: 50, venueId: '', lat: '', lng: '' });
   };
 
   const removePoint = (id: string) => {
@@ -196,6 +217,22 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             aria-label="Y coordinate"
           />
+          <input
+            type="text"
+            placeholder="Lat"
+            value={newPoint.lat}
+            onChange={(e) => setNewPoint({ ...newPoint, lat: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            aria-label="Latitude (GPS)"
+          />
+          <input
+            type="text"
+            placeholder="Lng"
+            value={newPoint.lng}
+            onChange={(e) => setNewPoint({ ...newPoint, lng: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            aria-label="Longitude (GPS)"
+          />
           <button
             type="button"
             onClick={addPoint}
@@ -324,6 +361,112 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
           <button type="button" onClick={saveRules} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
             Save rules
           </button>
+        </div>
+      </div>
+
+      {/* Weather */}
+      <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+        <h3 className="font-semibold text-sm mb-2">🌤️ Weather Forecast</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Enter a forecast per event day (shown alongside the couple's timeline in their
+          guest portal), or auto-fetch from a free weather API by entering a location.
+        </p>
+
+        <div className="flex gap-2 mb-3">
+          <input
+            type="text"
+            value={weatherLocation}
+            onChange={(e) => setWeatherLocation(e.target.value)}
+            placeholder="Location, e.g. Charlotte, NC"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            aria-label="Weather location"
+          />
+          <button
+            type="button"
+            onClick={async () => {
+              if (!weatherLocation.trim()) return;
+              setWeatherFetching(true);
+              const forecasts = await fetchWeatherForecast(weatherLocation.trim());
+              const dates = Object.keys(forecasts);
+              updateWeather({
+                location: weatherLocation.trim(),
+                forecasts: { ...weather.forecasts, ...forecasts },
+                updatedAt: new Date().toISOString(),
+              });
+              if (dates.length > 0) setWeatherDates(dates);
+              setWeatherFetching(false);
+            }}
+            className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-50"
+            disabled={weatherFetching}
+          >
+            {weatherFetching ? 'Fetching…' : 'Auto-fetch'}
+          </button>
+        </div>
+
+        {/* Manual entry per event day */}
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-gray-600 mb-1">Add forecast for a date</label>
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="date"
+              id="weather-date-input"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              aria-label="Forecast date"
+              onChange={(e) => {
+                const d = e.target.value;
+                if (!d) return;
+                setWeatherDates((prev) => (prev.includes(d) ? prev : [...prev, d]));
+              }}
+            />
+            <input
+              type="text"
+              id="weather-condition-input"
+              placeholder="Condition (e.g. Sunny)"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              aria-label="Forecast condition"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const date = (document.getElementById('weather-date-input') as HTMLInputElement)?.value;
+                  const condition = (e.target as HTMLInputElement).value.trim();
+                  if (date && condition) {
+                    setDayWeather(date, { condition });
+                    setWeather(getVenueWeather());
+                    setWeatherDates((prev) => (prev.includes(date) ? prev : [...prev, date]));
+                    (e.target as HTMLInputElement).value = '';
+                  }
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Forecast list */}
+        <div className="space-y-2">
+          {Object.entries(weather.forecasts).length === 0 ? (
+            <p className="text-xs text-gray-400">No forecasts entered yet.</p>
+          ) : (
+            Object.entries(weather.forecasts).map(([date, f]) => (
+              <div key={date} className="flex items-center gap-2 text-sm">
+                <span className="w-24 text-gray-600">{date}</span>
+                <span className="flex-1 text-gray-800">{f.condition}</span>
+                {f.tempHigh != null && <span className="text-gray-500">{f.tempHigh}°</span>}
+                {f.rainChance != null && <span className="text-blue-500">☔ {f.rainChance}%</span>}
+                <button
+                  type="button"
+                  onClick={() => {
+                    removeDayWeather(date);
+                    setWeather(getVenueWeather());
+                    setWeatherDates((prev) => prev.filter((d) => d !== date));
+                  }}
+                  className="text-red-400 hover:text-red-600"
+                  aria-label={`Remove forecast for ${date}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

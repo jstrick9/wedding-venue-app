@@ -30,6 +30,7 @@ import {
   PortalScheduleItem,
   PortalWayfindingPoint,
   PortalMealOption,
+  VenueMapPoint,
   DEFAULT_MEAL_OPTIONS,
 } from '../types';
 import {
@@ -64,6 +65,7 @@ import {
   getVenueRules,
   coupleWayfindingPoints,
 } from '../services/wayfinding/venueWayfindingService';
+import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import {
   guestCanAccessLodging,
   guestCanAccessPortal,
@@ -834,6 +836,26 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
           </div>
         )}
 
+        {/* Weather for the selected day */}
+        {(() => {
+          const dates = eventDates(config.eventStartDate, config.eventEndDate);
+          const dayDate = dates[effectiveDay];
+          const forecast = dayDate ? getVenueWeather().forecasts[dayDate] : undefined;
+          if (!forecast) return null;
+          return (
+            <div className="rounded-xl bg-sky-50 border border-sky-200 p-3 flex items-center gap-3">
+              <span className="text-2xl">{forecast.condition.includes('Rain') || (forecast.rainChance ?? 0) >= 50 ? '🌧️' : forecast.condition.includes('Cloud') ? '☁️' : '☀️'}</span>
+              <div className="text-sm">
+                <div className="font-medium text-sky-800">{forecast.condition}</div>
+                <div className="text-xs text-sky-700">
+                  {forecast.tempLow != null && `${forecast.tempLow}°`} {forecast.tempHigh != null && `– ${forecast.tempHigh}°`}
+                  {forecast.rainChance != null && ` · ☔ ${forecast.rainChance}% rain`}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="space-y-3 mt-2">
           {itemsForDay(effectiveDay).map((item) => (
             <div
@@ -901,12 +923,19 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     // couple's selected spaces (+ parking/entry + applicable rain-contingency backups).
     const venueMap = getVenueMapConfig();
     const coupleSelected = couple?.selectedSpaces || [];
-    const wayfindingPoints: PortalWayfindingPoint[] =
-      coupleWayfindingPoints(venueMap, coupleSelected).map((p) => ({
-        id: p.id,
-        label: p.label,
-        description: p.description,
-      }));
+    const mapPoints: VenueMapPoint[] = coupleWayfindingPoints(venueMap, coupleSelected);
+    const wayfindingPoints: PortalWayfindingPoint[] = mapPoints.map((p) => ({
+      id: p.id,
+      label: p.label,
+      description: p.description,
+    }));
+    const openInMaps = (p: VenueMapPoint) => {
+      if (p.lat == null || p.lng == null) return;
+      window.open(
+        `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`,
+        '_blank',
+      );
+    };
     const hasWayfindingPoints = venueMap && venueMap.points.length > 0;
 
     if (!hasWayfindingPoints) {
@@ -947,13 +976,16 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                           ? '#16a34a'
                           : '#f59e0b';
                   return (
-                    <g key={p.id}>
+                    <g key={p.id} onClick={() => openInMaps(p)} style={{ cursor: p.lat != null && p.lng != null ? 'pointer' : 'default' }}>
                       <circle cx={p.x} cy={p.y} r={4} fill={color} stroke="white" strokeWidth={1} />
                       <text x={p.x + 5} y={p.y - 3} fontSize={5} fill="#374151">{p.label}</text>
                     </g>
                   );
                 })}
             </svg>
+            <div className="mt-1 text-[10px] text-gray-400 px-1">
+              Tip: tap a pin that has GPS to open it in Google Maps.
+            </div>
           </div>
 
           <div className="mt-4 space-y-3">

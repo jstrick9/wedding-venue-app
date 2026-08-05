@@ -54,8 +54,15 @@ so each booked couple gets their own space.
 - ✅ **Email/mailto invites (delivered):** the couple can send **mailto:** invite emails
   (pre-filled with the link) to collaborators and to each guest, plus copy-link fallback.
   Upgrades to real transactional email when the Supabase send-email backend is configured.
-- 🚧 **Future ideas:** GPS positioning + weather tracking on the wayfinding map (needs
-  external providers/keys); real transactional email (needs live Supabase).
+- ✅ **GPS on wayfinding (delivered):** the venue can add lat/lng to each map point;
+  guests can tap a pin (or a destination) to open it in Google Maps. Works offline
+  (coordinates are manual; "Open in Maps" opens externally).
+- ✅ **Weather tracking on the timeline (delivered):** the venue/coordinator can enter a
+  forecast per event day (or auto-fetch a free 7-day forecast by location via the
+  Open-Meteo API, no key). The forecast appears alongside each day in the couple's guest
+  portal schedule/timeline.
+- 🚧 **Future ideas:** real transactional email (needs live Supabase); richer per-point
+  wayfinding paths (drawn polylines rather than dots).
 
 ## Data model (see src/types.ts)
 - `CoupleEvent`: id, coupleName, inviteToken, status (invited/active/completed),

@@ -60,6 +60,7 @@ export interface BackupPayload {
   couplePortalConfigs?: unknown;
   venueMapConfigs?: unknown;
   venueRules?: unknown;
+  venueWeather?: unknown;
   staffTasks?: unknown;
   staffAreas?: unknown;
   staffShifts?: unknown;

@@ -229,6 +229,12 @@ portal renders the map scoped to their selected spaces and surfaces venue rules.
 ✅ Email/mailto invites for collaborators and guests (mailto: pre-filled link + copy
 fallback; upgrades to real email when Supabase backend is live). See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — GPS wayfinding + weather on timeline
+✅ Venue can add GPS (lat/lng) to map points; guests can tap a pin to open in Google Maps.
+✅ Venue/coordinator can enter a weather forecast per event day (or auto-fetch a free
+7-day forecast via Open-Meteo, no key); forecasts show alongside each day in the couple's
+guest portal schedule. See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
