@@ -143,6 +143,10 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
   };
 
   const addRoute = () => {
+    if (routePointIds.length < 2) {
+      onShowSuccess('A walkway needs at least 2 points. Add more points to the path first.');
+      return;
+    }
     const m = ensureMap();
     const route = {
       id: `route-${Date.now()}`,
