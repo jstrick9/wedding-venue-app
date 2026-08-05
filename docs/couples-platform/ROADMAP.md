@@ -71,6 +71,9 @@ so each booked couple gets their own space.
 - ✅ **Per-space layout design & approval (delivered):** the couple marks each selected
   space as draft/designed/submitted with notes; submitting for approval flags all spaces
   as submitted, and the venue's approval queue shows each space's status + notes inline.
+- ✅ **Approval review notes (delivered):** the venue can write a per-couple note with
+  approve / request changes / reject; the couple sees the full review history (action,
+  who, note, timestamp) on their Design tab.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 

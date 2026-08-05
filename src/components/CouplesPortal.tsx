@@ -648,6 +648,18 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     <span className="font-semibold">Venue note:</span> {event.layoutComment}
                   </p>
                 )}
+                {event.layoutHistory && event.layoutHistory.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {event.layoutHistory.map((h, i) => (
+                      <div key={i} className="text-xs text-gray-500">
+                        <span className="font-medium">{h.action === 'approve' ? '✓ Approved' : h.action === 'reject' ? '✕ Rejected' : '↻ Changes requested'}</span>
+                        {' by '}{h.byName}
+                        {h.comment ? ` — ${h.comment}` : ''}
+                        <span className="text-gray-400"> · {new Date(h.at).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => {

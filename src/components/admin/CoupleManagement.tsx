@@ -50,6 +50,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [error, setError] = useState('');
   const [openChat, setOpenChat] = useState<string | null>(null);
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
+  // Optional review comment per couple event in the approval queue.
+  const [reviewComments, setReviewComments] = useState<Record<string, string>>({});
 
   const refresh = () => setEvents(getCoupleEvents());
   const unreadCounts = getUnreadCoupleMessageCounts(events.map((e) => e.id));
@@ -230,11 +232,22 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     })}
                   </div>
                 )}
+                <input
+                  type="text"
+                  value={reviewComments[ev.id] || ''}
+                  onChange={(e) => setReviewComments((p) => ({ ...p, [ev.id]: e.target.value }))}
+                  placeholder="Optional note to the couple (shown on their side)"
+                  className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  aria-label={`Review note for ${ev.coupleName}`}
+                />
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      reviewCoupleLayout(ev.id, 'approve', { byName: user?.name || 'Venue' });
+                      reviewCoupleLayout(ev.id, 'approve', {
+                        byName: user?.name || 'Venue',
+                        comment: reviewComments[ev.id] || undefined,
+                      });
                       refresh();
                       onShowSuccess(`${ev.coupleName}'s layouts approved.`);
                     }}
@@ -247,7 +260,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     onClick={() => {
                       reviewCoupleLayout(ev.id, 'request_changes', {
                         byName: user?.name || 'Venue',
-                        comment: 'Please revise your layouts.',
+                        comment: reviewComments[ev.id] || 'Please revise your layouts.',
                       });
                       refresh();
                       onShowSuccess(`Changes requested for ${ev.coupleName}.`);
@@ -259,7 +272,10 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                   <button
                     type="button"
                     onClick={() => {
-                      reviewCoupleLayout(ev.id, 'reject', { byName: user?.name || 'Venue' });
+                      reviewCoupleLayout(ev.id, 'reject', {
+                        byName: user?.name || 'Venue',
+                        comment: reviewComments[ev.id] || undefined,
+                      });
                       refresh();
                       onShowSuccess(`${ev.coupleName}'s layouts rejected.`);
                     }}
