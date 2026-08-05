@@ -38,6 +38,7 @@ import {
   clearGuestPortalSession,
   findGuestInEvent,
   getGuestPortalConfig,
+  celebrationStatusDays,
   getPortalGuests,
   getPortalGuestsForEvent,
   getPortalRSVPSubmissions,
@@ -217,11 +218,16 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       : 'Wedding Guest Portal';
   }, [config?.eventTitle]);
 
-  const daysUntilEvent = eventStartDate
-    ? Math.ceil((eventStartDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    : null;
-
   const isMultiDay = !!config?.isMultiDay && !!eventEndDate && !!eventStartDate;
+
+  // Celebration status label that accounts for multi-day events: during the event
+  // window (start…end) we show "big day", after the last day "has passed".
+  const daysUntilEvent = celebrationStatusDays(
+    eventStartDate,
+    eventEndDate,
+    isMultiDay,
+    today,
+  );
   // Number of event days for the RSVP "which days" checkboxes (capped so a bad date
   // range can't render an unwieldy list).
   const eventDayCount = isMultiDay

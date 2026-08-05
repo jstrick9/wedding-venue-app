@@ -33,6 +33,7 @@ vi.mock('../hooks/useLayoutState', () => ({
 }));
 
 import {
+  celebrationStatusDays,
   clearGuestPortalSession,
   createGuestPortalSession,
   findGuestInEvent,
@@ -330,5 +331,57 @@ describe('guest portal helpers', () => {
     clearGuestPortalSession();
 
     expect(sessionStorage.getItem('spm_portal_auth')).toBeNull();
+  });
+
+  describe('celebrationStatusDays', () => {
+    const FIXED_NOW = new Date('2026-08-05T12:00:00Z');
+
+    it('returns null without a start date', () => {
+      expect(celebrationStatusDays(null, null, false, FIXED_NOW)).toBeNull();
+      expect(celebrationStatusDays(undefined, undefined, false, FIXED_NOW)).toBeNull();
+    });
+
+    it('returns positive days until a future single-day event', () => {
+      expect(
+        celebrationStatusDays('2026-08-10', '2026-08-10', false, FIXED_NOW),
+      ).toBe(5);
+    });
+
+    it('returns 0 on the day of a single-day event', () => {
+      expect(
+        celebrationStatusDays('2026-08-05', '2026-08-05', false, FIXED_NOW),
+      ).toBe(0);
+    });
+
+    it('returns negative after a single-day event has passed', () => {
+      expect(
+        celebrationStatusDays('2026-08-01', '2026-08-01', false, FIXED_NOW),
+      ).toBe(-1);
+    });
+
+    it('returns 0 mid-way through a multi-day event', () => {
+      // Fri–Sun wedding; "now" is the middle (Saturday) day.
+      expect(
+        celebrationStatusDays('2026-08-07', '2026-08-09', true, new Date('2026-08-08T12:00:00Z')),
+      ).toBe(0);
+    });
+
+    it('returns 0 on the first day of a multi-day event even after the day starts', () => {
+      expect(
+        celebrationStatusDays('2026-08-07', '2026-08-09', true, new Date('2026-08-07T23:00:00Z')),
+      ).toBe(0);
+    });
+
+    it('returns negative only after a multi-day event fully ends', () => {
+      expect(
+        celebrationStatusDays('2026-08-02', '2026-08-04', true, FIXED_NOW),
+      ).toBe(-1);
+    });
+
+    it('returns positive before a multi-day event begins', () => {
+      expect(
+        celebrationStatusDays('2026-08-10', '2026-08-12', true, FIXED_NOW),
+      ).toBe(5);
+    });
   });
 });

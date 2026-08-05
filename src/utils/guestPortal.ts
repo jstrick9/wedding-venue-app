@@ -53,6 +53,60 @@ export function normalizeEventKey(eventName: string): string {
  * The grace period defaults to 36 hours but is overridable via
  * `config.accessGracePeriodHours` (set in the Admin → Guest Portal tab).
  */
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+/**
+ * Calendar-day number (UTC) for an event date. Date-only strings like
+ * "2026-08-05" are parsed by their Y-M-D components so the result is stable
+ * regardless of the viewer's local timezone (parsing them through `new Date()`
+ * alone can shift the day in negative-offset zones).
+ */
+function eventDayNumber(value: Date | string): number | null {
+  if (typeof value === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+    if (m) {
+      return Math.floor(
+        Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) / DAY_MS,
+      );
+    }
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return null;
+    return Math.floor(
+      Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()) / DAY_MS,
+    );
+  }
+  return Math.floor(
+    Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / DAY_MS,
+  );
+}
+
+/**
+ * Days until the celebration, computed against the event window for multi-day
+ * events:
+ *  - `> 0`  → that many days until the first day,
+ *  - `0`    → today is within the event window (in progress),
+ *  - `< 0`  → the event has fully passed.
+ * Returns `null` when there is no start date.
+ */
+export function celebrationStatusDays(
+  startDate: Date | string | null | undefined,
+  endDate: Date | string | null | undefined,
+  isMultiDay: boolean,
+  now: Date = new Date(),
+): number | null {
+  if (!startDate) return null;
+  const startDay = eventDayNumber(startDate);
+  if (startDay === null) return null;
+  const nowDay = eventDayNumber(now);
+  if (nowDay === null) return null;
+  const endDay =
+    isMultiDay && endDate ? eventDayNumber(endDate) : startDay;
+
+  if (endDay !== null && nowDay > endDay) return -1;
+  if (nowDay >= startDay) return 0;
+  return startDay - nowDay;
+}
+
 export function getGuestPortalAccessEnd(
   config: GuestPortalConfig,
 ): Date | null {

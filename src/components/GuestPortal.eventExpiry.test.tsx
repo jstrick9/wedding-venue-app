@@ -3,6 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../utils/guestPortal', () => {
   return {
+    celebrationStatusDays: (startDate: unknown, endDate: unknown, isMultiDay: boolean) => {
+      if (!startDate) return null;
+      const now = Date.now();
+      const start = new Date(startDate as string).getTime();
+      const end = isMultiDay && endDate ? new Date(endDate as string).getTime() : start;
+      if (!Number.isNaN(end) && now > end) return -1;
+      if (now >= start) return 0;
+      return Math.ceil((start - now) / 86400000);
+    },
     clearGuestPortalSession: vi.fn(),
     getGuestPortalConfig: vi.fn(),
     getPortalGuests: vi.fn(() => []),
