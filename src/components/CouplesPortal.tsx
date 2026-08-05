@@ -341,6 +341,21 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     window.location.href = mailtoInvite(email, name, url, `RSVP for ${event?.coupleName || 'our wedding'}`);
   };
 
+  /** Pre-fill a gentle RSVP reminder for a guest who hasn't responded yet. */
+  const handleRemindGuest = (email: string, name: string, token: string) => {
+    const url = `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(token)}&couple=${encodeURIComponent(event?.id || '')}`;
+    const subject = `Friendly reminder: RSVP for ${event?.coupleName || 'our wedding'}`;
+    const body =
+      `Hi ${name},\n\n` +
+      `We'd love to know if you can make it to ${event?.coupleName || 'our wedding'}! ` +
+      `Please RSVP using this link:\n\n${url}\n\n` +
+      `— ${event?.coupleName || 'Your event team'}`;
+    window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  /** Number of invited guests who have not responded (used for the reminder action). */
+  const noResponseGuests = coupleGuests.filter((g) => !coupleRsvps.some((r) => r.guestId === g.id));
+
   const handleCopyInviteLink = (token: string) => {
     const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
     void navigator.clipboard?.writeText(url).then(
@@ -1038,9 +1053,33 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
               </div>
 
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
-                <h3 className="font-semibold text-sm mb-3">
-                  Guest list ({coupleGuests.length})
-                </h3>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h3 className="font-semibold text-sm">
+                    Guest list ({coupleGuests.length})
+                  </h3>
+                  {canManageGuests && noResponseGuests.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+                        const rows = noResponseGuests.map((g) => [g.name, g.email || '', g.phone || ''].map(esc).join(','));
+                        const csv = ['Name,Email,Phone', ...rows].join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'no-response-guests.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        showToast(`Exported ${noResponseGuests.length} guest${noResponseGuests.length === 1 ? '' : 's'} who haven't responded. Use the 🔔 per-guest button to send a reminder email.`, 'info');
+                      }}
+                      className="text-xs text-amber-600 hover:underline"
+                      title="Download a CSV of guests who haven't responded so you can follow up"
+                    >
+                      📄 No-response list ({noResponseGuests.length})
+                    </button>
+                  )}
+                </div>
                 {coupleGuests.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-6 py-8 text-center text-gray-500 text-sm">
                     No guests yet. Add your first guest above.
@@ -1085,6 +1124,16 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 className="text-xs text-indigo-600 hover:underline"
                               >
                                 ✉️ Email invite
+                              </button>
+                            )}
+                            {canManageGuests && !rsvp && g.email && g.token && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemindGuest(g.email!, g.name, g.token!)}
+                                className="text-xs text-amber-600 hover:underline"
+                                title="Send an RSVP reminder to this guest"
+                              >
+                                🔔 Remind
                               </button>
                             )}
                             {canManageGuests && (
