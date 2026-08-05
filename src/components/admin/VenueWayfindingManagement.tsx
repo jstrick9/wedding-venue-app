@@ -68,6 +68,21 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
   };
 
   const addPoint = () => {
+    // Validate GPS coordinates when provided (both must be valid, or neither).
+    const latS = newPoint.lat.trim();
+    const lngS = newPoint.lng.trim();
+    const latN = latS === '' ? undefined : Number(latS);
+    const lngN = lngS === '' ? undefined : Number(lngS);
+    const latValid = latN === undefined || (Number.isFinite(latN) && latN >= -90 && latN <= 90);
+    const lngValid = lngN === undefined || (Number.isFinite(lngN) && lngN >= -180 && lngN <= 180);
+    if (!latValid || !lngValid) {
+      onShowSuccess('Latitude must be -90 to 90 and longitude -180 to 180. Enter both, or leave both blank.');
+      return;
+    }
+    if ((latN === undefined) !== (lngN === undefined)) {
+      onShowSuccess('Enter both latitude and longitude (or leave both blank).');
+      return;
+    }
     const m = ensureMap();
     const p: VenueMapPoint = {
       id: `pt-${Date.now()}`,
@@ -76,8 +91,8 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
       x: newPoint.x,
       y: newPoint.y,
       venueId: newPoint.kind === 'space' ? newPoint.venueId || undefined : undefined,
-      lat: newPoint.lat !== '' ? Number(newPoint.lat) : undefined,
-      lng: newPoint.lng !== '' ? Number(newPoint.lng) : undefined,
+      lat: latN,
+      lng: lngN,
     };
     update({ ...m, points: [...m.points, p], updatedAt: new Date().toISOString() });
     setNewPoint({ label: '', kind: 'space', x: 50, y: 50, venueId: '', lat: '', lng: '' });
