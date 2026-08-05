@@ -148,21 +148,31 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
 
         setPortalData({ venues, guests, submissions });
 
-        if (loadedConfig && isGuestPortalEventActive(loadedConfig)) {
-          const session = loadGuestPortalSession(loadedConfig, loadedConfig.eventTitle);
+      if (loadedConfig && isGuestPortalEventActive(loadedConfig)) {
+        const session = loadGuestPortalSession(loadedConfig, loadedConfig.eventTitle);
+        // Auto-authenticate a guest who opened their invite link (guestToken) — the token
+        // identifies them, so they shouldn't need to re-enter their name.
+        const tokenGuest = guestToken
+          ? getCoupleGuests(coupleEventId || '').find((g) => g.token === guestToken)
+          : undefined;
+        if (session || tokenGuest) {
+          setIsAuthed(true);
+          setActiveEventName(loadedConfig.eventTitle || '');
           if (session) {
-            setIsAuthed(true);
-            setActiveEventName(loadedConfig.eventTitle || '');
             setResolvedGuestId(session.guestId || null);
-            setEventInput(loadedConfig.eventTitle || '');
-          } else {
-            clearGuestPortalSession();
+          } else if (tokenGuest) {
+            setResolvedGuestId(tokenGuest.id);
+            saveGuestPortalSession(loadedConfig, guestToken, loadedConfig.eventTitle, tokenGuest.id);
           }
+          setEventInput(loadedConfig.eventTitle || '');
         } else {
           clearGuestPortalSession();
         }
-        return;
+      } else {
+        clearGuestPortalSession();
       }
+      return;
+    }
 
       const loadedConfig = getGuestPortalConfig();
       setConfig(loadedConfig);
