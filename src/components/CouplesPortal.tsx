@@ -876,6 +876,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             <div className="text-sm font-medium text-gray-800">{cat?.icon} {a.name}</div>
                             <div className="text-xs text-gray-500 truncate">
                               {cat?.label}{a.priceNote ? ` · ${a.priceNote}` : ''}
+                              {a.venueVendorId ? ` · ${venues.find((v) => v.id === a.venueVendorId)?.name || 'property'}` : ''}
                               {a.description ? ` · ${a.description}` : ''}
                             </div>
                           </div>

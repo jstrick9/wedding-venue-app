@@ -126,9 +126,10 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
     price: '',
     priceNote: '',
     description: '',
+    venueVendorId: '' as string,
     active: true,
   });
-  const startNewAo = () => setAoForm({ id: '', name: '', category: 'service', price: '', priceNote: '', description: '', active: true });
+  const startNewAo = () => setAoForm({ id: '', name: '', category: 'service', price: '', priceNote: '', description: '', venueVendorId: '', active: true });
   const saveAo = () => {
     if (!aoForm.name.trim()) { onShowSuccess('Enter an add-on name.'); return; }
     savePackageAddOn({
@@ -138,6 +139,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
       price: aoForm.price ? Number(aoForm.price) : 0,
       priceNote: aoForm.priceNote,
       description: aoForm.description,
+      venueVendorId: aoForm.venueVendorId || undefined,
       active: aoForm.active,
     });
     setAddOns(getPackageAddOns());
@@ -319,6 +321,17 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
               </label>
               <input type="text" value={aoForm.priceNote} onChange={(e) => setAoForm({ ...aoForm, priceNote: e.target.value })} placeholder="Pricing note (e.g. per hour, max 2 hours)" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Add-on price note" />
               <input type="text" value={aoForm.description} onChange={(e) => setAoForm({ ...aoForm, description: e.target.value })} placeholder="Description" className="px-3 py-2 border border-gray-300 rounded-lg text-sm sm:col-span-2" aria-label="Add-on description" />
+              {aoForm.category === 'lodging' && (
+                <div className="sm:col-span-2">
+                  <label className="block text-xs text-gray-600 mb-1">Lodging property</label>
+                  <select value={aoForm.venueVendorId} onChange={(e) => setAoForm({ ...aoForm, venueVendorId: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" aria-label="Lodging property">
+                    <option value="">General lodging (not tied to a property)</option>
+                    {venues.filter((v) => v.category === 'lodging').map((v) => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <label className="inline-flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" checked={aoForm.active} onChange={(e) => setAoForm({ ...aoForm, active: e.target.checked })} className="w-4 h-4 rounded border-gray-300" />
@@ -347,7 +360,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button type="button" onClick={() => setAoForm({ id: a.id, name: a.name, category: a.category, price: String(a.price), priceNote: a.priceNote || '', description: a.description || '', active: a.active })} className="text-xs text-gray-600 hover:underline">Edit</button>
+                      <button type="button" onClick={() => setAoForm({ id: a.id, name: a.name, category: a.category, price: String(a.price), priceNote: a.priceNote || '', description: a.description || '', venueVendorId: a.venueVendorId || '', active: a.active })} className="text-xs text-gray-600 hover:underline">Edit</button>
                       <button type="button" onClick={() => removeAo(a.id)} className="text-xs text-red-500 hover:underline">Delete</button>
                     </div>
                   </div>
