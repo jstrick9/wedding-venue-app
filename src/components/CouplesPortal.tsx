@@ -43,6 +43,8 @@ import { getCoupleRsvpSubmissions, removeCoupleRsvp, upsertCoupleRsvp } from '..
 import { getCoupleChecklist, addCoupleChecklistItem, toggleCoupleChecklistItem, removeCoupleChecklistItem } from '../services/couples/coupleChecklistService';
 import { getCoupleVendors, addCoupleVendor, updateCoupleVendor, removeCoupleVendor, getVenuePreferredVendors } from '../services/couples/coupleVendorService';
 import { VENDOR_CATEGORIES } from '../types/vendor';
+import { findWeddingPackage, PACKAGE_DURATIONS, INCLUDED_ITEMS } from '../services/couples/couplePackageService';
+import { getActivePackageAddOns, findPackageAddOn, ADD_ON_CATEGORIES } from '../services/couples/coupleAddOnService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getVenueVendors } from '../hooks/useVendors';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
@@ -52,7 +54,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
 
-type TabId = 'overview' | 'spaces' | 'questions' | 'design' | 'checklist' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
+type TabId = 'overview' | 'package' | 'spaces' | 'questions' | 'design' | 'checklist' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
 
 interface CouplesPortalProps {
   coupleToken?: string;
@@ -313,6 +315,22 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     setVendorTick((t) => t + 1);
   };
 
+  // ── Package & add-ons (couple's booked package + paid add-ons) ────────────
+  const [pkgTick, setPkgTick] = useState(0);
+  const bookedPackage = useMemo(() => (event ? findWeddingPackage(event.packageId) : undefined), [event, pkgTick]);
+  const addOnCatalog = useMemo(() => getActivePackageAddOns(), []);
+  const coupleAddOns = useMemo(() => event?.addOns || [], [event, pkgTick]);
+  const hasAddOn = (id: string) => coupleAddOns.some((a) => a.addOnId === id);
+  const toggleAddOn = (addOnId: string) => {
+    if (!event) return;
+    const current = event.addOns || [];
+    const next = hasAddOn(addOnId)
+      ? current.filter((a) => a.addOnId !== addOnId)
+      : [...current, { addOnId, addedAt: new Date().toISOString() }];
+    updateCoupleEvent(event.id, { addOns: next });
+    setPkgTick((t) => t + 1);
+  };
+
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const handleAddGuest = () => {
@@ -564,6 +582,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     { id: 'questions', label: 'Questions', icon: '❓' },
     { id: 'spaces', label: 'Venue Spaces', icon: '🏛️' },
     { id: 'design', label: 'Design & Approval', icon: '🎨' },
+    { id: 'package', label: 'Package', icon: '🎁' },
     { id: 'checklist', label: 'Checklist', icon: '✅' },
     { id: 'vendors', label: 'Vendors', icon: '🧰' },
     { id: 'guests', label: 'Guests', icon: '👥' },
@@ -767,6 +786,108 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     👁️ Preview portal
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'package' && (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-1">Your wedding package</h3>
+                {!bookedPackage ? (
+                  <p className="text-xs text-gray-500">
+                    Your venue hasn't assigned a package yet. Check back soon, or message the venue.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-lg font-bold text-gray-900">{bookedPackage.name}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                        {PACKAGE_DURATIONS.find((d) => d.id === bookedPackage.durationType)?.label}
+                      </span>
+                    </div>
+                    {bookedPackage.description && <p className="text-sm text-gray-600">{bookedPackage.description}</p>}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <div className="text-xs text-gray-500">Included guests</div>
+                        <div className="font-semibold">{bookedPackage.maxGuests}</div>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <div className="text-xs text-gray-500">Overnight guests</div>
+                        <div className="font-semibold">{bookedPackage.maxOvernightGuests > 0 ? bookedPackage.maxOvernightGuests : '—'}</div>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <div className="text-xs text-gray-500">On-site lodging</div>
+                        <div className="font-semibold">{bookedPackage.lodgingIncluded ? 'Included' : 'Add-on'}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Season pricing</div>
+                      <div className="flex flex-wrap gap-2 text-sm">
+                        <span className="bg-gray-100 rounded-full px-3 py-1">Non-Peak: ${bookedPackage.price.nonPeak.toLocaleString()}</span>
+                        <span className="bg-gray-100 rounded-full px-3 py-1">Peak: ${bookedPackage.price.peak.toLocaleString()}</span>
+                        <span className="bg-gray-100 rounded-full px-3 py-1">Premier: ${bookedPackage.price.premier.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    {bookedPackage.includedItems.length > 0 && (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">What's included</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {bookedPackage.includedItems.map((id) => (
+                            <span key={id} className="text-xs bg-green-50 text-green-700 rounded-full px-2.5 py-1">
+                              ✓ {INCLUDED_ITEMS.find((x) => x.id === id)?.label || id}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Add-ons */}
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-1">Add-ons you can add</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Add extras to your day — lodging, activities, horse &amp; carriage, and more. You can
+                  add or remove these anytime.
+                </p>
+                {addOnCatalog.length === 0 ? (
+                  <p className="text-xs text-gray-400">No add-ons available right now.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {addOnCatalog.map((a) => {
+                      const cat = ADD_ON_CATEGORIES.find((c) => c.id === a.category);
+                      const added = hasAddOn(a.id);
+                      return (
+                        <div key={a.id} className="rounded-lg border border-gray-200 p-3 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-800">{cat?.icon} {a.name}</div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {cat?.label}{a.priceNote ? ` · ${a.priceNote}` : ''}
+                              {a.description ? ` · ${a.description}` : ''}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-sm font-semibold text-gray-800">${a.price.toLocaleString()}</span>
+                            <button
+                              type="button"
+                              disabled={!canManageGuests}
+                              onClick={() => toggleAddOn(a.id)}
+                              className={`shrink-0 text-xs px-3 py-1.5 rounded-lg ${
+                                added
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                              } disabled:opacity-50`}
+                            >
+                              {added ? '✓ Added' : '+ Add'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
