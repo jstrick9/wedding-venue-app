@@ -96,6 +96,8 @@ so each booked couple gets their own space.
   so the couple knows their contingency before selecting.
 - ✅ **Meal count summary (delivered):** the couple's Guests tab shows a per-meal count of
   attending guests (for catering planning), using the couple's configured meal options.
+- ✅ **Venue shares collaborator invites (delivered):** the venue admin can copy a
+  collaborator's invite link for any couple.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 

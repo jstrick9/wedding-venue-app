@@ -291,6 +291,10 @@ venue-configured backup. See docs/couples-platform/ROADMAP.md.
 ✅ The couple's Guests tab shows a per-meal count of attending guests (for catering), using
 the couple's configured meal options. See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Venue shares collaborator invites
+✅ The venue admin can copy a collaborator's invite link for any couple.
+See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
