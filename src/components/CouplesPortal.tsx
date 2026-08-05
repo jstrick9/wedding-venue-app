@@ -29,6 +29,7 @@ import {
   addCoupleGuest,
   removeCoupleGuest,
   importCoupleGuests,
+  exportCoupleGuestsCsv,
   buildGuestInviteUrl,
   getCouplePortalConfig,
   setCouplePortalConfig,
@@ -917,6 +918,17 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   />
                   📥 Import guests (CSV: name,email,phone)
                 </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!event) return;
+                    exportCoupleGuestsCsv(event.id);
+                    showToast('Guest list exported as CSV.', 'success');
+                  }}
+                  className="ml-3 text-xs text-indigo-600 hover:underline"
+                >
+                  📤 Export CSV
+                </button>
               </div>
 
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
@@ -987,7 +999,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               {rsvp.mealChoice && <p>🍽️ Meal: {(portalConfig?.mealOptions && portalConfig.mealOptions.find((o) => o.value === rsvp.mealChoice)?.label) || rsvp.mealChoice}</p>}
                               {rsvp.plusOneName && <p>➕ Plus one: {rsvp.plusOneName}</p>}
                               {rsvp.dietaryNotes && <p>🥗 Dietary: {rsvp.dietaryNotes}</p>}
-                              {rsvp.attendingDays && rsvp.attendingDays.length > 0 && <p>📅 Days: {rsvp.attendingDays.join(', ')}</p>}
+                              {rsvp.attendingDays && rsvp.attendingDays.length > 0 && (
+                                <p>📅 Days: {rsvp.attendingDays.map((d) => d.replace('day', 'Day ')).join(', ')}</p>
+                              )}
                               {!rsvp.mealChoice && !rsvp.plusOneName && !rsvp.dietaryNotes && (
                                 <p className="text-gray-400">No meal/dietary details provided.</p>
                               )}
@@ -1219,7 +1233,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           <p className="text-xs text-gray-400">No schedule items yet.</p>
                         )}
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <input
                           type="text"
                           placeholder="Title"
@@ -1234,6 +1248,14 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           onChange={(e) => setNewScheduleItem({ ...newScheduleItem, startTime: e.target.value })}
                           className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                           aria-label="Schedule item time"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Location (optional)"
+                          value={newScheduleItem.location}
+                          onChange={(e) => setNewScheduleItem({ ...newScheduleItem, location: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          aria-label="Schedule item location"
                         />
                         <button
                           type="button"

@@ -88,6 +88,22 @@ export function removeCoupleGuest(coupleEventId: string, guestId: string): void 
   writeGuests(readGuests().filter((g) => !(g.id === guestId && g.eventName === coupleEventId)));
 }
 
+/** Download the couple's guest list as a CSV (name,email,phone). */
+export function exportCoupleGuestsCsv(coupleEventId: string): void {
+  const guests = getCoupleGuests(coupleEventId);
+  const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = ['Name', 'Email', 'Phone'];
+  const rows = guests.map((g) => [g.name, g.email || '', g.phone || ''].map(esc).join(','));
+  const csv = [header.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'guest-list.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function importCoupleGuests(
   coupleEventId: string,
   rows: { name: string; email?: string; phone?: string }[],
