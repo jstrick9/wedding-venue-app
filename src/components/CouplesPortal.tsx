@@ -142,6 +142,14 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     [event, msgTick],
   );
 
+  // Refresh the chat periodically (and when the tab is opened) so the couple sees new
+  // venue messages without having to send one themselves.
+  useEffect(() => {
+    setMsgTick((t) => t + 1);
+    const id = setInterval(() => setMsgTick((t) => t + 1), 5000);
+    return () => clearInterval(id);
+  }, [activeTab === 'chat', event?.id]);
+
   const handleSendMessage = () => {
     if (!event || !chatDraft.trim()) return;
     sendCoupleMessage({

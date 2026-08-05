@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AdminCommonProps } from './AdminTabTypes';
 import { CoupleEvent, CoupleLayoutStatus } from '../../types';
 import {
@@ -57,6 +57,15 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [openChat, setOpenChat] = useState<string | null>(null);
   const [openGuests, setOpenGuests] = useState<string | null>(null);
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
+  const [chatTick, setChatTick] = useState(0);
+
+  // Refresh the chat pane while open so new couple messages appear without the venue
+  // having to reload or send.
+  useEffect(() => {
+    if (!openChat) return;
+    const id = setInterval(() => setChatTick((t) => t + 1), 5000);
+    return () => clearInterval(id);
+  }, [openChat]);
   // Optional review comment per couple event in the approval queue.
   const [reviewComments, setReviewComments] = useState<Record<string, string>>({});
 
@@ -153,6 +162,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
 
   // Chat pane for an event
   const renderChat = (ev: CoupleEvent) => {
+    void chatTick; // re-render when the periodic refresh ticks
     const messages = getCoupleMessages(ev.id);
     const draft = chatDrafts[ev.id] || '';
     const send = () => {
