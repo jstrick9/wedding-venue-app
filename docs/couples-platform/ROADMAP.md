@@ -118,6 +118,11 @@ so each booked couple gets their own space.
   their booked package and lets them add/remove paid add-ons (lodging, activities, horse &
   carriage, services, photography, city experiences, extra guests, extra time) from the
   venue's add-on catalog after booking.
+- ✅ **Per-couple guest events & itinerary (delivered):** guest events (rehearsal dinner,
+  ceremony, cocktail hour, reception, overnight lodging, activities) auto-derive from the
+  couple's package + add-ons. The couple assigns specific guests to specific events
+  (with capacity enforcement) and sees RSVPs per event; each guest's portal shows only
+  their invited events and they RSVP per event.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 
