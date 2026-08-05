@@ -330,14 +330,20 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       ? current.filter((a) => a.addOnId !== addOnId)
       : [...current, { addOnId, addedAt: new Date().toISOString() }];
     updateCoupleEvent(event.id, { addOns: next });
-    // When the couple adds a lodging add-on, auto-suggest a venue setup task so
-    // the venue plans to prepare the lodging for overnight guests.
+    // When the couple adds certain add-ons, auto-suggest a venue setup task so
+    // the venue plans the corresponding prep (the venue keeps control/edits).
     const ao = findPackageAddOn(addOnId);
-    if (!wasAdded && ao?.category === 'lodging') {
+    if (!wasAdded && ao) {
       const existing = getCoupleSetupTasks(event.id);
-      if (!existing.some((t) => t.suggested && t.title.toLowerCase().includes('lodging'))) {
-        addCoupleSetupTask(event.id, { title: 'Prepare lodging for overnight guests', suggested: true });
-      }
+      const tasks: { key: string; title: string }[] = [];
+      if (ao.category === 'lodging') tasks.push({ key: 'lodging', title: 'Prepare lodging for overnight guests' });
+      if (ao.category === 'activity') tasks.push({ key: 'activity', title: `Set up guided activity: ${ao.name}` });
+      if (ao.category === 'ceremony-reception') tasks.push({ key: 'ceremony', title: `Set up add-on: ${ao.name}` });
+      tasks.forEach((t) => {
+        if (!existing.some((x) => x.suggested && x.title.toLowerCase().includes(t.key))) {
+          addCoupleSetupTask(event.id, { title: t.title, suggested: true });
+        }
+      });
     }
     setPkgTick((t) => t + 1);
   };
