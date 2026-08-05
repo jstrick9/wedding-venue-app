@@ -645,6 +645,21 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                   }`}>
                                     {rsvp ? (rsvp.attending ? 'Attending' : 'Not attending') : 'No response'}
                                   </span>
+                                  {rsvp?.attending && (
+                                    <span className="text-xs text-gray-600 max-w-[220px] truncate" title={[
+                                      rsvp.mealChoice ? `Meal: ${rsvp.mealChoice}` : '',
+                                      rsvp.plusOneName ? `Plus one: ${rsvp.plusOneName}` : '',
+                                      rsvp.dietaryNotes ? `Dietary: ${rsvp.dietaryNotes}` : '',
+                                      rsvp.specialNeeds ? `Special needs: ${rsvp.specialNeeds}` : '',
+                                      rsvp.notes ? `Notes: ${rsvp.notes}` : '',
+                                    ].filter(Boolean).join(' · ')}>
+                                      {[
+                                        rsvp.mealChoice ? `🍽️ ${rsvp.mealChoice}` : '',
+                                        rsvp.specialNeeds ? '♿' : '',
+                                        rsvp.dietaryNotes ? '🥗' : '',
+                                      ].filter(Boolean).join(' ') || '—'}
+                                    </span>
+                                  )}
                                   {g.token && (
                                     <button
                                       type="button"

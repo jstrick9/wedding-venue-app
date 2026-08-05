@@ -1214,10 +1214,12 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 </p>
                               )}
                               {rsvp.dietaryNotes && <p>🥗 Dietary: {rsvp.dietaryNotes}</p>}
+                              {rsvp.specialNeeds && <p>♿ Special needs: {rsvp.specialNeeds}</p>}
+                              {rsvp.notes && <p>📝 Notes: {rsvp.notes}</p>}
                               {rsvp.attendingDays && rsvp.attendingDays.length > 0 && (
                                 <p>📅 Days: {rsvp.attendingDays.map((d) => d.replace('day', 'Day ')).join(', ')}</p>
                               )}
-                              {!rsvp.mealChoice && !rsvp.plusOneName && !rsvp.dietaryNotes && (
+                              {!rsvp.mealChoice && !rsvp.plusOneName && !rsvp.dietaryNotes && !rsvp.specialNeeds && !rsvp.notes && (
                                 <p className="text-gray-400">No meal/dietary details provided.</p>
                               )}
                             </div>
