@@ -18,7 +18,7 @@ import {
 } from '../../services/couples/coupleChatService';
 import { getCoupleGuests, getCouplePortalConfig, setCouplePortalConfig } from '../../services/couples/coupleGuestService';
 import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
-import { getCoupleGuestEvents, getAssignedGuestCount, GUEST_EVENT_KIND_LABELS } from '../../services/couples/coupleGuestEventService';
+import { getCoupleGuestEvents, getAssignedGuestCount, GUEST_EVENT_KIND_LABELS, ensureDerivedGuestEventsForCouple } from '../../services/couples/coupleGuestEventService';
 import { getGuestPortalConfig } from '../../utils/guestPortal';
 import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeCoupleSetupTask } from '../../services/couples/coupleSetupService';
 import { getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
@@ -963,6 +963,9 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                 })()}
 
                 {openItin === ev.id && (() => {
+                  // Ensure derived guest events exist (venue sees them even before the
+                  // couple opens their portal).
+                  ensureDerivedGuestEventsForCouple(ev, findWeddingPackage(ev.packageId), findPackageAddOn);
                   const events = getCoupleGuestEvents(ev.id);
                   const guests = getCoupleGuests(ev.id);
                   const rsvps = getCoupleRsvpSubmissions(ev.id);

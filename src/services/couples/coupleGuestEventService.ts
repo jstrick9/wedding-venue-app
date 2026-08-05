@@ -182,3 +182,19 @@ export function ensureDerivedGuestEventsForEvent(
 ): void {
   ensureDerivedGuestEvents(event.id, pkg, addOns);
 }
+
+/**
+ * Resolve a couple event's stored add-on ids to their catalog entries, then
+ * ensure default guest events exist. Used on the venue side so derived events
+ * appear even before the couple opens their portal.
+ */
+export function ensureDerivedGuestEventsForCouple(
+  event: CoupleEvent,
+  pkg: WeddingPackage | undefined,
+  resolveAddOn: (id: string) => PackageAddOn | undefined,
+): void {
+  const addOns = (event.addOns || [])
+    .map((a) => resolveAddOn(a.addOnId))
+    .filter((x): x is PackageAddOn => !!x);
+  ensureDerivedGuestEvents(event.id, pkg, addOns);
+}
