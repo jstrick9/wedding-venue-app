@@ -1035,7 +1035,17 @@ export interface VenueMapConfig {
   height: number;
   points: VenueMapPoint[];
   rainContingencies: RainContingency[];
+  /** A named walkway/path drawn as an ordered polyline between point ids. */
+  routes: VenueMapRoute[];
   updatedAt: string;
+}
+
+/** A drawn route/path connecting map points, rendered as a polyline. */
+export interface VenueMapRoute {
+  id: string;
+  name: string;
+  /** Ordered map-point ids the route connects (drawn in sequence). */
+  pointIds: string[];
 }
 
 export interface VenueRulesConfig {

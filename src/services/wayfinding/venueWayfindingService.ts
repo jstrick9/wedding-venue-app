@@ -28,7 +28,23 @@ export function saveVenueMapConfig(config: VenueMapConfig): void {
 }
 
 export function emptyVenueMapConfig(): VenueMapConfig {
-  return { width: 100, height: 80, points: [], rainContingencies: [], updatedAt: new Date().toISOString() };
+  return {
+    width: 100,
+    height: 80,
+    points: [],
+    rainContingencies: [],
+    routes: [],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/** Resolve a route's ordered coordinates from its point ids. */
+export function routePolyline(map: VenueMapConfig | null, routeId: string): { x: number; y: number }[] {
+  if (!map) return [];
+  const route = (map.routes || []).find((r) => r.id === routeId);
+  if (!route) return [];
+  const byId = new Map(map.points.map((p) => [p.id, p]));
+  return route.pointIds.map((id) => byId.get(id)).filter(Boolean).map((p) => ({ x: p!.x, y: p!.y }));
 }
 
 export function getVenueRules(): VenueRulesConfig {

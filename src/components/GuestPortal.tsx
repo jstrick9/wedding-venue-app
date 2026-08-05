@@ -64,6 +64,7 @@ import {
   getVenueMapConfig,
   getVenueRules,
   coupleWayfindingPoints,
+  routePolyline,
 } from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import {
@@ -957,6 +958,21 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         <div className="bg-white rounded-xl shadow p-4 mt-4">
           <div className="relative w-full h-64 bg-teal-50 rounded-lg border border-teal-100 overflow-hidden">
             <svg viewBox={`0 0 ${venueMap!.width} ${venueMap!.height}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              {/* Drawn walkway routes */}
+              {(venueMap!.routes || []).map((route) => {
+                const pts = routePolyline(venueMap, route.id);
+                if (pts.length < 2) return null;
+                return (
+                  <polyline
+                    key={route.id}
+                    points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
+                    fill="none"
+                    stroke="#14b8a6"
+                    strokeWidth={1}
+                    strokeDasharray="2,1.5"
+                  />
+                );
+              })}
               {/* Paths */}
               {venueMap!.points
                 .filter((p) => p.kind === 'path')

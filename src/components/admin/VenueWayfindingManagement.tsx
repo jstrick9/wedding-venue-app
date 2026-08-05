@@ -12,6 +12,7 @@ import {
   emptyVenueMapConfig,
   getVenueRules,
   saveVenueRules,
+  routePolyline,
 } from '../../services/wayfinding/venueWayfindingService';
 import {
   getVenueWeather,
@@ -46,6 +47,9 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
   const [rules, setRules] = useState<string[]>(() => getVenueRules().rules);
   const [newRule, setNewRule] = useState('');
   const [newPoint, setNewPoint] = useState({ label: '', kind: 'space' as VenueMapPoint['kind'], x: 50, y: 50, venueId: '', lat: '', lng: '' });
+  // Route builder state
+  const [routeName, setRouteName] = useState('');
+  const [routePointIds, setRoutePointIds] = useState<string[]>([]);
 
   // Weather state
   const [weather, setWeather] = useState(() => getVenueWeather());
@@ -82,7 +86,29 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
 
   const removePoint = (id: string) => {
     const m = ensureMap();
-    update({ ...m, points: m.points.filter((p) => p.id !== id), updatedAt: new Date().toISOString() });
+    update({
+      ...m,
+      points: m.points.filter((p) => p.id !== id),
+      routes: (m.routes || []).map((r) => ({ ...r, pointIds: r.pointIds.filter((pid) => pid !== id) })),
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const addRoute = () => {
+    const m = ensureMap();
+    const route = {
+      id: `route-${Date.now()}`,
+      name: routeName.trim() || 'Path',
+      pointIds: routePointIds,
+    };
+    update({ ...m, routes: [...(m.routes || []), route], updatedAt: new Date().toISOString() });
+    setRouteName('');
+    setRoutePointIds([]);
+  };
+
+  const removeRoute = (id: string) => {
+    const m = ensureMap();
+    update({ ...m, routes: (m.routes || []).filter((r) => r.id !== id), updatedAt: new Date().toISOString() });
   };
 
   // Rain contingency: for each outdoor venue the couple might use, pick an indoor backup.
@@ -156,6 +182,20 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
         {map && map.points.length > 0 ? (
           <div className="rounded-lg border border-gray-200 overflow-hidden">
             <svg viewBox={`0 0 ${map.width} ${map.height}`} className="w-full h-64 bg-teal-50">
+              {(map.routes || []).map((route) => {
+                const pts = routePolyline(map, route.id);
+                if (pts.length < 2) return null;
+                return (
+                  <polyline
+                    key={route.id}
+                    points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
+                    fill="none"
+                    stroke="#14b8a6"
+                    strokeWidth={1}
+                    strokeDasharray="2,1.5"
+                  />
+                );
+              })}
               {map.points
                 .filter((p) => p.kind === 'path')
                 .map((p) => (
@@ -272,6 +312,67 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Routes / paths */}
+      <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+        <h3 className="font-semibold text-sm mb-2">🛤️ Walkways &amp; Paths</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Draw a walkway by naming it and selecting the points it connects in order
+          (e.g. Main Entry → Ceremony Garden). Paths render as dashed polylines.
+        </p>
+        {map && map.points.length > 0 ? (
+          <div className="flex flex-col sm:flex-row gap-2 mb-3">
+            <input
+              type="text"
+              value={routeName}
+              onChange={(e) => setRouteName(e.target.value)}
+              placeholder="Route name"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              aria-label="Route name"
+            />
+            <select
+              multiple
+              value={routePointIds}
+              onChange={(e) =>
+                setRoutePointIds(Array.from(e.target.selectedOptions).map((o) => o.value))
+              }
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+              aria-label="Route points (in order)"
+            >
+              {map.points
+                .filter((p) => p.kind !== 'path')
+                .map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+            </select>
+            <button
+              type="button"
+              onClick={addRoute}
+              className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+            >
+              + Add path
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">Add points first to draw paths between them.</p>
+        )}
+
+        <div className="space-y-1">
+          {(map?.routes || []).map((r) => (
+            <div key={r.id} className="flex items-center justify-between text-sm">
+              <span className="text-gray-700">
+                {r.name} <span className="text-gray-400 text-xs">({r.pointIds.length} points)</span>
+              </span>
+              <button type="button" onClick={() => removeRoute(r.id)} className="text-red-400 hover:text-red-600" aria-label={`Remove ${r.name}`}>
+                ✕
+              </button>
+            </div>
+          ))}
+          {(!map || !map.routes || map.routes.length === 0) && (
+            <p className="text-xs text-gray-400">No paths drawn yet.</p>
+          )}
+        </div>
       </div>
 
       {/* Rain contingency */}

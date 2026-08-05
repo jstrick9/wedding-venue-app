@@ -6,6 +6,7 @@ import {
   getVenueRules,
   findRainContingency,
   coupleWayfindingPoints,
+  routePolyline,
 } from './venueWayfindingService';
 
 const map = {
@@ -23,6 +24,7 @@ const map = {
   rainContingencies: [
     { id: 'rc1', outdoorVenueId: 'ceremony', indoorVenueId: 'ballroom' },
   ],
+  routes: [{ id: 'r1', name: 'Main Path', pointIds: ['p1', 'p3'] }],
 };
 
 describe('venueWayfindingService', () => {
@@ -63,5 +65,19 @@ describe('venueWayfindingService', () => {
 
   it('returns no points when there is no map', () => {
     expect(coupleWayfindingPoints(null, ['ceremony'])).toHaveLength(0);
+  });
+
+  it('resolves a route polyline to ordered coordinates', () => {
+    const poly = routePolyline(map as any, 'r1');
+    expect(poly).toEqual([
+      { x: 10, y: 10 },
+      { x: 30, y: 30 },
+    ]);
+    expect(routePolyline(map as any, 'missing')).toHaveLength(0);
+  });
+
+  it('defaults empty map config to empty routes', async () => {
+    const { emptyVenueMapConfig } = await import('./venueWayfindingService');
+    expect(emptyVenueMapConfig().routes).toEqual([]);
   });
 });

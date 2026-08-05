@@ -61,8 +61,10 @@ so each booked couple gets their own space.
   forecast per event day (or auto-fetch a free 7-day forecast by location via the
   Open-Meteo API, no key). The forecast appears alongside each day in the couple's guest
   portal schedule/timeline.
-- 🚧 **Future ideas:** real transactional email (needs live Supabase); richer per-point
-  wayfinding paths (drawn polylines rather than dots).
+- ✅ **Drawn walkway paths (delivered):** the venue can draw named walkways as ordered
+  polylines between map points; they render as dashed routes in both the admin and the
+  couple's guest portal map.
+- 🚧 **Future ideas:** real transactional email (needs live Supabase).
 
 ## Data model (see src/types.ts)
 - `CoupleEvent`: id, coupleName, inviteToken, status (invited/active/completed),
