@@ -63,6 +63,7 @@ export interface BackupPayload {
   coupleSetupTasks?: unknown;
   weddingPackages?: unknown;
   packageAddOns?: unknown;
+  coupleGuestEvents?: unknown;
   venueMapConfigs?: unknown;
   venueRules?: unknown;
   venueWeather?: unknown;

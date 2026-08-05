@@ -24,6 +24,7 @@ import { getCoupleVendorsForBackup } from '../services/couples/coupleVendorServi
 import { getCoupleSetupTasksForBackup } from '../services/couples/coupleSetupService';
 import { getWeddingPackagesForBackup } from '../services/couples/couplePackageService';
 import { getPackageAddOnsForBackup } from '../services/couples/coupleAddOnService';
+import { getCoupleGuestEventsForBackup } from '../services/couples/coupleGuestEventService';
 import {
   getDecorArrangements,
   getDecorCategories,
@@ -462,6 +463,16 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     version: STORAGE_VERSIONS.PACKAGE_ADDONS,
     read: () => getPackageAddOnsForBackup(),
     write: (v) => writeVersioned(STORAGE_KEYS.PACKAGE_ADDONS, STORAGE_VERSIONS.PACKAGE_ADDONS, v),
+  },
+  {
+    key: 'coupleGuestEvents',
+    storageKey: STORAGE_KEYS.COUPLE_GUEST_EVENTS,
+    label: 'Couple Guest Events',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.COUPLE_GUEST_EVENTS,
+    read: () => getCoupleGuestEventsForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_GUEST_EVENTS, STORAGE_VERSIONS.COUPLE_GUEST_EVENTS, v),
   },
   {
     key: 'rsvpSubmissions',

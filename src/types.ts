@@ -835,6 +835,8 @@ export interface RSVPSubmission {
   phone?: string;
   attending: boolean;
   attendingDays?: string[];
+  /** Guest event ids the guest will attend (per-event itinerary RSVP). */
+  attendingEvents?: string[];
   mealChoice?: string;
   plusOneName?: string;
   plusOneMealChoice?: string;
@@ -925,6 +927,8 @@ export interface GuestPortalGuestRecord extends Guest {
   eventKey?: string;
   allowPortalAccess?: boolean;
   allowLodgingAccess?: boolean;
+  /** Guest event ids this guest is invited to (per-guest itinerary). */
+  guestEventIds?: string[];
 }
 
 // ── Couples / Events platform ────────────────────────────────────────────────
@@ -1140,6 +1144,39 @@ export interface CoupleAddOn {
   /** Optional quantity/unit (e.g. hours, nights, guests). */
   qty?: number;
   addedAt: string;
+}
+
+// ── Per-couple guest events (itinerary) ──────────────────────────────────────
+// These are the events a couple invites their guests to (rehearsal dinner,
+// ceremony, cocktail hour, reception, overnight lodging, activities, etc.).
+// Derived from the couple's package + add-ons, with editable capacities. Each
+// guest is assigned to the specific events they're invited to; the guest's portal
+// itinerary shows only their assigned events and they RSVP per event.
+export type CoupleGuestEventKind =
+  | 'rehearsal-dinner'
+  | 'ceremony'
+  | 'cocktail-hour'
+  | 'reception'
+  | 'lodging'
+  | 'activity'
+  | 'custom';
+
+export interface CoupleGuestEvent {
+  id: string;
+  coupleEventId: string;
+  title: string;
+  kind: CoupleGuestEventKind;
+  /** Which event day (0-based index) the event falls on, if multi-day. */
+  dayIndex?: number;
+  /** Optional ISO start time. */
+  startTime?: string;
+  location?: string;
+  description?: string;
+  /** Max guests this event can accommodate (e.g. rehearsal dinner limited count). */
+  capacity: number;
+  /** Whether this event was auto-created from the package/add-ons. */
+  derived: boolean;
+  createdAt: string;
 }
 
 // ── Venue-controlled wayfinding, rain contingency & rules ──────────────────

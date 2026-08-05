@@ -18,6 +18,7 @@ import { removeCoupleAnswers } from './coupleAnswersService';
 import { removeCoupleChecklists } from './coupleChecklistService';
 import { removeCoupleVendors } from './coupleVendorService';
 import { removeCoupleSetupTasks } from './coupleSetupService';
+import { removeCoupleGuestEvents } from './coupleGuestEventService';
 
 const COUPLE_EVENTS_KEY = STORAGE_KEYS.COUPLE_EVENTS;
 const COUPLE_EVENTS_VERSION = 1;
@@ -235,6 +236,7 @@ export function deleteCoupleEvent(id: string): void {
   removeCoupleChecklists(id);
   removeCoupleVendors(id);
   removeCoupleSetupTasks(id);
+  removeCoupleGuestEvents(id);
 }
 
 export function findCoupleEventById(id: string): CoupleEvent | undefined {
