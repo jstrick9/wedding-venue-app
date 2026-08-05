@@ -35,6 +35,7 @@ import {
   setCouplePortalConfig,
 } from '../services/couples/coupleGuestService';
 import { getGuestPortalConfig } from '../utils/guestPortal';
+import { parseGuestCsv } from '../utils/guestCsv';
 import { getCoupleRsvpSubmissions } from '../services/couples/coupleRsvpService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getVenueMapConfig, findRainContingency } from '../services/wayfinding/venueWayfindingService';
@@ -204,14 +205,14 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
   const handleImportGuests = (content: string) => {
     if (!event) return;
-    const rows = content
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [name = '', email = '', phone = ''] = line.split(',').map((s) => s.trim());
-        return { name, email, phone };
-      });
+    // Use the robust shared CSV parser (quoted fields, header detection) for consistency
+    // with the venue's guest import.
+    const result = parseGuestCsv(content, getCoupleGuests(event.id));
+    if (!result.ok) {
+      showToast(result.error || 'Could not parse the CSV file.', 'warning');
+      return;
+    }
+    const rows = (result.guests || []).map((g) => ({ name: g.name, email: g.email || '', phone: g.phone || '' }));
     const added = importCoupleGuests(event.id, rows);
     setGuestTick((t) => t + 1);
     showToast(`Imported ${added} guest${added === 1 ? '' : 's'}.`, 'success');
