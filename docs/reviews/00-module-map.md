@@ -311,6 +311,13 @@ docs/reviews/79-continued-gap-pass.md.
 ✅ Tiered collaborator permissions in the Couples Portal (couple/planner/family/
 vendor) with view-only gates + notices; EventQuestionsWizard readOnly mode.
 See docs/reviews/79-continued-gap-pass.md.
+✅ Chat read-tracking clears unread badges (venue + couple), couple Chat-tab
+unread badge, side-aware getUnreadCoupleMessageCounts. See
+docs/reviews/80-continued-gap-pass-2.md.
+✅ Cascade-delete a couple event's guests/configs/RSVPs/messages/answers.
+See docs/reviews/80-continued-gap-pass-2.md.
+✅ Chat panes auto-scroll to the newest message (venue + couple).
+See docs/reviews/80-continued-gap-pass-2.md.
 
 ## Autonomous gap pass — status
 ✅ Removed 3 dead modules (DecorManagement, useHistory, useAppModals + test) —
