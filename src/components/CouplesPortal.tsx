@@ -38,6 +38,7 @@ import {
 import { getGuestPortalConfig } from '../utils/guestPortal';
 import { getCoupleRsvpSubmissions } from '../services/couples/coupleRsvpService';
 import { getVenues } from '../hooks/useLayoutState';
+import { getVenueMapConfig, findRainContingency } from '../services/wayfinding/venueWayfindingService';
 import { getConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
@@ -530,6 +531,16 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         <div className="text-xs text-gray-500 mt-1">
                           {space.width}' × {space.height}' • {space.capacity} capacity
                         </div>
+                        {(() => {
+                          const backup = findRainContingency(getVenueMapConfig(), space.id);
+                          if (!backup) return null;
+                          const backupVenue = venues.find((v) => v.id === backup.indoorVenueId);
+                          return (
+                            <div className="mt-2 text-[11px] text-blue-700 bg-blue-50 rounded px-2 py-1">
+                              🌧️ Rain backup: {backupVenue?.name || backup.indoorVenueId}
+                            </div>
+                          );
+                        })()}
                       </button>
                     );
                   })}

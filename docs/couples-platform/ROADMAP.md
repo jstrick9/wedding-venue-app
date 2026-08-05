@@ -91,6 +91,9 @@ so each booked couple gets their own space.
 - ✅ **Venue map on the Map tab (delivered):** the guest portal Map tab now renders the
   full venue-controlled SVG map (spaces, parking, entries, walkways, GPS) at the top,
   above the per-space info cards.
+- ✅ **Rain-contingency indicator for the couple (delivered):** the couple's Venue Spaces
+  tab shows a "Rain backup" note on any outdoor space that has a venue-configured backup,
+  so the couple knows their contingency before selecting.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 

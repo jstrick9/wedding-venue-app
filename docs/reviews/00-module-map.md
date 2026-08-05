@@ -283,6 +283,10 @@ See docs/couples-platform/ROADMAP.md.
 ✅ The guest portal Map tab renders the full venue-controlled SVG map (spaces, parking,
 entries, walkways, GPS) above the per-space info cards. See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Rain-contingency indicator
+✅ The couple's Venue Spaces tab shows a "Rain backup" note on any outdoor space that has a
+venue-configured backup. See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
