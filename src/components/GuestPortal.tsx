@@ -2023,7 +2023,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   const showLodgingTab =
     !!config.showLodging &&
     lodgingVenues.length > 0 &&
-    (isPreview || guestCanAccessLodging(identifiedGuest, activeEventName || config.eventTitle || ''));
+    (isPreview ||
+      guestCanAccessLodging(identifiedGuest, activeEventName || config.eventTitle || '') ||
+      // A guest invited to the couple's "Overnight Lodging" guest event gets lodging access.
+      (isCouplePortal && identifiedGuest && guestAssignedEvents.some((e) => e.kind === 'lodging')));
   const tabPanelId = `guest-portal-panel-${activeTab}`;
   const desktopTabProps = (tabId: TabId) => ({
     role: 'tab' as const,
