@@ -172,7 +172,11 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
           <h3 className="font-semibold text-sm">Property Map</h3>
           <button
             type="button"
-            onClick={() => update(emptyVenueMapConfig())}
+            onClick={() => {
+              if (window.confirm('Reset the entire venue map? This removes all points, paths, and rain-contingency backups.')) {
+                update(emptyVenueMapConfig());
+              }
+            }}
             className="text-xs text-gray-400 hover:text-gray-600"
           >
             Reset map
