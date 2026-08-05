@@ -1158,9 +1158,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 onChange={(e) => setSelectedWayfindingFrom(e.target.value)}
               >
                 <option value="entrance">Entrance</option>
-                {wayfindingPoints.map((pt) => (
-                  <option key={pt.id} value={pt.label}>{pt.label}</option>
-                ))}
+                {/* Skip a map point already labeled "Entrance" to avoid a duplicate option. */}
+                {wayfindingPoints
+                  .filter((pt) => pt.label.trim().toLowerCase() !== 'entrance')
+                  .map((pt) => (
+                    <option key={pt.id} value={pt.label}>{pt.label}</option>
+                  ))}
               </select>
             </div>
 
