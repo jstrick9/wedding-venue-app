@@ -49,6 +49,7 @@ import {
   setPortalRSVPSubmissions,
 } from '../utils/guestPortal';
 import { verifySecret } from '../utils/auth';
+import { getConfig } from '../config';
 import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
 import {
   getCoupleGuests,
@@ -677,6 +678,27 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             </ul>
           </div>
         )}
+
+        {/* Contact the venue */}
+        {(() => {
+          const vc = getConfig();
+          const phone = vc.phone || (vc as any).contactPhoneNumber;
+          const location = vc.location;
+          if (!phone && !location) return null;
+          return (
+            <div className="bg-white rounded-xl shadow p-4">
+              <p className="text-sm font-semibold text-gray-800 mb-2">📞 Contact the Venue</p>
+              <div className="space-y-1 text-sm text-gray-700">
+                {location && <p>📍 {location}</p>}
+                {phone && (
+                  <p>
+                    <a href={`tel:${phone}`} className="text-indigo-600 hover:underline">📞 {phone}</a>
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   };
