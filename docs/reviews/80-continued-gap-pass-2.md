@@ -40,6 +40,16 @@ to the bottom, so new messages were invisible until the user scrolled manually.
 **Fix:** Both panes now auto-scroll to the newest message on open and on each
 refresh tick (via a stable ref + effect keyed on the tick / open id).
 
+## 4. Couple meal-count summary surfaces unselected meals
+
+**Gap:** The couple's Meal-counts summary only listed meals with a chosen count,
+so attending guests who hadn't selected a meal were invisible to the couple
+planning catering.
+
+**Fix:** Added a "No meal selected" bucket for attending guests without a meal
+choice, and a footer showing `X attending · Y total meal(s) for catering`.
+Still 388 tests green.
+
 ## CI
 `npm run typecheck`, `npm run lint:events`, `npx vitest run`, `npm run build`
 all green. Full suite: **388 passing / 11 skipped**. Unused-locals scan clean.

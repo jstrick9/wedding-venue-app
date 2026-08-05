@@ -932,12 +932,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
               {(() => {
                 const attending = coupleRsvps.filter((r) => r.attending);
                 const counts = new Map<string, number>();
+                let unselected = 0;
                 attending.forEach((r) => {
                   if (r.mealChoice) counts.set(r.mealChoice, (counts.get(r.mealChoice) || 0) + 1);
+                  else unselected += 1; // attending guest with no meal chosen
                   // Plus-one meals count toward catering too.
                   if (r.plusOneMealChoice) counts.set(r.plusOneMealChoice, (counts.get(r.plusOneMealChoice) || 0) + 1);
                 });
-                if (counts.size === 0) return null;
+                const totalMeals = Array.from(counts.values()).reduce((a, b) => a + b, 0) + unselected;
+                if (totalMeals === 0) return null;
                 return (
                   <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
                     <h3 className="font-semibold text-sm mb-2">🍽️ Meal counts</h3>
@@ -947,7 +950,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           {(portalConfig?.mealOptions?.find((o) => o.value === value)?.label) || value}: <strong>{n}</strong>
                         </span>
                       ))}
+                      {unselected > 0 && (
+                        <span className="text-sm bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-3 py-1">
+                          No meal selected: <strong>{unselected}</strong>
+                        </span>
+                      )}
                     </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      {attending.length} attending · {totalMeals} total meal(s) for catering.
+                    </p>
                   </div>
                 );
               })()}

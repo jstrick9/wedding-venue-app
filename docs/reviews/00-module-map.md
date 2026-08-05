@@ -318,6 +318,8 @@ docs/reviews/80-continued-gap-pass-2.md.
 See docs/reviews/80-continued-gap-pass-2.md.
 ✅ Chat panes auto-scroll to the newest message (venue + couple).
 See docs/reviews/80-continued-gap-pass-2.md.
+✅ Couple Meal-count summary now surfaces attending guests with no meal selected
+(for catering) + shows attending/total meals. See docs/reviews/80-continued-gap-pass-2.md.
 
 ## Autonomous gap pass — status
 ✅ Removed 3 dead modules (DecorManagement, useHistory, useAppModals + test) —
