@@ -41,6 +41,7 @@ import { parseGuestCsv } from '../utils/guestCsv';
 import { getCoupleRsvpSubmissions, removeCoupleRsvp } from '../services/couples/coupleRsvpService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
+import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import { getConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
@@ -583,6 +584,35 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   ))}
                 </div>
               </div>
+
+              {/* Weather for the event days (helps plan outdoor spaces) */}
+              {(() => {
+                const dates = eventDates(event.eventDate, event.eventEndDate);
+                const forecasts = dates
+                  .map((d) => ({ d, f: getVenueWeather().forecasts[d] }))
+                  .filter((x) => x.f);
+                if (forecasts.length === 0) return null;
+                return (
+                  <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                    <h3 className="font-semibold text-sm mb-2">🌤️ Weather forecast</h3>
+                    <div className="space-y-2">
+                      {forecasts.map(({ d, f }) => (
+                        <div key={d} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">{new Date(d + 'T00:00:00').toLocaleDateString()}</span>
+                          <span className="inline-flex items-center gap-2 text-gray-700">
+                            <span>{f.condition.includes('Rain') || (f.rainChance ?? 0) >= 50 ? '🌧️' : f.condition.includes('Cloud') ? '☁️' : '☀️'}</span>
+                            <span className="font-medium">{f.condition}</span>
+                            {f.tempLow != null && f.tempHigh != null && (
+                              <span className="text-gray-500">{f.tempLow}°–{f.tempHigh}°</span>
+                            )}
+                            {f.rainChance != null && <span className="text-sky-600">☔ {f.rainChance}%</span>}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Share / preview guest portal */}
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
