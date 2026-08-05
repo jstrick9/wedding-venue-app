@@ -38,7 +38,7 @@ import {
 } from '../services/couples/coupleGuestService';
 import { getGuestPortalConfig } from '../utils/guestPortal';
 import { parseGuestCsv } from '../utils/guestCsv';
-import { getCoupleRsvpSubmissions, removeCoupleRsvp } from '../services/couples/coupleRsvpService';
+import { getCoupleRsvpSubmissions, removeCoupleRsvp, upsertCoupleRsvp } from '../services/couples/coupleRsvpService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
@@ -234,6 +234,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [expandedGuestRsvp, setExpandedGuestRsvp] = useState<string | null>(null);
   const [guestError, setGuestError] = useState('');
   const [editingGuest, setEditingGuest] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
+  // Manual RSVP recording (e.g. a guest responded by phone).
+  const [rsvpGuestId, setRsvpGuestId] = useState<string | null>(null);
+  const [rsvpRecord, setRsvpRecord] = useState({ attending: true as boolean, meal: '', plusOne: '', notes: '' });
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
@@ -273,6 +276,32 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     });
     setEditingGuest(null);
     setGuestTick((t) => t + 1);
+  };
+
+  const saveRecordedRsvp = () => {
+    if (!event || !rsvpGuestId) return;
+    const guest = coupleGuests.find((g) => g.id === rsvpGuestId);
+    if (!guest) return;
+    const existing = coupleRsvps.find((r) => r.guestId === guest.id);
+    upsertCoupleRsvp(event.id, {
+      id: existing?.id || `rsvp-${Date.now()}`,
+      guestId: guest.id,
+      eventName: event.id,
+      eventKey: event.id,
+      fullName: guest.name,
+      email: guest.email || '',
+      phone: guest.phone || '',
+      attending: rsvpRecord.attending,
+      mealChoice: rsvpRecord.attending ? rsvpRecord.meal || undefined : undefined,
+      plusOneName: rsvpRecord.attending ? rsvpRecord.plusOne.trim() || undefined : undefined,
+      notes: rsvpRecord.notes.trim() || undefined,
+      attendingDays: rsvpRecord.attending ? existing?.attendingDays : [],
+      submittedAt: new Date().toISOString(),
+    });
+    setRsvpGuestId(null);
+    setRsvpRecord({ attending: true, meal: '', plusOne: '', notes: '' });
+    setGuestTick((t) => t + 1);
+    showToast(`RSVP recorded for ${guest.name}.`, 'success');
   };
 
   const handleCopyGuestLink = (token: string) => {
@@ -1286,6 +1315,25 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             {canManageGuests && (
                               <button
                                 type="button"
+                                onClick={() => {
+                                  const existing = coupleRsvps.find((r) => r.guestId === g.id);
+                                  setRsvpRecord({
+                                    attending: existing?.attending ?? true,
+                                    meal: existing?.mealChoice || '',
+                                    plusOne: existing?.plusOneName || '',
+                                    notes: existing?.notes || '',
+                                  });
+                                  setRsvpGuestId(rsvpGuestId === g.id ? null : g.id);
+                                }}
+                                className="text-xs text-teal-600 hover:underline"
+                                title="Record or edit this guest's RSVP (e.g. from a phone call)"
+                              >
+                                📝 Record RSVP
+                              </button>
+                            )}
+                            {canManageGuests && (
+                              <button
+                                type="button"
                                 onClick={() => setEditingGuest({ id: g.id, name: g.name, email: g.email || '', phone: g.phone || '' })}
                                 className="text-xs text-gray-500 hover:underline"
                               >
@@ -1346,6 +1394,73 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                   type="button"
                                   onClick={() => setEditingGuest(null)}
                                   className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          {rsvpGuestId === g.id && (
+                            <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Attending?</label>
+                                <select
+                                  value={rsvpRecord.attending ? 'yes' : 'no'}
+                                  onChange={(e) => setRsvpRecord({ ...rsvpRecord, attending: e.target.value === 'yes' })}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                  aria-label="Recorded attending status"
+                                >
+                                  <option value="yes">Yes</option>
+                                  <option value="no">No</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Meal choice</label>
+                                <select
+                                  value={rsvpRecord.meal}
+                                  disabled={!rsvpRecord.attending}
+                                  onChange={(e) => setRsvpRecord({ ...rsvpRecord, meal: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-50"
+                                  aria-label="Recorded meal choice"
+                                >
+                                  <option value="">No meal</option>
+                                  {(portalConfig?.mealOptions && portalConfig.mealOptions.length > 0
+                                    ? portalConfig.mealOptions
+                                    : DEFAULT_MEAL_OPTIONS
+                                  ).map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <input
+                                type="text"
+                                value={rsvpRecord.plusOne}
+                                disabled={!rsvpRecord.attending}
+                                onChange={(e) => setRsvpRecord({ ...rsvpRecord, plusOne: e.target.value })}
+                                placeholder="Plus one name"
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-50"
+                                aria-label="Recorded plus one"
+                              />
+                              <input
+                                type="text"
+                                value={rsvpRecord.notes}
+                                onChange={(e) => setRsvpRecord({ ...rsvpRecord, notes: e.target.value })}
+                                placeholder="Notes (e.g. dietary)"
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                aria-label="Recorded notes"
+                              />
+                              <div className="flex gap-2 sm:col-span-2">
+                                <button
+                                  type="button"
+                                  onClick={saveRecordedRsvp}
+                                  className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+                                >
+                                  Save RSVP
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRsvpGuestId(null)}
+                                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600"
                                 >
                                   Cancel
                                 </button>

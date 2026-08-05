@@ -30,6 +30,25 @@ export function setCoupleRsvpSubmissions(coupleEventId: string, submissions: RSV
 }
 
 /** Remove a guest's RSVP submission for a couple event (e.g. when the guest is removed). */
+/**
+ * Upsert a single RSVP submission for a couple event (used by the couple to
+ * record a guest's RSVP taken over the phone/email, or to correct one).
+ */
+export function upsertCoupleRsvp(
+  coupleEventId: string,
+  submission: RSVPSubmission,
+): void {
+  const all = loadVersionedStorage<RSVPSubmission[]>({
+    key: KEY,
+    defaultValue: [],
+    currentVersion: VERSION,
+    validate: (v): v is RSVPSubmission[] => Array.isArray(v),
+    normalize: (v) => (Array.isArray(v) ? v : []),
+  });
+  const rest = all.filter((s) => !(s.eventKey === coupleEventId && s.guestId === submission.guestId));
+  saveVersionedStorage(KEY, VERSION, [...rest, submission]);
+}
+
 export function removeCoupleRsvp(coupleEventId: string, guestId: string): void {
   const all = loadVersionedStorage<RSVPSubmission[]>({
     key: KEY,
