@@ -589,6 +589,12 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       )}
                       {ev.guestCount && <span>👥 {ev.guestCount} guests</span>}
                       {ev.packageId && (() => { const p = findWeddingPackage(ev.packageId); return p ? <span>🎁 {p.name}</span> : null; })()}
+                      {(() => {
+                        const st = getCoupleSetupTasks(ev.id);
+                        if (st.length === 0) return null;
+                        const done = st.filter((t) => t.status === 'done').length;
+                        return <span className="text-sky-700 bg-sky-50 rounded-full px-2 py-0.5">🛠️ {done}/{st.length} setup</span>;
+                      })()}
                       <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
                       <span>👥 {ev.collaborators.length} people</span>
                       {(() => {
