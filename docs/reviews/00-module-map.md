@@ -304,6 +304,12 @@ the guest's room. See docs/couples-platform/78-bugfix-batch.md.
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
+## Couples & Events platform — Venue-configurable packages & add-ons (round 13)
+✅ Venue-configurable wedding packages (duration/season pricing/guest+overnight
+limits/lodging-included/included items) + add-on catalog; venue assigns a package
+to each couple with setup auto-suggest; couple Package tab views their package and
+adds/removes paid add-ons. See docs/reviews/91-wedding-packages-addons.md.
+
 ## Couples & Events platform — Couple checklist, vendors & venue setup (round 12)
 ✅ Couple's own prep checklist tab; couple vendors (pick venue preferred / add
 custom + status); venue per-couple setup & staffing panel (space/day/who/when).

@@ -64,6 +64,15 @@ describe('CouplesPortal', () => {
     expect(screen.getByText(/Your vendors/i)).toBeTruthy();
   });
 
+  it('renders the package tab', () => {
+    setupSession('Pkg & Co');
+    render(<CouplesPortal onExitPortal={() => {}} />);
+    expect(screen.getByText('Package')).toBeTruthy();
+    fireEvent.click(screen.getByText('Package'));
+    expect(screen.getByText(/Your wedding package/i)).toBeTruthy();
+    expect(screen.getByText(/Add-ons you can add/i)).toBeTruthy();
+  });
+
   function setupRoleSession(role: CoupleCollaboratorRole) {
     const ev = createCoupleEvent({ coupleName: 'Role & Test', availableSpaces: ['ceremony', 'reception'] });
     const collaborator = addCoupleCollaborator(ev.id, {

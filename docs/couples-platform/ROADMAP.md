@@ -109,6 +109,15 @@ so each booked couple gets their own space.
   install), which space/day, assigned staff, and a due time — driven by the couple's
   selected spaces and multi-day span. This lets the venue schedule setup before each
   event/space and separate its own prep from the couple's checklist.
+- ✅ **Venue-configurable wedding packages (delivered):** the venue defines the packages it
+  sells — single-day / multi-day / full weekend — each with season pricing (non-peak/peak/
+  premier), included guest + overnight-guest limits, whether on-site lodging is included
+  (with selectable lodging properties), and a checklist of included items. Assigned to a
+  couple event; assigning auto-suggests the venue's setup tasks.
+- ✅ **Couple package view + paid add-ons (delivered):** the couple's Package tab shows
+  their booked package and lets them add/remove paid add-ons (lodging, activities, horse &
+  carriage, services, photography, city experiences, extra guests, extra time) from the
+  venue's add-on catalog after booking.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 
@@ -121,6 +130,9 @@ so each booked couple gets their own space.
 - `CoupleVendor`: a vendor on the couple's list (source: preferred pick or custom).
 - `CoupleSetupTask`: the venue's per-couple setup/staffing task (space, day, assignee,
   scheduledFor, status).
+- `WeddingPackage`: venue-configurable package (duration type, season pricing, guest +
+  overnight limits, lodging-included, included-items checklist).
+- `PackageAddOn` / `CoupleAddOn`: venue-configurable add-ons and the ones a couple added.
 
 ## Services
 - `src/services/couples/coupleService.ts` — CRUD, token resolution, session mgmt,
