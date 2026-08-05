@@ -300,6 +300,23 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event, portalConfigTick]);
 
+  // True only when the couple has actually personalized their guest portal beyond
+  // the seeded defaults (hero image set, or welcome/meal options/deadline changed).
+  const portalPersonalized = useMemo(() => {
+    if (!portalConfig) return false;
+    const venueCfg = getGuestPortalConfig();
+    const hasHero = !!portalConfig.heroImageUrl;
+    const welcomeChanged = !!portalConfig.welcomeMessage && portalConfig.welcomeMessage !== venueCfg?.welcomeMessage;
+    const deadlineSet = !!portalConfig.rsvpDeadlineDate;
+    const mealsChanged =
+      !!portalConfig.mealOptions &&
+      portalConfig.mealOptions.length > 0 &&
+      (portalConfig.mealOptions.length !== (venueCfg?.mealOptions?.length ?? 0) ||
+        portalConfig.mealOptions.some((o, i) => o.value !== venueCfg?.mealOptions?.[i]?.value));
+    return hasHero || welcomeChanged || deadlineSet || mealsChanged;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portalConfig]);
+
   const [portalDraft, setPortalDraft] = useState<GuestPortalConfig | null>(null);
   const [newMealOption, setNewMealOption] = useState('');
   const [newScheduleItem, setNewScheduleItem] = useState<{ title: string; startTime: string; location: string; dayIndex: number }>({ title: '', startTime: '', location: '', dayIndex: 0 });
@@ -537,7 +554,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     { label: 'Venue spaces selected', done: event.selectedSpaces.length > 0, tab: 'spaces' as TabId },
                     { label: 'Layouts submitted for approval', done: event.layoutStatus === 'pending' || event.layoutStatus === 'approved', tab: 'design' as TabId },
                     { label: 'Guests invited', done: coupleGuests.length > 0, tab: 'guests' as TabId },
-                    { label: 'Portal personalized', done: !!portalConfig?.welcomeMessage || !!portalConfig?.heroImageUrl || (portalConfig?.mealOptions?.length ?? 0) > 0, tab: 'portal' as TabId },
+                    { label: 'Portal personalized', done: portalPersonalized, tab: 'portal' as TabId },
                   ].map((step) => (
                     <button
                       key={step.label}
