@@ -6,7 +6,6 @@ import {
   EventQuestion,
   EventAnswer,
   GuestPortalConfig,
-  PortalMealOption,
   PortalScheduleItem,
   DEFAULT_MEAL_OPTIONS,
 } from '../types';
@@ -28,7 +27,6 @@ import { getCoupleMessages, sendCoupleMessage } from '../services/couples/couple
 import {
   getCoupleGuests,
   addCoupleGuest,
-  updateCoupleGuest,
   removeCoupleGuest,
   importCoupleGuests,
   buildGuestInviteUrl,

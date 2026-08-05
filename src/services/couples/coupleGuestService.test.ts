@@ -6,7 +6,6 @@ import {
   updateCoupleGuest,
   importCoupleGuests,
   getCouplePortalConfig,
-  setCouplePortalConfig,
   getCoupleGuestsForBackup,
   getCouplePortalConfigsForBackup,
   getCoupleIdFromLocation,

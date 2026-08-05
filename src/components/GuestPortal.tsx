@@ -54,7 +54,6 @@ import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
 import {
   getCoupleGuests,
   getCouplePortalConfig,
-  setCouplePortalConfig,
 } from '../services/couples/coupleGuestService';
 import {
   getCoupleRsvpSubmissions,
@@ -505,11 +504,32 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       selectedWayfindingFrom === 'entrance' ? 'Entrance' : selectedWayfindingFrom;
     const toLabel = selectedWayfindingTo;
 
-    setWayfindingResult([
-      `Start at ${fromLabel}.`,
-      `Walk straight towards ${toLabel}.`,
-      'Follow on-site signage for final guidance.',
-    ]);
+    if (fromLabel === toLabel) {
+      setWayfindingResult([`You're already at ${toLabel}.`]);
+      return;
+    }
+
+    // If a drawn walkway route links the two points, reference it by name.
+    const vmap = getVenueMapConfig();
+    let routeName: string | undefined;
+    if (vmap) {
+      const byLabel = new Map<string, string>();
+      vmap.points.forEach((p) => byLabel.set(p.label, p.id));
+      const fromId = byLabel.get(fromLabel);
+      const toId = byLabel.get(toLabel);
+      if (fromId && toId) {
+        const found = (vmap.routes || []).find((r) =>
+          r.pointIds.includes(fromId) && r.pointIds.includes(toId),
+        );
+        routeName = found?.name;
+      }
+    }
+
+    setWayfindingResult(
+      routeName
+        ? [`Start at ${fromLabel}.`, `Follow the "${routeName}" walkway towards ${toLabel}.`, 'Follow on-site signage for final guidance.']
+        : [`Start at ${fromLabel}.`, `Walk straight towards ${toLabel}.`, 'Follow on-site signage for final guidance.'],
+    );
   };
 
   const lodgingVenues = useMemo(
@@ -669,7 +689,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             )}
             {identifiedGuest.roomId && (
               <p className="text-sm text-gray-700">
-                <span className="font-medium">Room:</span> {identifiedGuest.roomId}
+                <span className="font-medium">Room:</span> {guestRoomInfo?.room.name || identifiedGuest.roomId}
               </p>
             )}
           </div>

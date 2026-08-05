@@ -54,7 +54,6 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
   // Weather state
   const [weather, setWeather] = useState(() => getVenueWeather());
   const [weatherLocation, setWeatherLocation] = useState(() => getVenueWeather().location || '');
-  const [weatherDates, setWeatherDates] = useState<string[]>([]);
   const [weatherFetching, setWeatherFetching] = useState(false);
 
   const updateWeather = (cfg: VenueWeatherConfig) => {
@@ -494,7 +493,7 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
                 forecasts: { ...weather.forecasts, ...forecasts },
                 updatedAt: new Date().toISOString(),
               });
-              if (dates.length > 0) setWeatherDates(dates);
+              if (dates.length > 0) {/* nothing extra */}
               setWeatherFetching(false);
             }}
             className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-50"
@@ -516,7 +515,6 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
               onChange={(e) => {
                 const d = e.target.value;
                 if (!d) return;
-                setWeatherDates((prev) => (prev.includes(d) ? prev : [...prev, d]));
               }}
             />
             <input
@@ -533,7 +531,6 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
                   if (date && condition) {
                     setDayWeather(date, { condition });
                     setWeather(getVenueWeather());
-                    setWeatherDates((prev) => (prev.includes(date) ? prev : [...prev, date]));
                     (e.target as HTMLInputElement).value = '';
                   }
                 }
@@ -558,7 +555,7 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
                   onClick={() => {
                     removeDayWeather(date);
                     setWeather(getVenueWeather());
-                    setWeatherDates((prev) => prev.filter((d) => d !== date));
+
                   }}
                   className="text-red-400 hover:text-red-600"
                   aria-label={`Remove forecast for ${date}`}
