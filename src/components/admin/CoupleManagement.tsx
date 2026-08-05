@@ -620,7 +620,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                           {c.name} ({c.role}){c.accepted ? ' ✓' : ' · pending'}
                           <button
                             type="button"
-                            onClick={() => handleCopy(portalUrl(c.inviteToken))}
+                            onClick={() => handleCopy(c.inviteToken)}
                             className="text-indigo-600 hover:underline"
                             title="Copy collaborator invite link"
                           >
