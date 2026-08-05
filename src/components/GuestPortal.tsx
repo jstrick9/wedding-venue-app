@@ -751,8 +751,19 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     }
 
     const enabledCategories = config.enabledVenueCategories || [];
+    // In a couple portal, scope the map to the couple's selected spaces (+ their
+    // rain-contingency backups), not every venue in the catalog.
+    const coupleSelected = couple?.selectedSpaces || [];
+    const backupIds = (getVenueMapConfig()?.rainContingencies || [])
+      .filter((c) => coupleSelected.includes(c.outdoorVenueId))
+      .map((c) => c.indoorVenueId);
+    const scopedIds = new Set([...coupleSelected, ...backupIds]);
     const venuesToShow = portalData.venues.filter((v) =>
-      enabledCategories.length ? enabledCategories.includes(v.category) : true,
+      isCouplePortal && scopedIds.size > 0
+        ? scopedIds.has(v.id)
+        : enabledCategories.length
+          ? enabledCategories.includes(v.category)
+          : true,
     );
 
     return (
