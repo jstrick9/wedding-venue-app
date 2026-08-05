@@ -55,6 +55,40 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
   const [weather, setWeather] = useState(() => getVenueWeather());
   const [weatherLocation, setWeatherLocation] = useState(() => getVenueWeather().location || '');
   const [weatherFetching, setWeatherFetching] = useState(false);
+  // Manual forecast form fields
+  const [wfDate, setWfDate] = useState('');
+  const [wfCondition, setWfCondition] = useState('');
+  const [wfTempLow, setWfTempLow] = useState('');
+  const [wfTempHigh, setWfTempHigh] = useState('');
+  const [wfRain, setWfRain] = useState('');
+
+  const addManualForecast = () => {
+    if (!wfDate || !wfCondition.trim()) {
+      onShowSuccess('Enter a date and condition to add a forecast.');
+      return;
+    }
+    if (wfTempLow !== '' && wfTempHigh !== '' && Number(wfTempLow) > Number(wfTempHigh)) {
+      onShowSuccess("Low temperature can't be above high temperature.");
+      return;
+    }
+    if (wfRain !== '' && (Number(wfRain) < 0 || Number(wfRain) > 100)) {
+      onShowSuccess('Rain chance must be between 0 and 100.');
+      return;
+    }
+    setDayWeather(wfDate, {
+      condition: wfCondition.trim(),
+      tempLow: wfTempLow !== '' ? Number(wfTempLow) : undefined,
+      tempHigh: wfTempHigh !== '' ? Number(wfTempHigh) : undefined,
+      rainChance: wfRain !== '' ? Number(wfRain) : undefined,
+    });
+    setWeather(getVenueWeather());
+    setWfDate('');
+    setWfCondition('');
+    setWfTempLow('');
+    setWfTempHigh('');
+    setWfRain('');
+    onShowSuccess('Forecast added.');
+  };
 
   const updateWeather = (cfg: VenueWeatherConfig) => {
     setWeather(cfg);
@@ -540,33 +574,50 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
           <div className="flex flex-wrap gap-2">
             <input
               type="date"
-              id="weather-date-input"
+              value={wfDate}
+              onChange={(e) => setWfDate(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
               aria-label="Forecast date"
-              onChange={(e) => {
-                const d = e.target.value;
-                if (!d) return;
-              }}
             />
             <input
               type="text"
-              id="weather-condition-input"
+              value={wfCondition}
+              onChange={(e) => setWfCondition(e.target.value)}
               placeholder="Condition (e.g. Sunny)"
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
               aria-label="Forecast condition"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const date = (document.getElementById('weather-date-input') as HTMLInputElement)?.value;
-                  const condition = (e.target as HTMLInputElement).value.trim();
-                  if (date && condition) {
-                    setDayWeather(date, { condition });
-                    setWeather(getVenueWeather());
-                    (e.target as HTMLInputElement).value = '';
-                  }
-                }
-              }}
             />
+            <input
+              type="number"
+              value={wfTempLow}
+              onChange={(e) => setWfTempLow(e.target.value)}
+              placeholder="Low °F"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-24"
+              aria-label="Forecast low temperature"
+            />
+            <input
+              type="number"
+              value={wfTempHigh}
+              onChange={(e) => setWfTempHigh(e.target.value)}
+              placeholder="High °F"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-24"
+              aria-label="Forecast high temperature"
+            />
+            <input
+              type="number"
+              value={wfRain}
+              onChange={(e) => setWfRain(e.target.value)}
+              placeholder="Rain %"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-24"
+              aria-label="Forecast rain chance"
+            />
+            <button
+              type="button"
+              onClick={addManualForecast}
+              className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+            >
+              Add
+            </button>
           </div>
         </div>
 
