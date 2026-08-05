@@ -101,6 +101,10 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       setError('Please enter the couple’s name.');
       return;
     }
+    if (form.eventDate && form.eventEndDate && form.eventEndDate < form.eventDate) {
+      setError('The end date must be on or after the start date.');
+      return;
+    }
     createCoupleEvent({
       coupleName: form.coupleName,
       eventDate: form.eventDate || undefined,
@@ -146,6 +150,10 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
 
   const handleSaveEdit = () => {
     if (!editEventId) return;
+    if (editForm.eventDate && editForm.eventEndDate && editForm.eventEndDate < editForm.eventDate) {
+      onShowSuccess('The end date must be on or after the start date.');
+      return;
+    }
     const updated = findCoupleEventById(editEventId);
     const availableSet = new Set(editForm.availableSpaces);
     updateCoupleEvent(editEventId, {
