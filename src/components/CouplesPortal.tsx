@@ -82,12 +82,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   // branding or collaborators. family: can help answer questions + view + chat.
   // vendor: view + chat only.
   const myRole: CoupleCollaboratorRole = me?.role || 'couple';
-  const canEditSpaces = myRole === 'couple' || myRole === 'planner';
-  const canEditDesign = myRole === 'couple' || myRole === 'planner';
-  const canManageGuests = myRole === 'couple' || myRole === 'planner';
-  const canAnswerQuestions = myRole !== 'vendor';
-  const canManagePortal = myRole === 'couple';
-  const canManageCollaborators = myRole === 'couple';
+  // A venue-marked "completed" event is locked for planning: everything is
+  // view-only (the couple can still read and chat).
+  const isComplete = event?.status === 'completed';
+  const canEditSpaces = !isComplete && (myRole === 'couple' || myRole === 'planner');
+  const canEditDesign = !isComplete && (myRole === 'couple' || myRole === 'planner');
+  const canManageGuests = !isComplete && (myRole === 'couple' || myRole === 'planner');
+  const canAnswerQuestions = !isComplete && myRole !== 'vendor';
+  const canManagePortal = !isComplete && myRole === 'couple';
+  const canManageCollaborators = !isComplete && myRole === 'couple';
 
   // Token-based entry: if we have a token and no session, resolve it and sign in.
   useEffect(() => {
@@ -514,6 +517,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
             </span>
           </div>
         </div>
+
+        {isComplete && (
+          <div className="mt-3 rounded-xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-800">
+            💐 <strong>This event is complete.</strong> Planning is now view-only — you can still
+            review everything and message the venue.
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 mt-4 overflow-x-auto border-b border-gray-200">
