@@ -45,6 +45,7 @@ import { getCoupleVendors, addCoupleVendor, updateCoupleVendor, removeCoupleVend
 import { VENDOR_CATEGORIES } from '../types/vendor';
 import { findWeddingPackage, PACKAGE_DURATIONS, INCLUDED_ITEMS } from '../services/couples/couplePackageService';
 import { getActivePackageAddOns, findPackageAddOn, ADD_ON_CATEGORIES } from '../services/couples/coupleAddOnService';
+import { getCoupleSetupTasks, addCoupleSetupTask } from '../services/couples/coupleSetupService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getVenueVendors } from '../hooks/useVendors';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
@@ -324,10 +325,20 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const toggleAddOn = (addOnId: string) => {
     if (!event) return;
     const current = event.addOns || [];
-    const next = hasAddOn(addOnId)
+    const wasAdded = hasAddOn(addOnId);
+    const next = wasAdded
       ? current.filter((a) => a.addOnId !== addOnId)
       : [...current, { addOnId, addedAt: new Date().toISOString() }];
     updateCoupleEvent(event.id, { addOns: next });
+    // When the couple adds a lodging add-on, auto-suggest a venue setup task so
+    // the venue plans to prepare the lodging for overnight guests.
+    const ao = findPackageAddOn(addOnId);
+    if (!wasAdded && ao?.category === 'lodging') {
+      const existing = getCoupleSetupTasks(event.id);
+      if (!existing.some((t) => t.suggested && t.title.toLowerCase().includes('lodging'))) {
+        addCoupleSetupTask(event.id, { title: 'Prepare lodging for overnight guests', suggested: true });
+      }
+    }
     setPkgTick((t) => t + 1);
   };
 

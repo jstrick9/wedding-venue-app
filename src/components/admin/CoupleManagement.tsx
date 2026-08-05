@@ -21,6 +21,7 @@ import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpServi
 import { getGuestPortalConfig } from '../../utils/guestPortal';
 import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeCoupleSetupTask } from '../../services/couples/coupleSetupService';
 import { getWeddingPackages, getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
+import { findPackageAddOn } from '../../services/couples/coupleAddOnService';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
@@ -62,6 +63,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [openChat, setOpenChat] = useState<string | null>(null);
   const [openGuests, setOpenGuests] = useState<string | null>(null);
   const [openSetup, setOpenSetup] = useState<string | null>(null);
+  const [openPkg, setOpenPkg] = useState<string | null>(null);
   const [setupDrafts, setSetupDrafts] = useState<Record<string, { title: string; spaceId: string; dayIndex: string; assignee: string; scheduledFor: string; notes: string }>>({});
   const [setupTick, setSetupTick] = useState(0);
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
@@ -634,6 +636,13 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     </button>
                     <button
                       type="button"
+                      onClick={() => setOpenPkg(openPkg === ev.id ? null : ev.id)}
+                      className="text-xs text-gray-600 hover:underline"
+                    >
+                      🎁 Package
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setOpenSetup(openSetup === ev.id ? null : ev.id)}
                       className="text-xs text-gray-600 hover:underline"
                     >
@@ -786,6 +795,49 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                               </div>
                             );
                           })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {openPkg === ev.id && (() => {
+                  const pkg = findWeddingPackage(ev.packageId);
+                  return (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="text-xs font-medium text-gray-500 mb-2">Package & Add-ons</div>
+                      {!pkg ? (
+                        <p className="text-xs text-gray-400">No package assigned. Edit the couple event to assign one.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="rounded-lg border border-gray-200 p-3">
+                            <div className="text-sm font-medium text-gray-800">{pkg.name}</div>
+                            <div className="text-xs text-gray-500">
+                              ${pkg.price.nonPeak.toLocaleString()} / ${pkg.price.peak.toLocaleString()} / ${pkg.price.premier.toLocaleString()} (NP/P/PR) · {pkg.maxGuests} guests
+                              {pkg.maxOvernightGuests > 0 ? ` · ${pkg.maxOvernightGuests} overnight` : ''}
+                              {pkg.lodgingIncluded ? ' · 🛏️ lodging incl.' : ''}
+                            </div>
+                            {pkg.includedItems.length > 0 && (
+                              <div className="mt-1 text-xs text-gray-500">{pkg.includedItems.length} included item(s)</div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-medium text-gray-500 mb-1">Add-ons added by couple</div>
+                            {(ev.addOns || []).length === 0 ? (
+                              <p className="text-xs text-gray-400">None yet.</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5">
+                                {ev.addOns!.map((a) => {
+                                  const ao = findPackageAddOn(a.addOnId);
+                                  return ao ? (
+                                    <span key={a.addOnId} className="text-xs bg-purple-50 text-purple-700 rounded-full px-2.5 py-1">
+                                      {ao.name} · ${ao.price.toLocaleString()}{a.qty && a.qty > 1 ? ` ×${a.qty}` : ''}
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
