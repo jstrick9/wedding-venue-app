@@ -217,6 +217,11 @@ invite links, CSV import, RSVP view); guest invite links load a couple-scoped po
 (per-couple config seeded from venue, couple guests + RSVPs). Venue admin shows per-couple
 guest/attending counts. See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Per-couple portal settings
+✅ The couple can customize their own guest portal from a Portal Settings tab: welcome
+message, RSVP message/deadline, access grace period, visible tabs, meal choices, and
+schedule items — persisted per couple event. See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

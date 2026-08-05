@@ -5,6 +5,10 @@ import {
   CoupleCollaboratorRole,
   EventQuestion,
   EventAnswer,
+  GuestPortalConfig,
+  PortalMealOption,
+  PortalScheduleItem,
+  DEFAULT_MEAL_OPTIONS,
 } from '../types';
 import {
   getCoupleEvents,
@@ -27,7 +31,10 @@ import {
   removeCoupleGuest,
   importCoupleGuests,
   buildGuestInviteUrl,
+  getCouplePortalConfig,
+  setCouplePortalConfig,
 } from '../services/couples/coupleGuestService';
+import { getGuestPortalConfig } from '../utils/guestPortal';
 import { getCoupleRsvpSubmissions } from '../services/couples/coupleRsvpService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
@@ -35,7 +42,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
 
-type TabId = 'overview' | 'spaces' | 'questions' | 'design' | 'chat' | 'guests' | 'collaborators';
+type TabId = 'overview' | 'spaces' | 'questions' | 'design' | 'guests' | 'portal' | 'chat' | 'collaborators';
 
 interface CouplesPortalProps {
   coupleToken?: string;
@@ -202,6 +209,37 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     showToast(`Imported ${added} guest${added === 1 ? '' : 's'}.`, 'success');
   };
 
+  // ── Portal settings (per-couple guest portal customization) ────────────────
+  const [portalConfigTick, setPortalConfigTick] = useState(0);
+  const portalConfig = useMemo<GuestPortalConfig | null>(() => {
+    if (!event) return null;
+    const venueCfg = getGuestPortalConfig();
+    return getCouplePortalConfig(event.id, venueCfg, {
+      coupleName: event.coupleName,
+      eventDate: event.eventDate,
+      eventEndDate: event.eventEndDate,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event, portalConfigTick]);
+
+  const [portalDraft, setPortalDraft] = useState<GuestPortalConfig | null>(null);
+  const [newMealOption, setNewMealOption] = useState('');
+  const [newScheduleItem, setNewScheduleItem] = useState<{ title: string; startTime: string; location: string }>({ title: '', startTime: '', location: '' });
+  const [portalSaved, setPortalSaved] = useState(false);
+
+  useEffect(() => {
+    if (portalConfig) setPortalDraft(portalConfig);
+  }, [portalConfig]);
+
+  const savePortalSettings = () => {
+    if (!event || !portalDraft) return;
+    setCouplePortalConfig(event.id, portalDraft);
+    setPortalConfigTick((t) => t + 1);
+    setPortalSaved(true);
+    setTimeout(() => setPortalSaved(false), 2000);
+    showToast('Guest portal settings saved.', 'success');
+  };
+
   const handleInvite = () => {
     if (!event || !inviteForm.name.trim() || !inviteForm.email.trim()) {
       setInviteError('Please provide a name and email.');
@@ -277,6 +315,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     { id: 'spaces', label: 'Venue Spaces', icon: '🏛️' },
     { id: 'design', label: 'Design & Approval', icon: '🎨' },
     { id: 'guests', label: 'Guests', icon: '👥' },
+    { id: 'portal', label: 'Portal Settings', icon: '🎛️' },
     { id: 'chat', label: 'Chat', icon: '💬' },
     { id: 'collaborators', label: 'People', icon: '👥' },
   ];
@@ -730,6 +769,242 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'portal' && (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-1">Your guest portal settings</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Personalize the portal your guests see — the welcome message, schedule,
+                  and meal choices. These were pre-filled from the venue; adjust them to fit
+                  your day.
+                </p>
+
+                {!portalDraft ? (
+                  <p className="text-sm text-gray-400">Loading…</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Welcome message
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={portalDraft.welcomeMessage || ''}
+                        onChange={(e) => setPortalDraft({ ...portalDraft, welcomeMessage: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="Welcome to our wedding!"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        RSVP message
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={portalDraft.rsvpMessage || ''}
+                        onChange={(e) => setPortalDraft({ ...portalDraft, rsvpMessage: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          RSVP deadline
+                        </label>
+                        <input
+                          type="date"
+                          value={portalDraft.rsvpDeadlineDate || ''}
+                          onChange={(e) => setPortalDraft({ ...portalDraft, rsvpDeadlineDate: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Guest access closes
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={portalDraft.accessGracePeriodHours ?? 36}
+                          onChange={(e) => setPortalDraft({ ...portalDraft, accessGracePeriodHours: Number(e.target.value) })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Visible tabs
+                      </label>
+                      <div className="flex flex-wrap gap-3">
+                        {(
+                          [
+                            ['showRSVP', 'RSVP'],
+                            ['showSchedule', 'Schedule'],
+                            ['showMap', 'Map'],
+                            ['showLodging', 'Lodging'],
+                            ['showWayfinding', 'Wayfinding'],
+                          ] as [keyof GuestPortalConfig, string][]
+                        ).map(([key, label]) => (
+                          <label key={key} className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!portalDraft[key]}
+                              onChange={(e) => setPortalDraft({ ...portalDraft, [key]: e.target.checked })}
+                              className="w-4 h-4 rounded border-gray-300"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Meal options */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Meal choices
+                      </label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {(portalDraft.mealOptions && portalDraft.mealOptions.length > 0
+                          ? portalDraft.mealOptions
+                          : DEFAULT_MEAL_OPTIONS
+                        ).map((opt) => (
+                          <span key={opt.value} className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm text-indigo-800">
+                            {opt.label}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPortalDraft({
+                                  ...portalDraft,
+                                  mealOptions: (portalDraft.mealOptions && portalDraft.mealOptions.length > 0
+                                    ? portalDraft.mealOptions
+                                    : DEFAULT_MEAL_OPTIONS
+                                  ).filter((o) => o.value !== opt.value),
+                                })
+                              }
+                              className="text-indigo-400 hover:text-indigo-700 font-bold leading-none"
+                              aria-label={`Remove ${opt.label}`}
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newMealOption}
+                          onChange={(e) => setNewMealOption(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const label = newMealOption.trim();
+                              if (!label) return;
+                              const value = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                              const current = portalDraft.mealOptions && portalDraft.mealOptions.length > 0 ? portalDraft.mealOptions : DEFAULT_MEAL_OPTIONS;
+                              if (!current.some((o) => o.value === value)) {
+                                setPortalDraft({ ...portalDraft, mealOptions: [...current, { value, label }] });
+                              }
+                              setNewMealOption('');
+                            }
+                          }}
+                          placeholder="Add a meal option (Enter)"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          aria-label="Add meal option"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const label = newMealOption.trim();
+                            if (!label) return;
+                            const value = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                            const current = portalDraft.mealOptions && portalDraft.mealOptions.length > 0 ? portalDraft.mealOptions : DEFAULT_MEAL_OPTIONS;
+                            if (!current.some((o) => o.value === value)) {
+                              setPortalDraft({ ...portalDraft, mealOptions: [...current, { value, label }] });
+                            }
+                            setNewMealOption('');
+                          }}
+                          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Schedule items */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Schedule
+                      </label>
+                      <div className="space-y-2 mb-2">
+                        {(portalDraft.scheduleItems || []).map((item) => (
+                          <div key={item.id} className="flex items-center gap-2 text-sm">
+                            <span className="flex-1">{item.title}</span>
+                            <span className="text-gray-500 text-xs">{item.startTime ? new Date(item.startTime).toLocaleString() : ''}</span>
+                            <button
+                              type="button"
+                              onClick={() => setPortalDraft({ ...portalDraft, scheduleItems: (portalDraft.scheduleItems || []).filter((s) => s.id !== item.id) })}
+                              className="text-red-400 hover:text-red-600"
+                              aria-label={`Remove ${item.title}`}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        {(!portalDraft.scheduleItems || portalDraft.scheduleItems.length === 0) && (
+                          <p className="text-xs text-gray-400">No schedule items yet.</p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Title"
+                          value={newScheduleItem.title}
+                          onChange={(e) => setNewScheduleItem({ ...newScheduleItem, title: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          aria-label="Schedule item title"
+                        />
+                        <input
+                          type="datetime-local"
+                          value={newScheduleItem.startTime}
+                          onChange={(e) => setNewScheduleItem({ ...newScheduleItem, startTime: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          aria-label="Schedule item time"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newScheduleItem.title.trim()) return;
+                            const item: PortalScheduleItem = {
+                              id: `sched-${Date.now()}`,
+                              title: newScheduleItem.title.trim(),
+                              startTime: newScheduleItem.startTime ? new Date(newScheduleItem.startTime).toISOString() : new Date().toISOString(),
+                              location: newScheduleItem.location || undefined,
+                            };
+                            setPortalDraft({ ...portalDraft, scheduleItems: [...(portalDraft.scheduleItems || []), item] });
+                            setNewScheduleItem({ title: '', startTime: '', location: '' });
+                          }}
+                          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={savePortalSettings}
+                      className="w-full py-3 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+                    >
+                      {portalSaved ? '✅ Saved!' : '💾 Save portal settings'}
+                    </button>
                   </div>
                 )}
               </div>

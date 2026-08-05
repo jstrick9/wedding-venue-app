@@ -41,8 +41,12 @@ so each booked couple gets their own space.
     the guest and loads the **couple-scoped** portal: a **per-couple portal config**
     (seeded from the venue's config), the couple's guests, and the couple's RSVPs.
   - The venue admin shows a per-couple **guest / attending count** on each event.
-- 🚧 **Future ideas:** per-couple portal config editing from the couple side (currently
-  seeded from the venue config); deeper guest-side customization.
+- ✅ **Per-couple portal settings (delivered):** the couple can customize their own guest
+  portal from a **Portal Settings** tab — welcome message, RSVP message, RSVP deadline,
+  access grace period, which tabs are visible, meal choices (add/remove), and schedule
+  items. Settings persist per couple event (seeded from the venue config on first open).
+- 🚧 **Future ideas:** couple-side editing of wayfinding points / hero image; email
+  invitations for collaborators.
 
 ## Data model (see src/types.ts)
 - `CoupleEvent`: id, coupleName, inviteToken, status (invited/active/completed),
