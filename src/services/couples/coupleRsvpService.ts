@@ -28,3 +28,19 @@ export function setCoupleRsvpSubmissions(coupleEventId: string, submissions: RSV
   const rest = all.filter((s) => !(s.eventKey === coupleEventId || s.eventName === coupleEventId));
   saveVersionedStorage(KEY, VERSION, [...rest, ...submissions]);
 }
+
+/** Remove a guest's RSVP submission for a couple event (e.g. when the guest is removed). */
+export function removeCoupleRsvp(coupleEventId: string, guestId: string): void {
+  const all = loadVersionedStorage<RSVPSubmission[]>({
+    key: KEY,
+    defaultValue: [],
+    currentVersion: VERSION,
+    validate: (v): v is RSVPSubmission[] => Array.isArray(v),
+    normalize: (v) => (Array.isArray(v) ? v : []),
+  });
+  saveVersionedStorage(
+    KEY,
+    VERSION,
+    all.filter((s) => !(s.eventKey === coupleEventId && s.guestId === guestId)),
+  );
+}

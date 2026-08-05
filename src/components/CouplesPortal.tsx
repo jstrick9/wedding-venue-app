@@ -37,7 +37,7 @@ import {
 } from '../services/couples/coupleGuestService';
 import { getGuestPortalConfig } from '../utils/guestPortal';
 import { parseGuestCsv } from '../utils/guestCsv';
-import { getCoupleRsvpSubmissions } from '../services/couples/coupleRsvpService';
+import { getCoupleRsvpSubmissions, removeCoupleRsvp } from '../services/couples/coupleRsvpService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getVenueMapConfig, findRainContingency } from '../services/wayfinding/venueWayfindingService';
 import { getConfig } from '../config';
@@ -988,6 +988,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               type="button"
                               onClick={() => {
                                 removeCoupleGuest(event!.id, g.id);
+                                removeCoupleRsvp(event!.id, g.id);
                                 setGuestTick((t) => t + 1);
                               }}
                               className="text-xs text-red-500 hover:underline"

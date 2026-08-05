@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getCoupleRsvpSubmissions, setCoupleRsvpSubmissions } from './coupleRsvpService';
+import { getCoupleRsvpSubmissions, setCoupleRsvpSubmissions, removeCoupleRsvp } from './coupleRsvpService';
 
 function submission(coupleEventId: string, guestId: string, attending: boolean) {
   return {
@@ -40,5 +40,13 @@ describe('coupleRsvpService', () => {
   it('does not leak one event\'s submissions into another', () => {
     setCoupleRsvpSubmissions('e1', [submission('e1', 'g1', true)]);
     expect(getCoupleRsvpSubmissions('e2')).toHaveLength(0);
+  });
+
+  it('removes a guest\'s RSVP submission', () => {
+    setCoupleRsvpSubmissions('e1', [submission('e1', 'g1', true), submission('e1', 'g2', false)]);
+    removeCoupleRsvp('e1', 'g1');
+    const remaining = getCoupleRsvpSubmissions('e1');
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].guestId).toBe('g2');
   });
 });

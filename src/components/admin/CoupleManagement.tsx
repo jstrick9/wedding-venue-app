@@ -551,7 +551,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     <div className="flex flex-wrap gap-2">
                       {ev.collaborators.map((c) => (
                         <span key={c.id} className="text-xs bg-gray-100 rounded-full px-2 py-0.5 text-gray-700 flex items-center gap-1">
-                          {c.name} ({c.role})
+                          {c.name} ({c.role}){c.accepted ? ' ✓' : ' · pending'}
                           <button
                             type="button"
                             onClick={() => handleCopy(portalUrl(c.inviteToken))}
