@@ -1542,17 +1542,49 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               </span>
             </div>
 
-            <div className="relative w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-500">
-              <span>Lodging floor plan preview.</span>
-              {guestRoomInfo && guestRoomInfo.venue.id === venue.id && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-16 h-16 rounded-full border-4 border-emerald-500 animate-ping" />
-                  <div className="absolute text-xs font-semibold text-emerald-700 bg-white/80 px-2 py-1 rounded-full shadow">
-                    Your Room
-                  </div>
+            {venue.floors && venue.floors.length > 0 && (() => {
+              // Render each floor as a scaled SVG plan showing room rectangles.
+              const maxW = Math.max(...venue.floors!.map((f) => f.width || 1));
+              const maxH = Math.max(...venue.floors!.map((f) => f.height || 1));
+              return (
+                <div className="space-y-3">
+                  {venue.floors.map((floor) => (
+                    <div key={floor.id} className="rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="px-2 py-1 bg-gray-50 text-[11px] font-semibold text-gray-600">{floor.name}</div>
+                      <div className="bg-gray-50">
+                        <svg viewBox={`0 0 ${floor.width || maxW} ${floor.height || maxH}`} preserveAspectRatio="xMidYMid meet" className="w-full h-40 bg-white">
+                          {(floor.rooms || []).map((room) => {
+                            const isMine = guestRoomInfo?.room.id === room.id;
+                            return (
+                              <g key={room.id}>
+                                <rect
+                                  x={room.x}
+                                  y={room.y}
+                                  width={room.width}
+                                  height={room.height}
+                                  rx={1}
+                                  fill={isMine ? '#d1fae5' : '#eef2ff'}
+                                  stroke={isMine ? '#10b981' : '#c7d2fe'}
+                                  strokeWidth={0.4}
+                                />
+                                <text x={room.x + room.width / 2} y={room.y + room.height / 2} textAnchor="middle" fontSize={Math.min(room.height / 2, 2.5)} fill="#374151">
+                                  {isMine ? '★ ' : ''}{room.name}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+              );
+            })()}
+            {(!venue.floors || venue.floors.length === 0) && (
+              <div className="relative w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-500">
+                <span>Lodging floor plan coming soon.</span>
+              </div>
+            )}
 
             <div className="space-y-2">
               <p className="text-xs font-semibold text-gray-800">Rooms</p>
