@@ -15,6 +15,7 @@ import {
   submitCoupleLayout,
   reviewCoupleLayout,
   deriveRecommendedVenueCategories,
+  setSpaceLayout,
 } from './coupleService';
 
 describe('coupleService', () => {
@@ -96,6 +97,20 @@ describe('coupleService', () => {
     expect(updated.layoutStatus).toBe('approved');
     expect(updated.layoutComment).toBe('Looks great');
     expect(updated.layoutHistory).toHaveLength(1);
+  });
+
+  it('tracks per-space layout status and notes, and marks spaces submitted on submit', () => {
+    const ev = createCoupleEvent({ coupleName: 'Spaces Test' });
+    updateCoupleEvent(ev.id, { selectedSpaces: ['ceremony', 'reception'] });
+    setSpaceLayout(ev.id, 'ceremony', { status: 'designed', notes: '20 round tables' });
+    let current = getCoupleEvents()[0];
+    expect(current.spaceLayouts!['ceremony'].status).toBe('designed');
+    expect(current.spaceLayouts!['ceremony'].notes).toBe('20 round tables');
+    submitCoupleLayout(ev.id, { byName: 'Couple' });
+    current = getCoupleEvents()[0];
+    expect(current.layoutStatus).toBe('pending');
+    expect(current.spaceLayouts!['ceremony'].status).toBe('submitted');
+    expect(current.spaceLayouts!['reception'].status).toBe('submitted');
   });
 
   it('derives recommended venue categories from answers', () => {

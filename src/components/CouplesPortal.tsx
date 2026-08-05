@@ -21,6 +21,7 @@ import {
   updateCoupleEvent,
   deriveRecommendedVenueCategories,
   submitCoupleLayout,
+  setSpaceLayout,
 } from '../services/couples/coupleService';
 import { getCoupleAnswers, saveCoupleAnswers } from '../services/couples/coupleAnswersService';
 import { getCoupleMessages, sendCoupleMessage } from '../services/couples/coupleChatService';
@@ -662,6 +663,60 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 >
                   {event.layoutStatus === 'pending' ? 'Submitted…' : 'Submit layouts for approval'}
                 </button>
+              </div>
+
+              {/* Per-space design status */}
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-2">Your spaces</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Mark each selected space as designed and add notes so the venue can review
+                  your plan before approving.
+                </p>
+                <div className="space-y-2">
+                  {event.selectedSpaces.length === 0 ? (
+                    <p className="text-xs text-gray-400">No spaces selected yet.</p>
+                  ) : (
+                    event.selectedSpaces.map((spaceId) => {
+                      const venue = venues.find((v) => v.id === spaceId);
+                      const sl = (event.spaceLayouts || {})[spaceId];
+                      return (
+                        <div key={spaceId} className="rounded-lg border border-gray-200 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-medium text-sm text-gray-800">
+                              {venue?.name || spaceId}
+                            </span>
+                            <select
+                              value={sl?.status || 'draft'}
+                              onChange={(e) => {
+                                setSpaceLayout(event.id, spaceId, {
+                                  status: e.target.value as 'draft' | 'designed' | 'submitted',
+                                });
+                                refresh();
+                              }}
+                              className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white"
+                              aria-label={`Design status for ${venue?.name || spaceId}`}
+                            >
+                              <option value="draft">Draft</option>
+                              <option value="designed">Designed</option>
+                              <option value="submitted">Submitted</option>
+                            </select>
+                          </div>
+                          <input
+                            type="text"
+                            value={sl?.notes || ''}
+                            onChange={(e) => {
+                              setSpaceLayout(event.id, spaceId, { notes: e.target.value });
+                              refresh();
+                            }}
+                            placeholder="Notes for the venue (capacity, layout, requests…)"
+                            className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            aria-label={`Notes for ${venue?.name || spaceId}`}
+                          />
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">

@@ -68,7 +68,11 @@ so each booked couple gets their own space.
   image (URL with live preview) in Portal Settings.
 - ✅ **Venue rules on guest-portal home (delivered):** venue rules now appear on the
   guest portal home screen as well as the wayfinding tab.
-- 🚧 **Future ideas:** real transactional email (needs live Supabase).
+- ✅ **Per-space layout design & approval (delivered):** the couple marks each selected
+  space as draft/designed/submitted with notes; submitting for approval flags all spaces
+  as submitted, and the venue's approval queue shows each space's status + notes inline.
+- 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
+  layout canvas inside the couple's design tab.
 
 ## Data model (see src/types.ts)
 - `CoupleEvent`: id, coupleName, inviteToken, status (invited/active/completed),

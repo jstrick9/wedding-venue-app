@@ -208,6 +208,28 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     <span className="font-semibold">Previous note:</span> {ev.layoutComment}
                   </p>
                 )}
+                {ev.spaceLayouts && Object.keys(ev.spaceLayouts).length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {Object.entries(ev.spaceLayouts).map(([spaceId, sl]) => {
+                      const v = venues.find((x) => x.id === spaceId);
+                      const statusBadge =
+                        sl.status === 'submitted'
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : sl.status === 'designed'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-600';
+                      return (
+                        <div key={spaceId} className="text-xs flex items-start gap-2">
+                          <span className={`shrink-0 px-2 py-0.5 rounded-full ${statusBadge}`}>
+                            {sl.status}
+                          </span>
+                          <span className="text-gray-700">{v?.name || spaceId}</span>
+                          {sl.notes && <span className="text-gray-500 truncate">— {sl.notes}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"

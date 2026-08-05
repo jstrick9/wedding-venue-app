@@ -137,10 +137,33 @@ export function submitCoupleLayout(
   id: string,
   opts?: { byName?: string },
 ): CoupleEvent | null {
+  const event = findCoupleEventById(id);
+  if (!event) return null;
+  // Mark every selected space as submitted (unless already reviewed).
+  const spaceLayouts = { ...(event.spaceLayouts || {}) };
+  event.selectedSpaces.forEach((sid) => {
+    const cur = spaceLayouts[sid];
+    if (cur && cur.status !== 'submitted') spaceLayouts[sid] = { ...cur, status: 'submitted' };
+    else if (!cur) spaceLayouts[sid] = { status: 'submitted' };
+  });
   return updateCoupleEvent(id, {
     layoutStatus: 'pending',
     layoutComment: undefined,
+    spaceLayouts,
   });
+}
+
+/** Record the couple's design status/notes for a single space. */
+export function setSpaceLayout(
+  id: string,
+  spaceId: string,
+  patch: { status?: 'draft' | 'designed' | 'submitted'; notes?: string },
+): CoupleEvent | null {
+  const event = findCoupleEventById(id);
+  if (!event) return null;
+  const spaceLayouts = { ...(event.spaceLayouts || {}) };
+  spaceLayouts[spaceId] = { ...(spaceLayouts[spaceId] || { status: 'draft' }), ...patch };
+  return updateCoupleEvent(id, { spaceLayouts });
 }
 
 /** Venue reviews a couple layout: approve / request changes / reject. */

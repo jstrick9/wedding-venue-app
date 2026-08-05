@@ -978,6 +978,8 @@ export interface CoupleEvent {
   /** Venue ids the couple is eligible to use / has selected for their spaces. */
   availableSpaces: string[];
   selectedSpaces: string[];
+  /** Per-space layout design status + notes, keyed by venue id. */
+  spaceLayouts?: Record<string, { status: 'draft' | 'designed' | 'submitted'; notes?: string }>;
   /** Current layout-submission status for this couple event (approval work queue). */
   layoutStatus: CoupleLayoutStatus;
   layoutComment?: string;
