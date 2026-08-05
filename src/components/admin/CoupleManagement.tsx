@@ -61,6 +61,14 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [chatTick, setChatTick] = useState(0);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
+  // Periodically re-poll so the unread-chat badge stays current even when the
+  // venue is on the tab but not inside an open chat pane.
+  const [pollTick, setPollTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setPollTick((t) => t + 1), 5000);
+    return () => clearInterval(id);
+  }, []);
+
   // Refresh the chat pane while open so new couple messages appear without the venue
   // having to reload or send. Opening the pane marks the venue side as "read"
   // (clears the unread badge) and keeps it clear while the pane stays open.
@@ -84,6 +92,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [reviewComments, setReviewComments] = useState<Record<string, string>>({});
 
   const refresh = () => setEvents(getCoupleEvents());
+  void pollTick; // re-render periodically so the unread badge stays current
   const unreadCounts = getUnreadCoupleMessageCounts(events.map((e) => e.id));
 
   const portalUrl = (token: string) =>
