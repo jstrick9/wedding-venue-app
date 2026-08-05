@@ -275,6 +275,10 @@ See docs/couples-platform/ROADMAP.md.
 ✅ The couple can expand a guest's RSVP to see meal choice, plus-one, dietary notes, and
 attending days. See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Wayfinding From-any-point
+✅ The guest can route directions between any two map points (not just from the entrance).
+See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

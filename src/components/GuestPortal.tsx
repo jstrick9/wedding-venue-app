@@ -1044,13 +1044,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               <select
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 value={selectedWayfindingFrom}
-                onChange={(e) =>
-                  setSelectedWayfindingFrom(
-                    e.target.value === 'entrance' ? 'entrance' : e.target.value,
-                  )
-                }
+                onChange={(e) => setSelectedWayfindingFrom(e.target.value)}
               >
                 <option value="entrance">Entrance</option>
+                {wayfindingPoints.map((pt) => (
+                  <option key={pt.id} value={pt.label}>{pt.label}</option>
+                ))}
               </select>
             </div>
 

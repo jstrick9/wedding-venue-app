@@ -86,6 +86,8 @@ so each booked couple gets their own space.
   list with RSVP status inline.
 - ✅ **Guest RSVP detail (delivered):** the couple can expand a guest's RSVP to see meal
   choice, plus-one, dietary notes, and attending days.
+- ✅ **Wayfinding From-any-point (delivered):** the guest can route directions between any
+  two map points (not just from the entrance).
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 
