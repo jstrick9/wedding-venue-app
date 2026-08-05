@@ -623,12 +623,30 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                           {guests.map((g) => {
                             const rsvp = rsvps.find((r) => r.guestId === g.id);
                             return (
-                              <div key={g.id} className="flex items-center justify-between text-sm">
-                                <span className="text-gray-700">{g.name}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                  rsvp ? (rsvp.attending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-500'
-                                }`}>
-                                  {rsvp ? (rsvp.attending ? 'Attending' : 'Not attending') : 'No response'}
+                              <div key={g.id} className="flex items-center justify-between gap-2 text-sm">
+                                <span className="text-gray-700 truncate">{g.name}</span>
+                                <span className="flex items-center gap-2 shrink-0">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    rsvp ? (rsvp.attending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-500'
+                                  }`}>
+                                    {rsvp ? (rsvp.attending ? 'Attending' : 'Not attending') : 'No response'}
+                                  </span>
+                                  {g.token && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const url = `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(g.token!)}&couple=${encodeURIComponent(ev.id)}`;
+                                        void navigator.clipboard?.writeText(url).then(
+                                          () => onShowSuccess(`Guest invite link copied for ${g.name}.`),
+                                          () => {},
+                                        );
+                                      }}
+                                      className="text-xs text-rose-600 hover:underline"
+                                      title="Copy guest invite link"
+                                    >
+                                      📋
+                                    </button>
+                                  )}
                                 </span>
                               </div>
                             );
