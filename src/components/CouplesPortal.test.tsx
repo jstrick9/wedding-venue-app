@@ -53,6 +53,17 @@ describe('CouplesPortal', () => {
     expect(screen.getByText('Invitation not found')).toBeTruthy();
   });
 
+  it('renders the checklist and vendors tabs', () => {
+    setupSession('Check & Co');
+    render(<CouplesPortal onExitPortal={() => {}} />);
+    expect(screen.getByText('Checklist')).toBeTruthy();
+    expect(screen.getByText('Vendors')).toBeTruthy();
+    fireEvent.click(screen.getByText('Checklist'));
+    expect(screen.getByText(/Your event checklist/i)).toBeTruthy();
+    fireEvent.click(screen.getByText('Vendors'));
+    expect(screen.getByText(/Your vendors/i)).toBeTruthy();
+  });
+
   function setupRoleSession(role: CoupleCollaboratorRole) {
     const ev = createCoupleEvent({ coupleName: 'Role & Test', availableSpaces: ['ceremony', 'reception'] });
     const collaborator = addCoupleCollaborator(ev.id, {
