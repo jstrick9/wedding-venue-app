@@ -155,6 +155,10 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       availableSpaces: editForm.availableSpaces,
       // Drop any selected spaces that are no longer available to avoid orphaned selections.
       selectedSpaces: (updated?.selectedSpaces || []).filter((id) => availableSet.has(id)),
+      // Drop layout status/notes for spaces that are no longer available.
+      spaceLayouts: Object.fromEntries(
+        Object.entries(updated?.spaceLayouts || {}).filter(([sid]) => availableSet.has(sid)),
+      ),
       days: buildEventDays(editForm.eventDate || undefined, editForm.eventEndDate || undefined),
     });
     // Propagate date changes to the couple's guest portal config so guests see the
