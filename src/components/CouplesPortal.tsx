@@ -623,16 +623,31 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {space.width}' × {space.height}' • {space.capacity} capacity
+                          {space.environment && (
+                            <span className={`ml-1 inline-block px-1.5 py-0.5 rounded ${space.environment === 'outdoor' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {space.environment === 'outdoor' ? '🌤️ outdoor' : space.environment === 'both' ? '🏛️ indoor/outdoor' : '🏠 indoor'}
+                            </span>
+                          )}
                         </div>
                         {(() => {
                           const backup = findRainContingency(getVenueMapConfig(), space.id);
-                          if (!backup) return null;
-                          const backupVenue = venues.find((v) => v.id === backup.indoorVenueId);
-                          return (
-                            <div className="mt-2 text-[11px] text-blue-700 bg-blue-50 rounded px-2 py-1">
-                              🌧️ Rain backup: {backupVenue?.name || backup.indoorVenueId}
-                            </div>
-                          );
+                          if (backup) {
+                            const backupVenue = venues.find((v) => v.id === backup.indoorVenueId);
+                            return (
+                              <div className="mt-2 text-[11px] text-blue-700 bg-blue-50 rounded px-2 py-1">
+                                🌧️ Rain backup: {backupVenue?.name || backup.indoorVenueId}
+                              </div>
+                            );
+                          }
+                          // Warn when an outdoor space is selected but has no venue-configured backup.
+                          if (selected && space.environment === 'outdoor') {
+                            return (
+                              <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1">
+                                ⚠️ No rain backup set — ask the venue about a contingency.
+                              </div>
+                            );
+                          }
+                          return null;
                         })()}
                       </button>
                     );
