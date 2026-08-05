@@ -53,7 +53,6 @@ import {
   removeCoupleGuestEvent,
   assignGuestToEvent,
   removeGuestFromEvent,
-  setGuestEvents,
   getAssignedGuestCount,
   findCoupleGuestEvent,
   ensureDerivedGuestEvents,
@@ -2178,7 +2177,6 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                         key={ge.id}
                                         type="button"
                                         onClick={() => {
-                                          const ids = g.guestEventIds || [];
                                           if (checked) {
                                             removeGuestFromEvent(event!.id, g.id, ge.id);
                                           } else {

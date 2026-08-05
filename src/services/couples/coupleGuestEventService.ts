@@ -2,7 +2,6 @@ import {
   CoupleGuestEvent,
   CoupleGuestEventKind,
   CoupleEvent,
-  GuestPortalGuestRecord,
   WeddingPackage,
   PackageAddOn,
 } from '../../types';
