@@ -16,6 +16,7 @@ import {
   reviewCoupleLayout,
   deriveRecommendedVenueCategories,
   setSpaceLayout,
+  acceptCoupleInvite,
 } from './coupleService';
 
 describe('coupleService', () => {
@@ -111,6 +112,14 @@ describe('coupleService', () => {
     expect(current.layoutStatus).toBe('pending');
     expect(current.spaceLayouts!['ceremony'].status).toBe('submitted');
     expect(current.spaceLayouts!['reception'].status).toBe('submitted');
+  });
+
+  it('marks a collaborator as accepted after they resolve their invite', () => {
+    const ev = createCoupleEvent({ coupleName: 'Accept Test' });
+    const col = addCoupleCollaborator(ev.id, { name: 'Planner', email: 'p@x.com', role: 'planner' });
+    expect(getCoupleEvents()[0].collaborators[0].accepted).toBeFalsy();
+    acceptCoupleInvite(ev.id, col!.id);
+    expect(getCoupleEvents()[0].collaborators[0].accepted).toBe(true);
   });
 
   it('derives recommended venue categories from answers', () => {

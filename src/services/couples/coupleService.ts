@@ -301,6 +301,17 @@ export function clearCoupleSession(): void {
   }
 }
 
+/** Mark a collaborator as having accepted their invite. */
+export function acceptCoupleInvite(eventId: string, collaboratorId: string): void {
+  const event = findCoupleEventById(eventId);
+  if (!event) return;
+  updateCoupleEvent(eventId, {
+    collaborators: event.collaborators.map((c) =>
+      c.id === collaboratorId ? { ...c, accepted: true } : c,
+    ),
+  });
+}
+
 /** Resolve a collaborator via token; returns { eventId, collaborator } or null. */
 export function resolveCoupleInviteToken(
   token: string,

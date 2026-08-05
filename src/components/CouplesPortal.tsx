@@ -12,6 +12,7 @@ import {
 import {
   getCoupleEvents,
   resolveCoupleInviteToken,
+  acceptCoupleInvite,
   saveCoupleSession,
   loadCoupleSession,
   clearCoupleSession,
@@ -84,6 +85,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       return;
     }
     saveCoupleSession(resolved.event.id, resolved.collaborator.id);
+    acceptCoupleInvite(resolved.event.id, resolved.collaborator.id);
     setSession(loadCoupleSession());
     setEvents(getCoupleEvents());
   }, [coupleToken, session]);
