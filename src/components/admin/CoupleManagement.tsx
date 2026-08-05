@@ -777,8 +777,9 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                           {guests.map((g) => {
                             const rsvp = rsvps.find((r) => r.guestId === g.id);
                             return (
-                              <div key={g.id} className="flex items-center justify-between gap-2 text-sm">
-                                <span className="text-gray-700 truncate">{g.name}</span>
+                              <div key={g.id} className="flex flex-col gap-1 text-sm">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-gray-700 truncate">{g.name}</span>
                                 <span className="flex items-center gap-2 shrink-0">
                                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                                     rsvp ? (rsvp.attending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-500'
@@ -817,6 +818,20 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                     </button>
                                   )}
                                 </span>
+                                </div>
+                                {(() => {
+                                  const ids = g.guestEventIds || [];
+                                  if (ids.length === 0) return null;
+                                  const names = ids
+                                    .map((id) => getCoupleGuestEvents(ev.id).find((e) => e.id === id)?.title)
+                                    .filter(Boolean);
+                                  if (names.length === 0) return null;
+                                  return (
+                                    <div className="text-xs text-gray-400 pl-0.5 truncate" title={names.join(', ')}>
+                                      Invited to: {names.join(', ')}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             );
                           })}
