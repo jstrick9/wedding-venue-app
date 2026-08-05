@@ -536,13 +536,18 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
                       <span>👥 {ev.collaborators.length} people</span>
                       {(() => {
-                        const g = getCoupleGuests(ev.id).length;
+                        const guests = getCoupleGuests(ev.id);
                         const rsvps = getCoupleRsvpSubmissions(ev.id);
-                        const attending = rsvps.filter((r) => r.attending).length;
-                        const declined = rsvps.filter((r) => !r.attending).length;
+                        // Only count RSVPs belonging to current guests, so stale RSVPs
+                        // from removed guests can't inflate the counts or drive
+                        // no-reply negative.
+                        const current = guests.filter((gu) => rsvps.some((r) => r.guestId === gu.id));
+                        const attending = current.filter((gu) => rsvps.find((r) => r.guestId === gu.id)?.attending).length;
+                        const declined = current.length - attending;
+                        const noReply = guests.length - current.length;
                         return (
                           <span>
-                            🎟️ {g} guests · ✅ {attending} attending · ❌ {declined} · ⏳ {Math.max(0, g - rsvps.length)} no reply
+                            🎟️ {guests.length} guests · ✅ {attending} attending · ❌ {declined} · ⏳ {Math.max(0, noReply)} no reply
                           </span>
                         );
                       })()}
