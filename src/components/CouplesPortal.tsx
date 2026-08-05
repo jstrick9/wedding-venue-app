@@ -876,6 +876,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 const counts = new Map<string, number>();
                 attending.forEach((r) => {
                   if (r.mealChoice) counts.set(r.mealChoice, (counts.get(r.mealChoice) || 0) + 1);
+                  // Plus-one meals count toward catering too.
+                  if (r.plusOneMealChoice) counts.set(r.plusOneMealChoice, (counts.get(r.plusOneMealChoice) || 0) + 1);
                 });
                 if (counts.size === 0) return null;
                 return (
@@ -1077,7 +1079,11 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           {expandedGuestRsvp === g.id && rsvp && (
                             <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600 space-y-1">
                               {rsvp.mealChoice && <p>🍽️ Meal: {(portalConfig?.mealOptions && portalConfig.mealOptions.find((o) => o.value === rsvp.mealChoice)?.label) || rsvp.mealChoice}</p>}
-                              {rsvp.plusOneName && <p>➕ Plus one: {rsvp.plusOneName}</p>}
+                              {rsvp.plusOneName && (
+                                <p>➕ Plus one: {rsvp.plusOneName}
+                                  {rsvp.plusOneMealChoice ? ` · ${(portalConfig?.mealOptions?.find((o) => o.value === rsvp.plusOneMealChoice)?.label) || rsvp.plusOneMealChoice}` : ''}
+                                </p>
+                              )}
                               {rsvp.dietaryNotes && <p>🥗 Dietary: {rsvp.dietaryNotes}</p>}
                               {rsvp.attendingDays && rsvp.attendingDays.length > 0 && (
                                 <p>📅 Days: {rsvp.attendingDays.map((d) => d.replace('day', 'Day ')).join(', ')}</p>
