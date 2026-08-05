@@ -304,6 +304,12 @@ the guest's room. See docs/couples-platform/78-bugfix-batch.md.
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
+## Couples & Events platform — Continued gap pass (round 3)
+✅ Non-negative couple RSVP summary; contact-venue email; guest RSVP reminders +
+no-response CSV; weather auto-fetch feedback; wayfinding availability fix;
+guest portal preview mode; RSVP special-needs/notes visible to couple + venue.
+See docs/reviews/81-continued-gap-pass-3.md.
+
 ## Couples & Events platform — Continued gap pass (round 2)
 ✅ Fixed multi-day celebration countdown (was "passed" mid-event); added pure
 timezone-safe `celebrationStatusDays` helper + unit tests. See
