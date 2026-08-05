@@ -12,6 +12,8 @@ import {
   sendCoupleMessage,
   getUnreadCoupleMessageCounts,
 } from '../../services/couples/coupleChatService';
+import { getCoupleGuests } from '../../services/couples/coupleGuestService';
+import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
@@ -384,6 +386,10 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       {ev.guestCount && <span>👥 {ev.guestCount} guests</span>}
                       <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
                       <span>👥 {ev.collaborators.length} people</span>
+                      <span>
+                        🎟️ {getCoupleGuests(ev.id).length} guests ·{' '}
+                        {getCoupleRsvpSubmissions(ev.id).filter((r) => r.attending).length} attending
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

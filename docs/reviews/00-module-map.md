@@ -211,6 +211,12 @@ submission + venue approval work queue (approve / request changes / reject), and
 venue↔couple chat (per-event thread, both sides, unread badge).
 See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Per-couple guest portal
+✅ Each couple manages their own guest list in their portal (add/edit/remove, per-guest
+invite links, CSV import, RSVP view); guest invite links load a couple-scoped portal
+(per-couple config seeded from venue, couple guests + RSVPs). Venue admin shows per-couple
+guest/attending counts. See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

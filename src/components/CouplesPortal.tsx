@@ -20,13 +20,22 @@ import {
 } from '../services/couples/coupleService';
 import { getCoupleAnswers, saveCoupleAnswers } from '../services/couples/coupleAnswersService';
 import { getCoupleMessages, sendCoupleMessage } from '../services/couples/coupleChatService';
+import {
+  getCoupleGuests,
+  addCoupleGuest,
+  updateCoupleGuest,
+  removeCoupleGuest,
+  importCoupleGuests,
+  buildGuestInviteUrl,
+} from '../services/couples/coupleGuestService';
+import { getCoupleRsvpSubmissions } from '../services/couples/coupleRsvpService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
 
-type TabId = 'overview' | 'spaces' | 'questions' | 'design' | 'chat' | 'collaborators';
+type TabId = 'overview' | 'spaces' | 'questions' | 'design' | 'chat' | 'guests' | 'collaborators';
 
 interface CouplesPortalProps {
   coupleToken?: string;
@@ -141,6 +150,58 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   });
   const [inviteError, setInviteError] = useState('');
 
+  // ── Guests management ────────────────────────────────────────────────────
+  const [guestTick, setGuestTick] = useState(0);
+  const coupleGuests = useMemo(
+    () => (event ? getCoupleGuests(event.id) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [event, guestTick],
+  );
+  const coupleRsvps = useMemo(
+    () => (event ? getCoupleRsvpSubmissions(event.id) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [event, guestTick],
+  );
+  const [guestForm, setGuestForm] = useState({ name: '', email: '', phone: '' });
+  const [guestError, setGuestError] = useState('');
+
+  const handleAddGuest = () => {
+    if (!event || !guestForm.name.trim()) {
+      setGuestError('Please enter the guest’s name.');
+      return;
+    }
+    addCoupleGuest(event.id, {
+      name: guestForm.name,
+      email: guestForm.email,
+      phone: guestForm.phone,
+    });
+    setGuestForm({ name: '', email: '', phone: '' });
+    setGuestError('');
+    setGuestTick((t) => t + 1);
+  };
+
+  const handleCopyGuestLink = (token: string) => {
+    void navigator.clipboard?.writeText(buildGuestInviteUrl(token)).then(
+      () => showToast('Guest invite link copied to clipboard.', 'success'),
+      () => showToast('Could not copy — copy the link below.', 'warning'),
+    );
+  };
+
+  const handleImportGuests = (content: string) => {
+    if (!event) return;
+    const rows = content
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [name = '', email = '', phone = ''] = line.split(',').map((s) => s.trim());
+        return { name, email, phone };
+      });
+    const added = importCoupleGuests(event.id, rows);
+    setGuestTick((t) => t + 1);
+    showToast(`Imported ${added} guest${added === 1 ? '' : 's'}.`, 'success');
+  };
+
   const handleInvite = () => {
     if (!event || !inviteForm.name.trim() || !inviteForm.email.trim()) {
       setInviteError('Please provide a name and email.');
@@ -215,6 +276,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     { id: 'questions', label: 'Questions', icon: '❓' },
     { id: 'spaces', label: 'Venue Spaces', icon: '🏛️' },
     { id: 'design', label: 'Design & Approval', icon: '🎨' },
+    { id: 'guests', label: 'Guests', icon: '👥' },
     { id: 'chat', label: 'Chat', icon: '💬' },
     { id: 'collaborators', label: 'People', icon: '👥' },
   ];
@@ -553,6 +615,123 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     </p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'guests' && (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-1">Manage your guests</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Add guests, send each one their own invite link to your guest portal, and
+                  see who has RSVP'd.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Guest name"
+                    value={guestForm.name}
+                    onChange={(e) => setGuestForm({ ...guestForm, name: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    aria-label="Guest name"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={guestForm.email}
+                    onChange={(e) => setGuestForm({ ...guestForm, email: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    aria-label="Guest email"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone"
+                    value={guestForm.phone}
+                    onChange={(e) => setGuestForm({ ...guestForm, phone: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    aria-label="Guest phone"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddGuest}
+                    className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                  >
+                    ➕ Add guest
+                  </button>
+                </div>
+                {guestError && <p className="text-xs text-red-600 mt-2">{guestError}</p>}
+                <label className="mt-3 inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => handleImportGuests(String(reader.result || ''));
+                      reader.readAsText(file);
+                    }}
+                  />
+                  📥 Import guests (CSV: name,email,phone)
+                </label>
+              </div>
+
+              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                <h3 className="font-semibold text-sm mb-3">
+                  Guest list ({coupleGuests.length})
+                </h3>
+                {coupleGuests.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 px-6 py-8 text-center text-gray-500 text-sm">
+                    No guests yet. Add your first guest above.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {coupleGuests.map((g) => {
+                      const rsvp = coupleRsvps.find((r) => r.guestId === g.id);
+                      return (
+                        <div key={g.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm text-gray-800 truncate">{g.name}</div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {g.email || '—'} {g.phone ? `• ${g.phone}` : ''}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${
+                                rsvp ? (rsvp.attending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-500'
+                              }`}
+                            >
+                              {rsvp ? (rsvp.attending ? 'Attending' : 'Not attending') : 'No RSVP'}
+                            </span>
+                            {g.token && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyGuestLink(g.token!)}
+                                className="text-xs text-indigo-600 hover:underline"
+                              >
+                                Copy link
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                removeCoupleGuest(event!.id, g.id);
+                                setGuestTick((t) => t + 1);
+                              }}
+                              className="text-xs text-red-500 hover:underline"
+                              aria-label={`Remove ${g.name}`}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}

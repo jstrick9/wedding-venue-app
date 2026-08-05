@@ -33,9 +33,16 @@ so each booked couple gets their own space.
     approve / request changes / reject + comments.
   - **Venue ↔ couple chat** — a message thread per couple event, available in both the
     venue admin (with unread badge) and the couple's Chat tab.
-- 🚧 **Next phases:**
-  1. **Per-couple guest portal** — each couple manages their own guest list + guest portal
-     (reuse the existing GuestPortal, scoped per couple event).
+- ✅ **Per-couple guest portal (delivered):**
+  - Each couple manages their own **guest list** in the Couples Portal (Guests tab):
+    add/edit/remove guests, **copy a per-guest invite link**, import via CSV, and see
+    who has RSVP'd.
+  - Each guest portal invite link (`#/guest-portal?token=…&couple=…`) auto-identifies
+    the guest and loads the **couple-scoped** portal: a **per-couple portal config**
+    (seeded from the venue's config), the couple's guests, and the couple's RSVPs.
+  - The venue admin shows a per-couple **guest / attending count** on each event.
+- 🚧 **Future ideas:** per-couple portal config editing from the couple side (currently
+  seeded from the venue config); deeper guest-side customization.
 
 ## Data model (see src/types.ts)
 - `CoupleEvent`: id, coupleName, inviteToken, status (invited/active/completed),

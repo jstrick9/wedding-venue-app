@@ -7,6 +7,7 @@ import { LiveRegion } from './components/LiveRegion';
 import { ModalProvider } from './contexts/ModalContext';
 import { getGuestPortalTokenFromLocation } from './utils/guestPortal';
 import { getCoupleTokenFromLocation } from './services/couples/coupleService';
+import { getCoupleIdFromLocation } from './services/couples/coupleGuestService';
 import { ToastContainer, showToast } from './components/Toast';
 import { on } from './utils/appEvents';
 import { lazy } from 'react';
@@ -97,6 +98,7 @@ function AppContent() {
       >
         <GuestPortal
           guestToken={getGuestPortalTokenFromLocation(window.location)}
+          coupleEventId={getCoupleIdFromLocation(window.location)}
           onExitPortal={() => {
             window.location.hash = '';
           }}

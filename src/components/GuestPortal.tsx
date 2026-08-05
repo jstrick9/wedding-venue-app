@@ -50,6 +50,16 @@ import {
 import { verifySecret } from '../utils/auth';
 import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
 import {
+  getCoupleGuests,
+  getCouplePortalConfig,
+  setCouplePortalConfig,
+} from '../services/couples/coupleGuestService';
+import {
+  getCoupleRsvpSubmissions,
+  setCoupleRsvpSubmissions,
+} from '../services/couples/coupleRsvpService';
+import { findCoupleEventById } from '../services/couples/coupleService';
+import {
   guestCanAccessLodging,
   guestCanAccessPortal,
   guestCanSubmitRSVP,
@@ -59,6 +69,7 @@ import {
 
 interface GuestPortalProps {
   guestToken?: string;
+  coupleEventId?: string;
   onExitPortal: () => void;
 }
 
@@ -70,7 +81,7 @@ interface PortalData {
   submissions: RSVPSubmission[];
 }
 
-const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) => {
+const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, onExitPortal }) => {
   const [config, setConfig] = useState<GuestPortalConfig | null>(null);
   const [portalData, setPortalData] = useState<PortalData>({
     venues: [],
@@ -98,8 +109,46 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
   const [selectedWayfindingTo, setSelectedWayfindingTo] = useState<string | ''>('');
   const [wayfindingResult, setWayfindingResult] = useState<string[] | null>(null);
 
+  // Per-couple guest portal: scopes config, guests, and RSVPs to a couple event.
+  const isCouplePortal = !!coupleEventId;
+  const couple = useMemo(
+    () => (coupleEventId ? findCoupleEventById(coupleEventId) : undefined),
+    [coupleEventId],
+  );
+
   useEffect(() => {
     try {
+      if (isCouplePortal && coupleEventId && couple) {
+        const venueConfig = getGuestPortalConfig();
+        const loadedConfig = getCouplePortalConfig(coupleEventId, venueConfig, {
+          coupleName: couple.coupleName,
+          eventDate: couple.eventDate,
+          eventEndDate: couple.eventEndDate,
+        });
+        setConfig(loadedConfig);
+
+        const venues = getPortalVenues();
+        const guests = getCoupleGuests(coupleEventId);
+        const submissions = getCoupleRsvpSubmissions(coupleEventId);
+
+        setPortalData({ venues, guests, submissions });
+
+        if (loadedConfig && isGuestPortalEventActive(loadedConfig)) {
+          const session = loadGuestPortalSession(loadedConfig, loadedConfig.eventTitle);
+          if (session) {
+            setIsAuthed(true);
+            setActiveEventName(loadedConfig.eventTitle || '');
+            setResolvedGuestId(session.guestId || null);
+            setEventInput(loadedConfig.eventTitle || '');
+          } else {
+            clearGuestPortalSession();
+          }
+        } else {
+          clearGuestPortalSession();
+        }
+        return;
+      }
+
       const loadedConfig = getGuestPortalConfig();
       setConfig(loadedConfig);
 
@@ -129,6 +178,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     } catch {
       // ignore
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const eventStartDate = config?.eventStartDate ? new Date(config.eventStartDate) : null;
@@ -361,7 +411,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, onExitPortal }) =
     // Keep the UI in sync locally for responsiveness, and persist through the
     // backend (local or Supabase RPC) depending on the active provider.
     setPortalData((prev) => ({ ...prev, submissions: updatedSubmissions }));
-    setPortalRSVPSubmissions(updatedSubmissions);
+    if (isCouplePortal && coupleEventId) {
+      setCoupleRsvpSubmissions(coupleEventId, updatedSubmissions);
+    } else {
+      setPortalRSVPSubmissions(updatedSubmissions);
+    }
     void getGuestPortalBackend()
       .submitRSVP({ eventName }, newSubmission)
       .then(() => setIsSubmittingRSVP(false))
