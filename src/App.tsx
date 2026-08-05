@@ -99,6 +99,7 @@ function AppContent() {
         <GuestPortal
           guestToken={getGuestPortalTokenFromLocation(window.location)}
           coupleEventId={getCoupleIdFromLocation(window.location)}
+          preview={new URLSearchParams(window.location.hash.split('?')[1] || '').get('preview') === '1'}
           onExitPortal={() => {
             window.location.hash = '';
           }}

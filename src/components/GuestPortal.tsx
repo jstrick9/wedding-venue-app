@@ -81,6 +81,10 @@ interface GuestPortalProps {
   guestToken?: string;
   coupleEventId?: string;
   onExitPortal: () => void;
+  /** Read-only preview mode: renders the portal as a generic visitor without the
+   *  sign-in gate and without creating a guest session. RSVP still requires a
+   *  real guest. Used by the couple's "Preview portal" action. */
+  preview?: boolean;
 }
 
 type TabId = 'home' | 'map' | 'schedule' | 'wayfinding' | 'rsvp' | 'lodging';
@@ -91,7 +95,8 @@ interface PortalData {
   submissions: RSVPSubmission[];
 }
 
-const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, onExitPortal }) => {
+const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, onExitPortal, preview = false }) => {
+  const isPreview = preview;
   const [config, setConfig] = useState<GuestPortalConfig | null>(null);
   const [portalData, setPortalData] = useState<PortalData>({
     venues: [],
@@ -278,6 +283,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   }, [identifiedGuest, scopedSubmissions]);
 
   const activeEventLabel = activeEventName || config?.eventTitle || '';
+
+  // In preview mode the couple browses as a generic visitor: access-controlled tabs
+  // (map/schedule/rsvp/lodging) are shown as long as the venue enabled them.
+  const canViewTab = (allow: (g: GuestPortalGuestRecord | undefined, ev: string) => boolean) =>
+    isPreview ? true : allow(identifiedGuest, activeEventLabel);
 
   const requiresPortalPassword = !!(
     config?.portalPassword || (config as any)?.portalPasswordHash
@@ -653,7 +663,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          {config?.showMap && guestCanViewMap(identifiedGuest, activeEventLabel) && (
+          {config?.showMap && canViewTab(guestCanViewMap) && (
             <button
               type="button"
               onClick={() => setActiveTab('map')}
@@ -665,7 +675,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             </button>
           )}
 
-          {config?.showRSVP && guestCanSubmitRSVP(identifiedGuest, activeEventLabel) && (
+          {config?.showRSVP && canViewTab(guestCanSubmitRSVP) && (
             <button
               type="button"
               onClick={() => setActiveTab('rsvp')}
@@ -677,7 +687,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             </button>
           )}
 
-          {config?.showSchedule && guestCanViewSchedule(identifiedGuest, activeEventLabel) && (
+          {config?.showSchedule && canViewTab(guestCanViewSchedule) && (
             <button
               type="button"
               onClick={() => setActiveTab('schedule')}
@@ -1205,6 +1215,23 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         <div className="pb-24">
           <div className="bg-white rounded-xl shadow p-4 mt-4">
             <p className="text-sm text-gray-700">RSVP is not available.</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Preview mode: RSVP requires a real guest to sign in; show a friendly notice
+    // instead of a form that can't submit.
+    if (isPreview && !identifiedGuest) {
+      return (
+        <div className="pb-24">
+          <div className="bg-white rounded-xl shadow p-4 mt-4 text-center space-y-2">
+            <p className="text-2xl">📝</p>
+            <p className="text-sm font-medium text-gray-700">RSVP is for invited guests</p>
+            <p className="text-xs text-gray-500">
+              You're previewing the portal as a visitor. Guests RSVP after opening their
+              personal invite link or signing in.
+            </p>
           </div>
         </div>
       );
@@ -1831,7 +1858,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
 
   // FIX: Show the sign-in gate first so guests always have a form to interact with.
   // Config / activity errors are surfaced as form-level messages in handleGuestPortalSignIn.
-  if (needsEventScopedSignIn) {
+  // In preview mode the gate is skipped so the couple can see the portal as a visitor.
+  if (needsEventScopedSignIn && !isPreview) {
     return renderSignInGate();
   }
 
@@ -1883,13 +1911,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   const showScheduleTab = !!config.showSchedule;
   const showWayfindingTab = !!config.showWayfinding;
   const showRSVPTab = !!config.showRSVP;
-     const showLodgingTab =
-           !!config.showLodging &&
-    	 lodgingVenues.length > 0 &&
-    	   guestCanAccessLodging(
-      	   	identifiedGuest,
-      	   	activeEventName || config.eventTitle || '',
-     );
+  const showLodgingTab =
+    !!config.showLodging &&
+    lodgingVenues.length > 0 &&
+    (isPreview || guestCanAccessLodging(identifiedGuest, activeEventName || config.eventTitle || ''));
   const tabPanelId = `guest-portal-panel-${activeTab}`;
   const desktopTabProps = (tabId: TabId) => ({
     role: 'tab' as const,
@@ -2013,6 +2038,15 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         aria-labelledby={`guest-portal-tab-${activeTab}`}
         tabIndex={0}
       >
+        {isPreview && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3 flex items-center gap-2">
+            <span>👁️</span>
+            <span>
+              <strong>Preview mode</strong> — you're seeing your guest portal as a visitor.
+              RSVP is disabled here; it requires a real guest to sign in.
+            </span>
+          </div>
+        )}
         {renderContent()}
       </main>
 

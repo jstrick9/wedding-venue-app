@@ -95,3 +95,38 @@ describe('GuestPortal guest-token auto-auth', () => {
     expect(screen.getByPlaceholderText(/jane@example.com or Jane Smith/i)).toBeTruthy();
   });
 });
+
+describe('GuestPortal preview mode', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(guestPortalHelpers.getGuestPortalConfig).mockReturnValue({
+      eventTitle: 'Smith & Johnson',
+      eventStartDate: '2026-06-06',
+      showMap: true,
+      showSchedule: true,
+      showWayfinding: true,
+      showRSVP: true,
+      showLodging: false,
+    } as any);
+    vi.mocked(guestPortalHelpers.isGuestPortalEventActive).mockReturnValue(true);
+    vi.mocked(coupleGuestService.getCoupleGuests).mockReturnValue([
+      { id: 'g1', name: 'Jane', token: 'tok-123', eventName: 'e1' },
+    ] as any);
+  });
+
+  it('bypasses the sign-in gate and shows the preview banner', async () => {
+    render(<GuestPortal coupleEventId="e1" preview onExitPortal={() => {}} />);
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/jane@example.com or Jane Smith/i)).toBeNull();
+    });
+    expect(screen.getByText(/Preview mode/i)).toBeTruthy();
+  });
+
+  it('does not create a guest session in preview', async () => {
+    render(<GuestPortal coupleEventId="e1" preview onExitPortal={() => {}} />);
+    await waitFor(() => {
+      expect(screen.getByText(/Preview mode/i)).toBeTruthy();
+    });
+    expect(guestPortalHelpers.saveGuestPortalSession).not.toHaveBeenCalled();
+  });
+});
