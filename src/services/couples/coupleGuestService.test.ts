@@ -9,6 +9,8 @@ import {
   getCoupleGuestsForBackup,
   getCouplePortalConfigsForBackup,
   getCoupleIdFromLocation,
+  setCouplePortalConfig,
+  pushSharedConfigToCouples,
 } from './coupleGuestService';
 
 describe('coupleGuestService', () => {
@@ -65,5 +67,45 @@ describe('coupleGuestService', () => {
   it('extracts the couple id from the guest-portal URL', () => {
     expect(getCoupleIdFromLocation({ hash: '#/guest-portal?token=x&couple=e1' } as Location)).toBe('e1');
     expect(getCoupleIdFromLocation({ hash: '#/guest-portal?token=x' } as Location)).toBeUndefined();
+  });
+
+  it('pushes shared settings to couples while preserving their customizations', () => {
+    // Couple config with custom hero, custom meal, and custom schedule item.
+    setCouplePortalConfig('e1', {
+      eventTitle: 'A & B',
+      welcomeMessage: 'Custom welcome',
+      heroImageUrl: 'https://x/hero.jpg',
+      mealOptions: [{ value: 'custom-dish', label: 'Custom Dish' }],
+      scheduleItems: [{ id: 'custom-item', title: 'Couple\'s Own Event', startTime: '' } as any],
+      showMap: false,
+    } as any);
+
+    const venueConfig = {
+      welcomeMessage: 'Venue welcome',
+      mealOptions: [{ value: 'chicken', label: 'Chicken' }, { value: 'beef', label: 'Beef' }],
+      scheduleItems: [{ id: 'v1', title: 'Cocktail Hour', startTime: '' }],
+      showMap: true,
+      showRSVP: true,
+      accessGracePeriodHours: 48,
+    } as any;
+
+    const count = pushSharedConfigToCouples(venueConfig);
+    expect(count).toBe(1);
+
+    const updated = getCouplePortalConfigsForBackup().e1;
+    // Venue message + visibility + grace period pushed.
+    expect(updated.welcomeMessage).toBe('Venue welcome');
+    expect(updated.showMap).toBe(true);
+    expect(updated.accessGracePeriodHours).toBe(48);
+    // Couple hero preserved.
+    expect(updated.heroImageUrl).toBe('https://x/hero.jpg');
+    // Meal options merged (venue base + couple's custom kept).
+    expect(updated.mealOptions?.map((o) => o.value)).toEqual(['chicken', 'beef', 'custom-dish']);
+    // Schedule items merged (venue item + couple's custom kept).
+    expect(updated.scheduleItems?.map((i) => i.id)).toEqual(['v1', 'custom-item']);
+  });
+
+  it('push with no couple configs returns 0', () => {
+    expect(pushSharedConfigToCouples({ welcomeMessage: 'hi' } as any)).toBe(0);
   });
 });

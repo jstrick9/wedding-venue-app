@@ -191,6 +191,70 @@ export function setCouplePortalConfig(coupleEventId: string, config: GuestPortal
   writeConfigs({ ...readConfigs(), [coupleEventId]: config });
 }
 
+/**
+ * Push the venue's shared guest-portal settings onto every couple's portal
+ * config, while preserving each couple's unique customizations.
+ *
+ * Venue-owned fields updated on each couple:
+ *   - welcomeMessage / rsvpMessage (venue's message)
+ *   - accessGracePeriodHours + tab visibility flags
+ *   - mealOptions (venue's choices as the base, plus any couple-added options)
+ *   - scheduleItems (venue's items as the base, plus any couple-added items)
+ *
+ * Couple-owned fields preserved (never overwritten):
+ *   - heroImageUrl, rsvpDeadlineDate, eventTitle, event dates, isMultiDay,
+ *     portal password.
+ *
+ * Returns the number of couple configs updated.
+ */
+export function pushSharedConfigToCouples(venueConfig: GuestPortalConfig | null): number {
+  const configs = readConfigs();
+  const ids = Object.keys(configs);
+  if (ids.length === 0 || !venueConfig) return 0;
+
+  let updated = 0;
+  const next: Record<string, GuestPortalConfig> = { ...configs };
+  for (const id of ids) {
+    const cur = configs[id];
+    if (!cur) continue;
+
+    // Merge meal options: venue's base + any couple option not already present.
+    const venueMeals = venueConfig.mealOptions || [];
+    const coupleMeals = cur.mealOptions || [];
+    const seen = new Set(venueMeals.map((o) => o.value));
+    const mergedMeals = [
+      ...venueMeals,
+      ...coupleMeals.filter((o) => !seen.has(o.value)),
+    ];
+
+    // Merge schedule items: venue's base + any couple item not already present (by id).
+    const venueItems = venueConfig.scheduleItems || [];
+    const coupleItems = cur.scheduleItems || [];
+    const seenIds = new Set(venueItems.map((i) => i.id));
+    const mergedItems = [
+      ...venueItems,
+      ...coupleItems.filter((i) => !seenIds.has(i.id)),
+    ];
+
+    next[id] = {
+      ...cur,
+      welcomeMessage: venueConfig.welcomeMessage ?? cur.welcomeMessage,
+      rsvpMessage: venueConfig.rsvpMessage ?? cur.rsvpMessage,
+      accessGracePeriodHours: venueConfig.accessGracePeriodHours ?? cur.accessGracePeriodHours,
+      showMap: venueConfig.showMap ?? cur.showMap,
+      showSchedule: venueConfig.showSchedule ?? cur.showSchedule,
+      showRSVP: venueConfig.showRSVP ?? cur.showRSVP,
+      showWayfinding: venueConfig.showWayfinding ?? cur.showWayfinding,
+      showLodging: venueConfig.showLodging ?? cur.showLodging,
+      mealOptions: mergedMeals,
+      scheduleItems: mergedItems,
+    };
+    updated += 1;
+  }
+  writeConfigs(next);
+  return updated;
+}
+
 /** Backup read — all per-couple portal configs. */
 export function getCouplePortalConfigsForBackup(): Record<string, GuestPortalConfig> {
   return readConfigs();

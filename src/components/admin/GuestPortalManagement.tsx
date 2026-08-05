@@ -18,6 +18,7 @@ import {
   setPortalGuests,
 } from '../../utils/guestPortal';
 import { createSecretRecord as authCreateSecretRecord } from '../../utils/auth';
+import { pushSharedConfigToCouples } from '../../services/couples/coupleGuestService';
 
 // ─── tiny helpers ────────────────────────────────────────────────────────────
 function uid() {
@@ -1061,14 +1062,30 @@ export function GuestPortalManagement({
         </button>
       )}
 
-      {/* ── Save all button ── */}
-      <div className="sticky bottom-0 pt-4 pb-2 bg-white/90 backdrop-blur-sm border-t border-gray-100 mt-6">
+      {/* ── Save + push-to-couples buttons ── */}
+      <div className="sticky bottom-0 pt-4 pb-2 bg-white/90 backdrop-blur-sm border-t border-gray-100 mt-6 space-y-2">
         <button
           type="button"
           onClick={() => save()}
           className="w-full py-3 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow hover:bg-indigo-700 active:scale-95 transition-all"
         >
           💾 Save Guest Portal Settings
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            // Save the current shared settings first so the latest values are pushed.
+            save();
+            const count = pushSharedConfigToCouples(cfg);
+            onShowSuccess(
+              count > 0
+                ? `Pushed shared settings to ${count} couple${count === 1 ? '' : 's'} (their customizations were kept).`
+                : 'No couple portal configs to update yet.',
+            );
+          }}
+          className="w-full py-3 rounded-xl bg-teal-600 text-white text-sm font-semibold shadow hover:bg-teal-700 active:scale-95 transition-all"
+        >
+          📤 Push Shared Settings to All Couples
         </button>
       </div>
     </div>
