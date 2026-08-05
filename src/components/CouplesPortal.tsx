@@ -837,6 +837,27 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   </div>
                 ))}
               </div>
+              {/* Meal summary (for catering) */}
+              {(() => {
+                const attending = coupleRsvps.filter((r) => r.attending);
+                const counts = new Map<string, number>();
+                attending.forEach((r) => {
+                  if (r.mealChoice) counts.set(r.mealChoice, (counts.get(r.mealChoice) || 0) + 1);
+                });
+                if (counts.size === 0) return null;
+                return (
+                  <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                    <h3 className="font-semibold text-sm mb-2">🍽️ Meal counts</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(counts.entries()).map(([value, n]) => (
+                        <span key={value} className="text-sm bg-gray-100 rounded-full px-3 py-1 text-gray-700">
+                          {(portalConfig?.mealOptions?.find((o) => o.value === value)?.label) || value}: <strong>{n}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
                 <h3 className="font-semibold text-sm mb-1">Manage your guests</h3>
                 <p className="text-xs text-gray-500 mb-3">

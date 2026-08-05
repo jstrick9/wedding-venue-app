@@ -94,6 +94,8 @@ so each booked couple gets their own space.
 - ✅ **Rain-contingency indicator for the couple (delivered):** the couple's Venue Spaces
   tab shows a "Rain backup" note on any outdoor space that has a venue-configured backup,
   so the couple knows their contingency before selecting.
+- ✅ **Meal count summary (delivered):** the couple's Guests tab shows a per-meal count of
+  attending guests (for catering planning), using the couple's configured meal options.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 
