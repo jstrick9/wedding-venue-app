@@ -734,8 +734,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         {(() => {
           const vc = getConfig();
           const phone = vc.phone || (vc as any).contactPhoneNumber;
+          const email = vc.supportEmail;
           const location = vc.location;
-          if (!phone && !location) return null;
+          if (!phone && !email && !location) return null;
           return (
             <div className="bg-white rounded-xl shadow p-4">
               <p className="text-sm font-semibold text-gray-800 mb-2">📞 Contact the Venue</p>
@@ -744,6 +745,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 {phone && (
                   <p>
                     <a href={`tel:${phone}`} className="text-indigo-600 hover:underline">📞 {phone}</a>
+                  </p>
+                )}
+                {email && (
+                  <p>
+                    <a href={`mailto:${email}`} className="text-indigo-600 hover:underline">✉️ {email}</a>
                   </p>
                 )}
               </div>
