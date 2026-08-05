@@ -54,6 +54,21 @@ describe('coupleGuestService', () => {
     expect(getCoupleGuests('e1')).toHaveLength(2);
   });
 
+  it('deduplicates imported guests by email and by name', () => {
+    // Pre-existing guest for the couple.
+    addCoupleGuest('e1', { name: 'Alice', email: 'alice@example.com' });
+
+    const added = importCoupleGuests('e1', [
+      { name: 'Alice', email: 'alice@example.com' }, // dup by email
+      { name: 'Alice', email: '' },                  // dup by name
+      { name: 'Bob', email: 'bob@example.com' },     // new
+      { name: 'CAROL', email: 'carol@example.com' }, // new, case normalization
+      { name: 'carol@example.com', email: 'CAROL@EXAMPLE.COM' }, // dup by email (case-insensitive)
+    ]);
+    expect(added).toBe(2); // only Bob and Carol added
+    expect(getCoupleGuests('e1')).toHaveLength(3); // Alice + Bob + Carol
+  });
+
   it('creates and persists a per-couple portal config seeded from the venue', () => {
     const cfg = getCouplePortalConfig('e1', null, { coupleName: 'Smith & Jones', eventDate: '2026-06-06' });
     expect(cfg.eventTitle).toBe('Smith & Jones');

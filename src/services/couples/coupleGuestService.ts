@@ -120,9 +120,30 @@ export function importCoupleGuests(
   rows: { name: string; email?: string; phone?: string }[],
 ): number {
   const all = readGuests();
-  const existing = all.filter((g) => g.eventName !== coupleEventId);
+  // Keep every existing guest (including pre-existing ones for this couple) so an
+  // import merges rather than replaces the couple's guest list.
+  const existing = all;
+
+  // Skip rows that duplicate an existing guest for this couple (by email, or by
+  // name when no email) so an accidental re-import doesn't create duplicates.
+  const existingForCouple = all.filter((g) => g.eventName === coupleEventId);
+  const seenEmails = new Set(existingForCouple.map((g) => g.email?.trim().toLowerCase()).filter(Boolean));
+  const seenNames = new Set(existingForCouple.map((g) => g.name.trim().toLowerCase()));
+
   const added = rows
     .filter((r) => r.name && r.name.trim())
+    .filter((r) => {
+      const email = (r.email?.trim() || '').toLowerCase();
+      if (email) {
+        if (seenEmails.has(email)) return false;
+        seenEmails.add(email);
+        return true;
+      }
+      const name = r.name.trim().toLowerCase();
+      if (seenNames.has(name)) return false;
+      seenNames.add(name);
+      return true;
+    })
     .map((r) => ({
       id: `guest-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: r.name.trim(),
