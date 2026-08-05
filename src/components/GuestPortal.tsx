@@ -208,10 +208,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   }, [config?.eventTitle]);
 
   const daysUntilEvent = eventStartDate
-    ? Math.max(
-        0,
-        Math.ceil((eventStartDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
-      )
+    ? Math.ceil((eventStartDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
   const isMultiDay = !!config?.isMultiDay && !!eventEndDate && !!eventStartDate;
@@ -623,7 +620,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             <p className="text-sm text-indigo-600 font-medium">
               {daysUntilEvent === 0
                 ? 'Today is the big day!'
-                : `${daysUntilEvent} day${daysUntilEvent === 1 ? '' : 's'} until the celebration`}
+                : daysUntilEvent > 0
+                  ? `${daysUntilEvent} day${daysUntilEvent === 1 ? '' : 's'} until the celebration`
+                  : 'The celebration has passed — thank you for joining!'}
             </p>
           )}
         </div>
