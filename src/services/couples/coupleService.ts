@@ -126,6 +126,7 @@ export function createCoupleEvent(input: {
   eventDate?: string;
   eventEndDate?: string;
   guestCount?: number;
+  packageId?: string;
   availableSpaces?: string[];
   createdBy?: string;
 }): CoupleEvent {
@@ -137,6 +138,8 @@ export function createCoupleEvent(input: {
     eventDate: input.eventDate,
     eventEndDate: input.eventEndDate,
     guestCount: input.guestCount,
+    packageId: input.packageId,
+    addOns: [],
     days: buildEventDays(input.eventDate, input.eventEndDate),
     availableSpaces: input.availableSpaces || [],
     selectedSpaces: [],

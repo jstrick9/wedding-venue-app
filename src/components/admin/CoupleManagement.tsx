@@ -20,6 +20,7 @@ import { getCoupleGuests, getCouplePortalConfig, setCouplePortalConfig } from '.
 import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
 import { getGuestPortalConfig } from '../../utils/guestPortal';
 import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeCoupleSetupTask } from '../../services/couples/coupleSetupService';
+import { getWeddingPackages, getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
@@ -52,11 +53,12 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
     eventDate: '',
     eventEndDate: '',
     guestCount: '',
+    packageId: '',
     availableSpaces: [] as string[],
   });
   const [error, setError] = useState('');
   const [editEventId, setEditEventId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ eventDate: '', eventEndDate: '', guestCount: '', availableSpaces: [] as string[] });
+  const [editForm, setEditForm] = useState({ eventDate: '', eventEndDate: '', guestCount: '', packageId: '', availableSpaces: [] as string[] });
   const [openChat, setOpenChat] = useState<string | null>(null);
   const [openGuests, setOpenGuests] = useState<string | null>(null);
   const [openSetup, setOpenSetup] = useState<string | null>(null);
@@ -119,19 +121,27 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       setError('The end date must be on or after the start date.');
       return;
     }
-    createCoupleEvent({
+    const created = createCoupleEvent({
       coupleName: form.coupleName,
       eventDate: form.eventDate || undefined,
       eventEndDate: form.eventEndDate || undefined,
       guestCount: form.guestCount ? parseInt(form.guestCount, 10) || undefined : undefined,
+      packageId: form.packageId || undefined,
       availableSpaces: form.availableSpaces,
       createdBy: user?.id,
     });
-    setForm({ coupleName: '', eventDate: '', eventEndDate: '', guestCount: '', availableSpaces: [] });
+    // Auto-suggest the venue's setup tasks from the assigned package.
+    const pkg = findWeddingPackage(form.packageId);
+    if (pkg) {
+      suggestSetupTaskTitles(pkg).forEach((title) => {
+        addCoupleSetupTask(created.id, { title, spaceId: created.selectedSpaces?.[0], suggested: true });
+      });
+    }
+    setForm({ coupleName: '', eventDate: '', eventEndDate: '', guestCount: '', packageId: '', availableSpaces: [] });
     setError('');
     setShowCreate(false);
     refresh();
-    onShowSuccess('Couple event created. Send the invite link to the couple.');
+    onShowSuccess(pkg ? `Couple event created with ${pkg.name}. Setup tasks suggested.` : 'Couple event created. Send the invite link to the couple.');
   };
 
   const toggleSpace = (venueId: string) => {
@@ -148,6 +158,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       eventDate: ev.eventDate || '',
       eventEndDate: ev.eventEndDate || '',
       guestCount: ev.guestCount != null ? String(ev.guestCount) : '',
+      packageId: ev.packageId || '',
       availableSpaces: [...ev.availableSpaces],
     });
     setEditEventId(ev.id);
@@ -174,6 +185,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       eventDate: editForm.eventDate || undefined,
       eventEndDate: editForm.eventEndDate || undefined,
       guestCount: editForm.guestCount ? parseInt(editForm.guestCount, 10) || undefined : undefined,
+      packageId: editForm.packageId || undefined,
       availableSpaces: editForm.availableSpaces,
       // Drop any selected spaces that are no longer available to avoid orphaned selections.
       selectedSpaces: (updated?.selectedSpaces || []).filter((id) => availableSet.has(id)),
@@ -447,7 +459,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Guest count</label>
               <input
@@ -458,6 +470,23 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                 placeholder="e.g. 120"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Wedding package</label>
+              <select
+                value={form.packageId}
+                onChange={(e) => setForm({ ...form, packageId: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                aria-label="Wedding package"
+              >
+                <option value="">None (no package assigned)</option>
+                {getActiveWeddingPackages().map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {form.packageId && (
+                <p className="text-xs text-gray-500 mt-1">Setup tasks will be auto-suggested from this package.</p>
+              )}
             </div>
           </div>
           <div>
@@ -557,6 +586,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                         <span>– {new Date(ev.eventEndDate).toLocaleDateString()}</span>
                       )}
                       {ev.guestCount && <span>👥 {ev.guestCount} guests</span>}
+                      {ev.packageId && (() => { const p = findWeddingPackage(ev.packageId); return p ? <span>🎁 {p.name}</span> : null; })()}
                       <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
                       <span>👥 {ev.collaborators.length} people</span>
                       {(() => {
@@ -889,6 +919,20 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                         onChange={(e) => setEditForm({ ...editForm, guestCount: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Wedding package</label>
+                      <select
+                        value={editForm.packageId}
+                        onChange={(e) => setEditForm({ ...editForm, packageId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                        aria-label="Wedding package (edit)"
+                      >
+                        <option value="">None (no package assigned)</option>
+                        {getActiveWeddingPackages().map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Available spaces</label>

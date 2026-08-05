@@ -42,6 +42,7 @@ export function addCoupleSetupTask(
     scheduledFor?: string;
     status?: CoupleSetupTask['status'];
     notes?: string;
+    suggested?: boolean;
   },
 ): CoupleSetupTask | null {
   const title = input.title.trim();
@@ -56,6 +57,7 @@ export function addCoupleSetupTask(
     scheduledFor: input.scheduledFor || undefined,
     status: input.status || 'not-started',
     notes: input.notes?.trim() || undefined,
+    suggested: input.suggested,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
