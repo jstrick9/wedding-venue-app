@@ -58,6 +58,8 @@ export interface BackupPayload {
   coupleMessages?: unknown;
   coupleGuests?: unknown;
   couplePortalConfigs?: unknown;
+  venueMapConfigs?: unknown;
+  venueRules?: unknown;
   staffTasks?: unknown;
   staffAreas?: unknown;
   staffShifts?: unknown;

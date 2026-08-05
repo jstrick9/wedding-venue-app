@@ -997,6 +997,49 @@ export interface CoupleSession {
   expiresAt: string;
 }
 
+// ── Venue-controlled wayfinding, rain contingency & rules ──────────────────
+// The venue (not the couple) defines the full property map, its spaces/parking/entry
+// points, rain-contingency backups, and the venue rules/regulations. The couple's
+// guest portal surfaces the subset relevant to the couple (their selected spaces +
+// parking/entry + applicable rain-contingency spaces) and the venue rules.
+
+export type VenueMapPointKind = 'space' | 'parking' | 'entry' | 'amenity' | 'path';
+
+export interface VenueMapPoint {
+  id: string;
+  label: string;
+  description?: string;
+  /** SVG coordinates (0..width / 0..height). */
+  x: number;
+  y: number;
+  kind: VenueMapPointKind;
+  /** When kind === 'space', the venue id this point represents. */
+  venueId?: string;
+}
+
+export interface RainContingency {
+  id: string;
+  /** Outdoor venue id that needs a rain backup. */
+  outdoorVenueId: string;
+  /** Indoor venue id used as the backup. */
+  indoorVenueId: string;
+  note?: string;
+}
+
+/** The whole-property SVG map the venue builds. */
+export interface VenueMapConfig {
+  width: number;
+  height: number;
+  points: VenueMapPoint[];
+  rainContingencies: RainContingency[];
+  updatedAt: string;
+}
+
+export interface VenueRulesConfig {
+  rules: string[];
+  updatedAt: string;
+}
+
 /** A message in the venue↔couple chat thread for a couple event. */
 export interface CoupleMessage {
   id: string;

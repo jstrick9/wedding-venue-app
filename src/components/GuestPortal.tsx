@@ -60,6 +60,11 @@ import {
 } from '../services/couples/coupleRsvpService';
 import { findCoupleEventById } from '../services/couples/coupleService';
 import {
+  getVenueMapConfig,
+  getVenueRules,
+  coupleWayfindingPoints,
+} from '../services/wayfinding/venueWayfindingService';
+import {
   guestCanAccessLodging,
   guestCanAccessPortal,
   guestCanSubmitRSVP,
@@ -892,9 +897,17 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       );
     }
 
-    // B-09 fix: read wayfinding points from config.
-    const wayfindingPoints: PortalWayfindingPoint[] = config.wayfindingPoints ?? [];
-    const hasWayfindingPoints = wayfindingPoints.length > 0;
+    // Wayfinding is venue-controlled: use the venue's full property map, scoped to the
+    // couple's selected spaces (+ parking/entry + applicable rain-contingency backups).
+    const venueMap = getVenueMapConfig();
+    const coupleSelected = couple?.selectedSpaces || [];
+    const wayfindingPoints: PortalWayfindingPoint[] =
+      coupleWayfindingPoints(venueMap, coupleSelected).map((p) => ({
+        id: p.id,
+        label: p.label,
+        description: p.description,
+      }));
+    const hasWayfindingPoints = venueMap && venueMap.points.length > 0;
 
     if (!hasWayfindingPoints) {
       return (
@@ -913,8 +926,34 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     return (
       <div className="space-y-4 pb-24">
         <div className="bg-white rounded-xl shadow p-4 mt-4">
-          <div className="relative w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-500">
-            <span>Wayfinding map with pins and paths will appear here.</span>
+          <div className="relative w-full h-64 bg-teal-50 rounded-lg border border-teal-100 overflow-hidden">
+            <svg viewBox={`0 0 ${venueMap!.width} ${venueMap!.height}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+              {/* Paths */}
+              {venueMap!.points
+                .filter((p) => p.kind === 'path')
+                .map((p) => (
+                  <circle key={p.id} cx={p.x} cy={p.y} r={1.2} fill="#94a3b8" />
+                ))}
+              {/* Space/parking/entry points */}
+              {venueMap!.points
+                .filter((p) => p.kind !== 'path')
+                .map((p) => {
+                  const color =
+                    p.kind === 'space'
+                      ? '#0d9488'
+                      : p.kind === 'parking'
+                        ? '#6366f1'
+                        : p.kind === 'entry'
+                          ? '#16a34a'
+                          : '#f59e0b';
+                  return (
+                    <g key={p.id}>
+                      <circle cx={p.x} cy={p.y} r={4} fill={color} stroke="white" strokeWidth={1} />
+                      <text x={p.x + 5} y={p.y - 3} fontSize={5} fill="#374151">{p.label}</text>
+                    </g>
+                  );
+                })}
+            </svg>
           </div>
 
           <div className="mt-4 space-y-3">
@@ -962,6 +1001,18 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               <ul className="text-xs text-indigo-900 list-disc list-inside space-y-1">
                 {wayfindingResult.map((step, idx) => (
                   <li key={idx}>{step}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Venue rules & regulations */}
+          {getVenueRules().rules.length > 0 && (
+            <div className="bg-white rounded-xl shadow p-4 mt-4">
+              <p className="text-xs font-semibold text-gray-800 mb-2">📜 Venue Rules &amp; Regulations</p>
+              <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
+                {getVenueRules().rules.map((r, i) => (
+                  <li key={i}>{r}</li>
                 ))}
               </ul>
             </div>

@@ -45,8 +45,17 @@ so each booked couple gets their own space.
   portal from a **Portal Settings** tab — welcome message, RSVP message, RSVP deadline,
   access grace period, which tabs are visible, meal choices (add/remove), and schedule
   items. Settings persist per couple event (seeded from the venue config on first open).
-- 🚧 **Future ideas:** couple-side editing of wayfinding points / hero image; email
-  invitations for collaborators.
+- ✅ **Venue-controlled wayfinding + rules (delivered):** the venue builds a full-property
+  SVG map (spaces, parking, entries, amenities) in a **Wayfinding & Rules** admin section,
+  sets **rain-contingency** backups, and defines **venue rules/regulations**. The couple's
+  guest portal renders the map scoped to the couple's selected spaces (+ parking/entry +
+  applicable rain-contingency backup) and surfaces the venue rules. Couples do **not**
+  control wayfinding points.
+- ✅ **Email/mailto invites (delivered):** the couple can send **mailto:** invite emails
+  (pre-filled with the link) to collaborators and to each guest, plus copy-link fallback.
+  Upgrades to real transactional email when the Supabase send-email backend is configured.
+- 🚧 **Future ideas:** GPS positioning + weather tracking on the wayfinding map (needs
+  external providers/keys); real transactional email (needs live Supabase).
 
 ## Data model (see src/types.ts)
 - `CoupleEvent`: id, coupleName, inviteToken, status (invited/active/completed),

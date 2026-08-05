@@ -222,6 +222,13 @@ guest/attending counts. See docs/couples-platform/ROADMAP.md.
 message, RSVP message/deadline, access grace period, visible tabs, meal choices, and
 schedule items — persisted per couple event. See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Venue wayfinding, rules & email invites
+✅ Venue-controlled wayfinding: venue builds a full-property SVG map + rain-contingency
+backups + venue rules in a new Wayfinding & Rules admin section; the couple's guest
+portal renders the map scoped to their selected spaces and surfaces venue rules.
+✅ Email/mailto invites for collaborators and guests (mailto: pre-filled link + copy
+fallback; upgrades to real email when Supabase backend is live). See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

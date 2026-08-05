@@ -85,6 +85,7 @@ import { BrandingManagement } from './admin/BrandingManagement';
 import { AccessControlPanel } from './admin/AccessControlPanel';
 import { GuestPortalManagement } from './admin/GuestPortalManagement';
 import { CoupleManagement } from './admin/CoupleManagement';
+import { VenueWayfindingManagement } from './admin/VenueWayfindingManagement';
 import { BackupManagement } from './admin/BackupManagement';
 import { InviteMembers } from './admin/InviteMembers';
 import { uploadImage } from '../services/storage/imageStorage';
@@ -1042,6 +1043,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'People & Access' },
     { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'People & Access' },
     { id: 'couples', label: '💍 Couples & Events', icon: '💍', Component: CoupleManagement, props: { config, venues, user, isAdmin, onShowSuccess: showSuccess }, group: 'Couples & Events' },
+    { id: 'wayfinding', label: '🗺️ Wayfinding & Rules', icon: '🗺️', Component: VenueWayfindingManagement, props: { config, venues, onShowSuccess: showSuccess }, group: 'Couples & Events' },
     {
       id: 'guest-portal',
       label: '👰 Guest Portal',

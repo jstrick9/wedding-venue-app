@@ -17,6 +17,7 @@ import {
   getCoupleGuestsForBackup,
   getCouplePortalConfigsForBackup,
 } from '../services/couples/coupleGuestService';
+import { getVenueMapConfig, getVenueRules } from '../services/wayfinding/venueWayfindingService';
 import {
   getDecorArrangements,
   getDecorCategories,
@@ -375,6 +376,26 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     version: STORAGE_VERSIONS.COUPLE_PORTAL_CONFIGS,
     read: () => getCouplePortalConfigsForBackup(),
     write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_PORTAL_CONFIGS, STORAGE_VERSIONS.COUPLE_PORTAL_CONFIGS, v),
+  },
+  {
+    key: 'venueMapConfigs',
+    storageKey: STORAGE_KEYS.VENUE_MAP_CONFIGS,
+    label: 'Venue Wayfinding Map',
+    defaultValue: null,
+    recovery: true,
+    version: STORAGE_VERSIONS.VENUE_MAP_CONFIGS,
+    read: () => getVenueMapConfig(),
+    write: (v) => writeVersioned(STORAGE_KEYS.VENUE_MAP_CONFIGS, STORAGE_VERSIONS.VENUE_MAP_CONFIGS, v),
+  },
+  {
+    key: 'venueRules',
+    storageKey: STORAGE_KEYS.VENUE_RULES,
+    label: 'Venue Rules & Regulations',
+    defaultValue: { rules: [] },
+    recovery: true,
+    version: STORAGE_VERSIONS.VENUE_RULES,
+    read: () => getVenueRules(),
+    write: (v) => writeVersioned(STORAGE_KEYS.VENUE_RULES, STORAGE_VERSIONS.VENUE_RULES, v),
   },
   {
     key: 'rsvpSubmissions',

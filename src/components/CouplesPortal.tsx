@@ -257,6 +257,22 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     }
   };
 
+  // Build a mailto: link that pre-fills an invitation email with the invite URL.
+  const mailtoInvite = (email: string, name: string, url: string, subject: string) => {
+    const body = `Hi ${name},\n\nYou've been invited! Open this link to get started:\n\n${url}\n\n— ${event?.coupleName || 'Your event team'}`;
+    return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleEmailCollaborator = (email: string, name: string, token: string) => {
+    const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
+    window.location.href = mailtoInvite(email, name, url, `Join our wedding planning portal`);
+  };
+
+  const handleEmailGuest = (email: string, name: string, token: string) => {
+    const url = `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(token)}&couple=${encodeURIComponent(event?.id || '')}`;
+    window.location.href = mailtoInvite(email, name, url, `RSVP for ${event?.coupleName || 'our wedding'}`);
+  };
+
   const handleCopyInviteLink = (token: string) => {
     const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
     void navigator.clipboard?.writeText(url).then(
@@ -532,6 +548,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       >
                         Copy link
                       </button>
+                      {c.email && (
+                        <button
+                          type="button"
+                          onClick={() => handleEmailCollaborator(c.email, c.name, c.inviteToken)}
+                          className="text-xs text-indigo-600 hover:underline"
+                        >
+                          ✉️ Email invite
+                        </button>
+                      )}
                       {me.role === 'couple' && c.id !== me.id && (
                         <button
                           type="button"
@@ -752,6 +777,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 className="text-xs text-indigo-600 hover:underline"
                               >
                                 Copy link
+                              </button>
+                            )}
+                            {g.email && g.token && (
+                              <button
+                                type="button"
+                                onClick={() => handleEmailGuest(g.email!, g.name, g.token!)}
+                                className="text-xs text-indigo-600 hover:underline"
+                              >
+                                ✉️ Email invite
                               </button>
                             )}
                             <button

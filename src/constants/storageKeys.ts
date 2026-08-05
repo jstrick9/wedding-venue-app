@@ -47,6 +47,8 @@ export const STORAGE_KEYS = {
   COUPLE_MESSAGES: 'spm_couple_messages',
   COUPLE_GUESTS: 'spm_couple_guests',
   COUPLE_PORTAL_CONFIGS: 'spm_couple_portal_configs',
+  VENUE_MAP_CONFIGS: 'spm_venue_map_configs',
+  VENUE_RULES: 'spm_venue_rules',
 
   STAFF_TASKS: 'spm_staff_tasks',
   STAFF_AREAS: 'spm_staff_areas',
