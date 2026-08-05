@@ -18,6 +18,7 @@ import {
 } from '../../services/couples/coupleChatService';
 import { getCoupleGuests, getCouplePortalConfig, setCouplePortalConfig } from '../../services/couples/coupleGuestService';
 import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
+import { getCoupleGuestEvents, getAssignedGuestCount, GUEST_EVENT_KIND_LABELS } from '../../services/couples/coupleGuestEventService';
 import { getGuestPortalConfig } from '../../utils/guestPortal';
 import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeCoupleSetupTask } from '../../services/couples/coupleSetupService';
 import { getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
@@ -64,6 +65,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [openGuests, setOpenGuests] = useState<string | null>(null);
   const [openSetup, setOpenSetup] = useState<string | null>(null);
   const [openPkg, setOpenPkg] = useState<string | null>(null);
+  const [openItin, setOpenItin] = useState<string | null>(null);
   const [setupDrafts, setSetupDrafts] = useState<Record<string, { title: string; spaceId: string; dayIndex: string; assignee: string; scheduledFor: string; notes: string }>>({});
   const [setupTick, setSetupTick] = useState(0);
   const [chatDrafts, setChatDrafts] = useState<Record<string, string>>({});
@@ -595,6 +597,16 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                         const done = st.filter((t) => t.status === 'done').length;
                         return <span className="text-sky-700 bg-sky-50 rounded-full px-2 py-0.5">🛠️ {done}/{st.length} setup</span>;
                       })()}
+                      {(() => {
+                        // Overnight-guest count from the lodging guest event, vs package capacity.
+                        const pkg = findWeddingPackage(ev.packageId);
+                        const lodgingEvent = getCoupleGuestEvents(ev.id).find((e) => e.kind === 'lodging');
+                        if (!lodgingEvent) return null;
+                        const assigned = getAssignedGuestCount(ev.id, lodgingEvent.id);
+                        const cap = pkg?.maxOvernightGuests || lodgingEvent.capacity;
+                        const cls = assigned > cap ? 'text-red-700 bg-red-50' : 'text-indigo-700 bg-indigo-50';
+                        return <span className={`rounded-full px-2 py-0.5 ${cls}`}>🛏️ {assigned}/{cap} overnight</span>;
+                      })()}
                       <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
                       <span>👥 {ev.collaborators.length} people</span>
                       {(() => {
@@ -653,6 +665,13 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       className="text-xs text-gray-600 hover:underline"
                     >
                       🛠️ Setup & Staffing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOpenItin(openItin === ev.id ? null : ev.id)}
+                      className="text-xs text-gray-600 hover:underline"
+                    >
+                      🗓️ Itinerary
                     </button>
                     <button
                       type="button"
@@ -937,6 +956,54 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                               </div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {openItin === ev.id && (() => {
+                  const events = getCoupleGuestEvents(ev.id);
+                  const guests = getCoupleGuests(ev.id);
+                  const rsvps = getCoupleRsvpSubmissions(ev.id);
+                  const attending = rsvps.filter((r) => r.attending);
+                  return (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="text-xs font-medium text-gray-500 mb-2">Guest events &amp; itinerary</div>
+                      {events.length === 0 ? (
+                        <p className="text-xs text-gray-400">No guest events yet (they derive from the assigned package + add-ons).</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {events.map((ge) => {
+                            const assigned = getAssignedGuestCount(ev.id, ge.id);
+                            const attendCount = attending.filter((r) => (r.attendingEvents || []).includes(ge.id)).length;
+                            const over = assigned > ge.capacity;
+                            const invitedNames = guests
+                              .filter((g) => (g.guestEventIds || []).includes(ge.id))
+                              .map((g) => g.name);
+                            return (
+                              <div key={ge.id} className="rounded-lg border border-gray-200 p-3">
+                                <div className="flex items-center justify-between gap-3 flex-wrap">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-medium text-gray-800">{ge.title}</span>
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{GUEST_EVENT_KIND_LABELS[ge.kind]}</span>
+                                  </div>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${over ? 'bg-red-100 text-red-700' : 'bg-indigo-50 text-indigo-700'}`}>
+                                    {assigned} invited · {attendCount} attending / {ge.capacity} cap
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {ge.dayIndex != null && ev.days?.[ge.dayIndex] ? `Day ${ge.dayIndex + 1} (${ev.days[ge.dayIndex].date})` : 'All days'}
+                                  {ge.startTime ? ` · ${new Date(ge.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                </div>
+                                {invitedNames.length > 0 && (
+                                  <div className="mt-1 text-xs text-gray-500 truncate" title={invitedNames.join(', ')}>
+                                    Invited: {invitedNames.join(', ')}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
