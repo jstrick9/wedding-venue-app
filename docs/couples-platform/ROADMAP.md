@@ -98,6 +98,17 @@ so each booked couple gets their own space.
   attending guests (for catering planning), using the couple's configured meal options.
 - ✅ **Venue shares collaborator invites (delivered):** the venue admin can copy a
   collaborator's invite link for any couple.
+- ✅ **Couple's own prep checklist (delivered):** the couple/planner builds their own
+  checklist (title, phase, due date, done toggle) in the Couples Portal, separate from
+  the venue's plan, typically derived from their approved layouts and chosen decor.
+- ✅ **Couple vendors (delivered):** the couple picks from the venue's preferred vendor
+  list (read-only one-tap adds) or adds their own custom vendors, and tracks
+  requested/contacted/booked/declined status. Choosing a vendor is the couple's own.
+- ✅ **Venue per-couple setup & staffing (delivered):** the venue keeps a separate
+  setup/staffing plan per couple event — what needs doing (moving tables/chairs, decor
+  install), which space/day, assigned staff, and a due time — driven by the couple's
+  selected spaces and multi-day span. This lets the venue schedule setup before each
+  event/space and separate its own prep from the couple's checklist.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 
@@ -106,11 +117,18 @@ so each booked couple gets their own space.
   eventDate(s), guestCount, availableSpaces (venue ids), selectedSpaces, collaborators.
 - `CoupleCollaborator`: id, name, email, role (couple/planner/family/vendor), inviteToken.
 - `CoupleSession`: eventId + collaboratorId + role, persisted with a 30-day TTL.
+- `CoupleChecklistItem`: the couple's own prep checklist item (title, phase, dueDate, done).
+- `CoupleVendor`: a vendor on the couple's list (source: preferred pick or custom).
+- `CoupleSetupTask`: the venue's per-couple setup/staffing task (space, day, assignee,
+  scheduledFor, status).
 
 ## Services
 - `src/services/couples/coupleService.ts` — CRUD, token resolution, session mgmt,
   URL-token extraction.
-- Storage keys: `spm_couple_events`, `spm_couple_session`.
+- `src/services/couples/coupleChecklistService.ts`, `coupleVendorService.ts`,
+  `coupleSetupService.ts` — the couple checklist, couple vendors, and venue setup tasks.
+- Storage keys: `spm_couple_events`, `spm_couple_session`, `spm_couple_checklists`,
+  `spm_couple_vendors`, `spm_couple_setup_tasks`.
 
 ## Screens
 - Admin → **Couples & Events** (`src/components/admin/CoupleManagement.tsx`).
