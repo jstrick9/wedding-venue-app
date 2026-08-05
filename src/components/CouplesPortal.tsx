@@ -344,6 +344,10 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       setInviteError("That email address isn't valid.");
       return;
     }
+    if (event.collaborators.some((c) => c.email.trim().toLowerCase() === inviteForm.email.trim().toLowerCase())) {
+      setInviteError('That email is already invited to this portal.');
+      return;
+    }
     const collab = addCoupleCollaborator(event.id, {
       name: inviteForm.name.trim(),
       email: inviteForm.email.trim(),
@@ -353,6 +357,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       setInviteForm({ name: '', email: '', role: 'planner' });
       setInviteError('');
       refresh();
+    } else {
+      setInviteError('Could not invite — the email may already be on this portal.');
     }
   };
 

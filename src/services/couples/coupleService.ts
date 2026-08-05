@@ -246,6 +246,11 @@ export function addCoupleCollaborator(
 ): CoupleCollaborator | null {
   const event = findCoupleEventById(eventId);
   if (!event) return null;
+  // Prevent inviting the same email twice (e.g. planner already invited).
+  const dup = event.collaborators.some(
+    (c) => c.email.trim().toLowerCase() === input.email.trim().toLowerCase(),
+  );
+  if (dup) return null;
   const collaborator: CoupleCollaborator = {
     id: `col-${Date.now()}`,
     name: input.name.trim(),
