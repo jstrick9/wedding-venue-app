@@ -1643,6 +1643,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     >
                       <div className={`text-[10px] font-semibold ${m.senderSide === 'couple' ? 'text-indigo-200' : 'text-gray-400'}`}>
                         {m.senderName} · {m.senderSide === 'venue' ? 'Venue' : 'Couple'}
+                        {m.createdAt && <span className="font-normal"> · {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                       </div>
                       <div>{m.message}</div>
                     </div>

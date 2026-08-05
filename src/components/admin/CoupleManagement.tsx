@@ -241,6 +241,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
               >
                 <div className={`text-[10px] font-semibold ${m.senderSide === 'venue' ? 'text-rose-100' : 'text-gray-400'}`}>
                   {m.senderName} · {m.senderSide === 'venue' ? 'Venue' : 'Couple'}
+                  {m.createdAt && <span className="font-normal"> · {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                 </div>
                 <div>{m.message}</div>
               </div>
