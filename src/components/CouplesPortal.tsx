@@ -1115,7 +1115,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   type="button"
                   onClick={() => {
                     if (!event) return;
-                    exportCoupleGuestsCsv(event.id);
+                    exportCoupleGuestsCsv(event.id, coupleRsvps);
                     showToast('Guest list exported as CSV.', 'success');
                   }}
                   className="ml-3 text-xs text-indigo-600 hover:underline"

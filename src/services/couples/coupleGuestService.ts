@@ -100,11 +100,26 @@ export function removeCoupleGuest(coupleEventId: string, guestId: string): void 
 }
 
 /** Download the couple's guest list as a CSV (name,email,phone). */
-export function exportCoupleGuestsCsv(coupleEventId: string): void {
+export function exportCoupleGuestsCsv(
+  coupleEventId: string,
+  rsvps?: { guestId: string; attending: boolean; mealChoice?: string; plusOneName?: string; dietaryNotes?: string }[],
+): void {
   const guests = getCoupleGuests(coupleEventId);
+  const byId = new Map((rsvps || []).map((r) => [r.guestId, r]));
   const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const header = ['Name', 'Email', 'Phone'];
-  const rows = guests.map((g) => [g.name, g.email || '', g.phone || ''].map(esc).join(','));
+  const header = ['Name', 'Email', 'Phone', 'RSVP', 'Meal', 'Plus One', 'Dietary Notes'];
+  const rows = guests.map((g) => {
+    const r = byId.get(g.id);
+    return [
+      g.name,
+      g.email || '',
+      g.phone || '',
+      r ? (r.attending ? 'Attending' : 'Not attending') : 'No response',
+      r?.mealChoice || '',
+      r?.plusOneName || '',
+      r?.dietaryNotes || '',
+    ].map(esc).join(',');
+  });
   const csv = [header.join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
