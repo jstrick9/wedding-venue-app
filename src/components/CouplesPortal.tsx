@@ -40,7 +40,7 @@ import { getGuestPortalConfig } from '../utils/guestPortal';
 import { parseGuestCsv } from '../utils/guestCsv';
 import { getCoupleRsvpSubmissions, removeCoupleRsvp } from '../services/couples/coupleRsvpService';
 import { getVenues } from '../hooks/useLayoutState';
-import { getVenueMapConfig, findRainContingency } from '../services/wayfinding/venueWayfindingService';
+import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
 import { getConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
@@ -969,6 +969,18 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   )}
                 </div>
               </div>
+
+              {/* Venue rules to keep in mind when designing */}
+              {getVenueRules().rules.length > 0 && (
+                <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                  <h3 className="font-semibold text-sm mb-2">📜 Venue rules to keep in mind</h3>
+                  <ul className="space-y-1 text-xs text-gray-600 list-disc list-inside">
+                    {getVenueRules().rules.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
