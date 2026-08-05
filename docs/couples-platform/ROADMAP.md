@@ -84,6 +84,8 @@ so each booked couple gets their own space.
   shows the same breakdown per couple.
 - ✅ **Venue guest viewer (delivered):** the venue can expand a couple to view their guest
   list with RSVP status inline.
+- ✅ **Guest RSVP detail (delivered):** the couple can expand a guest's RSVP to see meal
+  choice, plus-one, dietary notes, and attending days.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 

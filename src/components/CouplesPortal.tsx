@@ -171,6 +171,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     [event, guestTick],
   );
   const [guestForm, setGuestForm] = useState({ name: '', email: '', phone: '' });
+  const [expandedGuestRsvp, setExpandedGuestRsvp] = useState<string | null>(null);
   const [guestError, setGuestError] = useState('');
 
   const handleAddGuest = () => {
@@ -895,21 +896,25 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     {coupleGuests.map((g) => {
                       const rsvp = coupleRsvps.find((r) => r.guestId === g.id);
                       return (
-                        <div key={g.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
-                          <div className="min-w-0">
-                            <div className="font-medium text-sm text-gray-800 truncate">{g.name}</div>
-                            <div className="text-xs text-gray-500 truncate">
-                              {g.email || '—'} {g.phone ? `• ${g.phone}` : ''}
+                        <div key={g.id} className="rounded-lg border border-gray-200 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm text-gray-800 truncate">{g.name}</div>
+                              <div className="text-xs text-gray-500 truncate">
+                                {g.email || '—'} {g.phone ? `• ${g.phone}` : ''}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full ${
-                                rsvp ? (rsvp.attending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-500'
-                              }`}
-                            >
-                              {rsvp ? (rsvp.attending ? 'Attending' : 'Not attending') : 'No RSVP'}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedGuestRsvp(expandedGuestRsvp === g.id ? null : g.id)}
+                                className={`text-xs px-2 py-0.5 rounded-full ${
+                                  rsvp ? (rsvp.attending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-500'
+                                }`}
+                                aria-label={`RSVP details for ${g.name}`}
+                              >
+                                {rsvp ? (rsvp.attending ? 'Attending' : 'Not attending') : 'No RSVP'}
+                              </button>
                             {g.token && (
                               <button
                                 type="button"
@@ -939,7 +944,19 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             >
                               Remove
                             </button>
+                            </div>
                           </div>
+                          {expandedGuestRsvp === g.id && rsvp && (
+                            <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-600 space-y-1">
+                              {rsvp.mealChoice && <p>🍽️ Meal: {(portalConfig?.mealOptions && portalConfig.mealOptions.find((o) => o.value === rsvp.mealChoice)?.label) || rsvp.mealChoice}</p>}
+                              {rsvp.plusOneName && <p>➕ Plus one: {rsvp.plusOneName}</p>}
+                              {rsvp.dietaryNotes && <p>🥗 Dietary: {rsvp.dietaryNotes}</p>}
+                              {rsvp.attendingDays && rsvp.attendingDays.length > 0 && <p>📅 Days: {rsvp.attendingDays.join(', ')}</p>}
+                              {!rsvp.mealChoice && !rsvp.plusOneName && !rsvp.dietaryNotes && (
+                                <p className="text-gray-400">No meal/dietary details provided.</p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
