@@ -225,9 +225,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [guestError, setGuestError] = useState('');
   const [editingGuest, setEditingGuest] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
 
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
   const handleAddGuest = () => {
     if (!event || !guestForm.name.trim()) {
       setGuestError('Please enter the guest’s name.');
+      return;
+    }
+    if (guestForm.email.trim() && !isValidEmail(guestForm.email)) {
+      setGuestError("That email address isn't valid.");
       return;
     }
     addCoupleGuest(event.id, {
@@ -244,6 +250,10 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     if (!event || !editingGuest) return;
     if (!editingGuest.name.trim()) {
       showToast('Please enter the guest’s name.', 'warning');
+      return;
+    }
+    if (editingGuest.email.trim() && !isValidEmail(editingGuest.email)) {
+      showToast("That email address isn't valid.", 'warning');
       return;
     }
     updateCoupleGuest(event.id, editingGuest.id, {
@@ -311,6 +321,10 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const handleInvite = () => {
     if (!event || !inviteForm.name.trim() || !inviteForm.email.trim()) {
       setInviteError('Please provide a name and email.');
+      return;
+    }
+    if (!isValidEmail(inviteForm.email)) {
+      setInviteError("That email address isn't valid.");
       return;
     }
     const collab = addCoupleCollaborator(event.id, {
