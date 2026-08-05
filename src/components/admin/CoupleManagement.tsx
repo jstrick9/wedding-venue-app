@@ -14,6 +14,7 @@ import {
   getCoupleMessages,
   sendCoupleMessage,
   getUnreadCoupleMessageCounts,
+  markCoupleChatRead,
 } from '../../services/couples/coupleChatService';
 import { getCoupleGuests, getCouplePortalConfig, setCouplePortalConfig } from '../../services/couples/coupleGuestService';
 import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
@@ -60,10 +61,16 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [chatTick, setChatTick] = useState(0);
 
   // Refresh the chat pane while open so new couple messages appear without the venue
-  // having to reload or send.
+  // having to reload or send. Opening the pane marks the venue side as "read"
+  // (clears the unread badge) and keeps it clear while the pane stays open.
   useEffect(() => {
     if (!openChat) return;
-    const id = setInterval(() => setChatTick((t) => t + 1), 5000);
+    const mark = () => {
+      markCoupleChatRead(openChat, 'venue');
+      setChatTick((t) => t + 1);
+    };
+    mark();
+    const id = setInterval(mark, 5000);
     return () => clearInterval(id);
   }, [openChat]);
   // Optional review comment per couple event in the approval queue.

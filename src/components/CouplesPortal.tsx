@@ -24,7 +24,7 @@ import {
   setSpaceLayout,
 } from '../services/couples/coupleService';
 import { getCoupleAnswers, saveCoupleAnswers } from '../services/couples/coupleAnswersService';
-import { getCoupleMessages, sendCoupleMessage } from '../services/couples/coupleChatService';
+import { getCoupleMessages, sendCoupleMessage, markCoupleChatRead, getUnreadCoupleMessageCounts } from '../services/couples/coupleChatService';
 import {
   getCoupleGuests,
   addCoupleGuest,
@@ -153,12 +153,23 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [event, msgTick],
   );
+  // Unread venue→couple messages shown as a badge on the Chat tab.
+  const unreadVenueChat = useMemo(
+    () => (event ? (getUnreadCoupleMessageCounts([event.id], 'couple')[event.id] || 0) : 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [event, msgTick],
+  );
 
   // Refresh the chat periodically (and when the tab is opened) so the couple sees new
-  // venue messages without having to send one themselves.
+  // venue messages without having to send one themselves. While the Chat tab is open
+  // the couple side is marked as "read" so the venue's unread badge stays accurate.
   useEffect(() => {
+    if (activeTab === 'chat' && event) markCoupleChatRead(event.id, 'couple');
     setMsgTick((t) => t + 1);
-    const id = setInterval(() => setMsgTick((t) => t + 1), 5000);
+    const id = setInterval(() => {
+      if (activeTab === 'chat' && event) markCoupleChatRead(event.id, 'couple');
+      setMsgTick((t) => t + 1);
+    }, 5000);
     return () => clearInterval(id);
   }, [activeTab === 'chat', event?.id]);
 
@@ -448,6 +459,11 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
               }`}
             >
               <span className="mr-1">{t.icon}</span> {t.label}
+              {t.id === 'chat' && !event ? null : t.id === 'chat' && unreadVenueChat > 0 ? (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px]">
+                  {unreadVenueChat}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>

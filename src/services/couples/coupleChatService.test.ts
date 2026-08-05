@@ -4,6 +4,7 @@ import {
   getCoupleMessages,
   getUnreadCoupleMessageCounts,
   getCoupleMessagesForBackup,
+  markCoupleChatRead,
 } from './coupleChatService';
 
 describe('coupleChatService', () => {
@@ -32,6 +33,30 @@ describe('coupleChatService', () => {
     const counts = getUnreadCoupleMessageCounts(['e1', 'e2']);
     expect(counts.e1).toBe(1); // only the couple message
     expect(counts.e2).toBe(1);
+  });
+
+  it('clears the venue unread badge once the venue marks the thread read', async () => {
+    sendCoupleMessage({ coupleEventId: 'e1', senderId: 'u1', senderName: 'A', senderSide: 'couple', message: 'hi' });
+    expect(getUnreadCoupleMessageCounts(['e1']).e1).toBe(1);
+
+    markCoupleChatRead('e1', 'venue');
+    expect(getUnreadCoupleMessageCounts(['e1']).e1).toBe(0);
+
+    // A new couple message bumps it again (delay so its timestamp is strictly later).
+    await new Promise((r) => setTimeout(r, 5));
+    sendCoupleMessage({ coupleEventId: 'e1', senderId: 'u1', senderName: 'A', senderSide: 'couple', message: 'again' });
+    expect(getUnreadCoupleMessageCounts(['e1']).e1).toBe(1);
+  });
+
+  it('tracks couple-side unread venue messages independently', () => {
+    sendCoupleMessage({ coupleEventId: 'e1', senderId: 'venue', senderName: 'V', senderSide: 'venue', message: 'hey' });
+    sendCoupleMessage({ coupleEventId: 'e1', senderId: 'u1', senderName: 'A', senderSide: 'couple', message: 'hi' });
+    // Couple's unread = venue messages only.
+    expect(getUnreadCoupleMessageCounts(['e1'], 'couple').e1).toBe(1);
+    // Venue's unread = couple messages only; unaffected by couple marking read.
+    markCoupleChatRead('e1', 'couple');
+    expect(getUnreadCoupleMessageCounts(['e1'], 'venue').e1).toBe(1);
+    expect(getUnreadCoupleMessageCounts(['e1'], 'couple').e1).toBe(0);
   });
 
   it('exposes all messages for backup', () => {
