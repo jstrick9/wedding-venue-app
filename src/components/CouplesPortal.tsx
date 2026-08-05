@@ -214,6 +214,12 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
   // ── Guests management ────────────────────────────────────────────────────
   const [guestTick, setGuestTick] = useState(0);
+  // Poll so the couple sees new guest RSVPs (submitted from another device)
+  // without reloading the page.
+  useEffect(() => {
+    const id = setInterval(() => setGuestTick((t) => t + 1), 10000);
+    return () => clearInterval(id);
+  }, []);
   const coupleGuests = useMemo(
     () => (event ? getCoupleGuests(event.id) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
