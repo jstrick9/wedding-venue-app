@@ -30,6 +30,8 @@ interface EventQuestionsWizardProps {
   onVenueFilterChange: (categories: string[]) => void;
   /** Called when the user completes the last group. */
   onComplete?: () => void;
+  /** When true, answers are displayed but not editable (view-only role). */
+  readOnly?: boolean;
 }
 
 export function EventQuestionsWizard({
@@ -40,6 +42,7 @@ export function EventQuestionsWizard({
   onSaveAnswers,
   onVenueFilterChange,
   onComplete,
+  readOnly = false,
 }: EventQuestionsWizardProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [showAllLayouts, setShowAllLayouts] = useState(true);
@@ -175,6 +178,7 @@ export function EventQuestionsWizard({
             <input
               type="checkbox"
               checked={showAllLayouts}
+              disabled={readOnly}
               onChange={(e) => {
                 const checked = e.target.checked;
                 setShowAllLayouts(checked);
@@ -192,7 +196,8 @@ export function EventQuestionsWizard({
               key={group}
               type="button"
               onClick={() => setActiveStep(idx)}
-              className={`rounded-lg border px-3 py-2 text-left text-sm ${activeStep === idx ? 'border-[#4A1942] bg-[#4A1942] text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+              disabled={readOnly}
+              className={`rounded-lg border px-3 py-2 text-left text-sm ${readOnly ? 'cursor-default' : ''} ${activeStep === idx ? 'border-[#4A1942] bg-[#4A1942] text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
             >
               <div className="text-xs opacity-80">Step {idx + 1}</div>
               <div className="font-medium">{group}</div>
@@ -220,8 +225,9 @@ export function EventQuestionsWizard({
                 <input
                   type="text"
                   value={typeof answers[q.id] === 'string' ? (answers[q.id] as string) : ''}
+                  disabled={readOnly}
                   onChange={(e) => updateAnswer(q, e.target.value)}
-                  className={`w-full rounded-md border px-3 py-2 text-sm ${errors[q.id] ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2 text-sm ${readOnly ? 'bg-gray-50 text-gray-600' : ''} ${errors[q.id] ? 'border-red-400' : 'border-gray-300'}`}
                 />
               )}
 
@@ -229,16 +235,18 @@ export function EventQuestionsWizard({
                 <input
                   type="number"
                   value={answers[q.id] !== undefined ? String(answers[q.id]) : ''}
+                  disabled={readOnly}
                   onChange={(e) => updateAnswer(q, e.target.value === '' ? '' : Number(e.target.value))}
-                  className={`w-full rounded-md border px-3 py-2 text-sm ${errors[q.id] ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2 text-sm ${readOnly ? 'bg-gray-50 text-gray-600' : ''} ${errors[q.id] ? 'border-red-400' : 'border-gray-300'}`}
                 />
               )}
 
               {q.answerType === 'dropdown' && (
                 <select
                   value={typeof answers[q.id] === 'string' ? (answers[q.id] as string) : ''}
+                  disabled={readOnly}
                   onChange={(e) => updateAnswer(q, e.target.value)}
-                  className={`w-full rounded-md border px-3 py-2 text-sm ${errors[q.id] ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2 text-sm ${readOnly ? 'bg-gray-50 text-gray-600' : ''} ${errors[q.id] ? 'border-red-400' : 'border-gray-300'}`}
                 >
                   <option value="">Select an option</option>
                   {(q.options || []).map((opt) => (
@@ -252,31 +260,35 @@ export function EventQuestionsWizard({
           ))
         )}
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveStep((s) => Math.max(0, s - 1))}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700"
-            disabled={activeStep === 0}
-          >
-            Back
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (!validateCurrentStep()) return;
-              saveAnswers();
-              if (activeStep >= GROUPS.length - 1) {
-                onComplete?.();
-              } else {
-                setActiveStep((s) => s + 1);
-              }
-            }}
-            className="rounded-md bg-[#4A1942] px-4 py-2 text-sm font-medium text-white hover:bg-[#3b1435]"
-          >
-            {activeStep >= GROUPS.length - 1 ? 'Save & Finish' : 'Save & Continue'}
-          </button>
-        </div>
+        {readOnly ? (
+          <p className="text-xs text-gray-500 italic">View-only — your role cannot edit these answers.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveStep((s) => Math.max(0, s - 1))}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700"
+              disabled={activeStep === 0}
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!validateCurrentStep()) return;
+                saveAnswers();
+                if (activeStep >= GROUPS.length - 1) {
+                  onComplete?.();
+                } else {
+                  setActiveStep((s) => s + 1);
+                }
+              }}
+              className="rounded-md bg-[#4A1942] px-4 py-2 text-sm font-medium text-white hover:bg-[#3b1435]"
+            >
+              {activeStep >= GROUPS.length - 1 ? 'Save & Finish' : 'Save & Continue'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

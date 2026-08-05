@@ -76,6 +76,18 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     [event, session],
   );
 
+  // ── Tiered collaborator permissions ─────────────────────────────────────────
+  // couple: full control. planner: design/spaces/guests/questions but not portal
+  // branding or collaborators. family: can help answer questions + view + chat.
+  // vendor: view + chat only.
+  const myRole: CoupleCollaboratorRole = me?.role || 'couple';
+  const canEditSpaces = myRole === 'couple' || myRole === 'planner';
+  const canEditDesign = myRole === 'couple' || myRole === 'planner';
+  const canManageGuests = myRole === 'couple' || myRole === 'planner';
+  const canAnswerQuestions = myRole !== 'vendor';
+  const canManagePortal = myRole === 'couple';
+  const canManageCollaborators = myRole === 'couple';
+
   // Token-based entry: if we have a token and no session, resolve it and sign in.
   useEffect(() => {
     if (session) return;
@@ -528,6 +540,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 Pick which venue spaces you'd like to use for your event (ceremony,
                 reception, cocktail hour, and more).
               </p>
+              {!canEditSpaces && (
+                <p className="text-xs text-gray-500 italic">View-only — your role cannot change the selected spaces.</p>
+              )}
               {eligibleSpaces.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center text-gray-500">
                   <div className="text-3xl mb-2">🏛️</div>
@@ -544,6 +559,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       <button
                         key={space.id}
                         type="button"
+                        disabled={!canEditSpaces}
                         onClick={() => {
                           const next = selected
                             ? event.selectedSpaces.filter((s) => s !== space.id)
@@ -552,9 +568,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           refresh();
                         }}
                         className={`text-left rounded-xl border p-4 transition-all ${
-                          selected
-                            ? 'border-indigo-500 bg-indigo-50 shadow-sm'
-                            : 'border-gray-200 bg-white hover:border-indigo-300'
+                          canEditSpaces
+                            ? selected
+                              ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                              : 'border-gray-200 bg-white hover:border-indigo-300'
+                            : selected
+                              ? 'border-indigo-300 bg-indigo-50'
+                              : 'border-gray-200 bg-gray-50 cursor-default'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -588,7 +608,11 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 Invite your planner, parents, or vendors into your portal so they can help
                 plan and approve layouts.
               </p>
+              {!canManageCollaborators && (
+                <p className="text-xs text-gray-500 italic">View-only — only the couple can invite or remove people.</p>
+              )}
 
+              {canManageCollaborators && (
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
                 <h3 className="font-semibold text-sm mb-3">Invite someone</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -630,6 +654,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   ➕ Send invite
                 </button>
               </div>
+              )}
 
               <div className="space-y-2">
                 {event.collaborators.map((c: CoupleCollaborator) => (
@@ -645,14 +670,16 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleCopyInviteLink(c.inviteToken)}
-                        className="text-xs text-indigo-600 hover:underline"
-                      >
-                        Copy link
-                      </button>
-                      {c.email && (
+                      {canManageCollaborators && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyInviteLink(c.inviteToken)}
+                          className="text-xs text-indigo-600 hover:underline"
+                        >
+                          Copy link
+                        </button>
+                      )}
+                      {canManageCollaborators && c.email && (
                         <button
                           type="button"
                           onClick={() => handleEmailCollaborator(c.email, c.name, c.inviteToken)}
@@ -661,7 +688,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           ✉️ Email invite
                         </button>
                       )}
-                      {me.role === 'couple' && c.id !== me.id && (
+                      {canManageCollaborators && c.id !== me.id && (
                         <button
                           type="button"
                           onClick={() => {
@@ -703,6 +730,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   initialAnswers={coupleAnswers}
                   userId={me?.id || 'couple'}
                   eventId={event.id}
+                  readOnly={!canAnswerQuestions}
                   onSaveAnswers={handleSaveAnswers}
                   onVenueFilterChange={() => {}}
                   onComplete={() => refresh()}
@@ -719,6 +747,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   Design each of your selected spaces in the layout planner, then submit for
                   the venue's approval. The venue reviews your layouts in their work queue.
                 </p>
+                {!canEditDesign && (
+                  <p className="text-xs text-gray-500 italic mb-3">View-only — your role cannot edit or submit layouts.</p>
+                )}
                 <div className="flex items-center gap-3">
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${
@@ -774,7 +805,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     refresh();
                   }}
                   className="mt-3 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-                  disabled={event.layoutStatus === 'pending'}
+                  disabled={event.layoutStatus === 'pending' || !canEditDesign}
                 >
                   {event.layoutStatus === 'pending' ? 'Submitted…' : 'Submit layouts for approval'}
                 </button>
@@ -802,13 +833,14 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             </span>
                             <select
                               value={sl?.status || 'draft'}
+                              disabled={!canEditDesign}
                               onChange={(e) => {
                                 setSpaceLayout(event.id, spaceId, {
                                   status: e.target.value as 'draft' | 'designed' | 'submitted',
                                 });
                                 refresh();
                               }}
-                              className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white"
+                              className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white disabled:bg-gray-50"
                               aria-label={`Design status for ${venue?.name || spaceId}`}
                             >
                               <option value="draft">Draft</option>
@@ -819,12 +851,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           <input
                             type="text"
                             value={sl?.notes || ''}
+                            disabled={!canEditDesign}
                             onChange={(e) => {
                               setSpaceLayout(event.id, spaceId, { notes: e.target.value });
                               refresh();
                             }}
                             placeholder="Notes for the venue (capacity, layout, requests…)"
-                            className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-50"
                             aria-label={`Notes for ${venue?.name || spaceId}`}
                           />
                         </div>
@@ -899,55 +932,62 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   Add guests, send each one their own invite link to your guest portal, and
                   see who has RSVP'd.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Guest name"
-                    value={guestForm.name}
-                    onChange={(e) => setGuestForm({ ...guestForm, name: e.target.value })}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    aria-label="Guest name"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={guestForm.email}
-                    onChange={(e) => setGuestForm({ ...guestForm, email: e.target.value })}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    aria-label="Guest email"
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Phone"
-                    value={guestForm.phone}
-                    onChange={(e) => setGuestForm({ ...guestForm, phone: e.target.value })}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    aria-label="Guest phone"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddGuest}
-                    className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
-                  >
-                    ➕ Add guest
-                  </button>
-                </div>
-                {guestError && <p className="text-xs text-red-600 mt-2">{guestError}</p>}
-                <label className="mt-3 inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-                  <input
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => handleImportGuests(String(reader.result || ''));
-                      reader.readAsText(file);
-                    }}
-                  />
-                  📥 Import guests (CSV: name,email,phone)
-                </label>
+                {!canManageGuests && (
+                  <p className="text-xs text-gray-500 italic mb-3">View-only — your role cannot add, edit, or remove guests.</p>
+                )}
+                {canManageGuests && (
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Guest name"
+                      value={guestForm.name}
+                      onChange={(e) => setGuestForm({ ...guestForm, name: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Guest name"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={guestForm.email}
+                      onChange={(e) => setGuestForm({ ...guestForm, email: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Guest email"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Phone"
+                      value={guestForm.phone}
+                      onChange={(e) => setGuestForm({ ...guestForm, phone: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      aria-label="Guest phone"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddGuest}
+                      className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                    >
+                      ➕ Add guest
+                    </button>
+                  </div>
+                )}
+                {guestError && canManageGuests && <p className="text-xs text-red-600 mt-2">{guestError}</p>}
+                {canManageGuests && (
+                  <label className="mt-3 inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => handleImportGuests(String(reader.result || ''));
+                        reader.readAsText(file);
+                      }}
+                    />
+                    📥 Import guests (CSV: name,email,phone)
+                  </label>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -993,7 +1033,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               >
                                 {rsvp ? (rsvp.attending ? 'Attending' : 'Not attending') : 'No RSVP'}
                               </button>
-                            {g.token && (
+                            {canManageGuests && g.token && (
                               <button
                                 type="button"
                                 onClick={() => handleCopyGuestLink(g.token!)}
@@ -1002,7 +1042,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 Copy link
                               </button>
                             )}
-                            {g.email && g.token && (
+                            {canManageGuests && g.email && g.token && (
                               <button
                                 type="button"
                                 onClick={() => handleEmailGuest(g.email!, g.name, g.token!)}
@@ -1011,25 +1051,29 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 ✉️ Email invite
                               </button>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => setEditingGuest({ id: g.id, name: g.name, email: g.email || '', phone: g.phone || '' })}
-                              className="text-xs text-gray-500 hover:underline"
-                            >
-                              ✏️ Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                removeCoupleGuest(event!.id, g.id);
-                                removeCoupleRsvp(event!.id, g.id);
-                                setGuestTick((t) => t + 1);
-                              }}
-                              className="text-xs text-red-500 hover:underline"
-                              aria-label={`Remove ${g.name}`}
-                            >
-                              Remove
-                            </button>
+                            {canManageGuests && (
+                              <button
+                                type="button"
+                                onClick={() => setEditingGuest({ id: g.id, name: g.name, email: g.email || '', phone: g.phone || '' })}
+                                className="text-xs text-gray-500 hover:underline"
+                              >
+                                ✏️ Edit
+                              </button>
+                            )}
+                            {canManageGuests && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  removeCoupleGuest(event!.id, g.id);
+                                  removeCoupleRsvp(event!.id, g.id);
+                                  setGuestTick((t) => t + 1);
+                                }}
+                                className="text-xs text-red-500 hover:underline"
+                                aria-label={`Remove ${g.name}`}
+                              >
+                                Remove
+                              </button>
+                            )}
                             </div>
                           </div>
                           {editingGuest && editingGuest.id === g.id && (
@@ -1112,8 +1156,37 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   your day.
                 </p>
 
+                {!canManagePortal && (
+                  <p className="text-xs text-gray-500 italic mb-3">View-only — only the couple can change portal settings.</p>
+                )}
+
                 {!portalDraft ? (
                   <p className="text-sm text-gray-400">Loading…</p>
+                ) : !canManagePortal ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 space-y-2">
+                    {portalDraft.welcomeMessage && (
+                      <p><span className="font-medium">Welcome:</span> {portalDraft.welcomeMessage}</p>
+                    )}
+                    {portalDraft.rsvpMessage && (
+                      <p><span className="font-medium">RSVP message:</span> {portalDraft.rsvpMessage}</p>
+                    )}
+                    <p>
+                      <span className="font-medium">Visible tabs:</span>{' '}
+                      {[
+                        ['showRSVP', 'RSVP'],
+                        ['showSchedule', 'Schedule'],
+                        ['showMap', 'Map'],
+                        ['showLodging', 'Lodging'],
+                        ['showWayfinding', 'Wayfinding'],
+                      ]
+                        .filter(([k]) => portalDraft[k as keyof GuestPortalConfig])
+                        .map(([, l]) => l)
+                        .join(', ') || 'None'}
+                    </p>
+                    {(portalDraft.scheduleItems?.length || 0) > 0 && (
+                      <p><span className="font-medium">Schedule items:</span> {portalDraft.scheduleItems!.length}</p>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     {/* Hero image */}

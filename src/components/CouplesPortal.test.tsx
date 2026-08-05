@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CouplesPortal from './CouplesPortal';
-import { createCoupleEvent, saveCoupleSession, getCoupleEvents, resolveCoupleInviteToken } from '../services/couples/coupleService';
+import {
+  createCoupleEvent,
+  saveCoupleSession,
+  getCoupleEvents,
+  resolveCoupleInviteToken,
+  addCoupleCollaborator,
+} from '../services/couples/coupleService';
+import type { CoupleCollaboratorRole } from '../types';
 
 vi.mock('../hooks/useLayoutState', () => ({
   getVenues: () => [
@@ -44,5 +51,58 @@ describe('CouplesPortal', () => {
   it('shows invalid invite state for a bad token', () => {
     render(<CouplesPortal coupleToken="bad-token" onExitPortal={() => {}} />);
     expect(screen.getByText('Invitation not found')).toBeTruthy();
+  });
+
+  function setupRoleSession(role: CoupleCollaboratorRole) {
+    const ev = createCoupleEvent({ coupleName: 'Role & Test', availableSpaces: ['ceremony', 'reception'] });
+    const collaborator = addCoupleCollaborator(ev.id, {
+      name: 'Helper',
+      email: 'helper@example.com',
+      role,
+    })!;
+    saveCoupleSession(ev.id, collaborator.id);
+    return getCoupleEvents()[0];
+  }
+
+  it('restricts a vendor to view-only (no space/guest/portal edits)', () => {
+    setupRoleSession('vendor');
+    render(<CouplesPortal onExitPortal={() => {}} />);
+
+    fireEvent.click(screen.getByText('Venue Spaces'));
+    expect(screen.getByText(/View-only — your role cannot change the selected spaces/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Guests'));
+    expect(screen.getByText(/View-only — your role cannot add, edit, or remove guests/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Portal Settings'));
+    expect(screen.getByText(/View-only — only the couple can change portal settings/i)).toBeTruthy();
+  });
+
+  it('lets a vendor chat but not edit portal settings', () => {
+    setupRoleSession('vendor');
+    render(<CouplesPortal onExitPortal={() => {}} />);
+    fireEvent.click(screen.getByText('Portal Settings'));
+    // Read-only summary shown, no save button.
+    expect(screen.queryByText('💾 Save portal settings')).toBeNull();
+  });
+
+  it('lets a planner manage guests but not portal settings', () => {
+    setupRoleSession('planner');
+    render(<CouplesPortal onExitPortal={() => {}} />);
+
+    fireEvent.click(screen.getByText('Guests'));
+    expect(screen.queryByText(/View-only — your role cannot add, edit, or remove guests/i)).toBeNull();
+    // Add-guest form present for a planner.
+    expect(screen.getByPlaceholderText('Guest name')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Portal Settings'));
+    expect(screen.getByText(/View-only — only the couple can change portal settings/i)).toBeTruthy();
+  });
+
+  it('lets the couple edit portal settings (save button present)', () => {
+    setupSession('Owner & Couple');
+    render(<CouplesPortal onExitPortal={() => {}} />);
+    fireEvent.click(screen.getByText('Portal Settings'));
+    expect(screen.getByText('💾 Save portal settings')).toBeTruthy();
   });
 });
