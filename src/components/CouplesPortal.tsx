@@ -795,6 +795,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     { label: 'Venue spaces selected', done: event.selectedSpaces.length > 0, tab: 'spaces' as TabId },
                     { label: 'Layouts submitted for approval', done: event.layoutStatus === 'pending' || event.layoutStatus === 'approved', tab: 'design' as TabId },
                     { label: 'Guests invited', done: coupleGuests.length > 0, tab: 'guests' as TabId },
+                    { label: 'Guest itinerary set up', done: coupleGuestEvents.length > 0 && coupleGuests.some((g) => (g.guestEventIds || []).length > 0), tab: 'guests' as TabId },
                     { label: 'Portal personalized', done: portalPersonalized, tab: 'portal' as TabId },
                   ].map((step) => (
                     <button
