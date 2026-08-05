@@ -239,6 +239,10 @@ guest portal schedule. See docs/couples-platform/ROADMAP.md.
 ✅ The venue can draw named walkways as ordered polylines between map points; they render
 as dashed routes in both the admin and the couple's guest portal map. See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Couple hero image + rules on home
+✅ The couple can set/clear their guest portal hero image (URL + live preview) in Portal
+Settings; venue rules now also appear on the guest portal home screen. See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 

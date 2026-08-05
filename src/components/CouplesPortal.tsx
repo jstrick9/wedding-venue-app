@@ -823,6 +823,36 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   <p className="text-sm text-gray-400">Loading…</p>
                 ) : (
                   <div className="space-y-4">
+                    {/* Hero image */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Hero image (URL)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={portalDraft.heroImageUrl || ''}
+                          onChange={(e) => setPortalDraft({ ...portalDraft, heroImageUrl: e.target.value })}
+                          placeholder="https://…/hero.jpg"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          aria-label="Hero image URL"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPortalDraft({ ...portalDraft, heroImageUrl: '' })}
+                          className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-500 hover:bg-gray-50"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      {portalDraft.heroImageUrl && (
+                        <img
+                          src={portalDraft.heroImageUrl}
+                          alt="Hero preview"
+                          className="mt-2 h-24 w-full object-cover rounded-lg border border-gray-200"
+                        />
+                      )}
+                    </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Welcome message

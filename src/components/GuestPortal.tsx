@@ -665,6 +665,18 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             )}
           </div>
         )}
+
+        {/* Venue rules & regulations (also shown on home for prominence) */}
+        {getVenueRules().rules.length > 0 && (
+          <div className="bg-white rounded-xl shadow p-4">
+            <p className="text-sm font-semibold text-gray-800 mb-2">📜 Venue Rules &amp; Regulations</p>
+            <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
+              {getVenueRules().rules.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   };

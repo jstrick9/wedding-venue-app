@@ -64,6 +64,10 @@ so each booked couple gets their own space.
 - ✅ **Drawn walkway paths (delivered):** the venue can draw named walkways as ordered
   polylines between map points; they render as dashed routes in both the admin and the
   couple's guest portal map.
+- ✅ **Couple hero image (delivered):** the couple can set/clear their guest portal hero
+  image (URL with live preview) in Portal Settings.
+- ✅ **Venue rules on guest-portal home (delivered):** venue rules now appear on the
+  guest portal home screen as well as the wayfinding tab.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase).
 
 ## Data model (see src/types.ts)
