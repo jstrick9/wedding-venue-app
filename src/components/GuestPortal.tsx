@@ -410,6 +410,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     e.preventDefault();
     if (!rsvpForm.fullName.trim() || !rsvpForm.email.trim() || !identifiedGuest) return;
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rsvpForm.email.trim())) {
+      showToast('Please enter a valid email address.', 'warning');
+      return;
+    }
+
     // A checked "plus one" needs a name so the couple can plan for them.
     if (rsvpForm.plusOne && !rsvpForm.plusOneName.trim()) {
       showToast('Please enter your plus one\'s name.', 'warning');
