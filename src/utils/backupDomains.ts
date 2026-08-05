@@ -22,6 +22,8 @@ import { getVenueWeather } from '../services/weather/venueWeatherService';
 import { getCoupleChecklistsForBackup } from '../services/couples/coupleChecklistService';
 import { getCoupleVendorsForBackup } from '../services/couples/coupleVendorService';
 import { getCoupleSetupTasksForBackup } from '../services/couples/coupleSetupService';
+import { getWeddingPackagesForBackup } from '../services/couples/couplePackageService';
+import { getPackageAddOnsForBackup } from '../services/couples/coupleAddOnService';
 import {
   getDecorArrangements,
   getDecorCategories,
@@ -440,6 +442,26 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     version: STORAGE_VERSIONS.COUPLE_SETUP_TASKS,
     read: () => getCoupleSetupTasksForBackup(),
     write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_SETUP_TASKS, STORAGE_VERSIONS.COUPLE_SETUP_TASKS, v),
+  },
+  {
+    key: 'weddingPackages',
+    storageKey: STORAGE_KEYS.WEDDING_PACKAGES,
+    label: 'Wedding Packages',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.WEDDING_PACKAGES,
+    read: () => getWeddingPackagesForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.WEDDING_PACKAGES, STORAGE_VERSIONS.WEDDING_PACKAGES, v),
+  },
+  {
+    key: 'packageAddOns',
+    storageKey: STORAGE_KEYS.PACKAGE_ADDONS,
+    label: 'Package Add-ons',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.PACKAGE_ADDONS,
+    read: () => getPackageAddOnsForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.PACKAGE_ADDONS, STORAGE_VERSIONS.PACKAGE_ADDONS, v),
   },
   {
     key: 'rsvpSubmissions',

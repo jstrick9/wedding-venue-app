@@ -51,6 +51,8 @@ export const STORAGE_KEYS = {
   COUPLE_CHECKLISTS: 'spm_couple_checklists',
   COUPLE_VENDORS: 'spm_couple_vendors',
   COUPLE_SETUP_TASKS: 'spm_couple_setup_tasks',
+  WEDDING_PACKAGES: 'spm_wedding_packages',
+  PACKAGE_ADDONS: 'spm_package_addons',
   VENUE_MAP_CONFIGS: 'spm_venue_map_configs',
   VENUE_RULES: 'spm_venue_rules',
   VENUE_WEATHER: 'spm_venue_weather',

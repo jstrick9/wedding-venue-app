@@ -985,6 +985,10 @@ export interface CoupleEvent {
   layoutComment?: string;
   layoutHistory: CoupleLayoutReview[];
   collaborators: CoupleCollaborator[];
+  /** The venue-configured wedding package this couple booked (id). */
+  packageId?: string;
+  /** Paid add-ons the couple has added after booking (lodging, activities, etc.). */
+  addOns?: CoupleAddOn[];
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
@@ -1060,8 +1064,82 @@ export interface CoupleSetupTask {
   scheduledFor?: string;
   status: CoupleSetupStatus;
   notes?: string;
+  /** Set when auto-suggested from a package; the venue can edit/accept as-is. */
+  suggested?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+// ── Venue-configured wedding packages ────────────────────────────────────────
+// The venue defines the packages it sells (single-day, multi-day, full weekend),
+// each with season-based pricing, guest limits, overnight lodging, and the items
+// included in the rental. A booked couple is assigned one package and can later
+// add paid add-ons (lodging, horse & carriage, activities, etc.).
+export type WeddingPackageDuration = 'single-day' | 'multi-day' | 'full-weekend';
+
+export interface WeddingSeasonPrice {
+  nonPeak: number;
+  peak: number;
+  premier: number;
+}
+
+/** The venue's catalog of items that a package can include (used for the included
+ *  list and to auto-suggest setup tasks). These mirror a full-service venue's
+ *  typical rental inclusions. */
+export interface WeddingPackage {
+  id: string;
+  name: string;
+  description?: string;
+  durationType: WeddingPackageDuration;
+  price: WeddingSeasonPrice;
+  /** Included guest count (beyond this, guests are add-ons). */
+  maxGuests: number;
+  /** Number of overnight guests included (0 for non-lodging packages). */
+  maxOvernightGuests: number;
+  /** Whether on-site lodging is included with this package. */
+  lodgingIncluded: boolean;
+  /** Venue ids of lodging included when lodgingIncluded is true. */
+  includedLodgingVenueIds?: string[];
+  /** The included-items checklist (from INCLUDED_ITEM catalog + custom). */
+  includedItems: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Venue-configured add-ons ─────────────────────────────────────────────────
+export type PackageAddOnCategory =
+  | 'lodging'
+  | 'activity'
+  | 'service'
+  | 'ceremony-reception'
+  | 'animal'
+  | 'photography'
+  | 'city'
+  | 'guest'
+  | 'time'
+  | 'other';
+
+export interface PackageAddOn {
+  id: string;
+  name: string;
+  category: PackageAddOnCategory;
+  price: number;
+  /** Pricing note, e.g. "per hour", "per group of 10", "max 2 hours". */
+  priceNote?: string;
+  description?: string;
+  /** Optional venue/lodging id this add-on refers to (e.g. a lodging property). */
+  venueVendorId?: string;
+  active: boolean;
+  createdAt: string;
+}
+
+/** An add-on a couple has added to their booked package. */
+export interface CoupleAddOn {
+  addOnId: string;
+  /** Optional quantity/unit (e.g. hours, nights, guests). */
+  qty?: number;
+  addedAt: string;
 }
 
 // ── Venue-controlled wayfinding, rain contingency & rules ──────────────────
