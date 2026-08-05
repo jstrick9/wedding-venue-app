@@ -44,3 +44,15 @@ export function saveCoupleAnswers(coupleEventId: string, answers: EventAnswer[])
   const rest = all.filter((a) => a.eventId !== coupleEventId);
   saveVersionedStorage(KEY, VERSION, [...rest, ...answers]);
 }
+
+/** Remove all answers belonging to a couple event (on delete). */
+export function removeCoupleAnswers(coupleEventId: string): void {
+  const all = loadVersionedStorage<EventAnswer[]>({
+    key: KEY,
+    defaultValue: [],
+    currentVersion: VERSION,
+    validate: (v): v is EventAnswer[] => Array.isArray(v),
+    normalize: (v) => (Array.isArray(v) ? v : []),
+  });
+  saveVersionedStorage(KEY, VERSION, all.filter((a) => a.eventId !== coupleEventId));
+}

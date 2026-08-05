@@ -44,3 +44,19 @@ export function removeCoupleRsvp(coupleEventId: string, guestId: string): void {
     all.filter((s) => !(s.eventKey === coupleEventId && s.guestId === guestId)),
   );
 }
+
+/** Remove all RSVP submissions belonging to a couple event (on delete). */
+export function removeCoupleRsvps(coupleEventId: string): void {
+  const all = loadVersionedStorage<RSVPSubmission[]>({
+    key: KEY,
+    defaultValue: [],
+    currentVersion: VERSION,
+    validate: (v): v is RSVPSubmission[] => Array.isArray(v),
+    normalize: (v) => (Array.isArray(v) ? v : []),
+  });
+  saveVersionedStorage(
+    KEY,
+    VERSION,
+    all.filter((s) => !(s.eventKey === coupleEventId || s.eventName === coupleEventId)),
+  );
+}

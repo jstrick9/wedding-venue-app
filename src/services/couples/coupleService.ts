@@ -11,6 +11,10 @@ import {
 } from '../../types';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { saveVersionedStorage, loadVersionedStorage } from '../../utils/storage';
+import { removeCoupleGuestsAndConfig } from './coupleGuestService';
+import { removeCoupleRsvps } from './coupleRsvpService';
+import { removeCoupleMessages } from './coupleChatService';
+import { removeCoupleAnswers } from './coupleAnswersService';
 
 const COUPLE_EVENTS_KEY = STORAGE_KEYS.COUPLE_EVENTS;
 const COUPLE_EVENTS_VERSION = 1;
@@ -216,6 +220,11 @@ export function updateCoupleEvent(
 
 export function deleteCoupleEvent(id: string): void {
   saveCoupleEvents(getCoupleEvents().filter((e) => e.id !== id));
+  // Cascade-delete the couple's related data so nothing is orphaned in storage.
+  removeCoupleGuestsAndConfig(id);
+  removeCoupleRsvps(id);
+  removeCoupleMessages(id);
+  removeCoupleAnswers(id);
 }
 
 export function findCoupleEventById(id: string): CoupleEvent | undefined {

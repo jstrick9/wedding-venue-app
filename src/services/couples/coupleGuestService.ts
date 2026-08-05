@@ -31,6 +31,17 @@ export function getCoupleGuests(coupleEventId: string): GuestPortalGuestRecord[]
   return readGuests().filter((g) => g.eventName === coupleEventId);
 }
 
+/** Remove all guests + portal config belonging to a couple event (on delete). */
+export function removeCoupleGuestsAndConfig(coupleEventId: string): void {
+  writeGuests(readGuests().filter((g) => g.eventName !== coupleEventId));
+  const configs = readConfigs();
+  if (coupleEventId in configs) {
+    const next = { ...configs };
+    delete next[coupleEventId];
+    writeConfigs(next);
+  }
+}
+
 /** Backup read — all couple guests across every event. */
 export function getCoupleGuestsForBackup(): GuestPortalGuestRecord[] {
   return readGuests();

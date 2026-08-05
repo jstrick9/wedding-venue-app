@@ -18,6 +18,10 @@ import {
   setSpaceLayout,
   acceptCoupleInvite,
 } from './coupleService';
+import { addCoupleGuest, getCoupleGuests } from './coupleGuestService';
+import { getCoupleRsvpSubmissions, setCoupleRsvpSubmissions } from './coupleRsvpService';
+import { getCoupleMessages, sendCoupleMessage } from './coupleChatService';
+import { getCoupleAnswers, saveCoupleAnswers } from './coupleAnswersService';
 
 describe('coupleService', () => {
   beforeEach(() => {
@@ -59,6 +63,29 @@ describe('coupleService', () => {
     expect(getCoupleEvents()[0].selectedSpaces).toEqual(['s1', 's2']);
     deleteCoupleEvent(ev.id);
     expect(getCoupleEvents()).toHaveLength(0);
+  });
+
+  it('cascade-deletes a couple event and its related data', () => {
+    const ev = createCoupleEvent({ coupleName: 'Cascade & Co' });
+    addCoupleGuest(ev.id, { name: 'Jane' });
+    setCoupleRsvpSubmissions(ev.id, [
+      { id: 'r1', guestId: 'guest-x', eventKey: ev.id, eventName: ev.id, attending: true, submittedAt: new Date().toISOString() } as any,
+    ]);
+    sendCoupleMessage({ coupleEventId: ev.id, senderId: 'v', senderName: 'Venue', senderSide: 'venue', message: 'hello' });
+    saveCoupleAnswers(ev.id, [{ userId: 'u1', questionId: 'q1', answerValue: 'yes', eventId: ev.id }]);
+
+    expect(getCoupleGuests(ev.id)).toHaveLength(1);
+    expect(getCoupleRsvpSubmissions(ev.id)).toHaveLength(1);
+    expect(getCoupleMessages(ev.id)).toHaveLength(1);
+    expect(getCoupleAnswers(ev.id)).toHaveLength(1);
+
+    deleteCoupleEvent(ev.id);
+
+    expect(getCoupleEvents()).toHaveLength(0);
+    expect(getCoupleGuests(ev.id)).toHaveLength(0);
+    expect(getCoupleRsvpSubmissions(ev.id)).toHaveLength(0);
+    expect(getCoupleMessages(ev.id)).toHaveLength(0);
+    expect(getCoupleAnswers(ev.id)).toHaveLength(0);
   });
 
   it('round-trips the couple session', () => {

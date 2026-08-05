@@ -97,6 +97,24 @@ export function getCoupleMessagesForBackup(): CoupleMessage[] {
   });
 }
 
+/** Remove all messages + read markers belonging to a couple event (on delete). */
+export function removeCoupleMessages(coupleEventId: string): void {
+  const all = loadVersionedStorage<CoupleMessage[]>({
+    key: KEY,
+    defaultValue: [],
+    currentVersion: VERSION,
+    validate: (v): v is CoupleMessage[] => Array.isArray(v),
+    normalize: (v) => (Array.isArray(v) ? v : []),
+  });
+  saveVersionedStorage(KEY, VERSION, all.filter((m) => m.coupleEventId !== coupleEventId));
+  const markers = readMarkers();
+  if (coupleEventId in markers) {
+    const next = { ...markers };
+    delete next[coupleEventId];
+    writeMarkers(next);
+  }
+}
+
 /**
  * Unread message counts per event, from the perspective of `side`. A message is
  * "unread" if it came from the other side and was sent after that side's last
