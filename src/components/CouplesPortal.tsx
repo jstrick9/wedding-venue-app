@@ -707,8 +707,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   <div className="text-xs text-gray-500 mt-1">People in your portal</div>
                 </div>
                 <div className="rounded-xl bg-white border border-gray-200 p-4 text-center shadow-sm">
-                  <div className="text-3xl">{event.guestCount ?? '—'}</div>
-                  <div className="text-xs text-gray-500 mt-1">Expected guests</div>
+                  <div className="text-3xl">{event.guestCount ?? (bookedPackage ? bookedPackage.maxGuests : '—')}</div>
+                  <div className="text-xs text-gray-500 mt-1">{bookedPackage ? 'Guest limit (package)' : 'Expected guests'}</div>
                 </div>
               </div>
 
@@ -958,11 +958,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             </span>
                           )}
                         </div>
-                        {selected && event.guestCount && space.capacity > 0 && space.capacity < event.guestCount && (
-                          <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1">
-                            ⚠️ This space seats {space.capacity} but you expect {event.guestCount} guests.
-                          </div>
-                        )}
+                        {selected && (() => {
+                          const limit = bookedPackage ? bookedPackage.maxGuests : event.guestCount;
+                          if (!limit || !space.capacity || space.capacity >= limit) return null;
+                          return (
+                            <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1">
+                              ⚠️ This space seats {space.capacity} but you expect {limit} guests.
+                            </div>
+                          );
+                        })()}
                         {(() => {
                           const backup = findRainContingency(getVenueMapConfig(), space.id);
                           if (backup) {
@@ -1605,12 +1609,17 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   </div>
                 ))}
               </div>
-              {event.guestCount && coupleGuests.length > event.guestCount && (
-                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
-                  ⚠️ You've invited {coupleGuests.length} guests, which is above your expected
-                  headcount of {event.guestCount}. Let the venue know if you'll need extra space.
-                </div>
-              )}
+              {(() => {
+                const limit = bookedPackage ? bookedPackage.maxGuests : event.guestCount;
+                if (!limit || coupleGuests.length <= limit) return null;
+                return (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
+                    ⚠️ You've invited {coupleGuests.length} guests, which is above your{' '}
+                    {bookedPackage ? 'package' : 'expected'} guest limit of {limit}.
+                    Let the venue know if you'll need extra space.
+                  </div>
+                );
+              })()}
               {/* Meal summary (for catering) */}
               {(() => {
                 const attending = coupleRsvps.filter((r) => r.attending);
