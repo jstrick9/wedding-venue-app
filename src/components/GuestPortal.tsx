@@ -1065,7 +1065,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       label: p.label,
       description: p.description,
     }));
-    const hasWayfindingPoints = venueMap && venueMap.points.length > 0;
+    // Only treat wayfinding as available when there's at least one destination
+    // point to route to (the venue may have drawn only decorative path dots).
+    const hasWayfindingPoints = wayfindingPoints.length > 0;
 
     if (!hasWayfindingPoints) {
       return (
