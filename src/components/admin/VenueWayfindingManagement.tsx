@@ -630,7 +630,7 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
               <div key={date} className="flex items-center gap-2 text-sm">
                 <span className="w-24 text-gray-600">{date}</span>
                 <span className="flex-1 text-gray-800">{f.condition}</span>
-                {f.tempHigh != null && <span className="text-gray-500">{f.tempHigh}°</span>}
+                {f.tempLow != null && f.tempHigh != null && <span className="text-gray-500">{f.tempLow}°–{f.tempHigh}°</span>}
                 {f.rainChance != null && <span className="text-blue-500">☔ {f.rainChance}%</span>}
                 <button
                   type="button"
