@@ -282,16 +282,75 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
         {/* Permissions Tab */}
         {activeTab === 'permissions' && (
           <div className="p-4">
-            <h3 className="text-lg font-semibold mb-4">All Permissions</h3>
-            {/* ... original permissions list ... */}
+            <h3 className="text-lg font-semibold mb-2">All Permissions</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Reference of every granular permission available in the system, grouped by
+              category. Locked permissions cannot be removed from a role; default
+              permissions are always present.
+            </p>
+            {permissionsByGroup && Object.keys(permissionsByGroup).length > 0 ? (
+              <div className="space-y-4">
+                {Object.entries(permissionsByGroup).map(([groupId, perms]) => {
+                  const group = groups.find((g) => g.id === groupId);
+                  return (
+                    <div key={groupId} className="rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="px-3 py-2 bg-gray-50 font-medium text-sm text-gray-700 flex items-center gap-2">
+                        <span>{group?.icon || '🔑'}</span>
+                        {group?.name || groupId}
+                        <span className="text-xs text-gray-400">({perms.length})</span>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        {perms.map((p) => (
+                          <div key={p.id} className="px-3 py-2 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-sm text-gray-800 font-medium">{p.label}</div>
+                              <div className="text-xs text-gray-500">{p.id}</div>
+                              {p.description && <div className="text-xs text-gray-400 mt-0.5">{p.description}</div>}
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              {p.isLocked && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">Locked</span>}
+                              {p.isDefault && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Default</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No permission groups defined.</p>
+            )}
           </div>
         )}
 
         {/* Audit Log Tab */}
         {activeTab === 'audit' && (
           <div className="p-4">
-            <h3 className="text-lg font-semibold mb-4">Audit Log</h3>
-            {/* ... original audit log ... */}
+            <h3 className="text-lg font-semibold mb-2">Audit Log</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              A record of role and permission changes across the workspace.
+            </p>
+            {auditLog.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-300 px-6 py-10 text-center text-gray-400 text-sm">
+                No audit entries yet. Role/permission changes will be recorded here.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[...auditLog].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((entry) => (
+                  <div key={entry.id} className="rounded-lg border border-gray-200 p-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium text-gray-800">{entry.action.replace(/_/g, ' ')}</span>
+                      <span className="text-xs text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">{entry.details}</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      by {entry.performedByName} ({entry.performedBy}) · {entry.targetName || entry.targetId || entry.targetType}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
