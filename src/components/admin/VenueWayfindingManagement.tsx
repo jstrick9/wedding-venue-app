@@ -488,17 +488,29 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
           <button
             type="button"
             onClick={async () => {
-              if (!weatherLocation.trim()) return;
+              if (!weatherLocation.trim()) {
+                onShowSuccess('Enter a location first, e.g. Charlotte, NC.');
+                return;
+              }
               setWeatherFetching(true);
-              const forecasts = await fetchWeatherForecast(weatherLocation.trim());
-              const dates = Object.keys(forecasts);
-              updateWeather({
-                location: weatherLocation.trim(),
-                forecasts: { ...weather.forecasts, ...forecasts },
-                updatedAt: new Date().toISOString(),
-              });
-              if (dates.length > 0) {/* nothing extra */}
-              setWeatherFetching(false);
+              try {
+                const forecasts = await fetchWeatherForecast(weatherLocation.trim());
+                const dates = Object.keys(forecasts);
+                if (dates.length === 0) {
+                  onShowSuccess(`Couldn't find a forecast for "${weatherLocation.trim()}". Try a more specific location, or enter the forecast manually.`);
+                } else {
+                  updateWeather({
+                    location: weatherLocation.trim(),
+                    forecasts: { ...weather.forecasts, ...forecasts },
+                    updatedAt: new Date().toISOString(),
+                  });
+                  onShowSuccess(`Loaded ${dates.length} day${dates.length === 1 ? '' : 's'} of weather for ${weatherLocation.trim()}.`);
+                }
+              } catch {
+                onShowSuccess('Weather fetch failed. Check your connection or enter the forecast manually.');
+              } finally {
+                setWeatherFetching(false);
+              }
             }}
             className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-50"
             disabled={weatherFetching}
