@@ -77,6 +77,8 @@ so each booked couple gets their own space.
 - ✅ **Couple overview dashboard (delivered):** the Overview tab now shows a progress
   checklist (questions, spaces, submission, guests, personalization) with quick jumps,
   plus "Copy portal link" and "Preview portal" actions.
+- ✅ **Venue event lifecycle (delivered):** the venue can mark a couple event complete /
+  reopen it from the Couple Management card.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 

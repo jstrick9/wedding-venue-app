@@ -5,6 +5,7 @@ import {
   getCoupleEvents,
   createCoupleEvent,
   deleteCoupleEvent,
+  updateCoupleEvent,
   reviewCoupleLayout,
 } from '../../services/couples/coupleService';
 import {
@@ -411,7 +412,13 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-800">{ev.coupleName}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${ev.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        ev.status === 'completed'
+                          ? 'bg-gray-200 text-gray-700'
+                          : ev.status === 'active'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700'
+                      }`}>
                         {ev.status}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
@@ -452,6 +459,18 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                           {unreadCounts[ev.id]}
                         </span>
                       )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateCoupleEvent(ev.id, {
+                          status: ev.status === 'completed' ? 'active' : 'completed',
+                        });
+                        refresh();
+                      }}
+                      className="text-xs text-gray-600 hover:underline"
+                    >
+                      {ev.status === 'completed' ? '↩ Reopen' : '✓ Complete'}
                     </button>
                     <button
                       type="button"

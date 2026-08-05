@@ -258,6 +258,10 @@ See docs/couples-platform/ROADMAP.md.
 personalization) with quick jumps, plus Copy portal link / Preview portal actions.
 See docs/couples-platform/ROADMAP.md.
 
+## Couples & Events platform — Venue event lifecycle
+✅ The venue can mark a couple event complete / reopen it from the Couple Management card
+(completed status is styled distinctly). See docs/couples-platform/ROADMAP.md.
+
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
