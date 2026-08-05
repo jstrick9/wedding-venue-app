@@ -498,10 +498,18 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
             )}
             <span
               className={`rounded-full px-3 py-1 ${
-                event.status === 'active' ? 'bg-green-500/70' : 'bg-white/20'
+                event.status === 'active'
+                  ? 'bg-green-500/70'
+                  : event.status === 'completed'
+                    ? 'bg-sky-500/70'
+                    : 'bg-white/20'
               }`}
             >
-              {event.status === 'active' ? '● Active' : '● Invited'}
+              {event.status === 'active'
+                ? '● Active'
+                : event.status === 'completed'
+                  ? '✓ Completed'
+                  : '● Invited'}
             </span>
           </div>
         </div>
