@@ -125,6 +125,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     [coupleEventId],
   );
 
+  // Shared helper: open a map point in Google Maps when it has GPS.
+  const openInMaps = (p: VenueMapPoint) => {
+    if (p.lat == null || p.lng == null) return;
+    window.open(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`, '_blank');
+  };
+
   useEffect(() => {
     try {
       if (isCouplePortal && coupleEventId && couple) {
@@ -721,6 +727,39 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
 
     return (
       <div className="space-y-4 pb-24">
+        {/* Full venue map (venue-controlled wayfinding) */}
+        {(() => {
+          const vmap = getVenueMapConfig();
+          if (!vmap || vmap.points.length === 0) return null;
+          return (
+            <div className="bg-white rounded-xl shadow p-4 mt-2">
+              <h2 className="text-sm font-semibold text-gray-800 mb-3">Venue Map</h2>
+              <div className="rounded-lg border border-teal-100 overflow-hidden">
+                <svg viewBox={`0 0 ${vmap.width} ${vmap.height}`} preserveAspectRatio="xMidYMid meet" className="w-full h-56 bg-teal-50">
+                  {(vmap.routes || []).map((route) => {
+                    const pts = routePolyline(vmap, route.id);
+                    if (pts.length < 2) return null;
+                    return (
+                      <polyline key={route.id} points={pts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#14b8a6" strokeWidth={1} strokeDasharray="2,1.5" />
+                    );
+                  })}
+                  {vmap.points.filter((p) => p.kind !== 'path').map((p) => {
+                    const color = p.kind === 'space' ? '#0d9488' : p.kind === 'parking' ? '#6366f1' : p.kind === 'entry' ? '#16a34a' : '#f59e0b';
+                    return (
+                      <g key={p.id} onClick={() => openInMaps(p)} style={{ cursor: p.lat != null && p.lng != null ? 'pointer' : 'default' }}>
+                        <circle cx={p.x} cy={p.y} r={4} fill={color} stroke="white" strokeWidth={1} />
+                        <text x={p.x + 5} y={p.y - 3} fontSize={5} fill="#374151">{p.label}</text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+              <div className="mt-1 text-[10px] text-gray-400 px-1">
+                Tap a pin that has GPS to open it in Google Maps.
+              </div>
+            </div>
+          );
+        })()}
         {venuesToShow.map((venue) => (
           <div key={venue.id} className="bg-white rounded-xl shadow p-4 mt-2">
             <div className="flex items-center justify-between mb-3">
@@ -964,13 +1003,6 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       label: p.label,
       description: p.description,
     }));
-    const openInMaps = (p: VenueMapPoint) => {
-      if (p.lat == null || p.lng == null) return;
-      window.open(
-        `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`,
-        '_blank',
-      );
-    };
     const hasWayfindingPoints = venueMap && venueMap.points.length > 0;
 
     if (!hasWayfindingPoints) {

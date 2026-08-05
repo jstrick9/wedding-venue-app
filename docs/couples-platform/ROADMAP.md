@@ -88,6 +88,9 @@ so each booked couple gets their own space.
   choice, plus-one, dietary notes, and attending days.
 - ✅ **Wayfinding From-any-point (delivered):** the guest can route directions between any
   two map points (not just from the entrance).
+- ✅ **Venue map on the Map tab (delivered):** the guest portal Map tab now renders the
+  full venue-controlled SVG map (spaces, parking, entries, walkways, GPS) at the top,
+  above the per-space info cards.
 - 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
   layout canvas inside the couple's design tab.
 
