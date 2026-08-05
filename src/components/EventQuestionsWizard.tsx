@@ -196,8 +196,7 @@ export function EventQuestionsWizard({
               key={group}
               type="button"
               onClick={() => setActiveStep(idx)}
-              disabled={readOnly}
-              className={`rounded-lg border px-3 py-2 text-left text-sm ${readOnly ? 'cursor-default' : ''} ${activeStep === idx ? 'border-[#4A1942] bg-[#4A1942] text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+              className={`rounded-lg border px-3 py-2 text-left text-sm ${activeStep === idx ? 'border-[#4A1942] bg-[#4A1942] text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
             >
               <div className="text-xs opacity-80">Step {idx + 1}</div>
               <div className="font-medium">{group}</div>
