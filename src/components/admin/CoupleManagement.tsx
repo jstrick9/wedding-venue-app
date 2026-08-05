@@ -8,14 +8,16 @@ import {
   updateCoupleEvent,
   reviewCoupleLayout,
   buildEventDays,
+  findCoupleEventById,
 } from '../../services/couples/coupleService';
 import {
   getCoupleMessages,
   sendCoupleMessage,
   getUnreadCoupleMessageCounts,
 } from '../../services/couples/coupleChatService';
-import { getCoupleGuests } from '../../services/couples/coupleGuestService';
+import { getCoupleGuests, getCouplePortalConfig, setCouplePortalConfig } from '../../services/couples/coupleGuestService';
 import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
+import { getGuestPortalConfig } from '../../utils/guestPortal';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
@@ -121,6 +123,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
 
   const handleSaveEdit = () => {
     if (!editEventId) return;
+    const updated = findCoupleEventById(editEventId);
     updateCoupleEvent(editEventId, {
       eventDate: editForm.eventDate || undefined,
       eventEndDate: editForm.eventEndDate || undefined,
@@ -128,6 +131,21 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       availableSpaces: editForm.availableSpaces,
       days: buildEventDays(editForm.eventDate || undefined, editForm.eventEndDate || undefined),
     });
+    // Propagate date changes to the couple's guest portal config so guests see the
+    // correct dates, multi-day flag, and RSVP window.
+    if (updated) {
+      const cfg = getCouplePortalConfig(editEventId, getGuestPortalConfig(), {
+        coupleName: updated.coupleName,
+        eventDate: editForm.eventDate || updated.eventDate,
+        eventEndDate: editForm.eventEndDate || updated.eventEndDate,
+      });
+      setCouplePortalConfig(editEventId, {
+        ...cfg,
+        eventStartDate: editForm.eventDate || cfg.eventStartDate,
+        eventEndDate: editForm.eventEndDate || cfg.eventEndDate,
+        isMultiDay: !!(editForm.eventDate && editForm.eventEndDate && editForm.eventEndDate !== editForm.eventDate),
+      });
+    }
     setEditEventId(null);
     refresh();
     onShowSuccess('Couple event updated.');
