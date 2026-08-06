@@ -6,7 +6,6 @@ import { layoutCategories } from '../data/venueData';
 import {
   canAccessAdminPanel,
   canAccessOperationsPanel,
-  canManageGuests,
   canPrintLayouts,
 } from '../utils/permissions';
 import ModalDialog from './ModalDialog';
@@ -24,7 +23,6 @@ export interface HeaderProps {
   onClearMasterLayout?: () => void;
   onPrint: () => void;
   onShowTemplates: () => void;
-  onShowGuests: () => void;
   onShowAdmin?: () => void;
   onOpenOperations?: () => void;
   onShowDashboard?: () => void;
@@ -52,7 +50,6 @@ export function Header({
   onClearMasterLayout,
   onPrint,
   onShowTemplates,
-  onShowGuests,
   onShowAdmin,
   onOpenOperations,
   onShowDashboard,
@@ -83,7 +80,6 @@ export function Header({
 
   const canOpenAdmin = canAccessAdminPanel(currentUser);
   const canOpenOperations = canAccessOperationsPanel(currentUser);
-  const canOpenGuests = canManageGuests(currentUser);
   const canPrint = canPrintLayouts(currentUser);
 
   useEffect(() => {
@@ -479,20 +475,6 @@ export function Header({
                     📋 Templates
                   </button>
 
-                  {canOpenGuests && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onShowGuests();
-                        setShowMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      👥 Guest List
-                    </button>
-                  )}
-
                   <hr className="my-1" />
 				  
 				    <button
@@ -766,20 +748,6 @@ export function Header({
                     className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
                   >
                     ❔ Help
-                  </button>
-                )}
-
-                {canOpenGuests && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onShowGuests();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
-                  >
-                    👥 Guests
                   </button>
                 )}
 

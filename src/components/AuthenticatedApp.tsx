@@ -30,7 +30,6 @@ import {
   canAccessAdminPanel,
   canAccessOperationsPanel,
   canEditLayout,
-  canManageGuests,
   canMoveFixture,
   canPrintLayouts,
 } from '../utils/permissions';
@@ -42,7 +41,6 @@ import { useModals } from '../contexts/ModalContext';
 
 // ─── Lazy-loaded modal / portal components ───────────────────────────────────
 const DecorDesigner = lazy(() => import('./DecorDesigner').then((m) => ({ default: m.DecorDesigner })));
-const GuestPanel = lazy(() => import('./GuestPanel').then((m) => ({ default: m.GuestPanel })));
 const EventOverview = lazy(() => import('./EventOverview').then((m) => ({ default: m.EventOverview })));
 const WorkspaceHelp = lazy(() => import('./WorkspaceHelp').then((m) => ({ default: m.WorkspaceHelp })));
 const StaffOperationsPanel = lazy(() => import('./StaffOperationsPanel'));
@@ -69,7 +67,6 @@ export default function AuthenticatedApp() {
 
   const canOpenAdminPanel = canAccessAdminPanel(user);
   const canOpenOperationsPanel = canAccessOperationsPanel(user);
-  const canOpenGuestPanel = canManageGuests(user);
   const canPrintCurrentLayout = canPrintLayouts(user);
   const canEditCurrentLayout = canEditLayout(user);
   
@@ -86,7 +83,6 @@ export default function AuthenticatedApp() {
 
   const showVendors = modals.vendors;
   const showTimeline = modals.timeline;
-  const showGuests = modals.guests;
   const showAdmin = modals.admin;
   const showTemplates = modals.templates;
   const showPrint = modals.print;
@@ -617,10 +613,8 @@ export default function AuthenticatedApp() {
         isStaff={isStaff}
         canAdmin={canOpenAdminPanel}
         canOps={canOpenOperationsPanel}
-        canGuests={canOpenGuestPanel}
         onOpenAdmin={() => { setView('studio'); open('admin'); }}
         onOpenOperations={() => { setView('studio'); open('operations'); }}
-        onOpenGuests={() => { setView('studio'); open('guests'); }}
         onOpenVendors={() => { setView('studio'); open('vendors'); }}
         onOpenTimeline={() => { setView('studio'); open('timeline'); }}
         onOpenStudio={() => setView('studio')}
@@ -651,27 +645,6 @@ export default function AuthenticatedApp() {
         }
         vendorsNode={<VendorPanel inline onClose={() => setView('studio')} />}
         timelineNode={<TimelinePanel inline onClose={() => setView('studio')} />}
-        guestsNode={
-          canOpenGuestPanel ? (
-            <GuestPanel
-              inline
-              guests={layoutState.guests}
-              tables={layoutState.layout.tables}
-              fixtures={layoutState.layout.fixtures}
-              venue={layoutState.currentVenue}
-              eventName={currentEventName}
-              venueName={layoutState.currentVenue.name}
-              onAddGuest={layoutState.addGuest}
-              onUpdateGuest={layoutState.updateGuest}
-              onRemoveGuest={layoutState.removeGuest}
-              onAssignToTable={layoutState.assignGuestToTable}
-              onAssignToRoom={layoutState.assignGuestToRoom}
-              onImportCSV={layoutState.importGuestsFromCSV}
-              onExportCSV={layoutState.exportGuestsToCSV}
-              onClose={() => setView('studio')}
-            />
-          ) : undefined
-        }
       />
     );
   }
@@ -682,7 +655,7 @@ export default function AuthenticatedApp() {
         <Header
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
           onSaveLayout={handleSaveLayoutWithSync} onSaveMasterLayout={isAdmin ? () => { layoutState.saveMasterLayout(); showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success'); } : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
-          onShowTemplates={() => open('templates')} onShowGuests={() => open('guests')} onShowAdmin={canOpenAdminPanel ? () => open('admin') : undefined} onShowDashboard={() => { closeAll(); setView('dashboard'); }} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
+          onShowTemplates={() => open('templates')} onShowAdmin={canOpenAdminPanel ? () => open('admin') : undefined} onShowDashboard={() => { closeAll(); setView('dashboard'); }} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
           onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={layoutState.loadLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
         />
@@ -756,7 +729,6 @@ export default function AuthenticatedApp() {
           />
         </div>
         <Suspense fallback={null}>
-          {showGuests && canOpenGuestPanel && <GuestPanel guests={layoutState.guests} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} venue={layoutState.currentVenue} eventName={currentEventName} venueName={layoutState.currentVenue.name} onAddGuest={layoutState.addGuest} onUpdateGuest={layoutState.updateGuest} onRemoveGuest={layoutState.removeGuest} onAssignToTable={layoutState.assignGuestToTable} onAssignToRoom={layoutState.assignGuestToRoom} onImportCSV={layoutState.importGuestsFromCSV} onExportCSV={layoutState.exportGuestsToCSV} onClose={() => close('guests')} />}
           {showOperations && (
             <StaffOperationsPanel
               onClose={() => close('operations')}
@@ -835,8 +807,6 @@ export default function AuthenticatedApp() {
               venue={layoutState.currentVenue}
               eventName={currentEventName}
               venueName={layoutState.currentVenue.name}
-              onOpenGuests={() => { close('overview'); open('guests'); }}
-              canManageGuests={canOpenGuestPanel}
               onOpenVendors={() => { close('overview'); open('vendors'); }}
               onOpenTemplates={() => { close('overview'); open('templates'); }}
               onClose={() => close('overview')}

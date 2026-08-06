@@ -48,7 +48,6 @@ function renderHeader(overrides: Partial<React.ComponentProps<typeof Header>> = 
     onClearMasterLayout: vi.fn(),
     onPrint: vi.fn(),
     onShowTemplates: vi.fn(),
-    onShowGuests: vi.fn(),
     onShowAdmin: vi.fn(),
     onOpenOperations: vi.fn(),
     onLogout: vi.fn(),
@@ -99,7 +98,6 @@ describe('Header', () => {
         onClearMasterLayout={vi.fn()}
         onPrint={vi.fn()}
         onShowTemplates={vi.fn()}
-        onShowGuests={vi.fn()}
         onShowAdmin={vi.fn()}
         onOpenOperations={vi.fn()}
         onLogout={vi.fn()}
@@ -129,7 +127,6 @@ describe('Header', () => {
         onClearMasterLayout={vi.fn()}
         onPrint={vi.fn()}
         onShowTemplates={vi.fn()}
-        onShowGuests={vi.fn()}
         onShowAdmin={vi.fn()}
         onOpenOperations={vi.fn()}
         onLogout={vi.fn()}

@@ -41,7 +41,6 @@ export function PropertiesPanel({
   onToggleVisibility,
   arrangements = [],
 }: PropertiesPanelProps) {
-  const [newGuestName, setNewGuestName] = useState('');
   const config = getConfig();
   const tableSpecs = getTableSpecs();
   const fixtureTypes = getFixtureTypes();
@@ -58,15 +57,6 @@ export function PropertiesPanel({
   const effectiveCapacity = tableSpec?.isSeatingType
     ? table?.chairCount ?? table?.customCapacity ?? tableSpec?.capacity ?? 0
     : table?.customCapacity ?? tableSpec?.capacity ?? 0;
-
-  const tableGuests = table ? guests.filter((g) => table.guests.includes(g.id)) : [];
-
-  const handleAddGuest = () => {
-    if (newGuestName.trim() && table) {
-      onAddGuest(newGuestName.trim(), table.id);
-      setNewGuestName('');
-    }
-  };
 
   const getLinenColorInfo = (colorId?: string) => {
     const defaultColor = {
@@ -937,68 +927,20 @@ export function PropertiesPanel({
               </div>
             </div>
 
-            {/* Guests for tables */}
+            {/* Seating capacity (venue sets max seating; guests live in the couples portal) */}
             {table && tableSpec && (
               <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  Guests ({tableGuests.length}/{effectiveCapacity})
+                  Seating capacity
                 </label>
-
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="text"
-                    value={newGuestName}
-                    onChange={(e) => setNewGuestName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddGuest()}
-                    placeholder="Add guest name..."
-                    disabled={tableGuests.length >= effectiveCapacity}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#4A1942] focus:border-transparent disabled:bg-gray-100"
-                  />
-                  <button
-                    onClick={handleAddGuest}
-                    disabled={!newGuestName.trim() || tableGuests.length >= effectiveCapacity}
-                    className="px-3 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    style={{ backgroundColor: config.primaryColor }}
-                    type="button"
-                  >
-                    +
-                  </button>
+                <div className="text-sm text-gray-700">
+                  <span className="font-semibold text-2xl">{effectiveCapacity}</span>
+                  <span className="text-gray-500 ml-1">seats max</span>
                 </div>
-
-                {tableGuests.length > 0 ? (
-                  <div className="space-y-1 max-h-32 overflow-auto">
-                    {tableGuests.map((guest, index) => (
-                      <div
-                        key={guest.id}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="w-5 h-5 bg-[#4A1942]/10 text-[#4A1942] rounded-full flex items-center justify-center text-xs font-medium">
-                            {index + 1}
-                          </span>
-                          {guest.name}
-                        </span>
-                        <button
-                          onClick={() => onRemoveGuestFromTable(guest.id)}
-                          className="text-red-500 hover:text-red-700 p-1"
-                          type="button"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400 text-center py-2">
-                    No guests assigned to this table
-                  </p>
-                )}
-
-                {tableGuests.length < effectiveCapacity && (
-                  <p className="text-xs text-green-600 mt-2 text-center">
-                    {effectiveCapacity - tableGuests.length} seats available
-                  </p>
-                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  Guest seating is managed by the couple in their portal; this space can
+                  seat up to {effectiveCapacity} guests.
+                </p>
               </div>
             )}
 

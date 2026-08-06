@@ -27,7 +27,6 @@ describe('AuthenticatedApp modal render parity', () => {
     }
 
     expect(flags.length).toBeGreaterThan(0);
-    expect(flags).toContainEqual({ flag: 'showGuests', modal: 'guests' });
 
     // Every flag must be used in a render: `{showX && ...` or `showX &&`
     const missing: string[] = [];
@@ -60,7 +59,7 @@ describe('AuthenticatedApp modal render parity', () => {
     }
 
     const known = [
-      'vendors', 'timeline', 'guests', 'admin', 'templates', 'print',
+      'vendors', 'timeline', 'admin', 'templates', 'print',
       'operations', 'messages', 'submission', 'eventQuestions',
       'decorDesigner', 'overview',
     ];

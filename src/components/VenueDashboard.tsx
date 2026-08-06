@@ -2,7 +2,6 @@
 import { useMemo, useState } from 'react';
 import { VenueCalendar } from './VenueCalendar';
 import { getCoupleEvents } from '../services/couples/coupleService';
-import { getCoupleGuests } from '../services/couples/coupleGuestService';
 import { getCoupleRsvpSubmissions } from '../services/couples/coupleRsvpService';
 import { getCoupleSetupTasks } from '../services/couples/coupleSetupService';
 import { getCoupleGuestEvents, getAssignedGuestCount } from '../services/couples/coupleGuestEventService';
@@ -11,7 +10,7 @@ import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
 
-type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'guests' | 'admin' | 'ops';
+type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'admin' | 'ops';
 
 type InlineNode = React.ReactNode | undefined;
 
@@ -23,10 +22,8 @@ interface Props {
   isStaff: boolean;
   canAdmin: boolean;
   canOps: boolean;
-  canGuests: boolean;
   onOpenAdmin: () => void;
   onOpenOperations: () => void;
-  onOpenGuests: () => void;
   onOpenVendors: () => void;
   onOpenTimeline: () => void;
   onOpenStudio: () => void;
@@ -39,8 +36,6 @@ interface Props {
   vendorsNode?: ReactNodeish;
   /** Pre-rendered inline Timeline panel node. */
   timelineNode?: ReactNodeish;
-  /** Pre-rendered inline Guests panel node. */
-  guestsNode?: ReactNodeish;
 }
 
 const openCouplePortal = (id: string) => {
@@ -118,7 +113,6 @@ export function VenueDashboard(props: Props) {
     { id: 'couples', label: 'Couples & Events', icon: '💍', action: () => setSection('couples') },
     { id: 'vendors', label: 'Vendors', icon: '🧰', action: () => setSection('vendors') },
     { id: 'timeline', label: 'Timeline', icon: '⏱️', action: () => setSection('timeline') },
-    { id: 'guests', label: 'Guests', icon: '👥', action: () => setSection('guests') },
     { id: 'ops', label: 'Operations', icon: '🛠️', action: () => setSection('ops') },
     { id: 'admin', label: 'Admin', icon: '🔐', action: () => setSection('admin') },
     { id: 'studio', label: 'Design Studio', icon: '🎨', action: () => { props.onOpenStudio(); } },
@@ -126,7 +120,6 @@ export function VenueDashboard(props: Props) {
   const sidebarItems = items.filter((i) => {
     if (i.id === 'admin') return props.canAdmin;
     if (i.id === 'ops') return props.canOps;
-    if (i.id === 'guests') return props.canGuests;
     return true;
   });
 
@@ -366,11 +359,6 @@ export function VenueDashboard(props: Props) {
           </div>
         )}
 
-        {section === 'guests' && (
-          <div className="h-[calc(100vh-2rem)] overflow-hidden">
-            {props.guestsNode || <p className="text-sm text-gray-400">Guests panel is not available.</p>}
-          </div>
-        )}
       </main>
     </div>
   );
