@@ -1,5 +1,6 @@
 import { StaffShift, VenueCalendarEvent } from '../../types';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
+import { emitDataChanged } from '../../utils/appEvents';
 
 function readShifts(): StaffShift[] {
   try {
@@ -12,11 +13,7 @@ function readShifts(): StaffShift[] {
 
 function writeShifts(shifts: StaffShift[]): void {
   localStorage.setItem(STORAGE_KEYS.STAFF_SHIFTS, JSON.stringify(shifts));
-  try {
-    window.dispatchEvent(new CustomEvent('spm_data_changed'));
-  } catch {
-    // ignore
-  }
+  emitDataChanged('all');
 }
 
 /** All staff shifts. */
