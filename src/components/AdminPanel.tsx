@@ -1073,8 +1073,8 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const ActiveComponent = activeTabConfig.Component;
 
   return (
-    <div className={inline ? "w-full flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4"} style={inline ? undefined : { zIndex: 10000 }}>
-      <div className={inline ? "w-full flex flex-col" : "bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col overflow-hidden"}>
+    <div className={inline ? "w-full h-full flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4"} style={inline ? undefined : { zIndex: 10000 }}>
+      <div className={inline ? "w-full h-full flex flex-col" : "bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col overflow-hidden"}>
         <div className="p-4 border-b" style={{ backgroundColor: config.primaryColor, color: config.headerTextColor }}>
           <div className="flex justify-between items-start gap-4">
             <div>

@@ -28,8 +28,6 @@ interface Props {
   onOpenTimeline: () => void;
   onOpenStudio: () => void;
   onLogout: () => void;
-  /** Pre-rendered inline Admin panel node (rendered in the Admin section). */
-  adminNode?: ReactNodeish;
   /** Pre-rendered inline Operations panel node (rendered in the Ops section). */
   opsNode?: ReactNodeish;
   /** Pre-rendered inline Vendors panel node. */
@@ -114,7 +112,7 @@ export function VenueDashboard(props: Props) {
     { id: 'vendors', label: 'Vendors', icon: '🧰', action: () => setSection('vendors') },
     { id: 'timeline', label: 'Timeline', icon: '⏱️', action: () => setSection('timeline') },
     { id: 'ops', label: 'Operations', icon: '🛠️', action: () => setSection('ops') },
-    { id: 'admin', label: 'Admin', icon: '🔐', action: () => setSection('admin') },
+    { id: 'admin', label: 'Admin', icon: '🔐', action: () => props.onOpenAdmin() },
     { id: 'studio', label: 'Design Studio', icon: '🎨', action: () => { props.onOpenStudio(); } },
   ];
   const sidebarItems = items.filter((i) => {
@@ -338,12 +336,6 @@ export function VenueDashboard(props: Props) {
         {section === 'ops' && (
           <div className="h-[calc(100vh-2rem)]">
             {props.opsNode || <p className="text-sm text-gray-400">Operations panel is not available.</p>}
-          </div>
-        )}
-
-        {section === 'admin' && (
-          <div className="h-[calc(100vh-2rem)] overflow-hidden">
-            {props.adminNode || <p className="text-sm text-gray-400">Admin panel is not available.</p>}
           </div>
         )}
 

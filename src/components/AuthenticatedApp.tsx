@@ -63,7 +63,7 @@ export default function AuthenticatedApp() {
   const isStaff = user?.role === 'staff';
   const layoutState = useLayoutState();
 
-  const [view, setView] = useState<'dashboard' | 'studio'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'studio' | 'admin'>('dashboard');
 
   const canOpenAdminPanel = canAccessAdminPanel(user);
   const canOpenOperationsPanel = canAccessOperationsPanel(user);
@@ -80,6 +80,21 @@ export default function AuthenticatedApp() {
   const [safeMode, setSafeMode] = useState(false);
 
   const { modals, editingArrangementId, setEditingArrangementId, open, close, closeAll } = useModals();
+
+  // Route support: `#/admin` opens the admin destination; `#/studio` opens the
+  // layout studio. Reading the initial hash and listening for changes keeps the
+  // browser URL in sync with the active view.
+  useEffect(() => {
+    const applyHash = () => {
+      const h = window.location.hash || '';
+      if (h.startsWith('#/admin')) setView('admin');
+      else if (h.startsWith('#/studio')) setView('studio');
+      else if (h.startsWith('#/dashboard') || h === '') setView('dashboard');
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, []);
 
   const showVendors = modals.vendors;
   const showTimeline = modals.timeline;
@@ -605,6 +620,36 @@ export default function AuthenticatedApp() {
     [layoutBackendSync],
   );
 
+  if (view === 'admin') {
+    return (
+      <div className="h-screen flex flex-col" style={{ backgroundColor: '#f3f4f6' }}>
+        <header className="h-14 px-4 flex items-center justify-between bg-white border-b border-gray-200">
+          <button
+            type="button"
+            onClick={() => { window.location.hash = '#/dashboard'; setView('dashboard'); closeAll(); }}
+            className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+          >
+            ← Dashboard
+          </button>
+          <span className="text-sm font-semibold text-gray-700">Admin</span>
+          <div className="w-24" />
+        </header>
+        <div className="flex-1 overflow-hidden">
+          {canOpenAdminPanel ? (
+            <AdminPanel
+              inline
+              onClose={() => { window.location.hash = '#/dashboard'; setView('dashboard'); }}
+              currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }}
+              onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }}
+            />
+          ) : (
+            <div className="p-6 text-sm text-gray-500">You don't have admin access.</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (view === 'dashboard') {
     return (
       <VenueDashboard
@@ -613,22 +658,12 @@ export default function AuthenticatedApp() {
         isStaff={isStaff}
         canAdmin={canOpenAdminPanel}
         canOps={canOpenOperationsPanel}
-        onOpenAdmin={() => { setView('studio'); open('admin'); }}
+        onOpenAdmin={() => { window.location.hash = '#/admin'; setView('admin'); closeAll(); }}
         onOpenOperations={() => { setView('studio'); open('operations'); }}
         onOpenVendors={() => { setView('studio'); open('vendors'); }}
         onOpenTimeline={() => { setView('studio'); open('timeline'); }}
-        onOpenStudio={() => setView('studio')}
+        onOpenStudio={() => { window.location.hash = '#/studio'; setView('studio'); }}
         onLogout={logout}
-        adminNode={
-          canOpenAdminPanel ? (
-            <AdminPanel
-              inline
-              onClose={() => setView('studio')}
-              currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }}
-              onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }}
-            />
-          ) : undefined
-        }
         opsNode={
           canOpenOperationsPanel ? (
             <StaffOperationsPanel
@@ -655,7 +690,7 @@ export default function AuthenticatedApp() {
         <Header
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
           onSaveLayout={handleSaveLayoutWithSync} onSaveMasterLayout={isAdmin ? () => { layoutState.saveMasterLayout(); showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success'); } : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
-          onShowTemplates={() => open('templates')} onShowAdmin={canOpenAdminPanel ? () => open('admin') : undefined} onShowDashboard={() => { closeAll(); setView('dashboard'); }} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
+          onShowTemplates={() => open('templates')} onShowAdmin={canOpenAdminPanel ? () => { closeAll(); window.location.hash = '#/admin'; setView('admin'); } : undefined} onShowDashboard={() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); }} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
           onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={layoutState.loadLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
         />
