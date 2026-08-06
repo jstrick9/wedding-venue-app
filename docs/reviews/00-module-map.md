@@ -304,6 +304,12 @@ the guest's room. See docs/couples-platform/78-bugfix-batch.md.
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
+## Deferred item — embedded layout canvas in the couple's Design tab (round 19)
+✅ Full per-space layout editor in the Couples Portal (FloorPlanCanvas + catalog:
+place/move/delete tables, fixtures, decor; zoom/pan; save per couple+space);
+venue approval queue renders read-only previews of the drawn layouts. See
+docs/reviews/97-couple-layout-canvas.md.
+
 ## Deferred items — email + admin merge (round 18)
 ✅ Real transactional email for couple/guest invites (sendCoupleEmail with mailto
 fallback; send-email edge function guest_invite/guest_reminder purposes).

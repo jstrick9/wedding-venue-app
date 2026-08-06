@@ -127,7 +127,10 @@ so each booked couple gets their own space.
   reminders route through the `send-email` edge function when Supabase is configured
   (with a `mailto:` fallback in local mode). Deploying the edge function + setting
   `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` + secrets enables live delivery.
-- 🚧 **Future ideas:** embedding the full layout canvas inside the couple's design tab.
+- ✅ **Embedded layout canvas (delivered):** the couple can draw real layouts in-portal per
+  space (place/move tables, chairs, fixtures, decor; zoom/pan), and the venue's approval
+  queue shows a read-only preview of each drawn layout before approving/requesting changes.
+- 🚧 **Future ideas:** none remaining from the original roadmap.
 
 ## Data model (see src/types.ts)
 - `CoupleEvent`: id, coupleName, inviteToken, status (invited/active/completed),
