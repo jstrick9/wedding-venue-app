@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AdminCommonProps } from './AdminTabTypes';
 import { CoupleEvent, CoupleLayoutStatus, CoupleSetupStatus } from '../../types';
+import { CoupleLayoutPreview } from '../CoupleLayoutPreview';
 import {
   getCoupleEvents,
   createCoupleEvent,
@@ -388,12 +389,17 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                             ? 'bg-green-100 text-green-700'
                             : 'bg-gray-100 text-gray-600';
                       return (
-                        <div key={spaceId} className="text-xs flex items-start gap-2">
-                          <span className={`shrink-0 px-2 py-0.5 rounded-full ${statusBadge}`}>
-                            {sl.status}
-                          </span>
-                          <span className="text-gray-700">{v?.name || spaceId}</span>
-                          {sl.notes && <span className="text-gray-500 truncate">— {sl.notes}</span>}
+                        <div key={spaceId} className="text-xs">
+                          <div className="flex items-start gap-2">
+                            <span className={`shrink-0 px-2 py-0.5 rounded-full ${statusBadge}`}>
+                              {sl.status}
+                            </span>
+                            <span className="text-gray-700">{v?.name || spaceId}</span>
+                            {sl.notes && <span className="text-gray-500 truncate">— {sl.notes}</span>}
+                          </div>
+                          {sl.layout && v && (
+                            <CoupleLayoutPreview venue={v} layout={sl.layout} />
+                          )}
                         </div>
                       );
                     })}

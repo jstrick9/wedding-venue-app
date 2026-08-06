@@ -1393,13 +1393,20 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             aria-label={`Notes for ${venue?.name || spaceId}`}
                           />
                           {canEditDesign && venue && (
-                            <button
-                              type="button"
-                              onClick={() => setLayoutEditorSpace(spaceId)}
-                              className="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700"
-                            >
-                              🎨 Open layout editor
-                            </button>
+                            <div className="mt-2 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setLayoutEditorSpace(spaceId)}
+                                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700"
+                              >
+                                🎨 {sl?.layout ? 'Edit layout' : 'Open layout editor'}
+                              </button>
+                              {sl?.layout && (
+                                <span className="text-xs text-gray-500">
+                                  {sl.layout.tables.length} table(s) · {sl.layout.fixtures.length} fixture(s) · {sl.layout.decor.length} decor saved
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       );
