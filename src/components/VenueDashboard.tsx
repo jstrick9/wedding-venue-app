@@ -180,10 +180,16 @@ export function VenueDashboard(props: Props) {
                 <div className="text-2xl font-bold">{stats.active}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Active couples</div>
               </Card>
-              <Card className="p-4">
+              <button
+                type="button"
+                onClick={() => setSection('couples')}
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                title="Open Couples & Events to review layouts"
+                aria-label={`${stats.pending} awaiting layout review`}
+              >
                 <div className={`text-2xl font-bold ${stats.pending > 0 ? 'text-amber-600' : ''}`}>{stats.pending}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Awaiting layout review</div>
-              </Card>
+              </button>
               <Card className="p-4">
                 <div className="text-2xl font-bold text-sky-700">{stats.setupTotal > 0 ? `${Math.round((stats.setupDone / stats.setupTotal) * 100)}%` : '—'}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Setup ({stats.setupDone}/{stats.setupTotal})</div>
@@ -200,10 +206,16 @@ export function VenueDashboard(props: Props) {
                 <div className={`text-2xl font-bold ${stats.unread > 0 ? 'text-rose-600' : 'text-gray-700'}`}>{stats.unread}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Unread couple msgs</div>
               </Card>
-              <Card className="p-4">
+              <button
+                type="button"
+                onClick={() => setSection('couples')}
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                title="Open Couples & Events to approve layouts"
+                aria-label={`${stats.pending} approvals due`}
+              >
                 <div className={`text-2xl font-bold ${stats.pending > 0 ? 'text-amber-600' : 'text-gray-700'}`}>{stats.pending}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Approvals due</div>
-              </Card>
+              </button>
             </div>
 
             {/* Onboarding empty-state for first-time venues */}
@@ -353,7 +365,14 @@ export function VenueDashboard(props: Props) {
 
         {section === 'couples' && (
           <div className="space-y-3">
-            <h1 className="text-2xl font-bold">Couples &amp; Events</h1>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h1 className="text-2xl font-bold">Couples &amp; Events</h1>
+              {coupleEvents.some((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
+                <Button tone="primary" size="sm" onClick={props.onOpenAdmin}>
+                  Review &amp; approve layouts in Admin
+                </Button>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {coupleEvents.length === 0 && <p className="text-sm text-gray-400">No couple events yet.</p>}
               {coupleEvents.map((e) => (
@@ -370,7 +389,12 @@ export function VenueDashboard(props: Props) {
                     </span>
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{e.status}</span>
                   </div>
-                  <button type="button" onClick={() => openCouplePortal(e.id)} className="mt-3 text-xs text-indigo-600 hover:underline">Open couple portal →</button>
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    <button type="button" onClick={() => openCouplePortal(e.id)} className="text-xs text-indigo-600 hover:underline">Open couple portal →</button>
+                    {(e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
+                      <button type="button" onClick={props.onOpenAdmin} className="text-xs text-amber-700 hover:underline">Review →</button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
