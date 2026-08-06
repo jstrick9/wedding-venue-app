@@ -54,6 +54,7 @@ export const STORAGE_KEYS = {
   WEDDING_PACKAGES: 'spm_wedding_packages',
   PACKAGE_ADDONS: 'spm_package_addons',
   COUPLE_GUEST_EVENTS: 'spm_couple_guest_events',
+  VENUE_CALENDAR_EVENTS: 'spm_venue_calendar_events',
   VENUE_MAP_CONFIGS: 'spm_venue_map_configs',
   VENUE_RULES: 'spm_venue_rules',
   VENUE_WEATHER: 'spm_venue_weather',

@@ -1069,7 +1069,6 @@ export interface CoupleVendor {
 // (moving tables/chairs, decor install, etc.), which space/day, who, and when —
 // driven by what the couple selected (their spaces, days, decor, vendors).
 export type CoupleSetupStatus = 'not-started' | 'in-progress' | 'done';
-
 export interface CoupleSetupTask {
   id: string;
   coupleEventId: string;
@@ -1191,6 +1190,28 @@ export interface CoupleGuestEvent {
   capacity: number;
   /** Whether this event was auto-created from the package/add-ons. */
   derived: boolean;
+  createdAt: string;
+}
+
+// ── Venue calendar events (dashboard) ───────────────────────────────────────
+// Events the venue tracks on its calendar: booked couple events, plus venue-run
+// events (monthly open houses, other events) and internal staffing/work items.
+export type VenueCalendarCategory = 'couple' | 'open-house' | 'staffing' | 'other';
+
+export interface VenueCalendarEvent {
+  id: string;
+  title: string;
+  category: VenueCalendarCategory;
+  /** Event date (YYYY-MM-DD). */
+  date: string;
+  startTime?: string; // HH:mm
+  endTime?: string; // HH:mm
+  /** Optional venue space id the event is in. */
+  spaceId?: string;
+  /** For couple category, the linked CoupleEvent id. */
+  coupleEventId?: string;
+  notes?: string;
+  createdBy?: string;
   createdAt: string;
 }
 
