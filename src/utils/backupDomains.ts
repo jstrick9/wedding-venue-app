@@ -26,6 +26,7 @@ import { getWeddingPackagesForBackup } from '../services/couples/couplePackageSe
 import { getPackageAddOnsForBackup } from '../services/couples/coupleAddOnService';
 import { getCoupleGuestEventsForBackup } from '../services/couples/coupleGuestEventService';
 import { getVenueCalendarEventsForBackup } from '../services/calendar/venueCalendarService';
+import { getVendorCategoriesForBackup } from '../services/vendors/vendorCategoryService';
 import {
   getDecorArrangements,
   getDecorCategories,
@@ -530,6 +531,16 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     recovery: true,
     read: () => readJson(STORAGE_KEYS.VENDORS, []),
     write: (v) => writeJson(STORAGE_KEYS.VENDORS, v),
+  },
+  {
+    key: 'vendorCategories',
+    storageKey: STORAGE_KEYS.VENDOR_CATEGORIES,
+    label: 'Vendor Categories',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.VENDOR_CATEGORIES,
+    read: () => getVendorCategoriesForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.VENDOR_CATEGORIES, STORAGE_VERSIONS.VENDOR_CATEGORIES, v),
   },
   {
     key: 'vendorPayments',

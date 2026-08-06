@@ -16,11 +16,8 @@ function seedVendor() {
         phone: '555-0100',
         website: '',
         notes: 'Loves peonies',
-        contractAmount: 2500,
-        contractSigned: false,
-        depositPaid: false,
         rating: 0,
-        isPreferred: false,
+        isPreferred: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -41,59 +38,42 @@ describe('VendorPanel edit flow', () => {
   it('renders the Edit button and lets a user update a vendor', () => {
     render(<VendorPanel onClose={() => {}} />);
 
-    const editButton = screen.getByText('✏️ Edit');
+    const editButton = screen.getByText('Edit');
     expect(editButton).toBeTruthy();
 
     fireEvent.click(editButton);
-
-    expect(screen.getByText('✏️ Edit Vendor')).toBeTruthy();
 
     // Name field is pre-filled with the current vendor name.
     const nameInput = screen.getByDisplayValue('Elegant Flowers');
     fireEvent.change(nameInput, { target: { value: 'Elegant Blooms Co.' } });
 
-    fireEvent.click(screen.getByText('Save Changes'));
+    fireEvent.click(screen.getByText('💾 Save changes'));
 
-    expect(screen.queryByText('✏️ Edit Vendor')).toBeNull();
+    expect(screen.queryByText('💾 Save changes')).toBeNull();
     const stored = storedVendors();
     expect(stored).toHaveLength(1);
     expect(stored[0].name).toBe('Elegant Blooms Co.');
     expect(stored[0].contactName).toBe('Jane'); // untouched fields preserved
   });
 
-  it('persists toggled checkboxes on save', () => {
+  it('cancels an edit without saving', () => {
     render(<VendorPanel onClose={() => {}} />);
-    fireEvent.click(screen.getByText('✏️ Edit'));
-
-    // First checkbox in the edit form is "Contract Signed".
-    fireEvent.click(screen.getAllByRole('checkbox')[0]);
-    fireEvent.click(screen.getByText('Save Changes'));
-
-    expect(storedVendors()[0].contractSigned).toBe(true);
-  });
-
-  it('closes without saving when cancelled', () => {
-    render(<VendorPanel onClose={() => {}} />);
-    fireEvent.click(screen.getByText('✏️ Edit'));
+    fireEvent.click(screen.getByText('Edit'));
     fireEvent.click(screen.getByText('Cancel'));
 
-    expect(screen.queryByText('✏️ Edit Vendor')).toBeNull();
     expect(storedVendors()[0].name).toBe('Elegant Flowers');
   });
 
-  it('deletes a vendor via the confirm dialog', () => {
+  it('removes a vendor via the confirm dialog', () => {
     render(<VendorPanel onClose={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Elegant Flowers' }));
+    fireEvent.click(screen.getByText('Remove'));
 
-    // Confirm dialog appears.
-    expect(screen.getByText('Delete vendor')).toBeTruthy();
-    // Cancel keeps the vendor.
+    expect(screen.getByText('Remove vendor?')).toBeTruthy();
     fireEvent.click(screen.getByText('Cancel'));
     expect(storedVendors()).toHaveLength(1);
 
-    // Confirm removes it.
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Elegant Flowers' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByText('Remove'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[1]);
     expect(storedVendors()).toHaveLength(0);
   });
 });

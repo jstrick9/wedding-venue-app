@@ -43,7 +43,7 @@ import { parseGuestCsv } from '../utils/guestCsv';
 import { getCoupleRsvpSubmissions, removeCoupleRsvp, upsertCoupleRsvp } from '../services/couples/coupleRsvpService';
 import { getCoupleChecklist, addCoupleChecklistItem, toggleCoupleChecklistItem, removeCoupleChecklistItem } from '../services/couples/coupleChecklistService';
 import { getCoupleVendors, addCoupleVendor, updateCoupleVendor, removeCoupleVendor, getVenuePreferredVendors } from '../services/couples/coupleVendorService';
-import { VENDOR_CATEGORIES } from '../types/vendor';
+import { getVendorCategories, vendorCategoryLabel } from '../services/vendors/vendorCategoryService';
 import { findWeddingPackage, PACKAGE_DURATIONS, INCLUDED_ITEMS } from '../services/couples/couplePackageService';
 import { getActivePackageAddOns, findPackageAddOn, ADD_ON_CATEGORIES } from '../services/couples/coupleAddOnService';
 import { getCoupleSetupTasks, addCoupleSetupTask } from '../services/couples/coupleSetupService';
@@ -1579,7 +1579,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           <div className="min-w-0">
                             <div className="text-sm font-medium text-gray-800">{v.name}</div>
                             <div className="text-xs text-gray-500 truncate">
-                              {VENDOR_CATEGORIES.find((c) => c.id === v.category)?.label || v.category}
+                              {vendorCategoryLabel(v.category)}
                               {v.contactName ? ` · ${v.contactName}` : ''}
                               {v.email ? ` · ${v.email}` : ''}
                             </div>
@@ -1624,7 +1624,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                       aria-label="Custom vendor category"
                     >
-                      {VENDOR_CATEGORIES.map((c) => (
+                      {getVendorCategories().map((c) => (
                         <option key={c.id} value={c.id}>{c.label}</option>
                       ))}
                     </select>
@@ -1684,7 +1684,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           <div className="min-w-0">
                             <div className="text-sm font-medium text-gray-800">{v.name}</div>
                             <div className="text-xs text-gray-500 truncate">
-                              {VENDOR_CATEGORIES.find((c) => c.id === v.category)?.label || v.category}
+                              {vendorCategoryLabel(v.category)}
                               {v.source === 'preferred' ? ' · venue preferred' : ' · your own'}
                               {v.contactName ? ` · ${v.contactName}` : ''}
                               {v.email ? ` · ${v.email}` : ''}

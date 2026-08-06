@@ -64,6 +64,7 @@ export const STORAGE_KEYS = {
   STAFF_SHIFTS: 'spm_staff_shifts',
   VENDORS: 'spm_vendors',
   VENDOR_PAYMENTS: 'spm_vendor_payments',
+  VENDOR_CATEGORIES: 'spm_vendor_categories',
   TIMELINES: 'spm_timelines',
 
   SESSION_V2: 'spm_session_v2',

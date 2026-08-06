@@ -65,6 +65,7 @@ export interface BackupPayload {
   packageAddOns?: unknown;
   coupleGuestEvents?: unknown;
   venueCalendarEvents?: unknown;
+  vendorCategories?: unknown;
   venueMapConfigs?: unknown;
   venueRules?: unknown;
   venueWeather?: unknown;
