@@ -19,6 +19,8 @@ interface Props {
   eventName?: string;
   users: User[];
   venues: Venue[];
+  /** When true, renders inline (not a full-screen overlay) for dashboard embedding. */
+  inline?: boolean;
 }
 
 const PHASES: StaffTaskPhase[] = ['pre-event', 'during-event', 'post-event'];
@@ -32,7 +34,8 @@ const StaffOperationsPanel: React.FC<Props> = ({
   venueId, 
   eventName,
   users,
-  venues
+  venues,
+  inline = false,
 }) => {
   const config = getConfig();
   const canAccessPanel = canAccessOperationsPanel(currentUser);
@@ -908,7 +911,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] bg-gray-100/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300">
+    <div className={inline ? "h-full flex flex-col bg-gray-100" : "fixed inset-0 z-[10000] bg-gray-100/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300"}>
       <header className="h-16 px-6 flex items-center justify-between shadow-sm border-b" style={{ background: `linear-gradient(to right, ${config.primaryColor}, ${config.primaryDark})` }}>
         <div className="flex items-center text-white">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3 text-xl shadow-inner">📋</div>

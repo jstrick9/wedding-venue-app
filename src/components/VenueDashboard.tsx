@@ -11,7 +11,9 @@ import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
 
-type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'guests';
+type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'guests' | 'admin' | 'ops';
+
+type ReactNodeish = import('react').ReactNode;
 
 interface Props {
   user: { id?: string; name?: string; username?: string };
@@ -27,6 +29,10 @@ interface Props {
   onOpenTimeline: () => void;
   onOpenStudio: () => void;
   onLogout: () => void;
+  /** Pre-rendered inline Admin panel node (rendered in the Admin section). */
+  adminNode?: ReactNodeish;
+  /** Pre-rendered inline Operations panel node (rendered in the Ops section). */
+  opsNode?: ReactNodeish;
 }
 
 const openCouplePortal = (id: string) => {
@@ -99,8 +105,8 @@ export function VenueDashboard(props: Props) {
     { id: 'vendors', label: 'Vendors', icon: '🧰', action: () => { props.onOpenVendors(); } },
     { id: 'timeline', label: 'Timeline', icon: '⏱️', action: () => { props.onOpenTimeline(); } },
     { id: 'guests', label: 'Guests', icon: '👥', action: () => { props.onOpenGuests(); } },
-    { id: 'ops', label: 'Operations', icon: '🛠️', action: () => { props.onOpenOperations(); } },
-    { id: 'admin', label: 'Admin', icon: '🔐', action: () => { props.onOpenAdmin(); } },
+    { id: 'ops', label: 'Operations', icon: '🛠️', action: () => setSection('ops') },
+    { id: 'admin', label: 'Admin', icon: '🔐', action: () => setSection('admin') },
     { id: 'studio', label: 'Design Studio', icon: '🎨', action: () => { props.onOpenStudio(); } },
   ];
   const sidebarItems = items.filter((i) => {
@@ -269,6 +275,18 @@ export function VenueDashboard(props: Props) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {section === 'ops' && (
+          <div className="h-[calc(100vh-2rem)]">
+            {props.opsNode || <p className="text-sm text-gray-400">Operations panel is not available.</p>}
+          </div>
+        )}
+
+        {section === 'admin' && (
+          <div className="h-[calc(100vh-2rem)] overflow-hidden">
+            {props.adminNode || <p className="text-sm text-gray-400">Admin panel is not available.</p>}
           </div>
         )}
       </main>

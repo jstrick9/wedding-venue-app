@@ -625,6 +625,30 @@ export default function AuthenticatedApp() {
         onOpenTimeline={() => { setView('studio'); open('timeline'); }}
         onOpenStudio={() => setView('studio')}
         onLogout={logout}
+        adminNode={
+          canOpenAdminPanel ? (
+            <AdminPanel
+              inline
+              onClose={() => setView('studio')}
+              currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }}
+              onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }}
+            />
+          ) : undefined
+        }
+        opsNode={
+          canOpenOperationsPanel ? (
+            <StaffOperationsPanel
+              inline
+              onClose={() => setView('studio')}
+              currentUser={user}
+              isAdmin={isAdmin}
+              venueId={layoutState.currentVenue.id}
+              eventName={currentEventName}
+              users={allUsers}
+              venues={selectableVenues}
+            />
+          ) : undefined
+        }
       />
     );
   }
