@@ -11,10 +11,14 @@ P1 = valuable, P2 = polish).*
   removed). Committed.
 - ✅ **A1 — Removed venue guest management** (dashboard/header/studio/overview
   entries; Properties shows read-only seating capacity). Committed.
-- ⏳ **A3 — Admin as its own page (`#/admin`)** — next.
-- ⏳ **A4 — Layout Studio as its own module (`#/studio`)**.
-- ⏳ **A5 — Design-system consistency pass**.
-- ⏳ **B series (P1)** — pending.
+- ✅ **A3 — Admin as its own page (`#/admin`)** — dedicated full-page destination
+  with header + back button; hash routing; dashboard/header route to it. Committed.
+- ✅ **A4 — Layout Studio as its own module (`#/studio`)** — dedicated route with a
+  Layout Studio breadcrumb strip (module name + space + back). Committed.
+- ✅ **A5 — Design-system consistency pass (foundation)** — shared `src/components/ui`
+  kit (Button/Card/Badge/SectionHeader/EmptyState) adopted in the dashboard; more
+  surfaces can migrate incrementally. Committed.
+- ⏳ **B series (P1)** — pending (see below).
 
 ## Guiding principles (from research)
 - **Venue ops ≠ couple planning.** The best tools separate the venue's back-office
