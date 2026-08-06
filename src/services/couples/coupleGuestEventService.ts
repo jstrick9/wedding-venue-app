@@ -168,8 +168,14 @@ export function deriveGuestEvents(
 /** Ensure default guest events exist for a couple (idempotent; seeds if none). */
 export function ensureDerivedGuestEvents(coupleEventId: string, pkg: WeddingPackage | undefined, addOns: PackageAddOn[]): void {
   const existing = getCoupleGuestEvents(coupleEventId);
-  if (existing.length > 0) return;
+  // Idempotent: add each derived event that doesn't already exist (matched by
+  // title + kind), so adding a new add-on later (e.g. an activity) creates its
+  // corresponding guest event without duplicating the core events.
   deriveGuestEvents(pkg, addOns).forEach((d) => {
+    const already = existing.some(
+      (e) => e.kind === d.kind && e.title.toLowerCase() === d.title.toLowerCase(),
+    );
+    if (already) return;
     addCoupleGuestEvent(coupleEventId, { title: d.title, kind: d.kind, capacity: d.capacity, derived: true });
   });
 }

@@ -88,6 +88,27 @@ describe('coupleGuestEventService', () => {
     expect(getCoupleGuestEventsForBackup().length).toBe(count);
   });
 
+  it('adds a guest event for a new add-on later without duplicating core events', () => {
+    const pkg = { durationType: 'single-day', maxGuests: 200, maxOvernightGuests: 0, lodgingIncluded: false, includedItems: [] } as any;
+    // Initial: seeds ceremony + cocktail + reception (3 core events).
+    ensureDerivedGuestEvents('e2', pkg, []);
+    const before = getCoupleGuestEvents('e2').map((e) => e.title);
+    expect(before).toHaveLength(3);
+
+    // Couple later adds a horse & carriage activity add-on.
+    const addOns = [{ id: 'a1', name: 'Horse & Carriage', category: 'activity', price: 500 }] as any;
+    ensureDerivedGuestEvents('e2', pkg, addOns);
+
+    const after = getCoupleGuestEvents('e2');
+    // Core events are not duplicated; the new activity event is added once.
+    expect(after).toHaveLength(4);
+    expect(after.filter((e) => e.title === 'Horse & Carriage')).toHaveLength(1);
+
+    // Calling again is still idempotent.
+    ensureDerivedGuestEvents('e2', pkg, addOns);
+    expect(getCoupleGuestEvents('e2')).toHaveLength(4);
+  });
+
   it('removes all events for a couple on cleanup', () => {
     addCoupleGuestEvent('e1', { title: 'A', kind: 'custom', capacity: 1 });
     addCoupleGuestEvent('e2', { title: 'B', kind: 'custom', capacity: 1 });

@@ -367,13 +367,17 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     () => coupleAddOns.map((a) => findPackageAddOn(a.addOnId)).filter((x): x is NonNullable<typeof x> => !!x),
     [coupleAddOns],
   );
-  // Auto-derive default guest events from the package + the couple's add-ons (once).
+  // Auto-derive default guest events from the package + the couple's add-ons.
+  // Keys on the set of add-on ids (not just their count) so adding a new add-on
+  // later creates its matching guest event, while the idempotent service avoids
+  // duplicating core events.
+  const resolvedAddOnKey = resolvedAddOns.map((a) => a.id).sort().join('|');
   useEffect(() => {
     if (!event) return;
     ensureDerivedGuestEvents(event.id, bookedPackage, resolvedAddOns);
     setGuestEventTick((t) => t + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event?.id, bookedPackage?.id, resolvedAddOns.length]);
+  }, [event?.id, bookedPackage?.id, resolvedAddOnKey]);
   const hasAddOn = (id: string) => coupleAddOns.some((a) => a.addOnId === id);
   const toggleAddOn = (addOnId: string) => {
     if (!event) return;
