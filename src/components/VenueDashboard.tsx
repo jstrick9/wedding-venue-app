@@ -125,7 +125,7 @@ export function VenueDashboard(props: Props) {
   });
 
   const catChip = (cat: string) => {
-    const map = { couple: 'bg-indigo-100 text-indigo-700', 'open-house': 'bg-emerald-100 text-emerald-700', staffing: 'bg-amber-100 text-amber-700', other: 'bg-slate-100 text-slate-700' };
+    const map = { couple: 'bg-indigo-100 text-indigo-700', 'open-house': 'bg-emerald-100 text-emerald-700', staffing: 'bg-amber-100 text-amber-700', blocked: 'bg-red-100 text-red-700', other: 'bg-slate-100 text-slate-700' };
     return map[cat] || 'bg-gray-100 text-gray-600';
   };
 

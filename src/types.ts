@@ -1198,7 +1198,7 @@ export interface CoupleGuestEvent {
 // ── Venue calendar events (dashboard) ───────────────────────────────────────
 // Events the venue tracks on its calendar: booked couple events, plus venue-run
 // events (monthly open houses, other events) and internal staffing/work items.
-export type VenueCalendarCategory = 'couple' | 'open-house' | 'staffing' | 'other';
+export type VenueCalendarCategory = 'couple' | 'open-house' | 'staffing' | 'blocked' | 'other';
 
 export interface VenueCalendarEvent {
   id: string;

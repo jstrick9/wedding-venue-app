@@ -10,6 +10,7 @@ export const CALENDAR_CATEGORY_LABELS: Record<VenueCalendarCategory, string> = {
   couple: 'Couple Event',
   'open-house': 'Open House',
   staffing: 'Staffing / Work',
+  blocked: 'Blocked / Unavailable',
   other: 'Other Event',
 };
 

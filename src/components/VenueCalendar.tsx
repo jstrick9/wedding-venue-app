@@ -27,6 +27,7 @@ const CAT_STYLE: Record<VenueCalendarCategory, { dot: string; chip: string }> = 
   couple: { dot: 'bg-indigo-500', chip: 'bg-indigo-100 text-indigo-700' },
   'open-house': { dot: 'bg-emerald-500', chip: 'bg-emerald-100 text-emerald-700' },
   staffing: { dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700' },
+  blocked: { dot: 'bg-red-500', chip: 'bg-red-100 text-red-700' },
   other: { dot: 'bg-slate-500', chip: 'bg-slate-100 text-slate-700' },
 };
 
@@ -474,7 +475,7 @@ function CalendarEventForm({
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
             aria-label="Category"
           >
-            {(['open-house', 'staffing', 'other'] as VenueCalendarCategory[]).map((c) => (
+            {(['open-house', 'staffing', 'blocked', 'other'] as VenueCalendarCategory[]).map((c) => (
               <option key={c} value={c}>{CALENDAR_CATEGORY_LABELS[c]}</option>
             ))}
           </select>
