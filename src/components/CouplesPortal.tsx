@@ -8,6 +8,7 @@ import {
   EventAnswer,
   GuestPortalConfig,
   PortalScheduleItem,
+  CoupleChecklistItem,
   DEFAULT_MEAL_OPTIONS,
 } from '../types';
 import {
@@ -42,6 +43,7 @@ import { getGuestPortalConfig } from '../utils/guestPortal';
 import { parseGuestCsv } from '../utils/guestCsv';
 import { getCoupleRsvpSubmissions, removeCoupleRsvp, upsertCoupleRsvp } from '../services/couples/coupleRsvpService';
 import { getCoupleChecklist, addCoupleChecklistItem, toggleCoupleChecklistItem, removeCoupleChecklistItem } from '../services/couples/coupleChecklistService';
+import { groupByPhase } from '../utils/groupByPhase';
 import { getCoupleVendors, addCoupleVendor, updateCoupleVendor, removeCoupleVendor, getVenuePreferredVendors } from '../services/couples/coupleVendorService';
 import { getVendorCategories, vendorCategoryLabel } from '../services/vendors/vendorCategoryService';
 import { findWeddingPackage, PACKAGE_DURATIONS, INCLUDED_ITEMS } from '../services/couples/couplePackageService';
@@ -1507,47 +1509,69 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 {coupleChecklist.length === 0 ? (
                   <p className="text-xs text-gray-400">No checklist items yet.</p>
                 ) : (
-                  <div className="space-y-2">
-                    {coupleChecklist.map((item) => (
-                      <div key={item.id} className="rounded-lg border border-gray-200 p-3 flex items-center gap-3">
-                        <button
-                          type="button"
-                          disabled={!canManageGuests}
-                          onClick={() => {
-                            toggleCoupleChecklistItem(event!.id, item.id);
-                            setChecklistTick((t) => t + 1);
-                          }}
-                          className={`shrink-0 w-5 h-5 rounded border flex items-center justify-center text-xs ${
-                            item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-transparent'
-                          }`}
-                          aria-label={`Toggle ${item.title}`}
-                        >
-                          ✓
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-sm ${item.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{item.title}</div>
-                          <div className="text-xs text-gray-500">
-                            {item.phase && <span>{item.phase}</span>}
-                            {item.phase && item.dueDate && ' · '}
-                            {item.dueDate && <span>📅 {new Date(item.dueDate + 'T00:00:00').toLocaleDateString()}</span>}
-                          </div>
-                        </div>
-                        {canManageGuests && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              removeCoupleChecklistItem(event!.id, item.id);
-                              setChecklistTick((t) => t + 1);
-                            }}
-                            className="text-xs text-red-500 hover:underline"
-                            aria-label={`Remove ${item.title}`}
-                          >
-                            Remove
-                          </button>
-                        )}
+                  (() => {
+                    // Group checklist items by phase so a long list is scannable.
+                    const phaseGroups = groupByPhase(coupleChecklist);
+                    const itemCount = (items: CoupleChecklistItem[]) =>
+                      items.filter((i) => i.done).length;
+                    return (
+                      <div className="space-y-4">
+                        {phaseGroups.map(({ phase, items }) => {
+                          return (
+                            <div key={phase}>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                                  {phase}
+                                </span>
+                                <span className="text-[11px] text-gray-400">
+                                  {itemCount(items)}/{items.length}
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {items.map((item) => (
+                                  <div key={item.id} className="rounded-lg border border-gray-200 p-3 flex items-center gap-3">
+                                    <button
+                                      type="button"
+                                      disabled={!canManageGuests}
+                                      onClick={() => {
+                                        toggleCoupleChecklistItem(event!.id, item.id);
+                                        setChecklistTick((t) => t + 1);
+                                      }}
+                                      className={`shrink-0 w-5 h-5 rounded border flex items-center justify-center text-xs ${
+                                        item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-transparent'
+                                      }`}
+                                      aria-label={`Toggle ${item.title}`}
+                                    >
+                                      ✓
+                                    </button>
+                                    <div className="flex-1 min-w-0">
+                                      <div className={`text-sm ${item.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{item.title}</div>
+                                      <div className="text-xs text-gray-500">
+                                        {item.dueDate && <span>📅 {new Date(item.dueDate + 'T00:00:00').toLocaleDateString()}</span>}
+                                      </div>
+                                    </div>
+                                    {canManageGuests && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          removeCoupleChecklistItem(event!.id, item.id);
+                                          setChecklistTick((t) => t + 1);
+                                        }}
+                                        className="text-xs text-red-500 hover:underline"
+                                        aria-label={`Remove ${item.title}`}
+                                      >
+                                        Remove
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()
                 )}
               </div>
             </div>
