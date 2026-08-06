@@ -238,6 +238,8 @@ export interface StaffShift {
   endTime: string;
   venueId?: string;
   eventName?: string;
+  /** Optional link to a venue calendar event id. */
+  calendarEventId?: string;
   notes?: string;
 }
 

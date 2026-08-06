@@ -18,6 +18,7 @@ import {
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { getUsers } from '../hooks/useLayoutState';
 import { showToast } from './Toast';
+import { syncShiftsForCalendarEvent, getShiftsForCalendarEvent } from '../services/calendar/venueShiftService';
 
 type View = 'month' | 'week' | 'day' | 'agenda';
 
@@ -155,8 +156,10 @@ export function VenueCalendar({
   };
 
   const saveForm = (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; assignees?: string[]; notes?: string }) => {
-    if (editEv) updateVenueCalendarEvent(editEv.id, input);
-    else addVenueCalendarEvent({ ...input, createdBy: undefined });
+    const saved = editEv
+      ? (updateVenueCalendarEvent(editEv.id, input), getVenueCalendarEvents().find((e) => e.id === editEv.id) || null)
+      : addVenueCalendarEvent({ ...input, createdBy: undefined });
+    if (saved && saved.assignees && saved.assignees.length > 0) syncShiftsForCalendarEvent(saved);
     setShowForm(false);
     setEditEv(null);
     refresh();
@@ -185,6 +188,10 @@ export function VenueCalendar({
     setDragOver(null);
     if (!dragId) return;
     const ok = moveVenueCalendarEvent(dragId, dateKey);
+    if (ok) {
+      const moved = getVenueCalendarEvents().find((e) => e.id === dragId);
+      if (moved) syncShiftsForCalendarEvent(moved);
+    }
     setDragId(null);
     refresh();
     if (ok) showToast('Event moved.', 'success');
@@ -367,6 +374,20 @@ export function VenueCalendar({
                 {detail.venue.assignees.map((id) => (
                   <span key={id} className="text-xs bg-sky-100 text-sky-700 rounded-full px-2 py-0.5">👤 {staffName(id)}</span>
                 ))}
+              </div>
+            )}
+            {detail.venue && getShiftsForCalendarEvent(detail.venue.id).length > 0 && (
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-1">Staff shifts</div>
+                <div className="space-y-1">
+                  {getShiftsForCalendarEvent(detail.venue.id).map((s) => (
+                    <div key={s.id} className="text-xs text-gray-600 flex items-center gap-1.5">
+                      <span>🕒</span>
+                      <span>{staffName(s.staffId)}</span>
+                      <span className="text-gray-400">· {s.startTime?.slice(11, 16) || '—'}{s.endTime ? ` – ${s.endTime.slice(11, 16)}` : ''} · {s.role}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             <div className="flex gap-2 justify-end pt-2">
