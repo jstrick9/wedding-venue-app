@@ -310,6 +310,11 @@ place/move/delete tables, fixtures, decor; zoom/pan; save per couple+space);
 venue approval queue renders read-only previews of the drawn layouts. See
 docs/reviews/97-couple-layout-canvas.md.
 
+## Venue Dashboard enhancements (round 21)
+✅ Inline Admin & Operations panels in the dashboard; drag-and-drop calendar
+rescheduling; staffing/assignment on calendar events; first-time venue onboarding
+empty states. See docs/reviews/99-dashboard-enhancements.md.
+
 ## Venue Dashboard & calendar (round 20)
 ✅ Venue home/landing page = default view: persistent sidebar hub (Home, Calendar,
 Couples, Vendors, Timeline, Guests, Ops, Admin, Design Studio), KPI widgets,
