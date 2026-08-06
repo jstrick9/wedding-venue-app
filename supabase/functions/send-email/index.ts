@@ -13,6 +13,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
 type EmailPurpose =
   | 'invitation'
+  | 'guest_invite'
+  | 'guest_reminder'
   | 'password_reset'
   | 'rsvp_confirmation'
   | 'staff_notification';
@@ -42,6 +44,8 @@ const corsHeaders = {
 
 const PURPOSE_ROLES: Record<EmailPurpose, AppRole[]> = {
   invitation: ['owner', 'admin', 'planner'],
+  guest_invite: ['owner', 'admin', 'planner'],
+  guest_reminder: ['owner', 'admin', 'planner'],
   password_reset: ['owner', 'admin'],
   rsvp_confirmation: ['owner', 'admin', 'planner', 'staff'],
   staff_notification: ['owner', 'admin', 'planner', 'staff'],
@@ -100,6 +104,30 @@ function renderEmail(purpose: EmailPurpose, templateData: Record<string, unknown
         <p>Hi ${recipientName},</p>
         <p>You've been invited to collaborate in <strong>${organizationName}</strong>.</p>
         <p><a href="${inviteUrl}" style="background:#4A1942;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;display:inline-block;">Open invitation</a></p>
+      `);
+      return { subject, text, html };
+    }
+    case 'guest_invite': {
+      const inviteUrl = escapeHtml(getString(templateData, 'inviteUrl'));
+      if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for guest invite email.');
+      const subject = `RSVP for ${eventName}`;
+      const text = `Hi ${recipientName},\n\nYou've been invited to ${eventName}. Please RSVP here: ${inviteUrl}`;
+      const html = renderShell('You're invited', `
+        <p>Hi ${recipientName},</p>
+        <p>You've been invited to <strong>${eventName}</strong>!</p>
+        <p><a href="${inviteUrl}" style="background:#4A1942;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;display:inline-block;">View invitation &amp; RSVP</a></p>
+      `);
+      return { subject, text, html };
+    }
+    case 'guest_reminder': {
+      const inviteUrl = escapeHtml(getString(templateData, 'inviteUrl'));
+      if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for guest reminder email.');
+      const subject = `Friendly reminder: RSVP for ${eventName}`;
+      const text = `Hi ${recipientName},\n\nWe'd love to know if you can make it to ${eventName}. Please RSVP here: ${inviteUrl}`;
+      const html = renderShell('RSVP reminder', `
+        <p>Hi ${recipientName},</p>
+        <p>We'd love to know if you can make it to <strong>${eventName}</strong>!</p>
+        <p><a href="${inviteUrl}" style="background:#4A1942;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;display:inline-block;">RSVP now</a></p>
       `);
       return { subject, text, html };
     }

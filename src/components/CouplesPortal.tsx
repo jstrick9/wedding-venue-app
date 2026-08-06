@@ -66,6 +66,7 @@ import { getConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
+import { sendCoupleEmail } from '../services/couples/coupleEmailService';
 
 type TabId = 'overview' | 'package' | 'spaces' | 'questions' | 'design' | 'checklist' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
 
@@ -563,32 +564,66 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     }
   };
 
-  // Build a mailto: link that pre-fills an invitation email with the invite URL.
-  const mailtoInvite = (email: string, name: string, url: string, subject: string) => {
-    const body = `Hi ${name},\n\nYou've been invited! Open this link to get started:\n\n${url}\n\n— ${event?.coupleName || 'Your event team'}`;
-    return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  };
+  const coupleName = event?.coupleName || 'our wedding';
+  const orgId = (config as any)?.organizationId || '';
 
   const handleEmailCollaborator = (email: string, name: string, token: string) => {
     const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
-    window.location.href = mailtoInvite(email, name, url, `Join our wedding planning portal`);
+    const subject = 'Join our wedding planning portal';
+    const body = `Hi ${name},\n\nYou've been invited! Open this link to get started:\n\n${url}\n\n— ${coupleName}`;
+    void sendCoupleEmail(email, {
+      name,
+      url,
+      coupleName,
+      kind: 'couple_invite',
+      organizationId: orgId,
+      subject,
+      body,
+    }).then((res) => {
+      if (res === 'sent') showToast('Invitation email sent.', 'success');
+      else if (res === 'mailto') showToast('Opening your email app to send the invite.', 'info');
+    });
   };
 
   const handleEmailGuest = (email: string, name: string, token: string) => {
     const url = `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(token)}&couple=${encodeURIComponent(event?.id || '')}`;
-    window.location.href = mailtoInvite(email, name, url, `RSVP for ${event?.coupleName || 'our wedding'}`);
+    const subject = `RSVP for ${coupleName}`;
+    const body = `Hi ${name},\n\nYou've been invited! Please RSVP here:\n\n${url}\n\n— ${coupleName}`;
+    void sendCoupleEmail(email, {
+      name,
+      url,
+      coupleName,
+      kind: 'guest_invite',
+      organizationId: orgId,
+      subject,
+      body,
+    }).then((res) => {
+      if (res === 'sent') showToast('Guest invite email sent.', 'success');
+      else if (res === 'mailto') showToast('Opening your email app to send the invite.', 'info');
+    });
   };
 
-  /** Pre-fill a gentle RSVP reminder for a guest who hasn't responded yet. */
+  /** Send a gentle RSVP reminder to a guest who hasn't responded yet. */
   const handleRemindGuest = (email: string, name: string, token: string) => {
     const url = `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(token)}&couple=${encodeURIComponent(event?.id || '')}`;
-    const subject = `Friendly reminder: RSVP for ${event?.coupleName || 'our wedding'}`;
+    const subject = `Friendly reminder: RSVP for ${coupleName}`;
     const body =
       `Hi ${name},\n\n` +
-      `We'd love to know if you can make it to ${event?.coupleName || 'our wedding'}! ` +
+      `We'd love to know if you can make it to ${coupleName}! ` +
       `Please RSVP using this link:\n\n${url}\n\n` +
-      `— ${event?.coupleName || 'Your event team'}`;
-    window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      `— ${coupleName}`;
+    void sendCoupleEmail(email, {
+      name,
+      url,
+      coupleName,
+      kind: 'guest_reminder',
+      organizationId: orgId,
+      subject,
+      body,
+    }).then((res) => {
+      if (res === 'sent') showToast('Reminder email sent.', 'success');
+      else if (res === 'mailto') showToast('Opening your email app to send the reminder.', 'info');
+    });
   };
 
   /** Number of invited guests who have not responded (used for the reminder action). */
