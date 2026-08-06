@@ -452,6 +452,12 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       plusOneName: rsvpRecord.attending ? rsvpRecord.plusOne.trim() || undefined : undefined,
       notes: rsvpRecord.notes.trim() || undefined,
       attendingDays: rsvpRecord.attending ? existing?.attendingDays : [],
+      // Manual RSVP defaults to the guest's assigned events (so per-event counts work).
+      attendingEvents: rsvpRecord.attending
+        ? existing?.attendingEvents && existing.attendingEvents.length > 0
+          ? existing.attendingEvents
+          : guest.guestEventIds || []
+        : [],
       submittedAt: new Date().toISOString(),
     });
     setRsvpGuestId(null);
