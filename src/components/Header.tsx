@@ -27,6 +27,7 @@ export interface HeaderProps {
   onShowGuests: () => void;
   onShowAdmin?: () => void;
   onOpenOperations?: () => void;
+  onShowDashboard?: () => void;
   onShowWorkspaceHelp?: () => void;
   onLogout: () => void;
   userName: string;
@@ -54,6 +55,7 @@ export function Header({
   onShowGuests,
   onShowAdmin,
   onOpenOperations,
+  onShowDashboard,
   onShowWorkspaceHelp,
   onLogout,
   userName,
@@ -387,6 +389,20 @@ export function Header({
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0">
+            {onShowDashboard && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onShowDashboard();
+                }}
+                className="hidden md:flex items-center gap-1 px-2 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+              >
+                <span>🏠</span>
+                <span className="hidden lg:inline">Dashboard</span>
+                <span className="lg:hidden">Home</span>
+              </button>
+            )}
             {canOpenOperations && onOpenOperations && (
               <button
                 type="button"

@@ -36,6 +36,7 @@ import {
 } from '../utils/permissions';
 import { UndoRedoProvider } from '../contexts/UndoRedoContext';
 import { UndoRedoToolbar } from './UndoRedoToolbar';
+import { VenueDashboard } from './VenueDashboard';
 import { emit, emitDataChanged, on, type UndoSnapshot } from '../utils/appEvents';
 import { useModals } from '../contexts/ModalContext';
 
@@ -63,7 +64,9 @@ export default function AuthenticatedApp() {
   const allUsers = getAllUsers();
   const isStaff = user?.role === 'staff';
   const layoutState = useLayoutState();
-  
+
+  const [view, setView] = useState<'dashboard' | 'studio'>('dashboard');
+
   const canOpenAdminPanel = canAccessAdminPanel(user);
   const canOpenOperationsPanel = canAccessOperationsPanel(user);
   const canOpenGuestPanel = canManageGuests(user);
@@ -79,7 +82,7 @@ export default function AuthenticatedApp() {
   const [dismissedWarningsKey, setDismissedWarningsKey] = useState<string | null>(null);
   const [safeMode, setSafeMode] = useState(false);
 
-  const { modals, editingArrangementId, setEditingArrangementId, open, close } = useModals();
+  const { modals, editingArrangementId, setEditingArrangementId, open, close, closeAll } = useModals();
 
   const showVendors = modals.vendors;
   const showTimeline = modals.timeline;
@@ -606,13 +609,33 @@ export default function AuthenticatedApp() {
     [layoutBackendSync],
   );
 
+  if (view === 'dashboard') {
+    return (
+      <VenueDashboard
+        user={user}
+        isAdmin={isAdmin}
+        isStaff={isStaff}
+        canAdmin={canOpenAdminPanel}
+        canOps={canOpenOperationsPanel}
+        canGuests={canOpenGuestPanel}
+        onOpenAdmin={() => { setView('studio'); open('admin'); }}
+        onOpenOperations={() => { setView('studio'); open('operations'); }}
+        onOpenGuests={() => { setView('studio'); open('guests'); }}
+        onOpenVendors={() => { setView('studio'); open('vendors'); }}
+        onOpenTimeline={() => { setView('studio'); open('timeline'); }}
+        onOpenStudio={() => setView('studio')}
+        onLogout={logout}
+      />
+    );
+  }
+
   return (
     <UndoRedoProvider onRestore={handleRestoreSnapshot}>
       <div className="h-screen flex flex-col overflow-hidden" style={{ fontFamily: brandingConfig.fontFamily, backgroundColor: brandingConfig.backgroundColor, color: brandingConfig.bodyTextColor }}>
         <Header
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
           onSaveLayout={handleSaveLayoutWithSync} onSaveMasterLayout={isAdmin ? () => { layoutState.saveMasterLayout(); showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success'); } : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
-          onShowTemplates={() => open('templates')} onShowGuests={() => open('guests')} onShowAdmin={canOpenAdminPanel ? () => open('admin') : undefined} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
+          onShowTemplates={() => open('templates')} onShowGuests={() => open('guests')} onShowAdmin={canOpenAdminPanel ? () => open('admin') : undefined} onShowDashboard={() => { closeAll(); setView('dashboard'); }} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
           onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={layoutState.loadLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
         />

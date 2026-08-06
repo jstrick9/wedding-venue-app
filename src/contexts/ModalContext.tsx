@@ -21,6 +21,7 @@ interface ModalContextType {
   open: (type: ModalType, id?: string) => void;
   close: (type: ModalType) => void;
   toggle: (type: ModalType) => void;
+  closeAll: () => void;
   setEditingArrangementId: (id?: string) => void;
 }
 
@@ -53,6 +54,24 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     if (type === 'decorDesigner') setEditingArrangementId(undefined);
   }, []);
 
+  const closeAll = useCallback(() => {
+    setModals({
+      vendors: false,
+      timeline: false,
+      guests: false,
+      admin: false,
+      templates: false,
+      print: false,
+      operations: false,
+      messages: false,
+      submission: false,
+      eventQuestions: false,
+      decorDesigner: false,
+      overview: false,
+    });
+    setEditingArrangementId(undefined);
+  }, []);
+
   const toggle = useCallback((type: ModalType) => {
     setModals(prev => ({ ...prev, [type]: !prev[type] }));
   }, []);
@@ -77,7 +96,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ModalContext.Provider value={{ modals, editingArrangementId, open, close, toggle, setEditingArrangementId }}>
+    <ModalContext.Provider value={{ modals, editingArrangementId, open, close, toggle, closeAll, setEditingArrangementId }}>
       {children}
     </ModalContext.Provider>
   );

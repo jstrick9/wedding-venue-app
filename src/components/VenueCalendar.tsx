@@ -1,0 +1,461 @@
+// @ts-nocheck
+import { useMemo, useState } from 'react';
+import {
+  VenueCalendarEvent,
+  VenueCalendarCategory,
+  CoupleEvent,
+  Venue,
+} from '../types';
+import {
+  getVenueCalendarEvents,
+  getVenueCalendarEventsInRange,
+  addVenueCalendarEvent,
+  updateVenueCalendarEvent,
+  removeVenueCalendarEvent,
+  CALENDAR_CATEGORY_LABELS,
+} from '../services/calendar/venueCalendarService';
+import { getCoupleEvents } from '../services/couples/coupleService';
+
+type View = 'month' | 'week' | 'day' | 'agenda';
+
+const CAT_STYLE: Record<VenueCalendarCategory, { dot: string; chip: string }> = {
+  couple: { dot: 'bg-indigo-500', chip: 'bg-indigo-100 text-indigo-700' },
+  'open-house': { dot: 'bg-emerald-500', chip: 'bg-emerald-100 text-emerald-700' },
+  staffing: { dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700' },
+  other: { dot: 'bg-slate-500', chip: 'bg-slate-100 text-slate-700' },
+};
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+const toDateKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+interface EventItem {
+  id: string;
+  title: string;
+  category: VenueCalendarCategory;
+  date: string;
+  startTime?: string;
+  coupleEventId?: string;
+  venue?: VenueCalendarEvent | null;
+}
+
+export function VenueCalendar({
+  venues,
+  onOpenCouple,
+}: {
+  venues: Venue[];
+  onOpenCouple?: (coupleId: string) => void;
+}) {
+  const [view, setView] = useState<View>('month');
+  const [cursor, setCursor] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState<string>(toDateKey(new Date()));
+  const [showForm, setShowForm] = useState(false);
+  const [editEv, setEditEv] = useState<VenueCalendarEvent | null>(null);
+  const [detail, setDetail] = useState<EventItem | null>(null);
+  const [, force] = useState(0);
+
+  const refresh = () => force((n) => n + 1);
+
+  // Couple events as read-only calendar entries.
+  const coupleEntries: EventItem[] = useMemo(() => {
+    return getCoupleEvents()
+      .filter((c) => c.eventDate)
+      .map((c) => ({
+        id: `couple-${c.id}`,
+        title: c.coupleName,
+        category: 'couple' as VenueCalendarCategory,
+        date: c.eventDate!,
+        coupleEventId: c.id,
+        venue: null,
+      }));
+  }, [cursor]);
+
+  const venueEvents = getVenueCalendarEvents();
+  const venueItems: EventItem[] = venueEvents.map((e) => ({
+    id: e.id,
+    title: e.title,
+    category: e.category,
+    date: e.date,
+    startTime: e.startTime,
+    coupleEventId: e.category === 'couple' ? e.coupleEventId : undefined,
+    venue: e,
+  }));
+
+  const allItems: EventItem[] = [...coupleEntries, ...venueItems];
+
+  const itemsByDate = (dateKey: string) => allItems.filter((e) => e.date === dateKey);
+
+  const monthEvents = useMemo(
+    () => allItems.filter((e) => e.date.startsWith(toDateKey(cursor).slice(0, 7))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allItems, cursor, showForm, detail, editEv],
+  );
+
+  // Month grid
+  const grid = useMemo(() => {
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth();
+    const first = new Date(year, month, 1);
+    const startPad = first.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: (string | null)[] = [];
+    for (let i = 0; i < startPad; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(toDateKey(new Date(year, month, d)));
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }, [cursor]);
+
+  // Week days
+  const weekStart = useMemo(() => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    const dow = d.getDay();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+  }, [selectedDate]);
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => toDateKey(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i))),
+    [weekStart],
+  );
+
+  const shiftPeriod = (dir: number) => {
+    if (view === 'month') setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + dir, 1));
+    else if (view === 'week') {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + dir * 7);
+      setSelectedDate(toDateKey(d));
+    } else if (view === 'day' || view === 'agenda') {
+      const d = new Date(selectedDate + 'T00:00:00');
+      d.setDate(d.getDate() + dir);
+      setSelectedDate(toDateKey(d));
+    }
+  };
+
+  const today = toDateKey(new Date());
+  const isToday = (k: string) => k === today;
+
+  const openCreate = (date?: string) => {
+    setEditEv(null);
+    setSelectedDate(date || selectedDate);
+    setShowForm(true);
+  };
+
+  const saveForm = (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; notes?: string }) => {
+    if (editEv) updateVenueCalendarEvent(editEv.id, input);
+    else addVenueCalendarEvent({ ...input, createdBy: undefined });
+    setShowForm(false);
+    setEditEv(null);
+    refresh();
+  };
+
+  const renderChip = (e: EventItem) => {
+    const s = CAT_STYLE[e.category];
+    return (
+      <button
+        key={e.id}
+        type="button"
+        onClick={(ev) => { ev.stopPropagation(); if (e.coupleEventId && onOpenCouple) onOpenCouple(e.coupleEventId); else setDetail(e); }}
+        className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] leading-tight truncate ${s.chip}`}
+        title={e.title}
+      >
+        {e.startTime ? `${e.startTime} ` : ''}{e.title}
+      </button>
+    );
+  };
+
+  const periodLabel =
+    view === 'month'
+      ? `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`
+      : view === 'week'
+        ? `${weekDays[0]} – ${weekDays[6]}`
+        : new Date(selectedDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            {(['month', 'week', 'day', 'agenda'] as View[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                className={`px-3 py-1.5 rounded-lg text-sm capitalize ${view === v ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 ml-2">
+            <button type="button" onClick={() => shiftPeriod(-1)} className="px-2 py-1 rounded border border-gray-300 text-gray-600">◀</button>
+            <button type="button" onClick={() => setSelectedDate(today)} className="px-3 py-1 rounded border border-gray-300 text-sm text-gray-600">Today</button>
+            <button type="button" onClick={() => shiftPeriod(1)} className="px-2 py-1 rounded border border-gray-300 text-gray-600">▶</button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-gray-700">{periodLabel}</span>
+          <button type="button" onClick={() => openCreate()} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">+ Add event</button>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+        {(Object.keys(CAT_STYLE) as VenueCalendarCategory[]).map((c) => (
+          <span key={c} className="inline-flex items-center gap-1.5">
+            <span className={`w-2.5 h-2.5 rounded-full ${CAT_STYLE[c].dot}`} />
+            {CALENDAR_CATEGORY_LABELS[c]}
+          </span>
+        ))}
+      </div>
+
+      {/* Month view */}
+      {view === 'month' && (
+        <div className="rounded-xl bg-white border border-gray-200 overflow-hidden shadow-sm">
+          <div className="grid grid-cols-7 bg-gray-50 text-xs font-medium text-gray-500">
+            {DAYS.map((d) => <div key={d} className="px-2 py-2 text-center">{d}</div>)}
+          </div>
+          <div className="grid grid-cols-7 border-t border-gray-100">
+            {grid.map((k, i) => (
+              <div
+                key={i}
+                onClick={() => { setSelectedDate(k || today); setView('day'); }}
+                className={`min-h-[72px] border border-gray-100 p-1 cursor-pointer ${k && isToday(k) ? 'bg-indigo-50' : 'hover:bg-gray-50'} ${!k ? 'bg-gray-50' : ''}`}
+              >
+                {k && (
+                  <>
+                    <div className="text-[10px] text-gray-500 mb-0.5">{Number(k.slice(8))}</div>
+                    <div className="space-y-0.5">
+                      {itemsByDate(k).slice(0, 3).map(renderChip)}
+                      {itemsByDate(k).length > 3 && (
+                        <div className="text-[10px] text-gray-400 pl-1">+{itemsByDate(k).length - 3} more</div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Week view */}
+      {view === 'week' && (
+        <div className="rounded-xl bg-white border border-gray-200 overflow-hidden shadow-sm">
+          <div className="grid grid-cols-7 bg-gray-50 text-xs font-medium text-gray-500">
+            {weekDays.map((k) => (
+              <div key={k} className="px-2 py-2 text-center cursor-pointer hover:bg-indigo-50" onClick={() => { setSelectedDate(k); setView('day'); }}>
+                <div>{DAYS[new Date(k + 'T00:00:00').getDay()]}</div>
+                <div className={`font-bold ${isToday(k) ? 'text-indigo-600' : ''}`}>{Number(k.slice(8))}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 border-t border-gray-100">
+            {weekDays.map((k) => (
+              <div key={k} className="min-h-[160px] border border-gray-100 p-1 cursor-pointer hover:bg-gray-50" onClick={() => { setSelectedDate(k); setView('day'); }}>
+                <div className="space-y-0.5">
+                  {itemsByDate(k).map(renderChip)}
+                  <button type="button" onClick={(e) => { e.stopPropagation(); openCreate(k); }} className="text-[10px] text-emerald-600 hover:underline pl-1">+</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Day view */}
+      {view === 'day' && (
+        <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 text-sm font-semibold text-gray-700 border-b">
+            {new Date(selectedDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            <button type="button" onClick={() => openCreate(selectedDate)} className="ml-3 text-xs text-emerald-600 hover:underline">+ Add</button>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {itemsByDate(selectedDate).length === 0 && <p className="text-xs text-gray-400 px-4 py-6 text-center">No events on this day.</p>}
+            {itemsByDate(selectedDate).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e) => (
+              <div key={e.id} className="flex items-center gap-2 px-4 py-2 text-sm">
+                <span className={`w-2.5 h-2.5 rounded-full ${CAT_STYLE[e.category].dot}`} />
+                <span className="text-gray-500 w-20">{e.startTime || '—'}</span>
+                <span className="flex-1 text-gray-800 font-medium">{e.title}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_STYLE[e.category].chip}`}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
+                {e.coupleEventId && onOpenCouple ? (
+                  <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-indigo-600 hover:underline">Open</button>
+                ) : e.venue ? (
+                  <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Agenda view */}
+      {view === 'agenda' && (
+        <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 text-sm font-semibold text-gray-700 border-b">Agenda</div>
+          {allItems.length === 0 && <p className="text-xs text-gray-400 px-4 py-6 text-center">No events scheduled.</p>}
+          <div className="divide-y divide-gray-100">
+            {allItems
+              .slice()
+              .sort((a, b) => (a.date < b.date ? -1 : 1) || (a.startTime || '').localeCompare(b.startTime || ''))
+              .map((e) => (
+                <div key={e.id} className="flex items-center gap-2 px-4 py-2 text-sm">
+                  <span className={`w-2.5 h-2.5 rounded-full ${CAT_STYLE[e.category].dot}`} />
+                  <span className="text-gray-500 w-24">{new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                  <span className="text-gray-500 w-14">{e.startTime || ''}</span>
+                  <span className="flex-1 text-gray-800">{e.title}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_STYLE[e.category].chip}`}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
+                  {e.coupleEventId && onOpenCouple ? (
+                    <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-indigo-600 hover:underline">Open</button>
+                  ) : e.venue ? (
+                    <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
+                  ) : null}
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {detail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[12000] p-4" onClick={() => setDetail(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <span className={`w-3 h-3 rounded-full ${CAT_STYLE[detail.category].dot}`} />
+              <h3 className="font-semibold">{detail.title}</h3>
+            </div>
+            <p className="text-sm text-gray-600">
+              {new Date(detail.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              {detail.startTime ? ` · ${detail.startTime}` : ''}
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+              {detail.venue && (
+                <button type="button" onClick={() => { setEditEv(detail.venue!); setDetail(null); }} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600">Edit</button>
+              )}
+              <button type="button" onClick={() => setDetail(null)} className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(showForm || editEv) && (
+        <CalendarEventForm
+          initial={editEv}
+          defaultDate={selectedDate}
+          venues={venues}
+          onCancel={() => { setShowForm(false); setEditEv(null); }}
+          onSave={saveForm}
+        />
+      )}
+    </div>
+  );
+}
+
+function CalendarEventForm({
+  initial,
+  defaultDate,
+  venues,
+  onCancel,
+  onSave,
+}: {
+  initial: VenueCalendarEvent | null;
+  defaultDate: string;
+  venues: Venue[];
+  onCancel: () => void;
+  onSave: (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; notes?: string }) => void;
+}) {
+  const [f, setF] = useState({
+    title: initial?.title || '',
+    category: initial?.category || ('open-house' as VenueCalendarCategory),
+    date: initial?.date || defaultDate,
+    startTime: initial?.startTime || '',
+    endTime: initial?.endTime || '',
+    spaceId: initial?.spaceId || '',
+    notes: initial?.notes || '',
+  });
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[12000] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-3">
+        <h3 className="font-semibold">{initial ? 'Edit event' : 'Add event'}</h3>
+        <input
+          type="text"
+          value={f.title}
+          onChange={(e) => setF({ ...f, title: e.target.value })}
+          placeholder="Event title"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          aria-label="Event title"
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={f.category}
+            onChange={(e) => setF({ ...f, category: e.target.value as VenueCalendarCategory })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+            aria-label="Category"
+          >
+            {(['open-house', 'staffing', 'other'] as VenueCalendarCategory[]).map((c) => (
+              <option key={c} value={c}>{CALENDAR_CATEGORY_LABELS[c]}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={f.date}
+            onChange={(e) => setF({ ...f, date: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            aria-label="Date"
+          />
+          <input
+            type="time"
+            value={f.startTime}
+            onChange={(e) => setF({ ...f, startTime: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            aria-label="Start time"
+          />
+          <input
+            type="time"
+            value={f.endTime}
+            onChange={(e) => setF({ ...f, endTime: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            aria-label="End time"
+          />
+          <select
+            value={f.spaceId}
+            onChange={(e) => setF({ ...f, spaceId: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white col-span-2"
+            aria-label="Space"
+          >
+            <option value="">No specific space</option>
+            {venues.map((v) => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
+        <textarea
+          value={f.notes}
+          onChange={(e) => setF({ ...f, notes: e.target.value })}
+          placeholder="Notes"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          rows={2}
+          aria-label="Notes"
+        />
+        <div className="flex gap-2 justify-end">
+          <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600">Cancel</button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!f.title.trim() || !f.date) return;
+              onSave({ title: f.title, category: f.category, date: f.date, startTime: f.startTime, endTime: f.endTime, spaceId: f.spaceId, notes: f.notes });
+            }}
+            className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
