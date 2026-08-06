@@ -40,7 +40,8 @@ describe('AdminPanel Fixtures expand/collapse regression', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /fixtures/i }));
+    await user.click(screen.getByRole('button', { name: /fixtures & walls/i }));
+    // Defaults to the Fixtures sub-editor.
 
     const venueHeader = screen.getByText('Venue Fixtures').closest('div');
     const lodgingHeader = screen.getByText('Lodging/Utilities Fixtures').closest('div');

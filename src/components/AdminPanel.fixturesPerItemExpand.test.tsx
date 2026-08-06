@@ -40,7 +40,8 @@ describe('AdminPanel Fixtures per-item expand/collapse', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /fixtures/i }));
+    await user.click(screen.getByRole('button', { name: /fixtures & walls/i }));
+    // Defaults to the Fixtures sub-editor.
 
     // Expand all sections first
     const sectionExpandButtons = screen.getAllByRole('button', { name: /expand/i });

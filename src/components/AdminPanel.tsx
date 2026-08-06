@@ -71,12 +71,8 @@ import { useRBAC } from '../hooks/useRBAC';
 import { createPasswordRecord } from '../utils/auth';
 
 import { VenueManagement } from './admin/VenueManagement';
-import { TableManagement } from './admin/TableManagement';
-import { ChairManagement } from './admin/ChairManagement';
-import { FixtureManagement } from './admin/FixtureManagement';
-import { WallManagement } from './admin/WallManagement';
-import { LinenManagement } from './admin/LinenManagement';
-import { SpacingManagement } from './admin/SpacingManagement';
+import { SeatingAndLinensManagement } from './admin/SeatingAndLinensManagement';
+import { StructuresManagement } from './admin/StructuresManagement';
 import { TemplateManagement } from './admin/TemplateManagement';
 import { GuidelineManagement } from './admin/GuidelineManagement';
 import { EventQuestionsManagement } from './admin/EventQuestionsManagement';
@@ -1011,9 +1007,8 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
 
   const tabs: AdminTabDefinition[] = [
     { id: 'venues', label: '🏛️ Venues', icon: '🏛️', Component: VenueManagement, props: commonProps, group: 'Venue & Layout' },
-    { id: 'tables', label: '🪑 Tables/Seating', icon: '🪑', Component: TableManagement, props: commonProps, group: 'Venue & Layout' },
-    { id: 'chairs', label: '💺 Chairs', icon: '💺', Component: ChairManagement, props: commonProps, group: 'Venue & Layout' },
-    { id: 'fixtures', label: '📦 Fixtures', icon: '📦', Component: FixtureManagement, props: commonProps, group: 'Venue & Layout' },
+    { id: 'seating', label: '🪑 Tables, Chairs & Linens', icon: '🪑', Component: SeatingAndLinensManagement, props: commonProps, group: 'Venue & Layout' },
+    { id: 'structures', label: '📦 Fixtures & Walls', icon: '📦', Component: StructuresManagement, props: commonProps, group: 'Venue & Layout' },
     {
       id: 'decor',
       label: '🎀 Decor',
@@ -1034,9 +1029,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
         confirmAction,
       },
     },
-    { id: 'walls', label: '🪟 Walls', icon: '🪟', Component: WallManagement, props: commonProps, group: 'Venue & Layout' },
-    { id: 'linens', label: '🎨 Linens', icon: '🎨', Component: LinenManagement, props: commonProps, group: 'Venue & Layout' },
-    { id: 'spacing', label: '📐 Spacing', icon: '📐', Component: SpacingManagement, props: commonProps, group: 'Venue & Layout' },
+
     { id: 'templates', label: '📋 Templates', icon: '📋', Component: TemplateManagement, props: commonProps, group: 'Design & Content' },
     { id: 'guidelines', label: '💡 Guidelines', icon: '💡', Component: GuidelineManagement, props: commonProps, group: 'Design & Content' },
     { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps, group: 'Design & Content' },

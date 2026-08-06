@@ -7,16 +7,6 @@ export type CoupleEmailKind =
   | 'guest_invite'        // invite a guest to the guest portal
   | 'guest_reminder';     // remind a guest who hasn't RSVP'd
 
-interface CoupleEmail {
-  email: string;
-  name: string;
-  url: string;
-  coupleName: string;
-  organizationId: string;
-  subject: string;
-  body: string;
-}
-
 /**
  * Try to send a real transactional email when the Supabase backend is configured.
  * Returns 'sent' if delivered, 'mailto' if it fell back (Supabase not configured,

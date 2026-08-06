@@ -39,7 +39,8 @@ describe('AdminPanel Fixtures default-collapsed behavior', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /fixtures/i }));
+    await user.click(screen.getByRole('button', { name: /fixtures & walls/i }));
+    // Defaults to the Fixtures sub-editor.
 
     const venueSection = screen.getByRole('heading', { name: 'Venue Fixtures' }).closest('div')?.parentElement?.parentElement as HTMLElement;
     const lodgingSection = screen.getByRole('heading', { name: /Lodging\/Utilities/i }).closest('div')?.parentElement?.parentElement as HTMLElement;
