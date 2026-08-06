@@ -86,7 +86,7 @@ export function StudioLayoutsHome({
                 const master = v.masterLayout;
                 const masterTables = master?.tables?.length ?? 0;
                 return (
-                  <Card key={v.id} className={`p-4 ${isCurrent ? 'ring-2 ring-indigo-400' : ''}`}>
+                  <Card key={v.id} className={`p-4 ${isCurrent ? 'ring-2 ring-[#4A1942]' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="text-2xl">{cat?.icon || '🏛️'}</div>
                       <div className="flex flex-wrap gap-1 justify-end">
@@ -131,7 +131,7 @@ export function StudioLayoutsHome({
                       type="button"
                       disabled={!canEdit && !isCurrent}
                       onClick={() => onOpenVenue(v.id)}
-                      className="mt-3 w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-40"
+                      className="mt-3 w-full rounded-lg bg-[#4A1942] px-3 py-2 text-sm font-medium text-white hover:bg-[#3b1435] disabled:opacity-40"
                     >
                       {isCurrent ? 'Edit this space' : 'Open in editor'}
                     </button>

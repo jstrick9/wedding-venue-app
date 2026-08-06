@@ -59,6 +59,10 @@ P1 = valuable, P2 = polish).*
   "Approvals due" cards are now buttons that open Couples & Events; the section
   gained a "Review & approve layouts in Admin" action and a per-couple "Review →"
   link when a layout is pending/changes-requested. Committed.
+- ✅ **Brand consistency — UI kit primary tone aligned to the venue brand**: the
+  shared `Button`/`Badge`/`inputCls` primary accent was indigo while the rest of the
+  app is the purple brand (`#4A1942`). Aligned the kit + StudioLayoutsHome + calendar
+  "Design Studio" button to the brand for platform-wide consistency. Committed.
 - ⏳ **B5 (remaining)** — migrate remaining standalone panels (ops, timeline)
   onto the shared kit for full consistency.
 

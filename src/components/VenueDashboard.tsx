@@ -351,7 +351,7 @@ export function VenueDashboard(props: Props) {
                     <button type="button" onClick={props.onOpenOperations} className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">🛠️ Ops</button>
                     <button type="button" onClick={props.onOpenAdmin} className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">🔐 Admin</button>
                     <button type="button" onClick={() => setSection('calendar')} className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">📅 Calendar</button>
-                    <button type="button" onClick={props.onOpenStudio} className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">🎨 Design Studio</button>
+                    <button type="button" onClick={props.onOpenStudio} className="px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm hover:bg-[#3b1435]">🎨 Design Studio</button>
                   </div>
                 </div>
               </div>

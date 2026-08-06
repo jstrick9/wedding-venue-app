@@ -11,7 +11,7 @@ type Tone = 'default' | 'primary' | 'success' | 'warning' | 'danger';
 
 const toneBtn: Record<Tone, string> = {
   default: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50',
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
+  primary: 'bg-[#4A1942] text-white hover:bg-[#3b1435]',
   success: 'bg-emerald-600 text-white hover:bg-emerald-700',
   warning: 'bg-amber-500 text-white hover:bg-amber-600',
   danger: 'bg-red-600 text-white hover:bg-red-700',
@@ -52,7 +52,7 @@ export function SectionHeader({ icon, title, subtitle, action }: { icon?: string
 
 const toneBadge: Record<Tone, string> = {
   default: 'bg-gray-100 text-gray-700',
-  primary: 'bg-indigo-100 text-indigo-700',
+  primary: 'bg-[#4A1942]/10 text-[#4A1942]',
   success: 'bg-emerald-100 text-emerald-700',
   warning: 'bg-amber-100 text-amber-700',
   danger: 'bg-red-100 text-red-700',
@@ -77,4 +77,4 @@ export function EmptyState({ icon = '📭', title, hint, action }: { icon?: stri
   );
 }
 
-export const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-full';
+export const inputCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942] w-full';
