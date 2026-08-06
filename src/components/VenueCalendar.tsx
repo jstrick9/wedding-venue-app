@@ -51,6 +51,8 @@ interface EventItem {
   startTime?: string;
   coupleEventId?: string;
   venue?: VenueCalendarEvent | null;
+  /** Additional dates this item spans (e.g. multi-day couple events). */
+  extraDates?: string[];
 }
 
 const staffName = (id: string) => getUsers().find((u) => u.id === id)?.name || id;
@@ -83,9 +85,13 @@ export function VenueCalendar({
       .filter((c) => c.eventDate)
       .map((c) => ({
         id: `couple-${c.id}`,
-        title: c.coupleName,
+        title: c.coupleName + (c.guestCount ? ` (${c.guestCount})` : ''),
         category: 'couple' as VenueCalendarCategory,
         date: c.eventDate!,
+        // Multi-day events: surface the couple's event on every booked day.
+        extraDates: (c.days || [])
+          .map((d) => d.date)
+          .filter((d) => d && d !== c.eventDate),
         coupleEventId: c.id,
         venue: null,
       }));
@@ -111,6 +117,7 @@ export function VenueCalendar({
   const itemsByDate = (dateKey: string) =>
     allItems.filter((e) => {
       if (e.date === dateKey) return true;
+      if (e.extraDates?.includes(dateKey)) return true;
       if (e.venue?.recurrence) {
         return recurringDatesForEvent(e.venue, dateKey, dateKey).length > 0;
       }
@@ -118,7 +125,12 @@ export function VenueCalendar({
     });
 
   const monthEvents = useMemo(
-    () => allItems.filter((e) => e.date.startsWith(toDateKey(cursor).slice(0, 7))),
+    () =>
+      allItems.filter((e) => {
+        const monthPrefix = toDateKey(cursor).slice(0, 7);
+        if (e.date.startsWith(monthPrefix)) return true;
+        return (e.extraDates || []).some((d) => d.startsWith(monthPrefix));
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [allItems, cursor, showForm, detail, editEv],
   );
