@@ -304,6 +304,13 @@ the guest's room. See docs/couples-platform/78-bugfix-batch.md.
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
+## Couples & Events platform — Venue operations rollup & itinerary polish (round 17)
+✅ Aggregate operational summary (active couples, awaiting review, setup %, total
+overnight); venue guest viewer lists each guest's invited events; derived events
+appear for venue pre-login; lodging-event guests see the Lodging tab; couple
+itinerary progress step; manual RSVP includes assigned events. See
+docs/reviews/95-venue-operations-rollup.md.
+
 ## Couples & Events platform — Venue visibility of guest events & overnight (round 16)
 ✅ Venue Couples card gains a 🗓️ Itinerary expandable (guest events with
 invited/attending vs capacity + invited guests) and a 🛏️ overnight badge
