@@ -105,8 +105,9 @@ export function VenueDashboard(props: Props) {
     return list.sort((a, b) => (a.date < b.date ? -1 : 1)).slice(0, 12);
   }, [coupleEvents, calendarEvents, today, in60]);
 
-  // Next 7 days for the mini agenda widget.
-  const next7 = upcoming.filter((e) => e.date <= in30).slice(0, 6);
+  // Next 7 days for the mini agenda widget (labeled "This week"). Previously this
+  // used a 30-day window, so it silently showed events up to a month out.
+  const next7 = upcoming.filter((e) => e.date <= dayKey(new Date(Date.now() + 7 * 86400000))).slice(0, 6);
 
   const items: { id: string; label: string; icon: string; action: () => void }[] = [
     { id: 'home', label: 'Home', icon: '🏠', action: () => setSection('home') },
