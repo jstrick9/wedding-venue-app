@@ -52,7 +52,7 @@ describe('VenueDashboard', () => {
     expect(screen.getAllByText(/Awaiting layout review/i).length).toBeGreaterThan(0);
     // Sidebar nav items.
     expect(screen.getByText('Home')).toBeTruthy();
-    expect(screen.getByText('Design Studio')).toBeTruthy();
+    expect(screen.getAllByText('Design Studio').length).toBeGreaterThan(0);
   });
 
   it('switches to the calendar section', async () => {

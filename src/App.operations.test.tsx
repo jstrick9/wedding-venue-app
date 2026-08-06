@@ -41,8 +41,8 @@ describe('App Staff Operations access', () => {
 
     render(<App />);
 
-    // Admin sees the Operations button.
-    const opsButton = await screen.findByRole('button', { name: /operations/i });
+    // Admin sees the Operations button (in the sidebar nav and quick actions).
+    const opsButton = (await screen.findAllByRole('button', { name: /operations/i }))[0];
     expect(opsButton).toBeInTheDocument();
 
     fireEvent.click(opsButton);

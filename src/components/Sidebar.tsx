@@ -118,10 +118,10 @@ export function Sidebar({
   const [activeSection, setActiveSection] = useState<string>('tables');
   const [zoomInput, setZoomInput] = useState(String(Math.round(zoom * 100)));
   const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogSearchOpen, setCatalogSearchOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const config = getConfig();
-  const showFullLabels = width > 320;
   const normalizedCatalogSearch = catalogSearch.trim().toLowerCase();
 
   const matchesCatalogSearch = (value: string, extraValues: string[] = []) => {
@@ -677,141 +677,68 @@ export function Sidebar({
         <span className="font-medium">🖱️ Drag</span> an item to the canvas, or <span className="font-medium">click</span> to select then click on canvas
       </div>
 
-      {/* Section tabs */}
-      <div className="flex bg-white border-b border-gray-300">
-        {sections.map((section, index) => (
-          <button
-            key={section.id}
-            onClick={() => setActiveSection(section.id)}
-            className={`flex-1 min-w-0 px-2 py-2.5 text-xs font-medium transition-colors whitespace-nowrap flex items-center justify-center gap-1 ${
-              activeSection === section.id
-                ? 'border-b-2 text-gray-900 bg-gray-50'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            } ${index > 0 ? 'border-l border-gray-300' : ''}`}
-            style={{
-              borderBottomColor: activeSection === section.id ? config.primaryColor : 'transparent',
-            }}
-            title={section.label}
-            type="button"
-          >
-            <span className="text-base">{section.icon}</span>
-            {showFullLabels && <span>{section.label}</span>}
-          </button>
-        ))}
+      {/* Section tabs — always show each section's name */}
+      <div className="bg-white border-b border-gray-300 p-2 flex flex-wrap gap-1.5">
+        {sections.map((section) => {
+          const active = activeSection === section.id;
+          return (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-colors ${
+                active
+                  ? 'bg-[#4A1942] text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              aria-pressed={active}
+              title={section.label}
+              type="button"
+            >
+              <span className="text-sm leading-none">{section.icon}</span>
+              <span className="truncate max-w-[6.5rem]">{section.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                Workspace Snapshot
-              </p>
-              <h3 className="text-sm font-semibold text-gray-800 mt-1">
-                {venueWidth}' × {venueHeight}' {currentVenueCategory} layout
-              </h3>
-            </div>
+        {showCatalogSearch && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <button
               type="button"
-              onClick={() => emit('spm_open_workspace_help')}
-              className="text-xs font-medium text-[#4A1942] hover:underline"
+              onClick={() => setCatalogSearchOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left"
+              aria-expanded={catalogSearchOpen}
+              aria-controls="sidebar-catalog-search"
             >
-              Keyboard help
+              <span className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                <span>🔍</span> Quick find
+              </span>
+              <span className="text-gray-400 transition-transform" style={{ transform: catalogSearchOpen ? 'rotate(180deg)' : undefined }}>▾</span>
             </button>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-            <div className="rounded-lg bg-gray-50 px-2 py-2">
-              <div className="text-base font-bold text-gray-900">{placedTables.length}</div>
-              <div className="text-[11px] text-gray-500">Tables</div>
-            </div>
-            <div className="rounded-lg bg-gray-50 px-2 py-2">
-              <div className="text-base font-bold text-gray-900">{placedFixtures.length}</div>
-              <div className="text-[11px] text-gray-500">Fixtures</div>
-            </div>
-            <div className="rounded-lg bg-gray-50 px-2 py-2">
-              <div className="text-base font-bold text-gray-900">{Math.round(zoom * 100)}%</div>
-              <div className="text-[11px] text-gray-500">Zoom</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Grid & Snap controls */}
-        <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-              Grid &amp; Snap
-            </p>
-          </div>
-          <div className="mt-2 space-y-2">
-            <label className="flex items-center justify-between gap-3 text-sm text-gray-700 cursor-pointer">
-              <span>Show grid</span>
-              <input
-                type="checkbox"
-                checked={showGrid}
-                onChange={(e) => onShowGridChange(e.target.checked)}
-                className="w-4 h-4 accent-[#4A1942]"
-              />
-            </label>
-            <label className="flex items-center justify-between gap-3 text-sm text-gray-700 cursor-pointer">
-              <span>Snap to grid</span>
-              <input
-                type="checkbox"
-                checked={snapToGrid}
-                onChange={(e) => onSnapToGridChange?.(e.target.checked)}
-                className="w-4 h-4 accent-[#4A1942]"
-              />
-            </label>
-            <label className="flex items-center justify-between gap-3 text-sm text-gray-700">
-              <span>Grid size</span>
-              <select
-                value={gridSize}
-                onChange={(e) => onGridSizeChange(Number(e.target.value))}
-                className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
-              >
-                {[1, 2, 5, 10, 20].map((size) => (
-                  <option key={size} value={size}>{size} ft</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex items-center justify-between gap-3 text-sm text-gray-700">
-              <span>Grid contrast</span>
-              <input
-                type="range"
-                min={0.1}
-                max={1}
-                step={0.05}
-                value={gridContrast}
-                onChange={(e) => onGridContrastChange?.(Number(e.target.value))}
-                className="w-28 accent-[#4A1942]"
-              />
-            </label>
-          </div>
-        </div>
-
-        {showCatalogSearch && (
-          <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-            <label htmlFor="sidebar-catalog-search" className="block text-xs font-semibold text-gray-700 mb-2">
-              Quick find
-            </label>
-            <input
-              id="sidebar-catalog-search"
-              type="search"
-              value={catalogSearch}
-              onChange={(e) => setCatalogSearch(e.target.value)}
-              placeholder={sectionSearchPlaceholder[activeSection] || 'Search this section'}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
-            />
-            {catalogSearch && (
-              <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
-                <span>Showing matches for “{catalogSearch}”</span>
-                <button
-                  type="button"
-                  onClick={() => setCatalogSearch('')}
-                  className="text-[#4A1942] hover:underline"
-                >
-                  Clear
-                </button>
+            {catalogSearchOpen && (
+              <div className="px-3 pb-3 pt-0 border-t border-gray-100">
+                <input
+                  id="sidebar-catalog-search"
+                  type="search"
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  placeholder={sectionSearchPlaceholder[activeSection] || 'Search this section'}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
+                />
+                {catalogSearch && (
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
+                    <span>Showing matches for “{catalogSearch}”</span>
+                    <button
+                      type="button"
+                      onClick={() => setCatalogSearch('')}
+                      className="text-[#4A1942] hover:underline"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1017,6 +944,92 @@ export function Sidebar({
 
         {activeSection === 'settings' && (
           <div className="space-y-4">
+            {/* Workspace Snapshot */}
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    Workspace Snapshot
+                  </p>
+                  <h3 className="text-sm font-semibold text-gray-800 mt-1">
+                    {venueWidth}' × {venueHeight}' {currentVenueCategory} layout
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => emit('spm_open_workspace_help')}
+                  className="text-xs font-medium text-[#4A1942] hover:underline"
+                >
+                  Keyboard help
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                <div className="rounded-lg bg-gray-50 px-2 py-2">
+                  <div className="text-base font-bold text-gray-900">{placedTables.length}</div>
+                  <div className="text-[11px] text-gray-500">Tables</div>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-2 py-2">
+                  <div className="text-base font-bold text-gray-900">{placedFixtures.length}</div>
+                  <div className="text-[11px] text-gray-500">Fixtures</div>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-2 py-2">
+                  <div className="text-base font-bold text-gray-900">{Math.round(zoom * 100)}%</div>
+                  <div className="text-[11px] text-gray-500">Zoom</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Grid & Snap controls */}
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Grid &amp; Snap
+              </p>
+              <div className="mt-2 space-y-2">
+                <label className="flex items-center justify-between gap-3 text-sm text-gray-700 cursor-pointer">
+                  <span>Show grid</span>
+                  <input
+                    type="checkbox"
+                    checked={showGrid}
+                    onChange={(e) => onShowGridChange(e.target.checked)}
+                    className="w-4 h-4 accent-[#4A1942]"
+                  />
+                </label>
+                <label className="flex items-center justify-between gap-3 text-sm text-gray-700 cursor-pointer">
+                  <span>Snap to grid</span>
+                  <input
+                    type="checkbox"
+                    checked={snapToGrid}
+                    onChange={(e) => onSnapToGridChange?.(e.target.checked)}
+                    className="w-4 h-4 accent-[#4A1942]"
+                  />
+                </label>
+                <label className="flex items-center justify-between gap-3 text-sm text-gray-700">
+                  <span>Grid size</span>
+                  <select
+                    value={gridSize}
+                    onChange={(e) => onGridSizeChange(Number(e.target.value))}
+                    className="px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                  >
+                    {[1, 2, 5, 10, 20].map((size) => (
+                      <option key={size} value={size}>{size} ft</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center justify-between gap-3 text-sm text-gray-700">
+                  <span>Grid contrast</span>
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={1}
+                    step={0.05}
+                    value={gridContrast}
+                    onChange={(e) => onGridContrastChange?.(Number(e.target.value))}
+                    className="w-28 accent-[#4A1942]"
+                  />
+                </label>
+              </div>
+            </div>
+
             {/* Zoom controls */}
             <div className="bg-white rounded-lg p-3 border border-gray-200">
               <label className="block text-xs font-semibold text-gray-700 mb-2">

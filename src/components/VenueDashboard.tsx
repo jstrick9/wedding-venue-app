@@ -115,7 +115,7 @@ export function VenueDashboard(props: Props) {
     { id: 'vendors', label: 'Vendors', icon: '🧰', action: () => setSection('vendors') },
     { id: 'timeline', label: 'Timeline', icon: '⏱️', action: () => setSection('timeline') },
     { id: 'ops', label: 'Operations', icon: '🛠️', action: () => setSection('ops') },
-    { id: 'admin', label: 'Admin', icon: '🔐', action: () => props.onOpenAdmin() },
+    { id: 'admin', label: 'Admin & System Settings', icon: '🔐', action: () => props.onOpenAdmin() },
     { id: 'studio', label: 'Design Studio', icon: '🎨', action: () => { props.onOpenStudio(); } },
   ];
   const sidebarItems = items.filter((i) => {
@@ -347,11 +347,19 @@ export function VenueDashboard(props: Props) {
 
                 <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4">
                   <h2 className="font-semibold mb-3">Quick actions</h2>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={props.onOpenOperations} className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">🛠️ Ops</button>
-                    <button type="button" onClick={props.onOpenAdmin} className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">🔐 Admin</button>
-                    <button type="button" onClick={() => setSection('calendar')} className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">📅 Calendar</button>
-                    <button type="button" onClick={props.onOpenStudio} className="px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm hover:bg-[#3b1435]">🎨 Design Studio</button>
+                  <div className="space-y-2">
+                    <button type="button" onClick={props.onOpenAdmin} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]">
+                      <span>🔐</span><span>Admin &amp; System Settings</span>
+                    </button>
+                    <button type="button" onClick={props.onOpenStudio} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                      <span>🎨</span><span>Design Studio</span>
+                    </button>
+                    <button type="button" onClick={() => setSection('calendar')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                      <span>📅</span><span>Calendar</span>
+                    </button>
+                    <button type="button" onClick={props.onOpenOperations} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                      <span>🛠️</span><span>Operations</span>
+                    </button>
                   </div>
                 </div>
               </div>

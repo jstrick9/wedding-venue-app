@@ -20,6 +20,11 @@ P1 = valuable, P2 = polish).*
   "Couples & Events" section (sidebar label, KPIs, onboarding card, section heading)
   and the CoupleManagement admin heading to "Couples Portal", matching the admin
   category. Committed.
+- ✅ **Dashboard + Design Studio UX polish** — dashboard sidebar/quick-action
+  "Admin" → "Admin & System Settings" (quick actions redesigned to stacked buttons);
+  Design Studio's Workspace Snapshot + Grid & Snap moved from every Layout Tool
+  section into the Settings section; Quick find made collapsible (default collapsed);
+  Layout Tools section tabs now always show their names as labeled pills. Committed.
 - ✅ **A2 — Vendor preferred-vendors showcase** (dynamic categories; payments/budget
   removed). Committed.
 - ✅ **A1 — Removed venue guest management** (dashboard/header/studio/overview

@@ -41,6 +41,8 @@ function renderSidebar(overrides: Record<string, unknown> = {}) {
 describe('Sidebar grid & snap controls', () => {
   it('renders grid/snap controls and reflects the showGrid state', () => {
     renderSidebar({ showGrid: true, snapToGrid: true, gridSize: 10, gridContrast: 0.7 });
+    // Grid & Snap now lives in the Settings section.
+    fireEvent.click(screen.getByRole('button', { name: /Settings/i }));
     const showGridCheckbox = screen.getByLabelText('Show grid') as HTMLInputElement;
     const snapCheckbox = screen.getByLabelText('Snap to grid') as HTMLInputElement;
     expect(showGridCheckbox.checked).toBe(true);
@@ -51,6 +53,7 @@ describe('Sidebar grid & snap controls', () => {
   it('calls onShowGridChange when the toggle is flipped', () => {
     const onShowGridChange = vi.fn();
     renderSidebar({ onShowGridChange, showGrid: false });
+    fireEvent.click(screen.getByRole('button', { name: /Settings/i }));
     fireEvent.click(screen.getByLabelText('Show grid'));
     expect(onShowGridChange).toHaveBeenCalledWith(true);
   });
@@ -59,6 +62,7 @@ describe('Sidebar grid & snap controls', () => {
     const onSnapToGridChange = vi.fn();
     const onGridSizeChange = vi.fn();
     renderSidebar({ onSnapToGridChange, onGridSizeChange });
+    fireEvent.click(screen.getByRole('button', { name: /Settings/i }));
     fireEvent.click(screen.getByLabelText('Snap to grid'));
     expect(onSnapToGridChange).toHaveBeenCalledWith(true);
     fireEvent.change(screen.getByDisplayValue('5 ft'), { target: { value: '10' } });
