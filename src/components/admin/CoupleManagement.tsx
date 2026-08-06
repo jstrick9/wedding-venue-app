@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useConfirm } from '../useConfirm';
 import type { AdminCommonProps } from './AdminTabTypes';
 import { CoupleEvent, CoupleLayoutStatus, CoupleSetupStatus } from '../../types';
 import { CoupleLayoutPreview } from '../CoupleLayoutPreview';
@@ -48,6 +49,7 @@ const LAYOUT_BADGE: Record<CoupleLayoutStatus, { label: string; cls: string }> =
  * end date (days are derived across the span).
  */
 export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess }: CoupleManagementProps) {
+  const { confirm, confirmDialog } = useConfirm();
   const [events, setEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -746,8 +748,9 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (window.confirm(`Delete the event for ${ev.coupleName}?`)) {
+                      onClick={async () => {
+                        const ok = await confirm({ title: 'Delete event?', message: `Delete the event for ${ev.coupleName}? This cannot be undone.`, tone: 'danger', confirmLabel: 'Delete' });
+                        if (ok) {
                           deleteCoupleEvent(ev.id);
                           refresh();
                         }
@@ -1174,6 +1177,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
         </div>
       );
       })()}
+      {confirmDialog}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Point, Venue } from '../types';
+import { useConfirm } from './useConfirm';
 import { showToast } from './Toast';
 
 interface NormalizedPoint {
@@ -116,6 +117,7 @@ const shapeToAbsolute = (points: NormalizedPoint[], venue: Venue): Point[] =>
   }));
 
 export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, onSave, onClose }) => {
+  const { confirm, confirmDialog } = useConfirm();
   const [points, setPoints] = useState<NormalizedPoint[]>(normalizePoints(venue));
   // Reference to the shape as loaded, for the "unsaved changes" close guard.
   const initialPointsRef = useRef<NormalizedPoint[]>(normalizePoints(venue));
@@ -125,8 +127,11 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
     [points],
   );
 
-  const requestClose = () => {
-    if (isDirty && !window.confirm('You have unsaved shape changes. Discard them and close?')) return;
+  const requestClose = async () => {
+    if (isDirty) {
+      const ok = await confirm({ title: 'Discard changes?', message: 'You have unsaved shape changes. Discard them and close?', confirmLabel: 'Discard', tone: 'default' });
+      if (!ok) return;
+    }
     onClose();
   };
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
@@ -158,7 +163,7 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        requestClose();
+        void requestClose();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -695,6 +700,7 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
           </div>
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 };

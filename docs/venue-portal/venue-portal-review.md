@@ -34,7 +34,14 @@ P1 = valuable, P2 = polish).*
   now flows through one shared `handleTemplateSelect` (overwrite guard + space
   switch) reused by both the gallery and the standalone `TemplateSelector`.
   Print/export was already covered by PrintView. Committed.
-- ⏳ **B5 (remaining)** — shared toast/confirm/modal unification + a11y/reduced-motion.
+- ✅ **B5 — confirm unification**: new promise-based `useConfirm()` hook renders one
+  shared, accessible `ConfirmDialog` (trap focus, Escape-cancel, non-blocking).
+  Replaced all remaining native `window.confirm` calls (PackageManagement
+  packages/add-ons, VenueWayfindingManagement map reset, CoupleManagement event
+  delete, CustomVenueBuilder unsaved-changes guard). Toast was already unified via
+  `showToast`; modals via `ModalDialog`/`CenteredModal`. Reduced-motion media query
+  already present globally. Committed.
+- ⏳ **B5 (remaining)** — broader adoption of the shared `ui` kit + keyboard/focus a11y sweep.
 
 ## Guiding principles (from research)
 - **Venue ops ≠ couple planning.** The best tools separate the venue's back-office

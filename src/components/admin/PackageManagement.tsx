@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useConfirm } from '../useConfirm';
 import {
   WeddingPackage,
   WeddingPackageDuration,
@@ -41,6 +42,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
   const [section, setSection] = useState<Section>('packages');
   const [packages, setPackages] = useState<WeddingPackage[]>(() => getWeddingPackages());
   const [addOns, setAddOns] = useState(getPackageAddOns());
+  const { confirm, confirmDialog } = useConfirm();
 
   // ── Package form state ────────────────────────────────────────────────────
   const [pkgForm, setPkgForm] = useState({
@@ -109,12 +111,12 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
     startNewPkg();
     onShowSuccess('Package saved.');
   };
-  const removePkg = (id: string) => {
-    if (window.confirm('Delete this package?')) {
-      deleteWeddingPackage(id);
-      setPackages(getWeddingPackages());
-      onShowSuccess('Package deleted.');
-    }
+  const removePkg = async (id: string) => {
+    const ok = await confirm({ title: 'Delete package?', message: 'This package will be permanently removed.', tone: 'danger', confirmLabel: 'Delete' });
+    if (!ok) return;
+    deleteWeddingPackage(id);
+    setPackages(getWeddingPackages());
+    onShowSuccess('Package deleted.');
   };
 
   // ── Add-on form state ─────────────────────────────────────────────────────
@@ -145,12 +147,12 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
     startNewAo();
     onShowSuccess('Add-on saved.');
   };
-  const removeAo = (id: string) => {
-    if (window.confirm('Delete this add-on?')) {
-      deletePackageAddOn(id);
-      setAddOns(getPackageAddOns());
-      onShowSuccess('Add-on deleted.');
-    }
+  const removeAo = async (id: string) => {
+    const ok = await confirm({ title: 'Delete add-on?', message: 'This add-on will be permanently removed.', tone: 'danger', confirmLabel: 'Delete' });
+    if (!ok) return;
+    deletePackageAddOn(id);
+    setAddOns(getPackageAddOns());
+    onShowSuccess('Add-on deleted.');
   };
 
   const money = (n: number) => (n ? `$${n.toLocaleString()}` : '$0');
@@ -369,6 +371,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
           </div>
         </>
       )}
+      {confirmDialog}
     </div>
   );
 }

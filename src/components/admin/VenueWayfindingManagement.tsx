@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useConfirm } from '../useConfirm';
 import type { AdminCommonProps } from './AdminTabTypes';
 import {
   VenueMapConfig,
@@ -43,6 +44,7 @@ const KIND_LABEL: Record<VenueMapPoint['kind'], string> = {
  * that couple.
  */
 export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
+  const { confirm, confirmDialog } = useConfirm();
   const [map, setMap] = useState<VenueMapConfig | null>(() => getVenueMapConfig());
   const [rules, setRules] = useState<string[]>(() => getVenueRules().rules);
   const [newRule, setNewRule] = useState('');
@@ -225,10 +227,9 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
           <h3 className="font-semibold text-sm">Property Map</h3>
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm('Reset the entire venue map? This removes all points, paths, and rain-contingency backups.')) {
-                update(emptyVenueMapConfig());
-              }
+            onClick={async () => {
+              const ok = await confirm({ title: 'Reset venue map?', message: 'This removes all points, paths, and rain-contingency backups.', tone: 'danger', confirmLabel: 'Reset' });
+              if (ok) update(emptyVenueMapConfig());
             }}
             className="text-xs text-gray-400 hover:text-gray-600"
           >
@@ -653,6 +654,7 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
           )}
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }
