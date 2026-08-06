@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { useVendors } from '../hooks/useVendors';
 import { Vendor } from '../types/vendor';
 import { showToast } from './Toast';
+import { Button, EmptyState } from './ui';
 import { ConfirmDialog } from './ConfirmDialog';
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { getCoupleVendors } from '../services/couples/coupleVendorService';
@@ -141,7 +142,7 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
               <div className="text-sm font-medium text-gray-700">Manage categories</div>
               <div className="flex gap-2">
                 <input type="text" value={newCategoryLabel} onChange={(e) => setNewCategoryLabel(e.target.value)} placeholder="New category (e.g. Bar Service)" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="New category" />
-                <button type="button" onClick={saveCategory} className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Add</button>
+                <Button type="button" tone="primary" onClick={saveCategory}>Add</Button>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {categories.map((c) => (
@@ -171,8 +172,8 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
               <input type="text" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Internal notes" className="px-3 py-2 border border-gray-300 rounded-lg text-sm sm:col-span-2" aria-label="Notes" />
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={saveVendor} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium">{editingVendor ? '💾 Save changes' : '+ Add vendor'}</button>
-              {editingVendor && <button type="button" onClick={() => setEditingVendor(null)} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600">Cancel</button>}
+              <Button type="button" tone="primary" onClick={saveVendor}>{editingVendor ? '💾 Save changes' : '+ Add vendor'}</Button>
+              {editingVendor && <Button type="button" onClick={() => setEditingVendor(null)}>Cancel</Button>}
             </div>
           </div>
 
@@ -181,7 +182,7 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
 
           {/* Vendor cards */}
           {filtered.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No vendors here yet. Add one above, or create a category.</p>
+            <EmptyState icon="🧰" title="No vendors here yet" hint="Add a preferred vendor above, or create a new category." />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {filtered.map((v) => (

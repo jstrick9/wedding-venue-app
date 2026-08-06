@@ -49,8 +49,10 @@ P1 = valuable, P2 = polish).*
 - ✅ **Cleanup (from studio/calendar pass)** — studio home now routes through the
   venue-switch guard (no silent unsaved-work loss), is scoped to `selectableVenues`,
   and the dead `'guests'` modal was removed. Committed.
-- ⏳ **B5 (remaining)** — migrate remaining standalone panels (vendors, ops,
-  timeline) onto the shared kit for full consistency.
+- ✅ **B5 — VendorPanel adopts shared `ui` kit** (empty state, add/save/cancel
+  buttons) for consistency with the dashboard/calendar. Committed.
+- ⏳ **B5 (remaining)** — migrate remaining standalone panels (ops, timeline)
+  onto the shared kit for full consistency.
 
 ## Guiding principles (from research)
 - **Venue ops ≠ couple planning.** The best tools separate the venue's back-office
