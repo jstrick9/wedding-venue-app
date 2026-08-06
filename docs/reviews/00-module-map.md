@@ -310,10 +310,11 @@ place/move/delete tables, fixtures, decor; zoom/pan; save per couple+space);
 venue approval queue renders read-only previews of the drawn layouts. See
 docs/reviews/97-couple-layout-canvas.md.
 
-## Venue Dashboard enhancements (round 21)
-✅ Inline Admin & Operations panels in the dashboard; drag-and-drop calendar
-rescheduling; staffing/assignment on calendar events; first-time venue onboarding
-empty states. See docs/reviews/99-dashboard-enhancements.md.
+## Venue Dashboard enhancements (round 21–22)
+✅ Inline Admin & Operations (r21); drag-and-drop rescheduling; staffing/assignment;
+onboarding empty states (r21). Follow-up (r22): inline Vendors/Timeline/Guests;
+staff-shift linking from calendar events (venueShiftService); recurring calendar
+events (weekly/monthly/yearly). See docs/reviews/99-dashboard-enhancements.md.
 
 ## Venue Dashboard & calendar (round 20)
 ✅ Venue home/landing page = default view: persistent sidebar hub (Home, Calendar,

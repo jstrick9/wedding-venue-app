@@ -27,9 +27,19 @@ banner with one-click cards: add venue spaces, review packages/add-ons, create t
 first couple event, and schedule an open house. The upcoming-events widget gets an
 empty-state with a "Schedule an event" action.
 
+## Follow-up (round 22): inline Vendors/Timeline/Guests, shift linking, recurring events
+- **Inline Vendors, Timeline & Guests** — those panels also gained `inline` props and now
+  render inside the dashboard content area, so all venue management stays in the dashboard.
+- **Staff-shift linking** — `StaffShift.calendarEventId` + `venueShiftService` syncs one
+  shift per assigned staff member from a calendar event's date/time/role; re-syncs on
+  drag-reschedule; event detail shows linked shifts (times + roles).
+- **Recurring events** — `VenueCalendarEvent.recurrence` (weekly/monthly/yearly);
+  `recurringDatesForEvent` expands occurrences across a range; form "Repeats" selector,
+  ↻ badge, and dragging a recurring event turns that occurrence into a one-off.
+
 ## Tests
-Calendar `moveVenueCalendarEvent` + VenueDashboard onboarding render tests.
-Full suite: **449 passing / 11 skipped**.
+Calendar `moveVenueCalendarEvent`, `recurringDatesForEvent`, VenueDashboard onboarding,
+and `venueShiftService` unit tests. Full suite: **453 passing / 11 skipped**.
 
 ## CI
 `npm run typecheck`, `npm run lint:events`, `npx vitest run`, `npm run build`
