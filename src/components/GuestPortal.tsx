@@ -1458,6 +1458,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               <button
                 type="button"
                 onClick={() => handleRSVPChange('attending', 'yes')}
+                aria-pressed={rsvpForm.attending === 'yes'}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border ${
                   rsvpForm.attending === 'yes'
                     ? 'bg-indigo-600 text-white border-indigo-600'
@@ -1469,6 +1470,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               <button
                 type="button"
                 onClick={() => handleRSVPChange('attending', 'no')}
+                aria-pressed={rsvpForm.attending === 'no'}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border ${
                   rsvpForm.attending === 'no'
                     ? 'bg-indigo-600 text-white border-indigo-600'
