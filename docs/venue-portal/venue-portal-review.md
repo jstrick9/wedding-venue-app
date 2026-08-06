@@ -7,6 +7,12 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Couples portal + dashboard polish round**: couple checklist grouped by phase;
+  fixed add-on→guest-event auto-derivation for add-ons added later; replaced the
+  horizontal-scroll tab bar with wrapping pill tabs; fixed the dashboard "This week"
+  widget (was 30-day window) and surfaced multi-day couple events on every booked
+  day in the dashboard; guest RSVP submit now says "Update RSVP" for returning
+  guests. Committed.
 - ✅ **Guest-count ↔ seating-capacity verification (couple layout)**: the couple's
   layout editor now computes seating capacity from placed tables and shows
   "Seats X / Y guests" with an amber warning when a space under-seats the couple's
