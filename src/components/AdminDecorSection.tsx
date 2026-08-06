@@ -318,12 +318,12 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 overflow-x-auto">
+      <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-0">
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`px-6 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
+          className={`px-4 py-2.5 font-medium text-sm transition-colors ${
             activeTab === 'catalog' 
-              ? 'border-b-2 border-purple-600 text-purple-600' 
+              ? 'border-b-2 border-[#4A1942] text-[#4A1942]' 
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -331,9 +331,9 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('categories')}
-          className={`px-6 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
+          className={`px-4 py-2.5 font-medium text-sm transition-colors ${
             activeTab === 'categories' 
-              ? 'border-b-2 border-purple-600 text-purple-600' 
+              ? 'border-b-2 border-[#4A1942] text-[#4A1942]' 
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -343,7 +343,7 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
           onClick={() => setActiveTab('packages')}
           className={`px-6 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
             activeTab === 'packages' 
-              ? 'border-b-2 border-purple-600 text-purple-600' 
+              ? 'border-b-2 border-[#4A1942] text-[#4A1942]' 
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >

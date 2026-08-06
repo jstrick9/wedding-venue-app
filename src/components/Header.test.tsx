@@ -113,7 +113,7 @@ describe('Header', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: /admin panel/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /admin & system settings/i })).not.toBeInTheDocument();
 
     rerender(
       <Header
@@ -142,7 +142,7 @@ describe('Header', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: /admin panel/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /admin & system settings/i })).toBeInTheDocument();
   });
 
   it('opens save layout dialog and saves layout name', async () => {

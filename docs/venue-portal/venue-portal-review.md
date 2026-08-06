@@ -7,6 +7,15 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Admin & System Settings reorg (user-directive)** — the venue Admin is now a
+  settings console titled "Admin & System Settings" with five categories
+  (Venues & Inventory, Layout Content, Couples Portal, System Brand & Access,
+  System & Backup). Decor moved into Venues & Inventory; Spacing moved out of
+  Tables/Chairs/Linens into Layout Content; Event Questions moved into Couples
+  Portal; the Guest Portal config was removed from the venue (couples configure
+  their own); Users/Access/Invites moved into System Brand & Access. Navigation
+  redesigned to a category rail + wrapping section pills — the horizontal
+  scrollbar is gone. Committed.
 - ✅ **A2 — Vendor preferred-vendors showcase** (dynamic categories; payments/budget
   removed). Committed.
 - ✅ **A1 — Removed venue guest management** (dashboard/header/studio/overview

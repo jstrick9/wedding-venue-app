@@ -424,7 +424,7 @@ export function Header({
                 className="hidden md:flex items-center gap-1 px-2 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
               >
                 <span>⚙️</span>
-                <span className="hidden lg:inline">Admin Panel</span>
+                <span className="hidden lg:inline">Admin &amp; System Settings</span>
                 <span className="lg:hidden">Admin</span>
               </button>
             )}
@@ -706,7 +706,7 @@ export function Header({
                   }}
                   className="w-full py-3 px-4 bg-white/20 hover:bg-white/30 rounded-lg text-left font-medium"
                 >
-                  ⚙️ Admin Panel
+                  ⚙️ Admin &amp; System Settings
                 </button>
               )}
 

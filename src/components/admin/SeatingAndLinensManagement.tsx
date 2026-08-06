@@ -4,13 +4,13 @@ import type { AdminCommonProps } from './AdminTabTypes';
 import { TableManagement } from './TableManagement';
 import { ChairManagement } from './ChairManagement';
 import { LinenManagement } from './LinenManagement';
-import { SpacingManagement } from './SpacingManagement';
 
-type SubTab = 'tables' | 'chairs' | 'linens' | 'spacing';
+type SubTab = 'tables' | 'chairs' | 'linens';
 
 /**
- * Deep-merges the seating-related asset editors (Tables/Seating, Chairs, Linens,
- * Spacing) into a single admin screen with internal sub-tabs. Each sub-tab hosts
+ * Deep-merges the seating-related asset editors (Tables/Seating, Chairs, Linens)
+ * into a single admin screen with internal sub-tabs. Spacing now lives under the
+ * Layout Content category (moved out of Venues & Inventory). Each sub-tab hosts
  * its existing editor component unchanged, so data models and behavior are
  * preserved while the top-level navigation is consolidated.
  */
@@ -21,7 +21,6 @@ export function SeatingAndLinensManagement(props: AdminCommonProps) {
     { id: 'tables', label: 'Tables/Seating', icon: '🪑' },
     { id: 'chairs', label: 'Chairs', icon: '💺' },
     { id: 'linens', label: 'Linens', icon: '🎨' },
-    { id: 'spacing', label: 'Spacing', icon: '📐' },
   ];
 
   return (
@@ -34,7 +33,7 @@ export function SeatingAndLinensManagement(props: AdminCommonProps) {
             onClick={() => setSub(t.id)}
             className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
               sub === t.id
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[#4A1942] text-white'
                 : 'bg-white border border-gray-200 text-gray-700'
             }`}
           >
@@ -45,7 +44,6 @@ export function SeatingAndLinensManagement(props: AdminCommonProps) {
       {sub === 'tables' && <TableManagement {...props} />}
       {sub === 'chairs' && <ChairManagement {...props} />}
       {sub === 'linens' && <LinenManagement {...props} />}
-      {sub === 'spacing' && <SpacingManagement {...props} />}
     </div>
   );
 }

@@ -81,7 +81,7 @@ import { EventQuestionsManagement } from './admin/EventQuestionsManagement';
 import { UserManagement } from './admin/UserManagement';
 import { BrandingManagement } from './admin/BrandingManagement';
 import { AccessControlPanel } from './admin/AccessControlPanel';
-import { GuestPortalManagement } from './admin/GuestPortalManagement';
+import { SpacingManagement } from './admin/SpacingManagement';
 import { CoupleManagement } from './admin/CoupleManagement';
 import { VenueWayfindingManagement } from './admin/VenueWayfindingManagement';
 import { PackageManagement } from './admin/PackageManagement';
@@ -207,8 +207,6 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [showDrawingTool, setShowDrawingTool] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const activeTabRef = useRef<HTMLButtonElement>(null);
-  const tabBarRef = useRef<HTMLDivElement>(null);
   // Debounce the auto-save success message: asset managers auto-save on every
   // keystroke, so without this the "saved" indicator would keep re-appearing
   // while the user types. The message now surfaces once, after a brief idle.
@@ -323,18 +321,6 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
       // ignore storage failures
     }
   }, [activeTab]);
-
-  // Keep the active section's tab visible when the tab bar overflows (15+ tabs).
-  useEffect(() => {
-    if (activeTabRef.current && tabBarRef.current) {
-      const el = activeTabRef.current;
-      const bar = tabBarRef.current;
-      const left = el.offsetLeft - 8;
-      const right = left + el.offsetWidth;
-      if (left < bar.scrollLeft) bar.scrollLeft = left;
-      else if (right > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = right - bar.clientWidth;
-    }
-  }, [activeTab, tabSearch]);
 
   useEffect(() => {
     localStorage.setItem(EVENT_QUESTIONS_STORAGE_KEY, JSON.stringify(eventQuestions));
@@ -1009,15 +995,27 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     handleReset,
   };
 
+  // Ordered admin categories (the group names shown in the category rail). The
+  // venue does NOT configure the guest portal — that lives in the Couples Portal —
+  // so there is no venue-side Guest Portal section here.
+  const CATEGORY_ORDER = [
+    { label: 'Venues & Inventory', icon: '🏛️' },
+    { label: 'Layout Content', icon: '🎨' },
+    { label: 'Couples Portal', icon: '💍' },
+    { label: 'System Brand & Access', icon: '⚙️' },
+    { label: 'System & Backup', icon: '💾' },
+  ];
+
   const tabs: AdminTabDefinition[] = [
-    { id: 'venues', label: '🏛️ Venues', icon: '🏛️', Component: VenueManagement, props: commonProps, group: 'Venue & Layout' },
-    { id: 'seating', label: '🪑 Tables, Chairs & Linens', icon: '🪑', Component: SeatingAndLinensManagement, props: commonProps, group: 'Venue & Layout' },
-    { id: 'structures', label: '📦 Fixtures & Walls', icon: '📦', Component: StructuresManagement, props: commonProps, group: 'Venue & Layout' },
+    // Venues & Inventory
+    { id: 'venues', label: '🏛️ Venues', icon: '🏛️', Component: VenueManagement, props: commonProps, group: 'Venues & Inventory' },
+    { id: 'seating', label: '🪑 Tables, Chairs & Linens', icon: '🪑', Component: SeatingAndLinensManagement, props: commonProps, group: 'Venues & Inventory' },
+    { id: 'structures', label: '📦 Fixtures & Walls', icon: '📦', Component: StructuresManagement, props: commonProps, group: 'Venues & Inventory' },
     {
       id: 'decor',
       label: '🎀 Decor',
       icon: '🎀',
-      group: 'Design & Content',
+      group: 'Venues & Inventory',
       Component: AdminDecorSection,
       props: {
         config,
@@ -1034,24 +1032,24 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
       },
     },
 
-    { id: 'templates', label: '📋 Templates', icon: '📋', Component: TemplateManagement, props: commonProps, group: 'Design & Content' },
-    { id: 'guidelines', label: '💡 Guidelines', icon: '💡', Component: GuidelineManagement, props: commonProps, group: 'Design & Content' },
-    { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps, group: 'Design & Content' },
-    { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'People & Access' },
-    { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'People & Access' },
-    { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'People & Access' },
-    { id: 'couples', label: '💍 Couples & Events', icon: '💍', Component: CoupleManagement, props: { config, venues, user, isAdmin, onShowSuccess: showSuccess }, group: 'Couples & Events' },
-    { id: 'packages', label: '🎁 Packages & Add-ons', icon: '🎁', Component: PackageManagement, props: { onShowSuccess: showSuccess, venues }, group: 'Couples & Events' },
-    { id: 'wayfinding', label: '🗺️ Wayfinding & Rules', icon: '🗺️', Component: VenueWayfindingManagement, props: { config, venues, onShowSuccess: showSuccess }, group: 'Couples & Events' },
-    {
-      id: 'guest-portal',
-      label: '👰 Guest Portal',
-      icon: '👰',
-      Component: GuestPortalManagement,
-      group: 'Portal & Brand',
-      props: { onShowSuccess: showSuccess },
-    },
-    { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps, group: 'Portal & Brand' },
+    // Layout Content
+    { id: 'spacing', label: '📐 Spacing', icon: '📐', Component: SpacingManagement, props: commonProps, group: 'Layout Content' },
+    { id: 'templates', label: '📋 Templates', icon: '📋', Component: TemplateManagement, props: commonProps, group: 'Layout Content' },
+    { id: 'guidelines', label: '💡 Guidelines', icon: '💡', Component: GuidelineManagement, props: commonProps, group: 'Layout Content' },
+
+    // Couples Portal
+    { id: 'couples', label: '💍 Couples', icon: '💍', Component: CoupleManagement, props: { config, venues, user, isAdmin, onShowSuccess: showSuccess }, group: 'Couples Portal' },
+    { id: 'packages', label: '🎁 Packages & Add-ons', icon: '🎁', Component: PackageManagement, props: { onShowSuccess: showSuccess, venues }, group: 'Couples Portal' },
+    { id: 'wayfinding', label: '🗺️ Wayfinding & Rules', icon: '🗺️', Component: VenueWayfindingManagement, props: { config, venues, onShowSuccess: showSuccess }, group: 'Couples Portal' },
+    { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps, group: 'Couples Portal' },
+
+    // System Brand & Access
+    { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps, group: 'System Brand & Access' },
+    { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'System Brand & Access' },
+    { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'System Brand & Access' },
+    { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'System Brand & Access' },
+
+    // System & Backup
     {
       id: 'backup',
       label: '💾 Backup & Restore',
@@ -1062,17 +1060,27 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     },
   ];
 
+  const searching = tabSearch.trim().length > 0;
   const filteredTabs = tabs.filter((tab) => {
     const q = tabSearch.trim().toLowerCase();
     if (!q) return true;
     return `${tab.label} ${tab.id}`.toLowerCase().includes(q);
   });
   const activeTabConfig =
-    filteredTabs.find((tab) => tab.id === activeTab) ||
     tabs.find((tab) => tab.id === activeTab) ||
-    filteredTabs[0] ||
+    (searching ? filteredTabs[0] : undefined) ||
     tabs[0];
   const ActiveComponent = activeTabConfig.Component;
+  const activeCategory = activeTabConfig.group;
+
+  // Categories in fixed display order, each carrying its sections.
+  const categories = CATEGORY_ORDER.map((c) => ({
+    ...c,
+    tabs: tabs.filter((t) => t.group === c.label),
+  }));
+  const activeCategoryTabs = searching
+    ? filteredTabs
+    : categories.find((c) => c.label === activeCategory)?.tabs || [];
 
   return (
     <div className={inline ? "w-full h-full flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4"} style={inline ? undefined : { zIndex: 10000 }}>
@@ -1080,8 +1088,8 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
         <div className="p-4 border-b" style={{ backgroundColor: config.primaryColor, color: config.headerTextColor }}>
           <div className="flex justify-between items-start gap-4">
             <div>
-              <h2 className="text-xl font-bold" style={{ fontFamily: config.headingFontFamily }}>Admin Panel</h2>
-              <p className="text-sm opacity-90 mt-1">Manage venues, fixtures, users, branding, and wedding intelligence data.</p>
+              <h2 className="text-xl font-bold" style={{ fontFamily: config.headingFontFamily }}>Admin &amp; System Settings</h2>
+              <p className="text-sm opacity-90 mt-1">Manage venues &amp; inventory, layout content, couples, branding, and access.</p>
             </div>
             <button type="button" onClick={onClose} className="text-2xl hover:opacity-80" aria-label="Close admin panel">✕</button>
           </div>
@@ -1130,57 +1138,80 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
           </div>
         </div>
 
-        <div ref={tabBarRef} className="flex items-center overflow-x-auto border-b" style={{ backgroundColor: config.primaryColor }}>
-          {filteredTabs.map((tab, idx) => {
-            const prev = idx > 0 ? filteredTabs[idx - 1] : null;
-            const showGroupHeader = prev?.group !== tab.group;
-            return (
-              <span key={tab.id} className="flex items-center shrink-0">
-                {showGroupHeader && (
-                  <span
-                    className="px-3 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap"
-                    style={{ color: config.headerTextColor, opacity: 0.6 }}
+        {/* Category rail + section pills — no horizontal scrolling */}
+        <div className="flex-1 flex min-h-0">
+          {!searching && (
+            <nav aria-label="Admin categories" className="w-48 shrink-0 border-r border-gray-200 bg-white overflow-y-auto py-2">
+              {categories.map((cat) => {
+                const active = cat.label === activeCategory;
+                return (
+                  <button
+                    key={cat.label}
+                    type="button"
+                    onClick={() => { setTabSearch(''); setActiveTab(cat.tabs[0]?.id || activeTab); }}
+                    className={`w-full text-left px-3 py-2.5 flex items-center justify-between gap-2 text-sm transition-colors ${
+                      active
+                        ? 'bg-[#4A1942]/10 font-semibold text-[#4A1942] border-r-2 border-[#4A1942]'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                    aria-current={active ? 'page' : undefined}
                   >
-                    {tab.group}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  ref={activeTab === tab.id ? activeTabRef : undefined}
-                  className="px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2"
-                  style={{
-                    backgroundColor: activeTab === tab.id ? 'white' : 'transparent',
-                    color: activeTab === tab.id ? config.primaryColor : config.headerTextColor,
-                    opacity: activeTab === tab.id ? 1 : 0.9,
-                  }}
-                >
-                  <span>{tab.icon}</span>
-                  <span className="hidden sm:inline">{tab.label.replace(`${tab.icon} `, '')}</span>
-                </button>
-              </span>
-            );
-          })}
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
-          {filteredTabs.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500">
-              <div className="text-3xl mb-3">🔎</div>
-              <p className="text-lg font-semibold text-gray-700">No admin sections match “{tabSearch}”</p>
-              <p className="text-sm mt-1">Try a broader term like venue, guest, user, or branding.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#4A1942]/10 px-3 py-1 text-[#4A1942] font-medium">
-                  {activeTabConfig.icon} {activeTabConfig.label.replace(`${activeTabConfig.icon} `, '')}
-                </span>
-                <span>Use Quick find to jump between sections without scanning the full admin tab list.</span>
-              </div>
-              <ActiveComponent {...activeTabConfig.props} />
-            </div>
+                    <span className="flex items-center gap-2">{cat.icon} {cat.label}</span>
+                    <span className={`text-xs rounded-full px-1.5 py-0.5 ${active ? 'bg-[#4A1942] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                      {cat.tabs.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
           )}
+
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Section pills for the active category */}
+            <div className="border-b border-gray-200 bg-white px-4 py-2.5 flex flex-wrap gap-1.5 items-center">
+              {activeCategoryTabs.map((tab) => {
+                const active = tab.id === activeTabConfig.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                      active ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                    }`}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label.replace(`${tab.icon} `, '')}</span>
+                  </button>
+                );
+              })}
+              {searching && (
+                <span className="text-xs text-gray-400 ml-auto">Search results across all categories</span>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
+              {filteredTabs.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500">
+                  <div className="text-3xl mb-3">🔎</div>
+                  <p className="text-lg font-semibold text-gray-700">No admin sections match “{tabSearch}”</p>
+                  <p className="text-sm mt-1">Try a broader term like venue, guest, user, or branding.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#4A1942]/10 px-3 py-1 text-[#4A1942] font-medium">
+                      {activeTabConfig.icon} {activeTabConfig.label.replace(`${activeTabConfig.icon} `, '')}
+                    </span>
+                    {!searching && <span>{activeCategory}</span>}
+                    <span>Use Quick find to jump between sections.</span>
+                  </div>
+                  <ActiveComponent {...activeTabConfig.props} />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {dialog && (

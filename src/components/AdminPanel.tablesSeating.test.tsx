@@ -46,7 +46,7 @@ describe('AdminPanel Tables/Seating tab', () => {
     expect(screen.getAllByText(/seating types/i).length).toBeGreaterThan(0);
   });
 
-  it('switches between merged seating sub-editors (Tables → Chairs → Linens → Spacing)', async () => {
+  it('switches between merged seating sub-editors (Tables → Chairs → Linens)', async () => {
     const user = userEvent.setup();
     render(
       <AdminPanel
@@ -58,13 +58,13 @@ describe('AdminPanel Tables/Seating tab', () => {
 
     await user.click(screen.getByRole('button', { name: /tables, chairs & linens/i }));
 
-    // Sub-editor tabs are present.
+    // Sub-editor tabs are present (Spacing was moved out to Layout Content).
     const chairsSub = screen.getByRole('button', { name: /💺 Chairs/i });
     const linensSub = screen.getByRole('button', { name: /🎨 Linens/i });
-    const spacingSub = screen.getByRole('button', { name: /📐 Spacing/i });
     expect(chairsSub).toBeTruthy();
     expect(linensSub).toBeTruthy();
-    expect(spacingSub).toBeTruthy();
+    // Spacing is no longer a sub-editor of Tables/Chairs/Linens.
+    expect(screen.queryByRole('button', { name: /📐 Spacing/i })).toBeNull();
 
     await user.click(chairsSub);
     // Chairs editor renders its section title.
@@ -73,9 +73,27 @@ describe('AdminPanel Tables/Seating tab', () => {
     await user.click(linensSub);
     // Linens editor renders.
     expect(screen.getAllByText(/table linen colors/i).length).toBeGreaterThan(0);
+  });
 
-    await user.click(spacingSub);
-    // Spacing editor renders.
+  it('exposes Spacing as its own section under the Layout Content category', async () => {
+    const user = userEvent.setup();
+    render(
+      <AdminPanel
+        onClose={() => undefined}
+        currentLayout={{ tables: [], fixtures: [], venueId: 'v1', category: 'reception' }}
+        onLoadTemplateForEdit={() => undefined}
+      />,
+    );
+
+    // Open the Layout Content category via the rail.
+    const layoutCategory = screen.getByRole('button', { name: /Layout Content/i });
+    await user.click(layoutCategory);
+
+    // The pill (with aria-current="page") is the top-level Spacing nav; other
+    // "Spacing" buttons live inside the editor content itself.
+    const spacingPill = screen.getAllByRole('button', { name: /Spacing/i }).find((b) => b.getAttribute('aria-current') === 'page');
+    expect(spacingPill).toBeTruthy();
+    await user.click(spacingPill!);
     expect(screen.getAllByText(/spacing & collision settings/i).length).toBeGreaterThan(0);
   });
 });
