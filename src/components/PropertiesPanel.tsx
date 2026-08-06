@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { PlacedTable, PlacedFixture, Guest, ChairType } from '../types';
 import { getTableSpecs, getFixtureTypes, getLinenColors } from '../hooks/useLayoutState';
 import { getChairSpecs } from '../data/venueData';
