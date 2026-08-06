@@ -8,6 +8,7 @@ import {
   removeVenueCalendarEvent,
   syncCoupleEventsToCalendar,
   removeVenueCalendarEventsForCouple,
+  moveVenueCalendarEvent,
 } from './venueCalendarService';
 
 describe('venueCalendarService', () => {
@@ -58,6 +59,13 @@ describe('venueCalendarService', () => {
     expect(events.find((e) => e.coupleEventId === 'c1')?.title).toBe('Smith & Jones');
     expect(events.find((e) => e.coupleEventId === 'c1')?.date).toBe('2026-10-01');
     expect(events.find((e) => e.coupleEventId === 'c2')).toBeTruthy();
+  });
+
+  it('moves an event to a new date (drag-and-drop reschedule)', () => {
+    const ev = addVenueCalendarEvent({ title: 'Open House', category: 'open-house', date: '2026-09-10' })!;
+    expect(moveVenueCalendarEvent(ev.id, '2026-09-20')).toBe(true);
+    expect(getVenueCalendarEvents()[0].date).toBe('2026-09-20');
+    expect(moveVenueCalendarEvent('missing', '2026-10-01')).toBe(false);
   });
 
   it('removes calendar records for a couple on delete', () => {

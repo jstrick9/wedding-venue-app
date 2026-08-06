@@ -12,9 +12,11 @@ import {
   addVenueCalendarEvent,
   updateVenueCalendarEvent,
   removeVenueCalendarEvent,
+  moveVenueCalendarEvent,
   CALENDAR_CATEGORY_LABELS,
 } from '../services/calendar/venueCalendarService';
 import { getCoupleEvents } from '../services/couples/coupleService';
+import { showToast } from './Toast';
 
 type View = 'month' | 'week' | 'day' | 'agenda';
 
@@ -62,6 +64,8 @@ export function VenueCalendar({
   const [editEv, setEditEv] = useState<VenueCalendarEvent | null>(null);
   const [detail, setDetail] = useState<EventItem | null>(null);
   const [, force] = useState(0);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
 
   const refresh = () => force((n) => n + 1);
 
@@ -157,18 +161,36 @@ export function VenueCalendar({
 
   const renderChip = (e: EventItem) => {
     const s = CAT_STYLE[e.category];
+    const draggable = !!e.venue; // venue-created events can be rescheduled by drag
     return (
       <button
         key={e.id}
         type="button"
+        draggable={draggable}
+        onDragStart={(ev) => { setDragId(e.id); ev.dataTransfer?.setData('text/plain', e.id); ev.dataTransfer!.effectAllowed = 'move'; }}
+        onDragEnd={() => setDragId(null)}
         onClick={(ev) => { ev.stopPropagation(); if (e.coupleEventId && onOpenCouple) onOpenCouple(e.coupleEventId); else setDetail(e); }}
-        className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] leading-tight truncate ${s.chip}`}
+        className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] leading-tight truncate ${s.chip} ${dragId === e.id ? 'opacity-50' : ''} ${draggable ? 'cursor-grab' : 'cursor-pointer'}`}
         title={e.title}
       >
         {e.startTime ? `${e.startTime} ` : ''}{e.title}
       </button>
     );
   };
+
+  const onCellDrop = (dateKey: string) => {
+    setDragOver(null);
+    if (!dragId) return;
+    const ok = moveVenueCalendarEvent(dragId, dateKey);
+    setDragId(null);
+    refresh();
+    if (ok) showToast('Event moved.', 'success');
+  };
+  const cellDragProps = (dateKey: string) => ({
+    onDragOver: (ev: React.DragEvent) => { ev.preventDefault(); ev.dataTransfer!.dropEffect = 'move'; setDragOver(dateKey); },
+    onDragLeave: () => setDragOver((d) => (d === dateKey ? null : d)),
+    onDrop: () => onCellDrop(dateKey),
+  });
 
   const periodLabel =
     view === 'month'
@@ -226,7 +248,8 @@ export function VenueCalendar({
               <div
                 key={i}
                 onClick={() => { setSelectedDate(k || today); setView('day'); }}
-                className={`min-h-[72px] border border-gray-100 p-1 cursor-pointer ${k && isToday(k) ? 'bg-indigo-50' : 'hover:bg-gray-50'} ${!k ? 'bg-gray-50' : ''}`}
+                className={`min-h-[72px] border border-gray-100 p-1 cursor-pointer ${k && isToday(k) ? 'bg-indigo-50' : 'hover:bg-gray-50'} ${!k ? 'bg-gray-50' : ''} ${dragOver === k ? 'ring-2 ring-indigo-400' : ''}`}
+                {...(k ? cellDragProps(k) : {})}
               >
                 {k && (
                   <>
@@ -258,7 +281,7 @@ export function VenueCalendar({
           </div>
           <div className="grid grid-cols-7 border-t border-gray-100">
             {weekDays.map((k) => (
-              <div key={k} className="min-h-[160px] border border-gray-100 p-1 cursor-pointer hover:bg-gray-50" onClick={() => { setSelectedDate(k); setView('day'); }}>
+              <div key={k} className={`min-h-[160px] border border-gray-100 p-1 cursor-pointer hover:bg-gray-50 ${dragOver === k ? 'ring-2 ring-indigo-400' : ''}`} onClick={() => { setSelectedDate(k); setView('day'); }} {...cellDragProps(k)}>
                 <div className="space-y-0.5">
                   {itemsByDate(k).map(renderChip)}
                   <button type="button" onClick={(e) => { e.stopPropagation(); openCreate(k); }} className="text-[10px] text-emerald-600 hover:underline pl-1">+</button>

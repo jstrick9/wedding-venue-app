@@ -82,6 +82,15 @@ export function removeVenueCalendarEvent(id: string): void {
   writeAll(readAll().filter((e) => e.id !== id));
 }
 
+/** Reschedule a calendar event to a new date (drag-and-drop). */
+export function moveVenueCalendarEvent(id: string, date: string): boolean {
+  const events = readAll();
+  const ev = events.find((e) => e.id === id);
+  if (!ev) return false;
+  writeAll(events.map((e) => (e.id === id ? { ...e, date } : e)));
+  return true;
+}
+
 /** Remove calendar records linked to a couple event (on couple delete). */
 export function removeVenueCalendarEventsForCouple(coupleEventId: string): void {
   writeAll(readAll().filter((e) => !(e.category === 'couple' && e.coupleEventId === coupleEventId)));
