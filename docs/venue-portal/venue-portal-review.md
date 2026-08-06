@@ -25,6 +25,8 @@ P1 = valuable, P2 = polish).*
 - ✅ **B3 — Admin**: richer per-category landing summary (Venues, Tables/Seating,
   Packages, Couples, Templates, Users). Committed.
 - ✅ **B5 (partial) — shared date/time helpers** (`src/utils/dateTime`). Committed.
+- ✅ **B1 (added) — availability/blocked dates**: new 'Blocked / Unavailable'
+  calendar category so the venue can mark dates unbookable. Committed.
 - ⏳ **B4 (partial) — Layout Studio**: print/export already exists via PrintView;
   space picker + template gallery + capacity summary remain.
 - ⏳ **B5 (remaining)** — shared toast/confirm/modal unification + a11y/reduced-motion.
