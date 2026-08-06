@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } fro
 import { useLayoutState, getSavedLayouts, setSavedLayouts, getTemplates, getTableSpecs, getFixtureTypes } from '../hooks/useLayoutState';
 import { useLayoutBackendSync } from '../hooks/useLayoutBackendSync';
 import { useEntityBackendSync } from '../hooks/useEntityBackendSync';
-import { EventAnswer, EventQuestion } from '../types';
+import { EventAnswer, EventQuestion, LayoutTemplate } from '../types';
 import { layoutCategories } from '../data/venueData';
 import { useAuth } from '../contexts/AuthContext';
 import { Header } from './Header';
@@ -36,6 +36,7 @@ import {
 import { UndoRedoProvider } from '../contexts/UndoRedoContext';
 import { UndoRedoToolbar } from './UndoRedoToolbar';
 import { VenueDashboard } from './VenueDashboard';
+import { StudioLayoutsHome } from './StudioLayoutsHome';
 import { emit, emitDataChanged, on, type UndoSnapshot } from '../utils/appEvents';
 import { useModals } from '../contexts/ModalContext';
 
@@ -107,6 +108,8 @@ export default function AuthenticatedApp() {
   const showEventQuestions = modals.eventQuestions;
   const showDecorDesigner = modals.decorDesigner;
   const showOverview = modals.overview;
+
+  const [showLayoutsHome, setShowLayoutsHome] = useState(false);
 
   // Local UI state
   const [zoom, setZoom] = useState(1);
@@ -620,6 +623,30 @@ export default function AuthenticatedApp() {
     [layoutBackendSync],
   );
 
+  // Shared template-application flow used by both the quick template gallery
+  // and the standalone TemplateSelector: warn before overwriting real work,
+  // then switch space + load.
+  const handleTemplateSelect = useCallback(
+    (t: LayoutTemplate) => {
+      const hasWork =
+        layoutState.layout.tables.length > 0 ||
+        layoutState.layout.fixtures.length > 0 ||
+        (layoutState.layout.decor || []).length > 0;
+      const proceed = () => {
+        if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId);
+        layoutState.loadTemplate(t);
+        handleResetView();
+        closeAll();
+      };
+      if (hasWork) {
+        setPendingOverwrite(() => proceed);
+        return;
+      }
+      proceed();
+    },
+    [layoutState, handleResetView, closeAll],
+  );
+
   if (view === 'admin') {
     return (
       <div className="h-screen flex flex-col" style={{ backgroundColor: '#f3f4f6' }}>
@@ -692,7 +719,14 @@ export default function AuthenticatedApp() {
           <span className="font-semibold text-gray-700">🎨 Layout Studio</span>
           <span className="text-gray-300">/</span>
           <span>{layoutState.currentVenue.name}</span>
-          <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => { setShowLayoutsHome(true); }}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-0.5 text-indigo-600 hover:bg-indigo-50"
+            >
+              🏛️ Spaces &amp; Layouts
+            </button>
             <button type="button" onClick={() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); }} className="text-indigo-600 hover:underline">← Dashboard</button>
           </span>
         </div>
@@ -860,25 +894,26 @@ export default function AuthenticatedApp() {
             <TemplateSelector
               templates={getTemplates()}
               layoutCategories={layoutCategories}
-              onSelect={(t) => {
-                // Warn before a template overwrites non-empty current work.
-                const hasWork =
-                  layoutState.layout.tables.length > 0 ||
-                  layoutState.layout.fixtures.length > 0 ||
-                  (layoutState.layout.decor || []).length > 0;
-                const proceed = () => {
-                  if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId);
-                  layoutState.loadTemplate(t);
-                  handleResetView();
-                  close('templates');
-                };
-                if (hasWork) {
-                  setPendingOverwrite(() => proceed);
-                  return;
-                }
-                proceed();
-              }}
+              onSelect={handleTemplateSelect}
               onClose={() => close('templates')}
+            />
+          )}
+          {showLayoutsHome && (
+            <StudioLayoutsHome
+              venues={layoutState.venues}
+              currentVenueId={layoutState.currentVenue.id}
+              templates={getTemplates()}
+              layoutCategories={layoutCategories}
+              canEdit={canEditCurrentLayout}
+              onOpenVenue={(venueId) => {
+                if (venueId !== layoutState.currentVenue.id) layoutState.changeVenue(venueId);
+                setShowLayoutsHome(false);
+              }}
+              onSelectTemplate={(t) => {
+                setShowLayoutsHome(false);
+                handleTemplateSelect(t);
+              }}
+              onClose={() => setShowLayoutsHome(false)}
             />
           )}
           {showWorkspaceHelp && <WorkspaceHelp onClose={() => setShowWorkspaceHelp(false)} />}

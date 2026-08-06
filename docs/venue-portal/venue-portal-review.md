@@ -27,8 +27,13 @@ P1 = valuable, P2 = polish).*
 - ✅ **B5 (partial) — shared date/time helpers** (`src/utils/dateTime`). Committed.
 - ✅ **B1 (added) — availability/blocked dates**: new 'Blocked / Unavailable'
   calendar category so the venue can mark dates unbookable. Committed.
-- ⏳ **B4 (partial) — Layout Studio**: print/export already exists via PrintView;
-  space picker + template gallery + capacity summary remain.
+- ✅ **B4 — Layout Studio home** — new `StudioLayoutsHome` panel in the studio
+  breadcrumb ("🏛️ Spaces & Layouts"): a space picker with per-space capacity +
+  master-layout status, a capacity summary strip (spaces / total seating / spaces
+  with master), and a quick category-filtered template gallery. Template application
+  now flows through one shared `handleTemplateSelect` (overwrite guard + space
+  switch) reused by both the gallery and the standalone `TemplateSelector`.
+  Print/export was already covered by PrintView. Committed.
 - ⏳ **B5 (remaining)** — shared toast/confirm/modal unification + a11y/reduced-motion.
 
 ## Guiding principles (from research)
