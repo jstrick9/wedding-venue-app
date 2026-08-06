@@ -259,6 +259,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [expandedGuestRsvp, setExpandedGuestRsvp] = useState<string | null>(null);
   const [guestError, setGuestError] = useState('');
   const [editingGuest, setEditingGuest] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
+  // Guest list search + RSVP filter so large weddings stay navigable.
+  const [guestSearch, setGuestSearch] = useState('');
+  const [guestFilter, setGuestFilter] = useState<'all' | 'attending' | 'not-attending' | 'no-response'>('all');
   // Manual RSVP recording (e.g. a guest responded by phone).
   const [rsvpGuestId, setRsvpGuestId] = useState<string | null>(null);
   const [rsvpRecord, setRsvpRecord] = useState({ attending: true as boolean, meal: '', plusOne: '', notes: '' });
@@ -638,6 +641,17 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
   /** Number of invited guests who have not responded (used for the reminder action). */
   const noResponseGuests = coupleGuests.filter((g) => !coupleRsvps.some((r) => r.guestId === g.id));
+
+  // Search + RSVP-status filtered guest list for the Guests tab.
+  const filteredGuests = coupleGuests.filter((g) => {
+    const q = guestSearch.trim().toLowerCase();
+    if (q && !`${g.name} ${g.email || ''} ${g.phone || ''}`.toLowerCase().includes(q)) return false;
+    const rsvp = coupleRsvps.find((r) => r.guestId === g.id);
+    if (guestFilter === 'attending') return !!rsvp?.attending;
+    if (guestFilter === 'not-attending') return !!rsvp && !rsvp.attending;
+    if (guestFilter === 'no-response') return !rsvp;
+    return true;
+  });
 
   const handleCopyInviteLink = (token: string) => {
     const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
@@ -2025,8 +2039,46 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     No guests yet. Add your first guest above.
                   </div>
                 ) : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <input
+                        type="search"
+                        value={guestSearch}
+                        onChange={(e) => setGuestSearch(e.target.value)}
+                        placeholder="Search guests…"
+                        aria-label="Search guests"
+                        className="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
+                      <div className="flex gap-1.5" role="group" aria-label="Filter guests by RSVP">
+                        {([
+                          ['all', 'All'],
+                          ['attending', '✅ Attending'],
+                          ['not-attending', '❌ Not attending'],
+                          ['no-response', '⏳ No response'],
+                        ] as const).map(([val, label]) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setGuestFilter(val)}
+                            aria-pressed={guestFilter === val}
+                            className={`px-2.5 py-1.5 rounded-full text-xs ${
+                              guestFilter === val
+                                ? 'bg-[#4A1942] text-white'
+                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {filteredGuests.length === 0 ? (
+                      <p className="text-xs text-gray-400 py-6 text-center">
+                        No guests match this search/filter.
+                      </p>
+                    ) : (
                   <div className="space-y-2">
-                    {coupleGuests.map((g) => {
+                    {filteredGuests.map((g) => {
                       const rsvp = coupleRsvps.find((r) => r.guestId === g.id);
                       return (
                         <div key={g.id} className="rounded-lg border border-gray-200 p-3">
@@ -2300,6 +2352,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       );
                     })}
                   </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
