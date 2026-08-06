@@ -771,24 +771,26 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 mt-4 overflow-x-auto border-b border-gray-200">
+        <div className="flex flex-wrap gap-1.5 mt-4 border-b border-gray-200 pb-2" role="tablist" aria-label="Couples portal sections">
           {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
+              role="tab"
+              aria-selected={activeTab === t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`shrink-0 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === t.id
-                  ? 'border-indigo-600 text-indigo-700'
-                  : 'border-transparent text-gray-500 hover:text-gray-800'
+                  ? 'bg-[#4A1942] text-white shadow-sm'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
               <span className="mr-1">{t.icon}</span> {t.label}
-              {t.id === 'chat' && !event ? null : t.id === 'chat' && unreadVenueChat > 0 ? (
-                <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px]">
+              {t.id === 'chat' && unreadVenueChat > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px]">
                   {unreadVenueChat}
                 </span>
-              ) : null}
+              )}
             </button>
           ))}
         </div>
