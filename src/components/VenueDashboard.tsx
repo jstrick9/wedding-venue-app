@@ -93,11 +93,18 @@ export function VenueDashboard(props: Props) {
   const in30 = dayKey(new Date(Date.now() + 30 * 86400000));
   const in60 = dayKey(new Date(Date.now() + 60 * 86400000));
 
-  // Upcoming events (couple events + venue calendar) within 60 days.
+  // Upcoming events (couple events + venue calendar) within 60 days. Multi-day
+  // couple events are expanded to every booked day so non-primary days (e.g. the
+  // rehearsal dinner before the ceremony day) show in the pipeline too.
   const upcoming = useMemo(() => {
     const list = [];
-    coupleEvents.filter((e) => e.eventDate && e.eventDate >= today && e.eventDate <= in60).forEach((e) => {
-      list.push({ date: e.eventDate, title: e.coupleName, category: 'couple', id: e.id });
+    coupleEvents.forEach((e) => {
+      const days = e.days && e.days.length > 0 ? e.days.map((d) => d.date).filter(Boolean) : [e.eventDate];
+      days.forEach((d) => {
+        if (d && d >= today && d <= in60) {
+          list.push({ date: d, title: e.coupleName, category: 'couple', id: e.id });
+        }
+      });
     });
     calendarEvents.filter((e) => e.date >= today && e.date <= in60).forEach((e) => {
       list.push({ date: e.date, title: e.title, category: e.category, id: e.id, venueEv: e });
@@ -267,7 +274,11 @@ export function VenueDashboard(props: Props) {
 
             {/* Today strip */}
             {(() => {
-              const todayEvents = [...coupleEvents.filter((e) => e.eventDate === today), ...calendarEvents.filter((e) => e.date === today)];
+              const todayCouples = coupleEvents.filter((e) => {
+                if (e.eventDate === today) return true;
+                return (e.days || []).some((d) => d.date === today);
+              }).map((e) => ({ id: e.id, title: e.coupleName, category: 'couple' }));
+              const todayEvents = [...todayCouples, ...calendarEvents.filter((e) => e.date === today)];
               if (todayEvents.length === 0) return null;
               return (
                 <Card className="px-4 py-3 flex items-center gap-3">
