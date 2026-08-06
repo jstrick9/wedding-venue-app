@@ -18,7 +18,16 @@ P1 = valuable, P2 = polish).*
 - ✅ **A5 — Design-system consistency pass (foundation)** — shared `src/components/ui`
   kit (Button/Card/Badge/SectionHeader/EmptyState) adopted in the dashboard; more
   surfaces can migrate incrementally. Committed.
-- ⏳ **B series (P1)** — pending (see below).
+- ✅ **B1 — Dashboard**: live "Unread couple msgs" + "Approvals due" KPIs, a
+  "Today" strip, and This-week/Later pipeline grouping. Committed.
+- ✅ **B2 — Vendor showcase**: shows how many couples use each preferred vendor.
+  Committed.
+- ✅ **B3 — Admin**: richer per-category landing summary (Venues, Tables/Seating,
+  Packages, Couples, Templates, Users). Committed.
+- ✅ **B5 (partial) — shared date/time helpers** (`src/utils/dateTime`). Committed.
+- ⏳ **B4 (partial) — Layout Studio**: print/export already exists via PrintView;
+  space picker + template gallery + capacity summary remain.
+- ⏳ **B5 (remaining)** — shared toast/confirm/modal unification + a11y/reduced-motion.
 
 ## Guiding principles (from research)
 - **Venue ops ≠ couple planning.** The best tools separate the venue's back-office
