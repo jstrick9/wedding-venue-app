@@ -649,6 +649,29 @@ export default function AuthenticatedApp() {
             />
           ) : undefined
         }
+        vendorsNode={<VendorPanel inline onClose={() => setView('studio')} />}
+        timelineNode={<TimelinePanel inline onClose={() => setView('studio')} />}
+        guestsNode={
+          canOpenGuestPanel ? (
+            <GuestPanel
+              inline
+              guests={layoutState.guests}
+              tables={layoutState.layout.tables}
+              fixtures={layoutState.layout.fixtures}
+              venue={layoutState.currentVenue}
+              eventName={currentEventName}
+              venueName={layoutState.currentVenue.name}
+              onAddGuest={layoutState.addGuest}
+              onUpdateGuest={layoutState.updateGuest}
+              onRemoveGuest={layoutState.removeGuest}
+              onAssignToTable={layoutState.assignGuestToTable}
+              onAssignToRoom={layoutState.assignGuestToRoom}
+              onImportCSV={layoutState.importGuestsFromCSV}
+              onExportCSV={layoutState.exportGuestsToCSV}
+              onClose={() => setView('studio')}
+            />
+          ) : undefined
+        }
       />
     );
   }

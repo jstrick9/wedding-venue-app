@@ -20,6 +20,8 @@ export interface GuestPanelProps {
   onClose: () => void;
   eventName?: string;
   venueName?: string;
+  /** When true, renders inline (not a full-screen overlay) for dashboard embedding. */
+  inline?: boolean;
 }
 
 type ActiveTab = 'guests' | 'assignments' | 'stats';
@@ -47,6 +49,7 @@ export function GuestPanel({
   onClose,
   eventName,
   venueName,
+  inline = false,
 }: GuestPanelProps) {
   const isLodging = venue?.category === 'lodging';
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -207,8 +210,8 @@ export function GuestPanel({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4" style={{ zIndex: 10000 }}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden">
+    <div className={inline ? "w-full h-full bg-white flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4"} style={inline ? undefined : { zIndex: 10000 }}>
+      <div className={inline ? "w-full h-full flex flex-col" : "bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden"}>
         <div className="bg-gradient-to-r from-[#4A1942] to-[#3d1a45] text-white rounded-t-xl">
           <div className="p-4 flex items-center justify-between">
             <div>

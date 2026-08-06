@@ -5,9 +5,11 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 interface TimelinePanelProps {
   onClose: () => void;
+  /** When true, renders inline (not a full-screen overlay) for dashboard embedding. */
+  inline?: boolean;
 }
 
-export function TimelinePanel({ onClose }: TimelinePanelProps) {
+export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
   const {
     timelines,
     activeTimeline,
@@ -126,8 +128,8 @@ export function TimelinePanel({ onClose }: TimelinePanelProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 10000 }}>
-      <div className="w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className={inline ? "w-full h-full bg-white flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-4"} style={inline ? undefined : { zIndex: 10000 }}>
+      <div className={inline ? "w-full h-full flex flex-col" : "w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
         {/* Header */}
         <div className="bg-gradient-to-r from-[#4A1942] to-[#3d1a45] text-white p-4 flex items-center justify-between">
           <div>

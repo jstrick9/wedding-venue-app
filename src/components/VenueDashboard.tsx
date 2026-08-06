@@ -13,6 +13,8 @@ import { getConfig } from '../config';
 
 type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'guests' | 'admin' | 'ops';
 
+type InlineNode = React.ReactNode | undefined;
+
 type ReactNodeish = import('react').ReactNode;
 
 interface Props {
@@ -33,6 +35,12 @@ interface Props {
   adminNode?: ReactNodeish;
   /** Pre-rendered inline Operations panel node (rendered in the Ops section). */
   opsNode?: ReactNodeish;
+  /** Pre-rendered inline Vendors panel node. */
+  vendorsNode?: ReactNodeish;
+  /** Pre-rendered inline Timeline panel node. */
+  timelineNode?: ReactNodeish;
+  /** Pre-rendered inline Guests panel node. */
+  guestsNode?: ReactNodeish;
 }
 
 const openCouplePortal = (id: string) => {
@@ -108,9 +116,9 @@ export function VenueDashboard(props: Props) {
     { id: 'home', label: 'Home', icon: '🏠', action: () => setSection('home') },
     { id: 'calendar', label: 'Calendar', icon: '📅', action: () => setSection('calendar') },
     { id: 'couples', label: 'Couples & Events', icon: '💍', action: () => setSection('couples') },
-    { id: 'vendors', label: 'Vendors', icon: '🧰', action: () => { props.onOpenVendors(); } },
-    { id: 'timeline', label: 'Timeline', icon: '⏱️', action: () => { props.onOpenTimeline(); } },
-    { id: 'guests', label: 'Guests', icon: '👥', action: () => { props.onOpenGuests(); } },
+    { id: 'vendors', label: 'Vendors', icon: '🧰', action: () => setSection('vendors') },
+    { id: 'timeline', label: 'Timeline', icon: '⏱️', action: () => setSection('timeline') },
+    { id: 'guests', label: 'Guests', icon: '👥', action: () => setSection('guests') },
     { id: 'ops', label: 'Operations', icon: '🛠️', action: () => setSection('ops') },
     { id: 'admin', label: 'Admin', icon: '🔐', action: () => setSection('admin') },
     { id: 'studio', label: 'Design Studio', icon: '🎨', action: () => { props.onOpenStudio(); } },
@@ -343,6 +351,24 @@ export function VenueDashboard(props: Props) {
         {section === 'admin' && (
           <div className="h-[calc(100vh-2rem)] overflow-hidden">
             {props.adminNode || <p className="text-sm text-gray-400">Admin panel is not available.</p>}
+          </div>
+        )}
+
+        {section === 'vendors' && (
+          <div className="h-[calc(100vh-2rem)] overflow-hidden">
+            {props.vendorsNode || <p className="text-sm text-gray-400">Vendors panel is not available.</p>}
+          </div>
+        )}
+
+        {section === 'timeline' && (
+          <div className="h-[calc(100vh-2rem)] overflow-hidden">
+            {props.timelineNode || <p className="text-sm text-gray-400">Timeline panel is not available.</p>}
+          </div>
+        )}
+
+        {section === 'guests' && (
+          <div className="h-[calc(100vh-2rem)] overflow-hidden">
+            {props.guestsNode || <p className="text-sm text-gray-400">Guests panel is not available.</p>}
           </div>
         )}
       </main>
