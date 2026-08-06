@@ -1,0 +1,275 @@
+// @ts-nocheck
+import { useMemo, useState } from 'react';
+import { FloorPlanCanvas } from './FloorPlanCanvas';
+import {
+  getTableSpecs,
+  getFixtureTypes,
+  getDecorItems,
+} from '../hooks/useLayoutState';
+import {
+  Venue,
+  PlacedTable,
+  PlacedFixture,
+  PlacedDecor,
+  CoupleSpaceLayout,
+} from '../types';
+
+interface Props {
+  venue: Venue;
+  initial?: CoupleSpaceLayout | null;
+  onSave: (layout: CoupleSpaceLayout) => void;
+  onClose: () => void;
+}
+
+type PendingKind = 'table' | 'fixture' | 'decor';
+
+interface PendingItem {
+  kind: PendingKind;
+  specId: string;
+}
+
+const uid = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+/**
+ * A self-contained layout editor for a single couple space. Reuses the venue's
+ * FloorPlanCanvas + catalog (tables/chairs, fixtures, decor) so the couple can
+ * draw a real layout in-portal. The drawn layout is saved per couple+space and
+ * later shown to the venue for approval.
+ */
+export function CoupleLayoutEditor({ venue, initial, onSave, onClose }: Props) {
+  const [tables, setTables] = useState<PlacedTable[]>(initial?.tables || []);
+  const [fixtures, setFixtures] = useState<PlacedFixture[]>(initial?.fixtures || []);
+  const [decor, setDecor] = useState<PlacedDecor[]>(initial?.decor || []);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(0.9);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [showGrid, setShowGrid] = useState(true);
+  const [pending, setPending] = useState<PendingItem | null>(null);
+
+  const tableSpecs = useMemo(() => getTableSpecs(), []);
+  const fixtureTypes = useMemo(() => getFixtureTypes(), []);
+  const decorItems = useMemo(() => getDecorItems(), []);
+
+  // Palette groups (only catalogs relevant to this space's category).
+  const category = venue.category;
+
+  const place = (position: { x: number; y: number }) => {
+    if (!pending) return;
+    const pos = {
+      x: Math.max(0, Math.min(position.x, venue.width - 2)),
+      y: Math.max(0, Math.min(position.y, venue.height - 2)),
+    };
+    if (pending.kind === 'table') {
+      const spec = tableSpecs.find((s) => s.id === pending.specId);
+      if (!spec) return;
+      setTables((prev) => [
+        ...prev,
+        {
+          id: uid('t'),
+          type: 'table',
+          specId: spec.id,
+          x: pos.x,
+          y: pos.y,
+          rotation: 0,
+          label: spec.name,
+          guests: [],
+          showChairs: spec.showChairs ?? true,
+        },
+      ]);
+    } else if (pending.kind === 'fixture') {
+      const spec = fixtureTypes.find((s) => s.id === pending.specId);
+      if (!spec) return;
+      setFixtures((prev) => [
+        ...prev,
+        {
+          id: uid('f'),
+          type: 'fixture',
+          specId: spec.id,
+          x: pos.x,
+          y: pos.y,
+          rotation: 0,
+          label: spec.name,
+          isExterior: spec.isExterior,
+        },
+      ]);
+    } else {
+      const spec = decorItems.find((s) => s.id === pending.specId);
+      if (!spec) return;
+      setDecor((prev) => [
+        ...prev,
+        {
+          id: uid('d'),
+          decorItemId: spec.id,
+          x: pos.x,
+          y: pos.y,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+          zIndex: prev.length + 1,
+          parentType: 'canvas',
+        },
+      ]);
+    }
+    setPending(null);
+  };
+
+  const move = (id: string, position: { x: number; y: number }, isExterior?: boolean) => {
+    const pos = {
+      x: Math.max(0, Math.min(position.x, (venue.canvasWidth || venue.width + 80) - 2)),
+      y: Math.max(0, Math.min(position.y, (venue.canvasHeight || venue.height + 80) - 2)),
+    };
+    setTables((prev) => prev.map((t) => (t.id === id ? { ...t, x: pos.x, y: pos.y } : t)));
+    setFixtures((prev) => prev.map((f) => (f.id === id ? { ...f, x: pos.x, y: pos.y, isExterior: isExterior ?? f.isExterior } : f)));
+    setDecor((prev) => prev.map((d) => (d.id === id ? { ...d, x: pos.x, y: pos.y } : d)));
+  };
+
+  const removeSelected = () => {
+    if (!selectedId) return;
+    setTables((prev) => prev.filter((t) => t.id !== selectedId));
+    setFixtures((prev) => prev.filter((f) => f.id !== selectedId));
+    setDecor((prev) => prev.filter((d) => d.id !== selectedId));
+    setSelectedId(null);
+  };
+
+  const handleSave = () => {
+    onSave({ tables, fixtures, decor, updatedAt: new Date().toISOString() });
+  };
+
+  const count = tables.length + fixtures.length + decor.length;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[11000] p-2 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="px-4 py-3 bg-indigo-600 text-white flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold">Layout editor — {venue.name}</h3>
+            <p className="text-xs text-white/80 mt-0.5">Pick an item, click the canvas to place it, drag to move.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs bg-white/20 rounded-full px-2 py-1">{count} item(s)</span>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-3 py-1.5 rounded-lg bg-white text-indigo-700 text-sm font-medium hover:bg-indigo-50"
+            >
+              💾 Save layout
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-lg bg-white/20 text-white text-sm font-medium hover:bg-white/30"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Toolbar */}
+        <div className="px-4 py-2 border-b border-gray-200 flex flex-wrap items-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setShowGrid((v) => !v)}
+            className={`px-2 py-1 rounded border ${showGrid ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-gray-600 border-gray-300'}`}
+          >
+            Grid
+          </button>
+          <button type="button" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} className="px-2 py-1 rounded border border-gray-300 text-gray-600">−</button>
+          <span>{Math.round(zoom * 100)}%</span>
+          <button type="button" onClick={() => setZoom((z) => Math.min(2, z + 0.1))} className="px-2 py-1 rounded border border-gray-300 text-gray-600">+</button>
+          <span className="mx-1" />
+          {selectedId && (
+            <button type="button" onClick={removeSelected} className="px-2 py-1 rounded bg-red-600 text-white">🗑 Delete selected</button>
+          )}
+          {pending && (
+            <span className="px-2 py-1 rounded bg-amber-100 text-amber-800">Click the canvas to place the selected item</span>
+          )}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
+          {/* Palette */}
+          <div className="sm:w-52 sm:overflow-y-auto border-b sm:border-b-0 sm:border-r border-gray-200 p-3 space-y-4">
+            <div>
+              <div className="text-xs font-semibold text-gray-600 mb-1">Tables / Seating</div>
+              <div className="space-y-1">
+                {tableSpecs.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setPending(pending?.specId === s.id ? null : { kind: 'table', specId: s.id })}
+                    className={`w-full text-left px-2 py-1 rounded text-xs ${pending?.specId === s.id && pending.kind === 'table' ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-indigo-50'}`}
+                  >
+                    {s.name} <span className="opacity-60">({s.width}×{s.height})</span>
+                  </button>
+                ))}
+                {tableSpecs.length === 0 && <p className="text-xs text-gray-400">No tables configured.</p>}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-gray-600 mb-1">Fixtures</div>
+              <div className="space-y-1">
+                {fixtureTypes
+                  .filter((f) => f.visibleToUsers !== false && (f.isSelectable ?? true) && (!f.venueCategories || f.venueCategories.includes(category)))
+                  .map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setPending(pending?.specId === f.id ? null : { kind: 'fixture', specId: f.id })}
+                      className={`w-full text-left px-2 py-1 rounded text-xs ${pending?.specId === f.id && pending.kind === 'fixture' ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-indigo-50'}`}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                {fixtureTypes.length === 0 && <p className="text-xs text-gray-400">No fixtures configured.</p>}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-gray-600 mb-1">Decor</div>
+              <div className="space-y-1">
+                {decorItems.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setPending(pending?.specId === d.id ? null : { kind: 'decor', specId: d.id })}
+                    className={`w-full text-left px-2 py-1 rounded text-xs ${pending?.specId === d.id && pending.kind === 'decor' ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-indigo-50'}`}
+                  >
+                    {d.icon} {d.name}
+                  </button>
+                ))}
+                {decorItems.length === 0 && <p className="text-xs text-gray-400">No decor items.</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Canvas */}
+          <div className="flex-1 relative overflow-hidden bg-gray-100">
+            <FloorPlanCanvas
+              venue={venue}
+              tables={tables}
+              fixtures={fixtures}
+              decor={decor}
+              guests={[]}
+              selectedId={selectedId}
+              zoom={zoom}
+              showGrid={showGrid}
+              gridSize={2}
+              onSelect={setSelectedId}
+              onDoubleClick={setSelectedId}
+              onMove={move}
+              onDrop={(pos) => place(pos)}
+              onClickToPlace={(pos) => place(pos)}
+              isDragging={false}
+              isAdmin
+              onViewImage={() => {}}
+              panOffset={panOffset}
+              onPanChange={setPanOffset}
+              onZoomChange={setZoom}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

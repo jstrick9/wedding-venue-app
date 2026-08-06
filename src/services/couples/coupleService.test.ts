@@ -16,6 +16,7 @@ import {
   reviewCoupleLayout,
   deriveRecommendedVenueCategories,
   setSpaceLayout,
+  saveCoupleSpaceLayout,
   acceptCoupleInvite,
 } from './coupleService';
 import { addCoupleGuest, getCoupleGuests } from './coupleGuestService';
@@ -139,6 +140,34 @@ describe('coupleService', () => {
     expect(current.layoutStatus).toBe('pending');
     expect(current.spaceLayouts!['ceremony'].status).toBe('submitted');
     expect(current.spaceLayouts!['reception'].status).toBe('submitted');
+  });
+
+  it('saves a drawn layout for a space and marks it designed', () => {
+    const ev = createCoupleEvent({ coupleName: 'Layout Test' });
+    updateCoupleEvent(ev.id, { selectedSpaces: ['reception'] });
+    saveCoupleSpaceLayout(ev.id, 'reception', {
+      tables: [{ id: 't1', type: 'table', specId: 's1', x: 10, y: 10, rotation: 0, label: 'Round', guests: [] }],
+      fixtures: [],
+      decor: [],
+      updatedAt: new Date().toISOString(),
+    });
+    const current = getCoupleEvents()[0];
+    expect(current.spaceLayouts!['reception'].status).toBe('designed');
+    expect(current.spaceLayouts!['reception'].layout?.tables).toHaveLength(1);
+    expect(current.spaceLayouts!['reception'].layout!.tables[0].x).toBe(10);
+  });
+
+  it('keeps a submitted space submitted when its layout is re-saved', () => {
+    const ev = createCoupleEvent({ coupleName: 'Layout Test 2' });
+    updateCoupleEvent(ev.id, { selectedSpaces: ['reception'] });
+    setSpaceLayout(ev.id, 'reception', { status: 'submitted' });
+    saveCoupleSpaceLayout(ev.id, 'reception', {
+      tables: [],
+      fixtures: [],
+      decor: [],
+      updatedAt: new Date().toISOString(),
+    });
+    expect(getCoupleEvents()[0].spaceLayouts!['reception'].status).toBe('submitted');
   });
 
   it('marks a collaborator as accepted after they resolve their invite', () => {

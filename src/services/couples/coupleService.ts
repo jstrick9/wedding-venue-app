@@ -6,6 +6,7 @@ import {
   CoupleEventDay,
   CoupleLayoutReview,
   CoupleLayoutStatus,
+  CoupleSpaceLayout,
   EventAnswer,
   EventQuestion,
 } from '../../types';
@@ -186,6 +187,24 @@ export function setSpaceLayout(
   if (!event) return null;
   const spaceLayouts = { ...(event.spaceLayouts || {}) };
   spaceLayouts[spaceId] = { ...(spaceLayouts[spaceId] || { status: 'draft' }), ...patch };
+  return updateCoupleEvent(id, { spaceLayouts });
+}
+
+/** Save (upsert) a drawn layout for a single couple space and mark it designed. */
+export function saveCoupleSpaceLayout(
+  id: string,
+  spaceId: string,
+  layout: CoupleSpaceLayout,
+): CoupleEvent | null {
+  const event = findCoupleEventById(id);
+  if (!event) return null;
+  const spaceLayouts = { ...(event.spaceLayouts || {}) };
+  const prev = spaceLayouts[spaceId] || { status: 'draft' };
+  spaceLayouts[spaceId] = {
+    ...prev,
+    status: prev.status === 'submitted' ? 'submitted' : 'designed',
+    layout,
+  };
   return updateCoupleEvent(id, { spaceLayouts });
 }
 

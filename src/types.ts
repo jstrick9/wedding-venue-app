@@ -960,6 +960,21 @@ export interface CoupleEventDay {
 
 export type CoupleLayoutStatus = 'none' | 'draft' | 'pending' | 'approved' | 'changes_requested' | 'rejected';
 
+/** A layout the couple has drawn for one of their venue spaces (for venue approval). */
+export interface CoupleSpaceLayout {
+  tables: PlacedTable[];
+  fixtures: PlacedFixture[];
+  decor: PlacedDecor[];
+  updatedAt: string;
+}
+
+/** Per-space design record: status, notes, and (optionally) a drawn layout. */
+export interface CoupleSpaceLayoutRecord {
+  status: 'draft' | 'designed' | 'submitted';
+  notes?: string;
+  layout?: CoupleSpaceLayout;
+}
+
 export interface CoupleLayoutReview {
   action: 'approve' | 'request_changes' | 'reject';
   byUserId?: string;
@@ -982,8 +997,8 @@ export interface CoupleEvent {
   /** Venue ids the couple is eligible to use / has selected for their spaces. */
   availableSpaces: string[];
   selectedSpaces: string[];
-  /** Per-space layout design status + notes, keyed by venue id. */
-  spaceLayouts?: Record<string, { status: 'draft' | 'designed' | 'submitted'; notes?: string }>;
+  /** Per-space layout design status + notes + optional drawn layout, keyed by venue id. */
+  spaceLayouts?: Record<string, CoupleSpaceLayoutRecord>;
   /** Current layout-submission status for this couple event (approval work queue). */
   layoutStatus: CoupleLayoutStatus;
   layoutComment?: string;

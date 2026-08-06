@@ -23,6 +23,7 @@ import {
   deriveRecommendedVenueCategories,
   submitCoupleLayout,
   setSpaceLayout,
+  saveCoupleSpaceLayout,
 } from '../services/couples/coupleService';
 import { getCoupleAnswers, saveCoupleAnswers } from '../services/couples/coupleAnswersService';
 import { getCoupleMessages, sendCoupleMessage, markCoupleChatRead, getUnreadCoupleMessageCounts } from '../services/couples/coupleChatService';
@@ -67,6 +68,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
 import { sendCoupleEmail } from '../services/couples/coupleEmailService';
+import { CoupleLayoutEditor } from './CoupleLayoutEditor';
 
 type TabId = 'overview' | 'package' | 'spaces' | 'questions' | 'design' | 'checklist' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
 
@@ -331,6 +333,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
   // ── Package & add-ons (couple's booked package + paid add-ons) ────────────
   const [pkgTick, setPkgTick] = useState(0);
+  // Layout editor modal state.
+  const [layoutEditorSpace, setLayoutEditorSpace] = useState<string | null>(null);
   const bookedPackage = useMemo(() => (event ? findWeddingPackage(event.packageId) : undefined), [event, pkgTick]);
   const addOnCatalog = useMemo(() => getActivePackageAddOns(), []);
   const coupleAddOns = useMemo(() => event?.addOns || [], [event, pkgTick]);
@@ -1388,6 +1392,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-50"
                             aria-label={`Notes for ${venue?.name || spaceId}`}
                           />
+                          {canEditDesign && venue && (
+                            <button
+                              type="button"
+                              onClick={() => setLayoutEditorSpace(spaceId)}
+                              className="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700"
+                            >
+                              🎨 Open layout editor
+                            </button>
+                          )}
                         </div>
                       );
                     })
@@ -2628,6 +2641,25 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       <footer className="px-4 py-4 text-center text-xs text-gray-500">
         {config.venueName || 'Wedding Venue'} · Couples Portal
       </footer>
+
+      {/* Embedded layout editor for a selected space */}
+      {layoutEditorSpace && (() => {
+        const venue = venues.find((v) => v.id === layoutEditorSpace);
+        if (!venue) return null;
+        const sl = (event.spaceLayouts || {})[layoutEditorSpace];
+        return (
+          <CoupleLayoutEditor
+            venue={venue}
+            initial={sl?.layout || null}
+            onSave={(layout) => {
+              saveCoupleSpaceLayout(event.id, layoutEditorSpace, layout);
+              refresh();
+              showToast(`${venue.name} layout saved.`, 'success');
+            }}
+            onClose={() => setLayoutEditorSpace(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
