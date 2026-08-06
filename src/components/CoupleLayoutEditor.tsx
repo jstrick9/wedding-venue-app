@@ -17,6 +17,8 @@ import {
 interface Props {
   venue: Venue;
   initial?: CoupleSpaceLayout | null;
+  /** Expected number of guests this layout must seat (for a capacity warning). */
+  guestCount?: number;
   onSave: (layout: CoupleSpaceLayout) => void;
   onClose: () => void;
 }
@@ -36,7 +38,7 @@ const uid = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slic
  * draw a real layout in-portal. The drawn layout is saved per couple+space and
  * later shown to the venue for approval.
  */
-export function CoupleLayoutEditor({ venue, initial, onSave, onClose }: Props) {
+export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose }: Props) {
   const [tables, setTables] = useState<PlacedTable[]>(initial?.tables || []);
   const [fixtures, setFixtures] = useState<PlacedFixture[]>(initial?.fixtures || []);
   const [decor, setDecor] = useState<PlacedDecor[]>(initial?.decor || []);
@@ -138,6 +140,15 @@ export function CoupleLayoutEditor({ venue, initial, onSave, onClose }: Props) {
 
   const count = tables.length + fixtures.length + decor.length;
 
+  // Seating capacity from placed tables (with per-table overrides), to show the
+  // couple whether their plan seats everyone.
+  const seatingCapacity = tables.reduce((sum, t) => {
+    const spec = tableSpecs.find((s) => s.id === t.specId);
+    if (!spec) return sum;
+    return sum + (t.customCapacity ?? spec.capacity ?? 0);
+  }, 0);
+  const capacityShort = !!guestCount && seatingCapacity < guestCount;
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[11000] p-2 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden">
@@ -149,6 +160,18 @@ export function CoupleLayoutEditor({ venue, initial, onSave, onClose }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs bg-white/20 rounded-full px-2 py-1">{count} item(s)</span>
+            {guestCount != null && (
+              <span
+                className={`text-xs rounded-full px-2 py-1 ${
+                  capacityShort
+                    ? 'bg-amber-300 text-amber-900 font-semibold'
+                    : 'bg-white/20 text-white'
+                }`}
+                title={capacityShort ? `This layout seats ${seatingCapacity} but you expect ${guestCount} guests.` : undefined}
+              >
+                {capacityShort ? '⚠️' : '🪑'} Seats {seatingCapacity} / {guestCount} guests
+              </span>
+            )}
             <button
               type="button"
               onClick={handleSave}

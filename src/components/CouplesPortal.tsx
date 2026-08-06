@@ -2658,6 +2658,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
           <CoupleLayoutEditor
             venue={venue}
             initial={sl?.layout || null}
+            guestCount={event.guestCount || bookedPackage?.maxGuests || undefined}
             onSave={(layout) => {
               saveCoupleSpaceLayout(event.id, layoutEditorSpace, layout);
               refresh();

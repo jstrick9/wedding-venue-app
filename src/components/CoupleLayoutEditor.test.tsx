@@ -50,4 +50,41 @@ describe('CoupleLayoutEditor', () => {
     );
     expect(screen.getByText(/1 item\(s\)/i)).toBeTruthy();
   });
+
+  it('warns when placed seating capacity is below the expected guest count', () => {
+    render(
+      <CoupleLayoutEditor
+        venue={venue}
+        guestCount={10}
+        initial={{
+          tables: [{ id: 't1', type: 'table', specId: 's1', x: 10, y: 10, rotation: 0, label: 'Round Table', guests: [] }], // capacity 8
+          fixtures: [],
+          decor: [],
+          updatedAt: new Date().toISOString(),
+        }}
+        onSave={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Seats 8 \/ 10 guests/i)).toBeTruthy();
+  });
+
+  it('does not warn when seating capacity meets the expected guest count', () => {
+    render(
+      <CoupleLayoutEditor
+        venue={venue}
+        guestCount={8}
+        initial={{
+          tables: [{ id: 't1', type: 'table', specId: 's1', x: 10, y: 10, rotation: 0, label: 'Round Table', guests: [] }], // capacity 8
+          fixtures: [],
+          decor: [],
+          updatedAt: new Date().toISOString(),
+        }}
+        onSave={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Seats 8 \/ 8 guests/i)).toBeTruthy();
+    expect(screen.queryByText(/⚠️/i)).toBeNull();
+  });
 });
