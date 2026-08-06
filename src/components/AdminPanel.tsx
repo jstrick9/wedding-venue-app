@@ -65,6 +65,8 @@ import {
   resetToDefaults,
 } from '../hooks/useLayoutState';
 import { getConfig, setConfig, Config } from '../config';
+import { getCoupleEvents } from '../services/couples/coupleService';
+import { getWeddingPackages } from '../services/couples/couplePackageService';
 import { AdminDecorSection } from './AdminDecorSection';
 import { canAccessAdminPanel } from '../utils/permissions';
 import { useRBAC } from '../hooks/useRBAC';
@@ -1083,10 +1085,22 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
             </div>
             <button type="button" onClick={onClose} className="text-2xl hover:opacity-80" aria-label="Close admin panel">✕</button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mt-4 text-xs">
             <div className="rounded-lg bg-white/10 px-3 py-2">
               <div className="font-semibold text-base text-white">{venues.length}</div>
               <div className="text-white/70">Venues</div>
+            </div>
+            <div className="rounded-lg bg-white/10 px-3 py-2">
+              <div className="font-semibold text-base text-white">{tableSpecs.length}</div>
+              <div className="text-white/70">Tables/Seating</div>
+            </div>
+            <div className="rounded-lg bg-white/10 px-3 py-2">
+              <div className="font-semibold text-base text-white">{getWeddingPackages().length}</div>
+              <div className="text-white/70">Packages</div>
+            </div>
+            <div className="rounded-lg bg-white/10 px-3 py-2">
+              <div className="font-semibold text-base text-white">{getCoupleEvents().length}</div>
+              <div className="text-white/70">Couples</div>
             </div>
             <div className="rounded-lg bg-white/10 px-3 py-2">
               <div className="font-semibold text-base text-white">{templates.length}</div>
@@ -1095,10 +1109,6 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
             <div className="rounded-lg bg-white/10 px-3 py-2">
               <div className="font-semibold text-base text-white">{users.length}</div>
               <div className="text-white/70">Users</div>
-            </div>
-            <div className="rounded-lg bg-white/10 px-3 py-2">
-              <div className="font-semibold text-base text-white">{activeTabConfig.label.replace(`${activeTabConfig.icon} `, '')}</div>
-              <div className="text-white/70">Current section</div>
             </div>
           </div>
         </div>
