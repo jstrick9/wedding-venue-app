@@ -5,9 +5,9 @@ import userEvent from '@testing-library/user-event';
 vi.mock('../config', () => ({ getConfig: () => ({ venueName: 'Seven Paths Manor', primaryColor: '#4A1942', textColor: '#1f2937', backgroundColor: '#f3f4f6' }) }));
 vi.mock('../hooks/useLayoutState', () => ({ getVenues: () => [{ id: 'reception', name: 'Reception Hall', category: 'reception' }] }));
 vi.mock('../services/couples/coupleService', () => ({
-  getCoupleEvents: () => [
+  getCoupleEvents: vi.fn(() => [
     { id: 'c1', coupleName: 'Smith & Jones', eventDate: '2099-01-01', status: 'active', inviteToken: 'tok1', layoutStatus: 'pending', selectedSpaces: [], availableSpaces: [], collaborators: [] },
-  ],
+  ]),
 }));
 vi.mock('../services/couples/coupleGuestService', () => ({ getCoupleGuests: () => [] }));
 vi.mock('../services/couples/coupleRsvpService', () => ({ getCoupleRsvpSubmissions: () => [] }));
@@ -24,6 +24,7 @@ vi.mock('../services/calendar/venueCalendarService', () => ({
 }));
 
 import { VenueDashboard } from './VenueDashboard';
+import * as coupleService from '../services/couples/coupleService';
 
 describe('VenueDashboard', () => {
   beforeEach(() => {
@@ -63,6 +64,14 @@ describe('VenueDashboard', () => {
     // Calendar view toggles appear.
     expect(screen.getByRole('button', { name: /^Month$/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Agenda$/i })).toBeTruthy();
+  });
+
+  it('shows onboarding empty-state when there are no couples', () => {
+    vi.mocked(coupleService.getCoupleEvents).mockReturnValue([]);
+    render(<VenueDashboard {...baseProps} />);
+    expect(screen.getAllByText(/Let's set up/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Create your first couple event/i)).toBeTruthy();
+    expect(screen.getByText(/Schedule an open house/i)).toBeTruthy();
   });
 
   it('calls onOpenStudio for the Design Studio action', async () => {

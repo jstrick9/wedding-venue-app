@@ -58,6 +58,12 @@ export function VenueDashboard(props: Props) {
   const coupleEvents = useMemo(() => getCoupleEvents(), []);
   const calendarEvents = useMemo(() => getVenueCalendarEvents(), []);
 
+  // First-time-venue onboarding empty states.
+  const venuesCount = venues.length;
+  const couplesCount = coupleEvents.length;
+  const openHouses = calendarEvents.filter((e) => e.category === 'open-house').length;
+  const needsOnboarding = venuesCount === 0 || couplesCount === 0;
+
   const stats = useMemo(() => {
     const active = coupleEvents.filter((e) => e.status !== 'completed');
     const pending = coupleEvents.filter((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested').length;
@@ -190,6 +196,52 @@ export function VenueDashboard(props: Props) {
               </div>
             </div>
 
+            {/* Onboarding empty-state for first-time venues */}
+            {needsOnboarding && (
+              <div className="rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/60 p-5">
+                <h2 className="font-semibold text-indigo-900">Let's set up {config.venueName || 'your venue'} 🎉</h2>
+                <p className="text-sm text-indigo-800/80 mt-1">A few quick steps to get everything running.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                  <button
+                    type="button"
+                    onClick={props.onOpenAdmin}
+                    className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
+                  >
+                    <div className="text-2xl">🏛️</div>
+                    <div className="font-medium mt-1 text-gray-800">{venuesCount === 0 ? 'Add your venue spaces' : 'Manage venue spaces'}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Set up your ceremony, reception, and lodging spaces.</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={props.onOpenAdmin}
+                    className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
+                  >
+                    <div className="text-2xl">🎁</div>
+                    <div className="font-medium mt-1 text-gray-800">Review packages & add-ons</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Confirm your wedding packages and add-on pricing.</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSection('couples')}
+                    className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
+                  >
+                    <div className="text-2xl">💍</div>
+                    <div className="font-medium mt-1 text-gray-800">{couplesCount === 0 ? 'Create your first couple event' : 'Open Couples & Events'}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Add a booked couple to start planning with them.</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSection('calendar')}
+                    className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
+                  >
+                    <div className="text-2xl">📅</div>
+                    <div className="font-medium mt-1 text-gray-800">{openHouses === 0 ? 'Schedule an open house' : 'Open the calendar'}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Add monthly open houses, staffing, and venue events.</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               {/* Upcoming events */}
               <div className="lg:col-span-2 rounded-xl bg-white border border-gray-200 shadow-sm">
@@ -198,7 +250,11 @@ export function VenueDashboard(props: Props) {
                   <button type="button" onClick={() => setSection('calendar')} className="text-xs text-indigo-600 hover:underline">Open calendar →</button>
                 </div>
                 {upcoming.length === 0 ? (
-                  <p className="text-sm text-gray-400 px-4 py-8 text-center">No upcoming events in the next 60 days.</p>
+                  <div className="px-4 py-8 text-center space-y-2">
+                    <p className="text-3xl">📅</p>
+                    <p className="text-sm text-gray-500">No upcoming events in the next 60 days.</p>
+                    <button type="button" onClick={() => setSection('calendar')} className="text-xs text-indigo-600 hover:underline">Schedule an event or open house</button>
+                  </div>
                 ) : (
                   <div className="divide-y divide-gray-50">
                     {upcoming.map((e, i) => (
