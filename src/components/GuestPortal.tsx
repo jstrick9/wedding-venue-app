@@ -256,10 +256,22 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     config?.mealOptions && config.mealOptions.length > 0
       ? config.mealOptions
       : DEFAULT_MEAL_OPTIONS;
-  const rsvpDeadline = (config as any)?.rsvpDeadlineDate
-    ? new Date((config as any).rsvpDeadlineDate)
+  // RSVP deadline: a date-only value (YYYY-MM-DD from a date input) is treated as
+  // the *whole day*, staying open through the end of that local day. Without this,
+  // `new Date("2026-09-01")` resolves to midnight UTC and the RSVP would close a
+  // day early in US timezones.
+  const rsvpDeadlineRaw = (config as any)?.rsvpDeadlineDate as string | undefined;
+  const rsvpDeadline = rsvpDeadlineRaw
+    ? /^\d{4}-\d{2}-\d{2}$/.test(rsvpDeadlineRaw)
+      ? (() => {
+          const d = new Date(rsvpDeadlineRaw + 'T23:59:59.999');
+          return Number.isNaN(d.getTime()) ? null : d;
+        })()
+      : new Date(rsvpDeadlineRaw)
     : null;
-  const rsvpClosed = rsvpDeadline ? today > rsvpDeadline : false;
+  const rsvpClosed = rsvpDeadline
+    ? today.getTime() > rsvpDeadline.getTime()
+    : false;
 
   const scopedGuests = useMemo(() => {
     if (!activeEventName) return portalData.guests;
