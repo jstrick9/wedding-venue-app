@@ -4,6 +4,8 @@ import { useVendors } from '../hooks/useVendors';
 import { Vendor } from '../types/vendor';
 import { showToast } from './Toast';
 import { ConfirmDialog } from './ConfirmDialog';
+import { getCoupleEvents } from '../services/couples/coupleService';
+import { getCoupleVendors } from '../services/couples/coupleVendorService';
 import {
   getVendorCategories,
   addVendorCategory,
@@ -78,6 +80,17 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
   const countsByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     vendors.forEach((v) => { map[v.category] = (map[v.category] || 0) + 1; });
+    return map;
+  }, [vendors]);
+
+  // How many couples are using each preferred vendor (couples pick from this list).
+  const couplesUsingVendor = useMemo(() => {
+    const map: Record<string, number> = {};
+    getCoupleEvents().forEach((ev) => {
+      getCoupleVendors(ev.id).forEach((cv) => {
+        if (cv.venueVendorId) map[cv.venueVendorId] = (map[cv.venueVendorId] || 0) + 1;
+      });
+    });
     return map;
   }, [vendors]);
 
@@ -189,6 +202,11 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
                     <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">⭐ Preferred</span>
                   </div>
                   {v.description && <p className="text-sm text-gray-600 mt-2">{v.description}</p>}
+                  {couplesUsingVendor[v.id] ? (
+                    <div className="mt-2 text-xs text-gray-500">
+                      Used by <span className="font-semibold text-indigo-600">{couplesUsingVendor[v.id]}</span> couple{couplesUsingVendor[v.id] === 1 ? '' : 's'}
+                    </div>
+                  ) : null}
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                     {v.phone && <a href={`tel:${v.phone}`} className="text-indigo-600 hover:underline">📞 {v.phone}</a>}
                     {v.email && <a href={`mailto:${v.email}`} className="text-indigo-600 hover:underline">✉️</a>}
