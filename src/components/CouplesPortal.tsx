@@ -2169,49 +2169,48 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             </div>
                           )}
                           {/* Per-guest event assignment (which events this guest is invited to) */}
-                          {canManageGuests && (
-                            <div className="mt-2 pt-2 border-t border-gray-100">
-                              <div className="text-xs font-medium text-gray-500 mb-1">Invited to events</div>
-                              {coupleGuestEvents.length === 0 ? (
-                                <p className="text-xs text-gray-400">No guest events defined yet.</p>
-                              ) : (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {coupleGuestEvents.map((ge) => {
-                                    const checked = (g.guestEventIds || []).includes(ge.id);
-                                    const atCap = !checked && getAssignedGuestCount(event!.id, ge.id) >= ge.capacity;
-                                    return (
-                                      <button
-                                        key={ge.id}
-                                        type="button"
-                                        onClick={() => {
-                                          if (checked) {
-                                            removeGuestFromEvent(event!.id, g.id, ge.id);
-                                          } else {
-                                            if (atCap) {
-                                              showToast(`${ge.title} is at capacity (${ge.capacity}).`, 'warning');
-                                              return;
-                                            }
-                                            assignGuestToEvent(event!.id, g.id, ge.id);
+                          <div className="mt-2 pt-2 border-t border-gray-100">
+                            <div className="text-xs font-medium text-gray-500 mb-1">Invited to events</div>
+                            {coupleGuestEvents.length === 0 ? (
+                              <p className="text-xs text-gray-400">No guest events defined yet.</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5">
+                                {coupleGuestEvents.map((ge) => {
+                                  const checked = (g.guestEventIds || []).includes(ge.id);
+                                  const atCap = !checked && getAssignedGuestCount(event!.id, ge.id) >= ge.capacity;
+                                  return (
+                                    <button
+                                      key={ge.id}
+                                      type="button"
+                                      disabled={!canManageGuests}
+                                      onClick={() => {
+                                        if (checked) {
+                                          removeGuestFromEvent(event!.id, g.id, ge.id);
+                                        } else {
+                                          if (atCap) {
+                                            showToast(`${ge.title} is at capacity (${ge.capacity}).`, 'warning');
+                                            return;
                                           }
-                                          setGuestEventTick((t) => t + 1);
-                                          setGuestTick((t) => t + 1);
-                                        }}
-                                        className={`text-[11px] px-2 py-1 rounded-full border ${
-                                          checked
-                                            ? 'bg-indigo-600 text-white border-indigo-600'
-                                            : atCap
-                                              ? 'bg-gray-100 text-gray-400 border-gray-200'
-                                              : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-300'
-                                        }`}
-                                      >
-                                        {checked ? '✓ ' : ''}{ge.title}{atCap && !checked ? ` (full)` : ''}
-                                      </button>
-                                    );
-                                  })}
+                                          assignGuestToEvent(event!.id, g.id, ge.id);
+                                        }
+                                        setGuestEventTick((t) => t + 1);
+                                        setGuestTick((t) => t + 1);
+                                      }}
+                                      className={`text-[11px] px-2 py-1 rounded-full border disabled:cursor-default ${
+                                        checked
+                                          ? 'bg-indigo-600 text-white border-indigo-600'
+                                          : atCap
+                                            ? 'bg-gray-100 text-gray-400 border-gray-200'
+                                            : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-300'
+                                      }`}
+                                    >
+                                      {checked ? '✓ ' : ''}{ge.title}{atCap && !checked ? ` (full)` : ''}
+                                    </button>
+                                  );
+                                })}
                                 </div>
                               )}
                             </div>
-                          )}
                         </div>
                       );
                     })}
