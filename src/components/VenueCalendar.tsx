@@ -21,6 +21,7 @@ import { getUsers } from '../hooks/useLayoutState';
 import { showToast } from './Toast';
 import { syncShiftsForCalendarEvent, getShiftsForCalendarEvent } from '../services/calendar/venueShiftService';
 import { Button, Badge, EmptyState } from './ui';
+import { findBlockedBookedConflicts } from '../utils/calendarConflicts';
 
 type View = 'month' | 'week' | 'day' | 'agenda';
 
@@ -102,6 +103,10 @@ export function VenueCalendar({
   }));
 
   const allItems: EventItem[] = [...coupleEntries, ...venueItems];
+
+  // Days that are both marked "Blocked / Unavailable" AND hold a confirmed couple
+  // event — a contradiction worth flagging so the venue doesn't block a booked day.
+  const conflictDates: string[] = findBlockedBookedConflicts(allItems);
 
   const itemsByDate = (dateKey: string) =>
     allItems.filter((e) => {
@@ -263,6 +268,25 @@ export function VenueCalendar({
           </Badge>
         ))}
       </div>
+
+      {/* Blocked-vs-booked conflict warning */}
+      {conflictDates.length > 0 && (
+        <div
+          role="alert"
+          className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          <div className="font-semibold mb-1">
+            ⚠️ {conflictDates.length} date{conflictDates.length === 1 ? '' : 's'} are both blocked and booked
+          </div>
+          <div className="text-xs text-amber-800">
+            {conflictDates
+              .sort()
+              .map((d) => new Date(d + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }))
+              .join(' · ')}
+            . Remove the “Blocked / Unavailable” entry if the couple's event is confirmed.
+          </div>
+        </div>
+      )}
 
       {/* Month view */}
       {view === 'month' && (

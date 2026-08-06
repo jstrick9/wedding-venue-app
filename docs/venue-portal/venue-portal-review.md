@@ -51,6 +51,10 @@ P1 = valuable, P2 = polish).*
   and the dead `'guests'` modal was removed. Committed.
 - ✅ **B5 — VendorPanel adopts shared `ui` kit** (empty state, add/save/cancel
   buttons) for consistency with the dashboard/calendar. Committed.
+- ✅ **Calendar data-integrity — blocked-vs-booked conflict warning**: the venue
+  calendar now flags any date that is both "Blocked / Unavailable" AND holds a
+  confirmed couple event, so a venue can't silently block a booked day. Logic
+  extracted to a tested pure helper (`src/utils/calendarConflicts`). Committed.
 - ⏳ **B5 (remaining)** — migrate remaining standalone panels (ops, timeline)
   onto the shared kit for full consistency.
 
