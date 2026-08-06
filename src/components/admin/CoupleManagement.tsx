@@ -305,6 +305,47 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
         </p>
       </div>
 
+      {/* Aggregate operational summary */}
+      {(() => {
+        const active = events.filter((e) => e.status !== 'completed');
+        const awaiting = events.filter((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested').length;
+        let overnightTotal = 0;
+        let overnightCap = 0;
+        let setupDone = 0;
+        let setupTotal = 0;
+        active.forEach((ev) => {
+          const st = getCoupleSetupTasks(ev.id);
+          setupTotal += st.length;
+          setupDone += st.filter((t) => t.status === 'done').length;
+          const pkg = findWeddingPackage(ev.packageId);
+          const lodging = getCoupleGuestEvents(ev.id).find((e) => e.kind === 'lodging');
+          if (lodging) {
+            overnightTotal += getAssignedGuestCount(ev.id, lodging.id);
+            overnightCap += pkg?.maxOvernightGuests || lodging.capacity;
+          }
+        });
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
+              <div className="text-2xl font-bold text-gray-800">{active.length}</div>
+              <div className="text-xs text-gray-500 mt-0.5">Active couples</div>
+            </div>
+            <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
+              <div className={`text-2xl font-bold ${awaiting > 0 ? 'text-amber-600' : 'text-gray-800'}`}>{awaiting}</div>
+              <div className="text-xs text-gray-500 mt-0.5">Awaiting layout review</div>
+            </div>
+            <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
+              <div className="text-2xl font-bold text-sky-700">{setupTotal > 0 ? `${Math.round((setupDone / setupTotal) * 100)}%` : '—'}</div>
+              <div className="text-xs text-gray-500 mt-0.5">Setup complete ({setupDone}/{setupTotal})</div>
+            </div>
+            <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
+              <div className={`text-2xl font-bold ${overnightTotal > overnightCap ? 'text-red-600' : 'text-indigo-700'}`}>{overnightTotal}<span className="text-sm text-gray-400">/{overnightCap}</span></div>
+              <div className="text-xs text-gray-500 mt-0.5">Overnight guests</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Layout Approval Work Queue */}
       {approvalQueue.length > 0 && (
         <div className="rounded-xl bg-white border border-amber-200 p-4 shadow-sm">
