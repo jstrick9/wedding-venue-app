@@ -1662,7 +1662,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             disabled={isSubmittingRSVP}
             className="w-full mt-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-60"
           >
-            {isSubmittingRSVP ? 'Submitting...' : 'Submit RSVP'}
+            {isSubmittingRSVP
+              ? 'Submitting...'
+              : guestRSVP
+                ? 'Update RSVP'
+                : 'Submit RSVP'}
           </button>
         </form>
       </div>
