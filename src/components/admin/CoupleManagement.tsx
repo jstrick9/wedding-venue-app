@@ -400,7 +400,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                             {sl.notes && <span className="text-gray-500 truncate">— {sl.notes}</span>}
                           </div>
                           {sl.layout && v && (
-                            <CoupleLayoutPreview venue={v} layout={sl.layout} />
+                            <CoupleLayoutPreview venue={v} layout={sl.layout} guestCount={ev.guestCount} />
                           )}
                         </div>
                       );
