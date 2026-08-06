@@ -16,6 +16,7 @@ import {
   CALENDAR_CATEGORY_LABELS,
 } from '../services/calendar/venueCalendarService';
 import { getCoupleEvents } from '../services/couples/coupleService';
+import { getUsers } from '../hooks/useLayoutState';
 import { showToast } from './Toast';
 
 type View = 'month' | 'week' | 'day' | 'agenda';
@@ -46,6 +47,8 @@ interface EventItem {
   coupleEventId?: string;
   venue?: VenueCalendarEvent | null;
 }
+
+const staffName = (id: string) => getUsers().find((u) => u.id === id)?.name || id;
 
 export function VenueCalendar({
   venues,
@@ -151,7 +154,7 @@ export function VenueCalendar({
     setShowForm(true);
   };
 
-  const saveForm = (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; notes?: string }) => {
+  const saveForm = (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; assignees?: string[]; notes?: string }) => {
     if (editEv) updateVenueCalendarEvent(editEv.id, input);
     else addVenueCalendarEvent({ ...input, createdBy: undefined });
     setShowForm(false);
@@ -307,6 +310,9 @@ export function VenueCalendar({
                 <span className="text-gray-500 w-20">{e.startTime || '—'}</span>
                 <span className="flex-1 text-gray-800 font-medium">{e.title}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_STYLE[e.category].chip}`}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
+                {e.venue && e.venue.assignees && e.venue.assignees.length > 0 && (
+                  <span className="text-xs text-sky-700">👤 {e.venue.assignees.length}</span>
+                )}
                 {e.coupleEventId && onOpenCouple ? (
                   <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-indigo-600 hover:underline">Open</button>
                 ) : e.venue ? (
@@ -356,6 +362,13 @@ export function VenueCalendar({
               {new Date(detail.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
               {detail.startTime ? ` · ${detail.startTime}` : ''}
             </p>
+            {detail.venue && detail.venue.assignees && detail.venue.assignees.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {detail.venue.assignees.map((id) => (
+                  <span key={id} className="text-xs bg-sky-100 text-sky-700 rounded-full px-2 py-0.5">👤 {staffName(id)}</span>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2 justify-end pt-2">
               {detail.venue && (
                 <button type="button" onClick={() => { setEditEv(detail.venue!); setDetail(null); }} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600">Edit</button>
@@ -390,8 +403,9 @@ function CalendarEventForm({
   defaultDate: string;
   venues: Venue[];
   onCancel: () => void;
-  onSave: (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; notes?: string }) => void;
+  onSave: (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; assignees?: string[]; notes?: string }) => void;
 }) {
+  const staff = getUsers();
   const [f, setF] = useState({
     title: initial?.title || '',
     category: initial?.category || ('open-house' as VenueCalendarCategory),
@@ -399,8 +413,11 @@ function CalendarEventForm({
     startTime: initial?.startTime || '',
     endTime: initial?.endTime || '',
     spaceId: initial?.spaceId || '',
+    assignees: initial?.assignees || [] as string[],
     notes: initial?.notes || '',
   });
+  const toggleAssignee = (id: string) =>
+    setF((p) => ({ ...p, assignees: p.assignees.includes(id) ? p.assignees.filter((x) => x !== id) : [...p.assignees, id] }));
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[12000] p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-3">
@@ -465,13 +482,35 @@ function CalendarEventForm({
           rows={2}
           aria-label="Notes"
         />
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Assign staff</label>
+          {staff.length === 0 ? (
+            <p className="text-xs text-gray-400">No staff/users configured yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {staff.map((u) => {
+                const on = f.assignees.includes(u.id);
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => toggleAssignee(u.id)}
+                    className={`text-xs px-2 py-1 rounded-full border ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300'}`}
+                  >
+                    {on ? '✓ ' : ''}{u.name || u.username}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
         <div className="flex gap-2 justify-end">
           <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600">Cancel</button>
           <button
             type="button"
             onClick={() => {
               if (!f.title.trim() || !f.date) return;
-              onSave({ title: f.title, category: f.category, date: f.date, startTime: f.startTime, endTime: f.endTime, spaceId: f.spaceId, notes: f.notes });
+              onSave({ title: f.title, category: f.category, date: f.date, startTime: f.startTime, endTime: f.endTime, spaceId: f.spaceId, assignees: f.assignees, notes: f.notes });
             }}
             className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
           >

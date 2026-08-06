@@ -1210,6 +1210,8 @@ export interface VenueCalendarEvent {
   spaceId?: string;
   /** For couple category, the linked CoupleEvent id. */
   coupleEventId?: string;
+  /** Staff user ids assigned to this event (staffing view). */
+  assignees?: string[];
   notes?: string;
   createdBy?: string;
   createdAt: string;

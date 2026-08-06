@@ -49,6 +49,7 @@ export function addVenueCalendarEvent(input: {
   endTime?: string;
   spaceId?: string;
   coupleEventId?: string;
+  assignees?: string[];
   notes?: string;
   createdBy?: string;
 }): VenueCalendarEvent | null {
@@ -63,6 +64,7 @@ export function addVenueCalendarEvent(input: {
     endTime: input.endTime || undefined,
     spaceId: input.spaceId || undefined,
     coupleEventId: input.coupleEventId || undefined,
+    assignees: input.assignees || undefined,
     notes: input.notes?.trim() || undefined,
     createdBy: input.createdBy,
     createdAt: new Date().toISOString(),
@@ -73,7 +75,7 @@ export function addVenueCalendarEvent(input: {
 
 export function updateVenueCalendarEvent(
   id: string,
-  updates: Partial<Pick<VenueCalendarEvent, 'title' | 'category' | 'date' | 'startTime' | 'endTime' | 'spaceId' | 'coupleEventId' | 'notes'>>,
+  updates: Partial<Pick<VenueCalendarEvent, 'title' | 'category' | 'date' | 'startTime' | 'endTime' | 'spaceId' | 'coupleEventId' | 'assignees' | 'notes'>>,
 ): void {
   writeAll(readAll().map((e) => (e.id === id ? { ...e, ...updates } : e)));
 }
