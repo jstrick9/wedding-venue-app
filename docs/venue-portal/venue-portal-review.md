@@ -6,6 +6,16 @@ Event Temple, Aisle Planner, WeddingWire, Zola) and a deep review of the current
 codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
+## Status
+- ✅ **A2 — Vendor preferred-vendors showcase** (dynamic categories; payments/budget
+  removed). Committed.
+- ✅ **A1 — Removed venue guest management** (dashboard/header/studio/overview
+  entries; Properties shows read-only seating capacity). Committed.
+- ⏳ **A3 — Admin as its own page (`#/admin`)** — next.
+- ⏳ **A4 — Layout Studio as its own module (`#/studio`)**.
+- ⏳ **A5 — Design-system consistency pass**.
+- ⏳ **B series (P1)** — pending.
+
 ## Guiding principles (from research)
 - **Venue ops ≠ couple planning.** The best tools separate the venue's back-office
   (bookings, availability, preferred vendors, floor plans, staffing, contracts) from
