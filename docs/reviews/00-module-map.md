@@ -310,6 +310,14 @@ place/move/delete tables, fixtures, decor; zoom/pan; save per couple+space);
 venue approval queue renders read-only previews of the drawn layouts. See
 docs/reviews/97-couple-layout-canvas.md.
 
+## Venue Dashboard & calendar (round 20)
+✅ Venue home/landing page = default view: persistent sidebar hub (Home, Calendar,
+Couples, Vendors, Timeline, Guests, Ops, Admin, Design Studio), KPI widgets,
+upcoming events, and a full month/week/day/agenda calendar with venue-created
+events (open houses, staffing, other). Data foundation:
+VenueCalendarEvent + venueCalendarService + backup + cascade delete. See
+docs/reviews/98-venue-dashboard.md.
+
 ## Deferred items — email + admin merge (round 18)
 ✅ Real transactional email for couple/guest invites (sendCoupleEmail with mailto
 fallback; send-email edge function guest_invite/guest_reminder purposes).

@@ -130,6 +130,9 @@ so each booked couple gets their own space.
 - ✅ **Embedded layout canvas (delivered):** the couple can draw real layouts in-portal per
   space (place/move tables, chairs, fixtures, decor; zoom/pan), and the venue's approval
   queue shows a read-only preview of each drawn layout before approving/requesting changes.
+- ✅ **Venue Dashboard (delivered):** the venue lands on a home dashboard with a persistent
+  sidebar hub, KPI widgets, upcoming-events list, and a full month/week/day/agenda calendar
+  that also hosts venue-created events (open houses, staffing, other).
 - 🚧 **Future ideas:** none remaining from the original roadmap.
 
 ## Data model (see src/types.ts)
