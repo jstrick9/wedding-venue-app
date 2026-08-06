@@ -2,10 +2,10 @@
 import { useMemo, useState } from 'react';
 import { VenueCalendar } from './VenueCalendar';
 import { getCoupleEvents } from '../services/couples/coupleService';
-import { getCoupleRsvpSubmissions } from '../services/couples/coupleRsvpService';
 import { getCoupleSetupTasks } from '../services/couples/coupleSetupService';
 import { getCoupleGuestEvents, getAssignedGuestCount } from '../services/couples/coupleGuestEventService';
 import { getVenueCalendarEvents } from '../services/calendar/venueCalendarService';
+import { getUnreadCoupleMessageCounts } from '../services/couples/coupleChatService';
 import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
@@ -69,6 +69,8 @@ export function VenueDashboard(props: Props) {
   const stats = useMemo(() => {
     const active = coupleEvents.filter((e) => e.status !== 'completed');
     const pending = coupleEvents.filter((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested').length;
+    // Unread couple->venue messages (venue side unread = messages from the couple).
+    const unread = Object.values(getUnreadCoupleMessageCounts(coupleEvents.map((e) => e.id), 'venue')).reduce((a, b) => a + b, 0);
     let overnightTotal = 0;
     let overnightCap = 0;
     let setupDone = 0;
@@ -84,7 +86,7 @@ export function VenueDashboard(props: Props) {
         overnightCap += pkg?.maxOvernightGuests || lodging.capacity;
       }
     });
-    return { active: active.length, pending, setupDone, setupTotal, overnightTotal, overnightCap };
+    return { active: active.length, pending, unread, setupDone, setupTotal, overnightTotal, overnightCap };
   }, [coupleEvents]);
 
   const today = dayKey(new Date());
@@ -173,7 +175,7 @@ export function VenueDashboard(props: Props) {
             </div>
 
             {/* KPI cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
               <Card className="p-4">
                 <div className="text-2xl font-bold">{stats.active}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Active couples</div>
@@ -193,6 +195,14 @@ export function VenueDashboard(props: Props) {
               <Card className="p-4">
                 <div className="text-2xl font-bold text-emerald-600">{calendarEvents.filter((e) => e.category === 'open-house').length}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Open houses</div>
+              </Card>
+              <Card className="p-4">
+                <div className={`text-2xl font-bold ${stats.unread > 0 ? 'text-rose-600' : 'text-gray-700'}`}>{stats.unread}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Unread couple msgs</div>
+              </Card>
+              <Card className="p-4">
+                <div className={`text-2xl font-bold ${stats.pending > 0 ? 'text-amber-600' : 'text-gray-700'}`}>{stats.pending}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Approvals due</div>
               </Card>
             </div>
 
@@ -242,6 +252,23 @@ export function VenueDashboard(props: Props) {
               </div>
             )}
 
+            {/* Today strip */}
+            {(() => {
+              const todayEvents = [...coupleEvents.filter((e) => e.eventDate === today), ...calendarEvents.filter((e) => e.date === today)];
+              if (todayEvents.length === 0) return null;
+              return (
+                <Card className="px-4 py-3 flex items-center gap-3">
+                  <span className="text-lg">📌</span>
+                  <span className="text-sm font-semibold text-gray-700">Today</span>
+                  <div className="flex flex-wrap gap-2">
+                    {todayEvents.map((e, i) => (
+                      <span key={`${e.id}-${i}`} className="text-xs bg-indigo-50 text-indigo-700 rounded-full px-2.5 py-1">{e.title}</span>
+                    ))}
+                  </div>
+                </Card>
+              );
+            })()}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               {/* Upcoming events */}
               <div className="lg:col-span-2 rounded-xl bg-white border border-gray-200 shadow-sm">
@@ -257,8 +284,11 @@ export function VenueDashboard(props: Props) {
                     action={<Button tone="primary" onClick={() => setSection('calendar')}>Schedule an event or open house</Button>}
                   />
                 ) : (
-                  <div className="divide-y divide-gray-50">
-                    {upcoming.map((e, i) => (
+                  (() => {
+                    const weekEnd = dayKey(new Date(Date.now() + 7 * 86400000));
+                    const thisWeek = upcoming.filter((e) => e.date <= weekEnd);
+                    const later = upcoming.filter((e) => e.date > weekEnd);
+                    const row = (e: any, i: number) => (
                       <div key={`${e.id}-${i}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${catChip(e.category)}`}>{e.category === 'couple' ? '💍' : e.category === 'open-house' ? '🏠' : e.category === 'staffing' ? '🛠️' : '📌'}</span>
                         <span className="text-gray-500 w-24">{new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
@@ -267,8 +297,20 @@ export function VenueDashboard(props: Props) {
                           <button type="button" onClick={() => openCouplePortal(e.id.replace('couple-', ''))} className="text-xs text-indigo-600 hover:underline">Open</button>
                         ) : null}
                       </div>
-                    ))}
-                  </div>
+                    );
+                    const section = (label: string, items: any[], base: number) => (
+                      <div key={label}>
+                        <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</div>
+                        {items.map((e, i) => row(e, base + i))}
+                      </div>
+                    );
+                    return (
+                      <div className="divide-y divide-gray-50">
+                        {thisWeek.length > 0 && section('This week', thisWeek, 0)}
+                        {later.length > 0 && section('Later', later, thisWeek.length)}
+                      </div>
+                    );
+                  })()
                 )}
               </div>
 
