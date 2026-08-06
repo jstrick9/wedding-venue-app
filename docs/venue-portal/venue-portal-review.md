@@ -7,6 +7,20 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Guest-count ↔ seating-capacity verification (couple layout)**: the couple's
+  layout editor now computes seating capacity from placed tables and shows
+  "Seats X / Y guests" with an amber warning when a space under-seats the couple's
+  expected guest count; the venue's approval queue shows the same per-space capacity
+  vs guest count so it can verify before approving. Committed.
+- ✅ **Guest RSVP deadline bug fix**: a date-only RSVP deadline (from the couple's
+  portal settings date input) resolved to midnight UTC and closed RSVPs a day early
+  in US timezones; it now stays open through the end of the local deadline day.
+  Committed.
+- ✅ **Venue calendar enhancements**: couple events now show guest count, and
+  multi-day couple events are surfaced on **every** booked day (not just the first).
+  Committed.
+- ✅ **Guest RSVP a11y**: attending Yes/No buttons now carry `aria-pressed` for
+  keyboard/screen-reader users. Committed.
 - ✅ **Admin & System Settings reorg (user-directive)** — the venue Admin is now a
   settings console titled "Admin & System Settings" with five categories
   (Venues & Inventory, Layout Content, Couples Portal, System Brand & Access,
