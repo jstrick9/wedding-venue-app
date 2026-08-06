@@ -900,14 +900,16 @@ export default function AuthenticatedApp() {
           )}
           {showLayoutsHome && (
             <StudioLayoutsHome
-              venues={layoutState.venues}
+              venues={selectableVenues}
               currentVenueId={layoutState.currentVenue.id}
               templates={getTemplates()}
               layoutCategories={layoutCategories}
               canEdit={canEditCurrentLayout}
               onOpenVenue={(venueId) => {
-                if (venueId !== layoutState.currentVenue.id) layoutState.changeVenue(venueId);
                 setShowLayoutsHome(false);
+                // Route through the guarded handler so unsaved work isn't discarded
+                // silently (falls back to the switch-venues confirm dialog).
+                handleVenueChange(venueId);
               }}
               onSelectTemplate={(t) => {
                 setShowLayoutsHome(false);

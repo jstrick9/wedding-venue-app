@@ -46,6 +46,9 @@ P1 = valuable, P2 = polish).*
   `Badge`, and day/agenda empty states → `EmptyState`. Keyboard focus/a11y are
   covered by the global `:focus-visible` styles + reduced-motion media query.
   Committed.
+- ✅ **Cleanup (from studio/calendar pass)** — studio home now routes through the
+  venue-switch guard (no silent unsaved-work loss), is scoped to `selectableVenues`,
+  and the dead `'guests'` modal was removed. Committed.
 - ⏳ **B5 (remaining)** — migrate remaining standalone panels (vendors, ops,
   timeline) onto the shared kit for full consistency.
 

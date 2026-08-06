@@ -4,7 +4,6 @@ import { isConfirmDialogOpen } from '../utils/modalEscape';
 export type ModalType = 
   | 'vendors' 
   | 'timeline' 
-  | 'guests' 
   | 'admin' 
   | 'templates' 
   | 'print' 
@@ -31,7 +30,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   const [modals, setModals] = useState<Record<ModalType, boolean>>({
     vendors: false,
     timeline: false,
-    guests: false,
+
     admin: false,
     templates: false,
     print: false,
@@ -58,7 +57,6 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     setModals({
       vendors: false,
       timeline: false,
-      guests: false,
       admin: false,
       templates: false,
       print: false,
