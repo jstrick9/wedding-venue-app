@@ -44,7 +44,7 @@ const LAYOUT_BADGE: Record<CoupleLayoutStatus, { label: string; cls: string }> =
 };
 
 /**
- * Couples & Events — venue-side management of booked couples, including the layout
+ * Couples Portal — venue-side management of booked couples, including the layout
  * approval work queue and venue↔couple chat. Multi-day events are supported via an
  * end date (days are derived across the span).
  */
@@ -300,7 +300,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 p-4 text-white">
-        <h2 className="text-base font-bold">💍 Couples &amp; Events</h2>
+        <h2 className="text-base font-bold">💍 Couples Portal</h2>
         <p className="text-xs text-white/80 mt-1">
           Create booked couples' events, review their submitted layouts in the work queue,
           and chat with each couple. Multi-day events (e.g. rehearsal dinner + ceremony)

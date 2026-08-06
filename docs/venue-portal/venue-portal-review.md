@@ -16,6 +16,10 @@ P1 = valuable, P2 = polish).*
   their own); Users/Access/Invites moved into System Brand & Access. Navigation
   redesigned to a category rail + wrapping section pills — the horizontal
   scrollbar is gone. Committed.
+- ✅ **Couples Portal naming consistency** — renamed the venue dashboard's
+  "Couples & Events" section (sidebar label, KPIs, onboarding card, section heading)
+  and the CoupleManagement admin heading to "Couples Portal", matching the admin
+  category. Committed.
 - ✅ **A2 — Vendor preferred-vendors showcase** (dynamic categories; payments/budget
   removed). Committed.
 - ✅ **A1 — Removed venue guest management** (dashboard/header/studio/overview

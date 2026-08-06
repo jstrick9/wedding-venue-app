@@ -111,7 +111,7 @@ export function VenueDashboard(props: Props) {
   const items: { id: string; label: string; icon: string; action: () => void }[] = [
     { id: 'home', label: 'Home', icon: '🏠', action: () => setSection('home') },
     { id: 'calendar', label: 'Calendar', icon: '📅', action: () => setSection('calendar') },
-    { id: 'couples', label: 'Couples & Events', icon: '💍', action: () => setSection('couples') },
+    { id: 'couples', label: 'Couples Portal', icon: '💍', action: () => setSection('couples') },
     { id: 'vendors', label: 'Vendors', icon: '🧰', action: () => setSection('vendors') },
     { id: 'timeline', label: 'Timeline', icon: '⏱️', action: () => setSection('timeline') },
     { id: 'ops', label: 'Operations', icon: '🛠️', action: () => setSection('ops') },
@@ -184,7 +184,7 @@ export function VenueDashboard(props: Props) {
                 type="button"
                 onClick={() => setSection('couples')}
                 className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                title="Open Couples & Events to review layouts"
+                title="Open Couples Portal to review layouts"
                 aria-label={`${stats.pending} awaiting layout review`}
               >
                 <div className={`text-2xl font-bold ${stats.pending > 0 ? 'text-amber-600' : ''}`}>{stats.pending}</div>
@@ -210,7 +210,7 @@ export function VenueDashboard(props: Props) {
                 type="button"
                 onClick={() => setSection('couples')}
                 className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                title="Open Couples & Events to approve layouts"
+                title="Open Couples Portal to approve layouts"
                 aria-label={`${stats.pending} approvals due`}
               >
                 <div className={`text-2xl font-bold ${stats.pending > 0 ? 'text-amber-600' : 'text-gray-700'}`}>{stats.pending}</div>
@@ -248,7 +248,7 @@ export function VenueDashboard(props: Props) {
                     className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
                   >
                     <div className="text-2xl">💍</div>
-                    <div className="font-medium mt-1 text-gray-800">{couplesCount === 0 ? 'Create your first couple event' : 'Open Couples & Events'}</div>
+                    <div className="font-medium mt-1 text-gray-800">{couplesCount === 0 ? 'Create your first couple event' : 'Open Couples Portal'}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Add a booked couple to start planning with them.</div>
                   </button>
                   <button
@@ -366,7 +366,7 @@ export function VenueDashboard(props: Props) {
         {section === 'couples' && (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold">Couples &amp; Events</h1>
+              <h1 className="text-2xl font-bold">Couples Portal</h1>
               {coupleEvents.some((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
                 <Button tone="primary" size="sm" onClick={props.onOpenAdmin}>
                   Review &amp; approve layouts in Admin
