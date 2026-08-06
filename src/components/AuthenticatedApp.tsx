@@ -687,6 +687,15 @@ export default function AuthenticatedApp() {
   return (
     <UndoRedoProvider onRestore={handleRestoreSnapshot}>
       <div className="h-screen flex flex-col overflow-hidden" style={{ fontFamily: brandingConfig.fontFamily, backgroundColor: brandingConfig.backgroundColor, color: brandingConfig.bodyTextColor }}>
+        {/* Layout Studio breadcrumb — gives the studio clear module identity */}
+        <div className="flex items-center gap-2 px-4 h-9 bg-white border-b border-gray-200 text-xs text-gray-500">
+          <span className="font-semibold text-gray-700">🎨 Layout Studio</span>
+          <span className="text-gray-300">/</span>
+          <span>{layoutState.currentVenue.name}</span>
+          <span className="ml-auto">
+            <button type="button" onClick={() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); }} className="text-indigo-600 hover:underline">← Dashboard</button>
+          </span>
+        </div>
         <Header
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
           onSaveLayout={handleSaveLayoutWithSync} onSaveMasterLayout={isAdmin ? () => { layoutState.saveMasterLayout(); showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success'); } : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
