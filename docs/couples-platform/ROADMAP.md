@@ -123,8 +123,11 @@ so each booked couple gets their own space.
   couple's package + add-ons. The couple assigns specific guests to specific events
   (with capacity enforcement) and sees RSVPs per event; each guest's portal shows only
   their invited events and they RSVP per event.
-- 🚧 **Future ideas:** real transactional email (needs live Supabase); embedding the full
-  layout canvas inside the couple's design tab.
+- ✅ **Real transactional email (wired, Supabase-ready):** couple/guest invites and RSVP
+  reminders route through the `send-email` edge function when Supabase is configured
+  (with a `mailto:` fallback in local mode). Deploying the edge function + setting
+  `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` + secrets enables live delivery.
+- 🚧 **Future ideas:** embedding the full layout canvas inside the couple's design tab.
 
 ## Data model (see src/types.ts)
 - `CoupleEvent`: id, coupleName, inviteToken, status (invited/active/completed),

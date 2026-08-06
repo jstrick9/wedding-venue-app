@@ -304,6 +304,13 @@ the guest's room. See docs/couples-platform/78-bugfix-batch.md.
 ## RBAC reconciliation (deep review)
 ✅ System A (enforcement) now consults System B (assigned RBAC role granular permissions) via utils/rbacBridge.ts — Access Control toggles take effect. See docs/reviews/36-rbac-reconciliation.md.
 
+## Deferred items — email + admin merge (round 18)
+✅ Real transactional email for couple/guest invites (sendCoupleEmail with mailto
+fallback; send-email edge function guest_invite/guest_reminder purposes).
+✅ Deep merge of venue asset editors: 6 tabs → 2 consolidated screens
+(Tables/Chairs/Linens/Spacing; Fixtures/Walls) via sub-tab wrappers preserving
+data models. See docs/reviews/96-email-and-admin-merge.md.
+
 ## Couples & Events platform — Venue operations rollup & itinerary polish (round 17)
 ✅ Aggregate operational summary (active couples, awaiting review, setup %, total
 overnight); venue guest viewer lists each guest's invited events; derived events
