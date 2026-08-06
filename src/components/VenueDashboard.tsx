@@ -9,6 +9,7 @@ import { getVenueCalendarEvents } from '../services/calendar/venueCalendarServic
 import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
+import { Card, Button, EmptyState } from './ui';
 
 type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'admin' | 'ops';
 
@@ -173,26 +174,26 @@ export function VenueDashboard(props: Props) {
 
             {/* KPI cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+              <Card className="p-4">
                 <div className="text-2xl font-bold">{stats.active}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Active couples</div>
-              </div>
-              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+              </Card>
+              <Card className="p-4">
                 <div className={`text-2xl font-bold ${stats.pending > 0 ? 'text-amber-600' : ''}`}>{stats.pending}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Awaiting layout review</div>
-              </div>
-              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+              </Card>
+              <Card className="p-4">
                 <div className="text-2xl font-bold text-sky-700">{stats.setupTotal > 0 ? `${Math.round((stats.setupDone / stats.setupTotal) * 100)}%` : '—'}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Setup ({stats.setupDone}/{stats.setupTotal})</div>
-              </div>
-              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+              </Card>
+              <Card className="p-4">
                 <div className={`text-2xl font-bold ${stats.overnightTotal > stats.overnightCap ? 'text-red-600' : 'text-indigo-700'}`}>{stats.overnightTotal}<span className="text-sm text-gray-400">/{stats.overnightCap}</span></div>
                 <div className="text-xs text-gray-500 mt-0.5">Overnight guests</div>
-              </div>
-              <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+              </Card>
+              <Card className="p-4">
                 <div className="text-2xl font-bold text-emerald-600">{calendarEvents.filter((e) => e.category === 'open-house').length}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Open houses</div>
-              </div>
+              </Card>
             </div>
 
             {/* Onboarding empty-state for first-time venues */}
@@ -249,11 +250,12 @@ export function VenueDashboard(props: Props) {
                   <button type="button" onClick={() => setSection('calendar')} className="text-xs text-indigo-600 hover:underline">Open calendar →</button>
                 </div>
                 {upcoming.length === 0 ? (
-                  <div className="px-4 py-8 text-center space-y-2">
-                    <p className="text-3xl">📅</p>
-                    <p className="text-sm text-gray-500">No upcoming events in the next 60 days.</p>
-                    <button type="button" onClick={() => setSection('calendar')} className="text-xs text-indigo-600 hover:underline">Schedule an event or open house</button>
-                  </div>
+                  <EmptyState
+                    icon="📅"
+                    title="No upcoming events in the next 60 days"
+                    hint="Add open houses, staffing, or venue events to see them here."
+                    action={<Button tone="primary" onClick={() => setSection('calendar')}>Schedule an event or open house</Button>}
+                  />
                 ) : (
                   <div className="divide-y divide-gray-50">
                     {upcoming.map((e, i) => (
