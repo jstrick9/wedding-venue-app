@@ -13,6 +13,7 @@ import {
   updateVenueCalendarEvent,
   removeVenueCalendarEvent,
   moveVenueCalendarEvent,
+  recurringDatesForEvent,
   CALENDAR_CATEGORY_LABELS,
 } from '../services/calendar/venueCalendarService';
 import { getCoupleEvents } from '../services/couples/coupleService';
@@ -100,7 +101,14 @@ export function VenueCalendar({
 
   const allItems: EventItem[] = [...coupleEntries, ...venueItems];
 
-  const itemsByDate = (dateKey: string) => allItems.filter((e) => e.date === dateKey);
+  const itemsByDate = (dateKey: string) =>
+    allItems.filter((e) => {
+      if (e.date === dateKey) return true;
+      if (e.venue?.recurrence) {
+        return recurringDatesForEvent(e.venue, dateKey, dateKey).length > 0;
+      }
+      return false;
+    });
 
   const monthEvents = useMemo(
     () => allItems.filter((e) => e.date.startsWith(toDateKey(cursor).slice(0, 7))),
@@ -155,7 +163,7 @@ export function VenueCalendar({
     setShowForm(true);
   };
 
-  const saveForm = (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; assignees?: string[]; notes?: string }) => {
+  const saveForm = (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; assignees?: string[]; notes?: string; recurrence?: 'weekly' | 'monthly' | 'yearly' }) => {
     const saved = editEv
       ? (updateVenueCalendarEvent(editEv.id, input), getVenueCalendarEvents().find((e) => e.id === editEv.id) || null)
       : addVenueCalendarEvent({ ...input, createdBy: undefined });
@@ -190,7 +198,11 @@ export function VenueCalendar({
     const ok = moveVenueCalendarEvent(dragId, dateKey);
     if (ok) {
       const moved = getVenueCalendarEvents().find((e) => e.id === dragId);
-      if (moved) syncShiftsForCalendarEvent(moved);
+      if (moved) {
+        // Dragging a recurring event moves just this occurrence: turn it into a one-off.
+        if (moved.recurrence) updateVenueCalendarEvent(moved.id, { recurrence: undefined });
+        syncShiftsForCalendarEvent(moved);
+      }
     }
     setDragId(null);
     refresh();
@@ -347,6 +359,9 @@ export function VenueCalendar({
                   <span className="text-gray-500 w-14">{e.startTime || ''}</span>
                   <span className="flex-1 text-gray-800">{e.title}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_STYLE[e.category].chip}`}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
+                  {e.venue?.recurrence && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 capitalize">↻ {e.venue.recurrence}</span>
+                  )}
                   {e.coupleEventId && onOpenCouple ? (
                     <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-indigo-600 hover:underline">Open</button>
                   ) : e.venue ? (
@@ -424,7 +439,7 @@ function CalendarEventForm({
   defaultDate: string;
   venues: Venue[];
   onCancel: () => void;
-  onSave: (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; assignees?: string[]; notes?: string }) => void;
+  onSave: (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; assignees?: string[]; notes?: string; recurrence?: 'weekly' | 'monthly' | 'yearly' }) => void;
 }) {
   const staff = getUsers();
   const [f, setF] = useState({
@@ -436,6 +451,7 @@ function CalendarEventForm({
     spaceId: initial?.spaceId || '',
     assignees: initial?.assignees || [] as string[],
     notes: initial?.notes || '',
+    recurrence: initial?.recurrence || ('' as '' | 'weekly' | 'monthly' | 'yearly'),
   });
   const toggleAssignee = (id: string) =>
     setF((p) => ({ ...p, assignees: p.assignees.includes(id) ? p.assignees.filter((x) => x !== id) : [...p.assignees, id] }));
@@ -483,18 +499,29 @@ function CalendarEventForm({
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             aria-label="End time"
           />
-          <select
-            value={f.spaceId}
-            onChange={(e) => setF({ ...f, spaceId: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white col-span-2"
-            aria-label="Space"
-          >
-            <option value="">No specific space</option>
-            {venues.map((v) => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
-        </div>
+            <select
+              value={f.spaceId}
+              onChange={(e) => setF({ ...f, spaceId: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+              aria-label="Space"
+            >
+              <option value="">No specific space</option>
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+            <select
+              value={f.recurrence}
+              onChange={(e) => setF({ ...f, recurrence: e.target.value as '' | 'weekly' | 'monthly' | 'yearly' })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+              aria-label="Recurrence"
+            >
+              <option value="">Does not repeat</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
         <textarea
           value={f.notes}
           onChange={(e) => setF({ ...f, notes: e.target.value })}
@@ -531,7 +558,7 @@ function CalendarEventForm({
             type="button"
             onClick={() => {
               if (!f.title.trim() || !f.date) return;
-              onSave({ title: f.title, category: f.category, date: f.date, startTime: f.startTime, endTime: f.endTime, spaceId: f.spaceId, assignees: f.assignees, notes: f.notes });
+              onSave({ title: f.title, category: f.category, date: f.date, startTime: f.startTime, endTime: f.endTime, spaceId: f.spaceId, assignees: f.assignees, notes: f.notes, recurrence: f.recurrence || undefined });
             }}
             className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
           >

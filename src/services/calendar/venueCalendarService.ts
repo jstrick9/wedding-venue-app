@@ -51,6 +51,7 @@ export function addVenueCalendarEvent(input: {
   coupleEventId?: string;
   assignees?: string[];
   notes?: string;
+  recurrence?: VenueCalendarEvent['recurrence'];
   createdBy?: string;
 }): VenueCalendarEvent | null {
   const title = input.title.trim();
@@ -66,6 +67,7 @@ export function addVenueCalendarEvent(input: {
     coupleEventId: input.coupleEventId || undefined,
     assignees: input.assignees || undefined,
     notes: input.notes?.trim() || undefined,
+    recurrence: input.recurrence,
     createdBy: input.createdBy,
     createdAt: new Date().toISOString(),
   };
@@ -75,13 +77,58 @@ export function addVenueCalendarEvent(input: {
 
 export function updateVenueCalendarEvent(
   id: string,
-  updates: Partial<Pick<VenueCalendarEvent, 'title' | 'category' | 'date' | 'startTime' | 'endTime' | 'spaceId' | 'coupleEventId' | 'assignees' | 'notes'>>,
+  updates: Partial<Pick<VenueCalendarEvent, 'title' | 'category' | 'date' | 'startTime' | 'endTime' | 'spaceId' | 'coupleEventId' | 'assignees' | 'notes' | 'recurrence'>>,
 ): void {
   writeAll(readAll().map((e) => (e.id === id ? { ...e, ...updates } : e)));
 }
 
 export function removeVenueCalendarEvent(id: string): void {
   writeAll(readAll().filter((e) => e.id !== id));
+}
+
+/** Compute the dates a recurring event occurs on within [start, end]. */
+export function recurringDatesForEvent(
+  ev: VenueCalendarEvent,
+  start: string,
+  end: string,
+): string[] {
+  if (!ev.recurrence) return ev.date >= start && ev.date <= end ? [ev.date] : [];
+  const base = new Date(ev.date + 'T00:00:00');
+  const baseDow = base.getDay();
+  const baseDom = base.getDate();
+  const baseMonth = base.getMonth();
+  const baseYear = base.getFullYear();
+  const out: string[] = [];
+  const cursor = new Date(baseYear, baseMonth, 1);
+  const endDate = new Date(end + 'T00:00:00');
+  const max = 400; // safety
+  let guard = 0;
+  // Iterate month by month (weekly/monthly/yearly all recur by month step).
+  while (cursor <= endDate && guard < max) {
+    guard += 1;
+    const y = cursor.getFullYear();
+    const m = cursor.getMonth();
+    if (ev.recurrence === 'weekly') {
+      // Every week from base onwards, on the same weekday.
+      let w = new Date(base);
+      while (w.getTime() <= endDate.getTime() && guard < max) {
+        guard += 1;
+        const d = `${w.getFullYear()}-${String(w.getMonth() + 1).padStart(2, '0')}-${String(w.getDate()).padStart(2, '0')}`;
+        if (d >= start && d <= end) out.push(d);
+        w.setDate(w.getDate() + 7);
+      }
+      break;
+    }
+    // monthly / yearly: same day-of-month (clamped) in the target month.
+    const dom = Math.min(baseDom, new Date(y, m + 1, 0).getDate());
+    const d = `${y}-${String(m + 1).padStart(2, '0')}-${String(dom).padStart(2, '0')}`;
+    if (d >= start && d <= end && (y > baseYear || (y === baseYear && m > baseMonth) || (y === baseYear && m === baseMonth))) {
+      out.push(d);
+    }
+    cursor.setMonth(cursor.getMonth() + (ev.recurrence === 'yearly' ? 12 : 1));
+    void baseDow;
+  }
+  return out;
 }
 
 /** Reschedule a calendar event to a new date (drag-and-drop). */

@@ -1217,6 +1217,9 @@ export interface VenueCalendarEvent {
   notes?: string;
   createdBy?: string;
   createdAt: string;
+  /** Recurrence rule, e.g. "weekly", "monthly", "yearly". When set, the event
+   *  repeats on the same day-of-week/day-of-month of `date`. */
+  recurrence?: 'weekly' | 'monthly' | 'yearly';
 }
 
 // ── Venue-controlled wayfinding, rain contingency & rules ──────────────────

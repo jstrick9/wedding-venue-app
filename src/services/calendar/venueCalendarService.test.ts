@@ -9,6 +9,7 @@ import {
   syncCoupleEventsToCalendar,
   removeVenueCalendarEventsForCouple,
   moveVenueCalendarEvent,
+  recurringDatesForEvent,
 } from './venueCalendarService';
 
 describe('venueCalendarService', () => {
@@ -66,6 +67,23 @@ describe('venueCalendarService', () => {
     expect(moveVenueCalendarEvent(ev.id, '2026-09-20')).toBe(true);
     expect(getVenueCalendarEvents()[0].date).toBe('2026-09-20');
     expect(moveVenueCalendarEvent('missing', '2026-10-01')).toBe(false);
+  });
+
+  it('expands recurring events across a date range', () => {
+    const base = { id: 'e1', title: 'Monthly Open House', category: 'open-house' as const, date: '2026-09-10', createdAt: new Date().toISOString() };
+    // Monthly recurring in Sep/Oct.
+    const monthly = recurringDatesForEvent({ ...base, recurrence: 'monthly' as const }, '2026-09-01', '2026-11-30');
+    expect(monthly).toContain('2026-09-10');
+    expect(monthly).toContain('2026-10-10');
+    expect(monthly).toContain('2026-11-10');
+
+    // Weekly recurring.
+    const weekly = recurringDatesForEvent({ ...base, recurrence: 'weekly' as const }, '2026-09-10', '2026-09-24');
+    expect(weekly).toEqual(['2026-09-10', '2026-09-17', '2026-09-24']);
+
+    // Non-recurring returns only the base date if in range.
+    const none = recurringDatesForEvent({ ...base, recurrence: undefined }, '2026-09-01', '2026-11-30');
+    expect(none).toEqual(['2026-09-10']);
   });
 
   it('removes calendar records for a couple on delete', () => {
