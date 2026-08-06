@@ -20,6 +20,7 @@ import { getCoupleEvents } from '../services/couples/coupleService';
 import { getUsers } from '../hooks/useLayoutState';
 import { showToast } from './Toast';
 import { syncShiftsForCalendarEvent, getShiftsForCalendarEvent } from '../services/calendar/venueShiftService';
+import { Button, Badge, EmptyState } from './ui';
 
 type View = 'month' | 'week' | 'day' | 'agenda';
 
@@ -228,14 +229,17 @@ export function VenueCalendar({
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {(['month', 'week', 'day', 'agenda'] as View[]).map((v) => (
-              <button
+              <Button
                 key={v}
                 type="button"
+                size="sm"
+                tone={view === v ? 'primary' : 'default'}
+                aria-pressed={view === v}
                 onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded-lg text-sm capitalize ${view === v ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
+                className="capitalize"
               >
                 {v}
-              </button>
+              </Button>
             ))}
           </div>
           <div className="flex items-center gap-1 ml-2">
@@ -246,17 +250,17 @@ export function VenueCalendar({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-gray-700">{periodLabel}</span>
-          <button type="button" onClick={() => openCreate()} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">+ Add event</button>
+          <Button type="button" tone="success" size="sm" onClick={() => openCreate()}>+ Add event</Button>
         </div>
       </div>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs text-gray-600">
         {(Object.keys(CAT_STYLE) as VenueCalendarCategory[]).map((c) => (
-          <span key={c} className="inline-flex items-center gap-1.5">
-            <span className={`w-2.5 h-2.5 rounded-full ${CAT_STYLE[c].dot}`} />
+          <Badge key={c} tone={c === 'blocked' ? 'danger' : c === 'staffing' ? 'warning' : c === 'couple' ? 'primary' : 'default'}>
+            <span className={`w-2 h-2 rounded-full ${CAT_STYLE[c].dot}`} />
             {CALENDAR_CATEGORY_LABELS[c]}
-          </span>
+          </Badge>
         ))}
       </div>
 
@@ -323,7 +327,9 @@ export function VenueCalendar({
             <button type="button" onClick={() => openCreate(selectedDate)} className="ml-3 text-xs text-emerald-600 hover:underline">+ Add</button>
           </div>
           <div className="divide-y divide-gray-100">
-            {itemsByDate(selectedDate).length === 0 && <p className="text-xs text-gray-400 px-4 py-6 text-center">No events on this day.</p>}
+            {itemsByDate(selectedDate).length === 0 && (
+              <EmptyState icon="🗓️" title="No events on this day." hint="Use “+ Add event” to schedule an open house, setup, or blocked date." />
+            )}
             {itemsByDate(selectedDate).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e) => (
               <div key={e.id} className="flex items-center gap-2 px-4 py-2 text-sm">
                 <span className={`w-2.5 h-2.5 rounded-full ${CAT_STYLE[e.category].dot}`} />
@@ -348,7 +354,9 @@ export function VenueCalendar({
       {view === 'agenda' && (
         <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-3 py-2 bg-gray-50 text-sm font-semibold text-gray-700 border-b">Agenda</div>
-          {allItems.length === 0 && <p className="text-xs text-gray-400 px-4 py-6 text-center">No events scheduled.</p>}
+          {allItems.length === 0 && (
+            <EmptyState icon="🗓️" title="No events scheduled." hint="Add an open house, staffing, or blocked date to start using your calendar." />
+          )}
           <div className="divide-y divide-gray-100">
             {allItems
               .slice()

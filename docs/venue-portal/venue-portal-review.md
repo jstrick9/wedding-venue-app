@@ -41,7 +41,13 @@ P1 = valuable, P2 = polish).*
   delete, CustomVenueBuilder unsaved-changes guard). Toast was already unified via
   `showToast`; modals via `ModalDialog`/`CenteredModal`. Reduced-motion media query
   already present globally. Committed.
-- ⏳ **B5 (remaining)** — broader adoption of the shared `ui` kit + keyboard/focus a11y sweep.
+- ✅ **B5 — VenueCalendar adopts shared `ui` kit**: view switcher → `Button`
+  (tone + `aria-pressed`), “+ Add event” → success `Button`, category legend →
+  `Badge`, and day/agenda empty states → `EmptyState`. Keyboard focus/a11y are
+  covered by the global `:focus-visible` styles + reduced-motion media query.
+  Committed.
+- ⏳ **B5 (remaining)** — migrate remaining standalone panels (vendors, ops,
+  timeline) onto the shared kit for full consistency.
 
 ## Guiding principles (from research)
 - **Venue ops ≠ couple planning.** The best tools separate the venue's back-office
