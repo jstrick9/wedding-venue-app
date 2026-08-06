@@ -498,8 +498,25 @@ function CalendarEventForm({
     notes: initial?.notes || '',
     recurrence: initial?.recurrence || ('' as '' | 'weekly' | 'monthly' | 'yearly'),
   });
+  const [formError, setFormError] = useState('');
   const toggleAssignee = (id: string) =>
     setF((p) => ({ ...p, assignees: p.assignees.includes(id) ? p.assignees.filter((x) => x !== id) : [...p.assignees, id] }));
+  const handleSave = () => {
+    if (!f.title.trim()) {
+      setFormError('Please enter an event title.');
+      return;
+    }
+    if (!f.date) {
+      setFormError('Please pick a date.');
+      return;
+    }
+    if (f.startTime && f.endTime && f.endTime <= f.startTime) {
+      setFormError('The end time must be after the start time.');
+      return;
+    }
+    setFormError('');
+    onSave({ title: f.title, category: f.category, date: f.date, startTime: f.startTime, endTime: f.endTime, spaceId: f.spaceId, assignees: f.assignees, notes: f.notes, recurrence: f.recurrence || undefined });
+  };
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[12000] p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-3">
@@ -597,14 +614,16 @@ function CalendarEventForm({
             </div>
           )}
         </div>
+        {formError && (
+          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            ⚠️ {formError}
+          </p>
+        )}
         <div className="flex gap-2 justify-end">
           <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600">Cancel</button>
           <button
             type="button"
-            onClick={() => {
-              if (!f.title.trim() || !f.date) return;
-              onSave({ title: f.title, category: f.category, date: f.date, startTime: f.startTime, endTime: f.endTime, spaceId: f.spaceId, assignees: f.assignees, notes: f.notes, recurrence: f.recurrence || undefined });
-            }}
+            onClick={handleSave}
             className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
           >
             Save
