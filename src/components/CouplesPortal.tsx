@@ -1242,6 +1242,25 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {canManageCollaborators && c.id !== me.id && (
+                        <select
+                          value={c.role}
+                          onChange={(e) => {
+                            const role = e.target.value as CoupleCollaboratorRole;
+                            updateCoupleEvent(event.id, {
+                              collaborators: event.collaborators.map((x) => (x.id === c.id ? { ...x, role } : x)),
+                            });
+                            refresh();
+                            showToast(`${c.name}'s role updated.`, 'success');
+                          }}
+                          className="text-xs px-1.5 py-1 border border-gray-300 rounded-lg bg-white"
+                          aria-label={`Role for ${c.name}`}
+                        >
+                          <option value="planner">Planner</option>
+                          <option value="family">Family</option>
+                          <option value="vendor">Vendor</option>
+                        </select>
+                      )}
                       {canManageCollaborators && (
                         <button
                           type="button"
