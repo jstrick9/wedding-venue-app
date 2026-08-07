@@ -47,6 +47,10 @@ P1 = valuable, P2 = polish).*
   scrubs stale `appliedArrangementId` references from placed tables/fixtures (no
   more broken "Design Active" badge / "Edit Design"). Test count:
   **584 passing / 11 skipped**. Committed.
+- ✅ **Design Studio: mobile/tablet responsiveness** — the Sidebar & Properties
+  panel now overlay the canvas on small screens (full-width canvas, default
+  collapsed), desktop prefs are preserved, and the canvas drag/pan uses pointer
+  events so it works on touch. Test count: **587 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

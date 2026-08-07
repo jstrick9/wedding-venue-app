@@ -145,33 +145,17 @@ export default function AuthenticatedApp() {
   const [showProperties, setShowProperties] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Small-viewport (mobile/tablet) mode: the side panels become overlays so the
+  // layout canvas always gets the full viewport width.
+  const [isMobile, setIsMobile] = useState(false);
+  const isMobileRef = useRef(false);
 
   // Persist lightweight UI preferences (sidebar width/collapsed, grid & snap)
   // so a returning user's workspace layout is remembered across sessions.
+  // On mobile we don't persist the forced-collapse so the desktop preference
+  // isn't clobbered.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.UI_PREFS);
-      if (!raw) return;
-      const prefs = JSON.parse(raw) as {
-        sidebarWidth?: number;
-        sidebarCollapsed?: boolean;
-        showGrid?: boolean;
-        gridSize?: number;
-        gridContrast?: number;
-        snapToGrid?: boolean;
-      };
-      if (typeof prefs.sidebarWidth === 'number') setSidebarWidth(prefs.sidebarWidth);
-      if (typeof prefs.sidebarCollapsed === 'boolean') setSidebarCollapsed(prefs.sidebarCollapsed);
-      if (typeof prefs.showGrid === 'boolean') setShowGrid(prefs.showGrid);
-      if (typeof prefs.gridSize === 'number') setGridSize(prefs.gridSize);
-      if (typeof prefs.gridContrast === 'number') setGridContrast(prefs.gridContrast);
-      if (typeof prefs.snapToGrid === 'boolean') setSnapToGrid(prefs.snapToGrid);
-    } catch {
-      // ignore corrupt prefs
-    }
-  }, []);
-
-  useEffect(() => {
+    if (isMobileRef.current) return;
     try {
       localStorage.setItem(
         STORAGE_KEYS.UI_PREFS,
@@ -181,6 +165,37 @@ export default function AuthenticatedApp() {
       // ignore storage quota errors
     }
   }, [sidebarWidth, sidebarCollapsed, showGrid, gridSize, gridContrast, snapToGrid]);
+
+  // Responsive workspace: on small screens default the side panels to their
+  // collapsed rails (so the canvas is maximized); restore desktop prefs when the
+  // viewport grows back to md+. No-op where matchMedia is unavailable (e.g. jsdom).
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const applyViewport = () => {
+      const mobile = mq.matches;
+      isMobileRef.current = mobile;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSidebarCollapsed(true);
+        setShowProperties(false);
+      } else {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.UI_PREFS);
+          if (raw) {
+            const prefs = JSON.parse(raw) as { sidebarCollapsed?: boolean; sidebarWidth?: number };
+            if (typeof prefs.sidebarCollapsed === 'boolean') setSidebarCollapsed(prefs.sidebarCollapsed);
+            if (typeof prefs.sidebarWidth === 'number') setSidebarWidth(prefs.sidebarWidth);
+          }
+        } catch {
+          // ignore corrupt prefs
+        }
+      }
+    };
+    applyViewport();
+    mq.addEventListener('change', applyViewport);
+    return () => mq.removeEventListener('change', applyViewport);
+  }, []);
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
   const [savedLayouts, setSavedLayoutsState] = useState(() => getSavedLayouts());
   const [imagePreview, setImagePreview] = useState<{ url: string; title: string } | null>(null);
@@ -921,13 +936,17 @@ export default function AuthenticatedApp() {
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
         />
         <AppStatusBar items={statusItems} />
-        <div className="flex-1 flex overflow-hidden">
-          <Sidebar
-            width={sidebarWidth} collapsed={sidebarCollapsed} onWidthChange={setSidebarWidth} onCollapsedChange={setSidebarCollapsed} zoom={zoom} onZoomChange={setZoom} showGrid={showGrid} onShowGridChange={setShowGrid} gridSize={gridSize} onGridSizeChange={setGridSize} gridContrast={gridContrast} onGridContrastChange={setGridContrast} snapToGrid={snapToGrid} onSnapToGridChange={setSnapToGrid}
-            onDragStart={handleDragStart} onDragEnd={handleDragEnd} currentDragItem={dragItem} onClearLayout={handleClearLayout} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })}
-            layoutCategories={layoutCategories} currentVenueCategory={layoutState.currentVenue.category} venueWidth={layoutState.currentVenue.width} venueHeight={layoutState.currentVenue.height} canvasWidth={layoutState.currentVenue.canvasWidth} canvasHeight={layoutState.currentVenue.canvasHeight}
-            onResetView={handleResetView} onResetToVenue={handleResetToVenue} onResetToCanvas={handleResetToCanvas} placedTables={layoutState.layout.tables} placedFixtures={layoutState.layout.fixtures} currentUser={user}
-          />
+        <div className="relative flex-1 flex overflow-hidden">
+          {/* Sidebar overlays the canvas on small screens; returns to normal flex
+              flow on md+ so the tools don't squeeze the canvas on mobile/tablet. */}
+          <div className={`${isMobile ? 'absolute top-0 bottom-0 left-0 z-30 flex' : ''} shrink-0`}>
+            <Sidebar
+              width={sidebarWidth} collapsed={sidebarCollapsed} onWidthChange={setSidebarWidth} onCollapsedChange={setSidebarCollapsed} zoom={zoom} onZoomChange={setZoom} showGrid={showGrid} onShowGridChange={setShowGrid} gridSize={gridSize} onGridSizeChange={setGridSize} gridContrast={gridContrast} onGridContrastChange={setGridContrast} snapToGrid={snapToGrid} onSnapToGridChange={setSnapToGrid}
+              onDragStart={handleDragStart} onDragEnd={handleDragEnd} currentDragItem={dragItem} onClearLayout={handleClearLayout} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })}
+              layoutCategories={layoutCategories} currentVenueCategory={layoutState.currentVenue.category} venueWidth={layoutState.currentVenue.width} venueHeight={layoutState.currentVenue.height} canvasWidth={layoutState.currentVenue.canvasWidth} canvasHeight={layoutState.currentVenue.canvasHeight}
+              onResetView={handleResetView} onResetToVenue={handleResetToVenue} onResetToCanvas={handleResetToCanvas} placedTables={layoutState.layout.tables} placedFixtures={layoutState.layout.fixtures} currentUser={user}
+            />
+          </div>
           <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden">
             <FloorPlanCanvas
               venue={layoutState.currentVenue} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} decor={layoutState.layout.decor} guests={layoutState.guests} selectedId={layoutState.selectedId} zoom={zoom} showGrid={showGrid} gridSize={gridSize} gridContrast={gridContrast}
@@ -1016,11 +1035,13 @@ export default function AuthenticatedApp() {
               </div>
             )}
           </div>
-          <PropertiesPanel
-            selectedId={layoutState.selectedId} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} onUpdateTable={handleUpdateTableSafe} onUpdateFixture={handleUpdateFixtureSafe}
-            onRemoveItem={handleRemoveItem} onDuplicateItem={handleDuplicateItem} onClose={() => setShowProperties(false)}
-            onViewImage={(url, title) => setImagePreview({ url, title })} visible={showProperties} onToggleVisibility={() => setShowProperties(v => !v)} arrangements={layoutState.getDecorArrangements()}
-          />
+          <div className={`${isMobile ? 'absolute top-0 bottom-0 right-0 z-30 flex' : ''} shrink-0`}>
+            <PropertiesPanel
+              selectedId={layoutState.selectedId} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} onUpdateTable={handleUpdateTableSafe} onUpdateFixture={handleUpdateFixtureSafe}
+              onRemoveItem={handleRemoveItem} onDuplicateItem={handleDuplicateItem} onClose={() => setShowProperties(false)}
+              onViewImage={(url, title) => setImagePreview({ url, title })} visible={showProperties} onToggleVisibility={() => setShowProperties(v => !v)} arrangements={layoutState.getDecorArrangements()}
+            />
+          </div>
         </div>
         <Suspense fallback={null}>
           {showOperations && (

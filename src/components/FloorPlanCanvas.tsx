@@ -242,7 +242,7 @@ export function FloorPlanCanvas({
         key={d.id}
         className="cursor-move"
         transform={`rotate(${d.rotation}, ${x + w / 2}, ${y + h / 2})`}
-        onMouseDown={(e) => handleItemMouseDown(e, d.id, d.x, d.y, d.parentType === 'canvas')}
+        onPointerDown={(e) => handleItemPointerDown(e, d.id, d.x, d.y, d.parentType === "canvas")}
         onClick={(e) => {
           e.stopPropagation();
           onSelect(d.id);
@@ -788,10 +788,12 @@ export function FloorPlanCanvas({
   }, [zoom, panOffset, scale, venueX, venueY, containerRef]);
 
   // Handle item mouse down
-  const handleItemMouseDown = (e: React.MouseEvent, id: string, itemX: number, itemY: number, isExterior: boolean = false) => {
+  // Pointer-based (unifies mouse + touch + pen) so items can be dragged on
+  // touch/mobile devices too, not just with a mouse.
+  const handleItemPointerDown = (e: React.PointerEvent, id: string, itemX: number, itemY: number, isExterior: boolean = false) => {
     e.stopPropagation();
     if (e.button === 1 || e.shiftKey) return;
-    
+
     onSelect(id);
     dragMovedRef.current = false;
     setDragState({
@@ -906,9 +908,9 @@ export function FloorPlanCanvas({
     [canvasWidth, canvasHeight, zoom, containerRef],
   );
 
-  // Mouse move effect for dragging
+  // Pointer move effect for dragging (pointer events cover mouse + touch + pen).
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (isPanning) {
         const dx = e.clientX - panStart.x;
         const dy = e.clientY - panStart.y;
@@ -940,17 +942,17 @@ export function FloorPlanCanvas({
       }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       setDragState(null);
       setIsPanning(false);
     };
 
     if (dragState || isPanning) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', handlePointerUp);
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('pointermove', handlePointerMove);
+        document.removeEventListener('pointerup', handlePointerUp);
       };
     }
   }, [dragState, isPanning, panStart, zoom, scale, onMove, onPanChange, clampPan, onDragStart]);
@@ -994,8 +996,8 @@ export function FloorPlanCanvas({
     }
   }, [handleWheel, containerRef]);
 
-  // Handle pan start
-  const handlePanStart = (e: React.MouseEvent) => {
+  // Handle pan start (pointer event so middle/shift-drag works on touch too).
+  const handlePanStart = (e: React.PointerEvent) => {
     if (e.button === 1 || e.shiftKey) {
       e.preventDefault();
       setIsPanning(true);
@@ -1028,11 +1030,11 @@ export function FloorPlanCanvas({
     <div
       ref={containerRef}
       className="relative w-full h-full overflow-auto bg-gray-100"
-      onMouseDown={handlePanStart}
+      onPointerDown={handlePanStart}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={handleCanvasClick}
-      style={{ cursor: isPanning ? 'grabbing' : isDragging ? 'crosshair' : 'default' }}
+      style={{ cursor: isPanning ? 'grabbing' : isDragging ? 'crosshair' : 'default', touchAction: isPanning || dragState ? 'none' : 'pan-x pan-y' }}
     >
       <style>{`
         @keyframes spm-pulse-aura {
@@ -1357,7 +1359,7 @@ export function FloorPlanCanvas({
               tabIndex={0}
               aria-label={`${fixture.label}, ${spec.name}`}
               aria-pressed={selectedId === fixture.id}
-              onMouseDown={(e) => handleItemMouseDown(e, fixture.id, fixture.x, fixture.y, fixture.isExterior)}
+              onPointerDown={(e) => handleItemPointerDown(e, fixture.id, fixture.x, fixture.y, fixture.isExterior)}
               onDoubleClick={(e) => handleItemDoubleClick(e, fixture.id, spec.imageUrl, spec.name)}
               onKeyDown={(e) => handleItemKeyDown(e, fixture.id, fixture.x, fixture.y, !!fixture.isExterior)}
             >
@@ -1565,7 +1567,7 @@ export function FloorPlanCanvas({
                     tabIndex={0}
                     aria-label={`${table.label}, ${spec.name}`}
                     aria-pressed={selectedId === table.id}
-                    onMouseDown={(e) => handleItemMouseDown(e, table.id, table.x, table.y)}
+                    onPointerDown={(e) => handleItemPointerDown(e, table.id, table.x, table.y)}
                     onDoubleClick={(e) => handleItemDoubleClick(e, table.id, spec.imageUrl, spec.name)}
                     onKeyDown={(e) => handleItemKeyDown(e, table.id, table.x, table.y, false)}
                   >
