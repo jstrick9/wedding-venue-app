@@ -2,6 +2,7 @@ import { VenueCalendarEvent, VenueCalendarCategory } from '../../types';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../../constants/storageVersions';
 import { loadVersionedStorage, saveVersionedStorage } from '../../utils/storage';
+import { removeShiftsForCalendarEvent } from './venueShiftService';
 
 const KEY = STORAGE_KEYS.VENUE_CALENDAR_EVENTS;
 const VERSION = STORAGE_VERSIONS.VENUE_CALENDAR_EVENTS;
@@ -85,6 +86,8 @@ export function updateVenueCalendarEvent(
 
 export function removeVenueCalendarEvent(id: string): void {
   writeAll(readAll().filter((e) => e.id !== id));
+  // Cascade-delete staff shifts linked to this event so they don't become orphaned.
+  removeShiftsForCalendarEvent(id);
 }
 
 /** Compute the dates a recurring event occurs on within [start, end]. */

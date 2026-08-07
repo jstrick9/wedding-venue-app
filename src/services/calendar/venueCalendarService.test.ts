@@ -11,6 +11,7 @@ import {
   moveVenueCalendarEvent,
   recurringDatesForEvent,
 } from './venueCalendarService';
+import { syncShiftsForCalendarEvent, getShiftsForCalendarEvent } from './venueShiftService';
 
 describe('venueCalendarService', () => {
   beforeEach(() => {
@@ -40,6 +41,14 @@ describe('venueCalendarService', () => {
     expect(getVenueCalendarEvents()[0].title).toBe('Y');
     removeVenueCalendarEvent(ev.id);
     expect(getVenueCalendarEvents()).toHaveLength(0);
+  });
+
+  it('cascade-deletes linked staff shifts when an event is removed', () => {
+    const ev = addVenueCalendarEvent({ title: 'Open House', category: 'open-house', date: '2026-09-10', startTime: '10:00', assignees: ['u1', 'u2'] })!;
+    syncShiftsForCalendarEvent(ev as any);
+    expect(getShiftsForCalendarEvent(ev.id)).toHaveLength(2);
+    removeVenueCalendarEvent(ev.id);
+    expect(getShiftsForCalendarEvent(ev.id)).toHaveLength(0);
   });
 
   it('rejects empty titles and backs up all', () => {
