@@ -35,4 +35,12 @@ describe('findBlockedBookedConflicts', () => {
   it('ignores items without a date', () => {
     expect(findBlockedBookedConflicts([{ date: '', category: 'blocked' }, { date: '2026-09-01', category: 'couple' }])).toEqual([]);
   });
+
+  it('flags conflicts on secondary days of a multi-day couple event', () => {
+    const conflicts = findBlockedBookedConflicts([
+      { date: '2026-09-10', category: 'couple', extraDates: ['2026-09-11'] },
+      { date: '2026-09-11', category: 'blocked' },
+    ]);
+    expect(conflicts).toEqual(['2026-09-11']);
+  });
 });
