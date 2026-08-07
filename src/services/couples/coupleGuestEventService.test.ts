@@ -13,6 +13,7 @@ import {
   ensureDerivedGuestEvents,
 } from './coupleGuestEventService';
 import { addCoupleGuest, getCoupleGuests } from './coupleGuestService';
+import { getCoupleRsvpSubmissions, setCoupleRsvpSubmissions } from './coupleRsvpService';
 
 describe('coupleGuestEventService', () => {
   beforeEach(() => {
@@ -55,6 +56,16 @@ describe('coupleGuestEventService', () => {
     assignGuestToEvent('e1', g.id, ev.id);
     removeCoupleGuestEvent('e1', ev.id);
     expect(getCoupleGuests('e1')[0].guestEventIds || []).toEqual([]);
+  });
+
+  it('removing an event scrubs stale attendingEvents from RSVPs', () => {
+    addCoupleGuestEvent('e1', { title: 'Ceremony', kind: 'ceremony', capacity: 200 });
+    const g = addCoupleGuest('e1', { name: 'A' });
+    const ev = getCoupleGuestEvents('e1')[0];
+    setCoupleRsvpSubmissions('e1', [{ id: 'r1', guestId: g.id, attending: true, attendingEvents: [ev.id, 'other-event'], eventKey: 'e1' } as any]);
+    removeCoupleGuestEvent('e1', ev.id);
+    const rsvps = getCoupleRsvpSubmissions('e1');
+    expect(rsvps[0].attendingEvents).toEqual(['other-event']);
   });
 
   it('derives guest events from package and add-ons', () => {

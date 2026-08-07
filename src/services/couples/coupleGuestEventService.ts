@@ -8,6 +8,7 @@ import {
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../../constants/storageVersions';
 import { loadVersionedStorage, saveVersionedStorage } from '../../utils/storage';
+import { getCoupleRsvpSubmissions, setCoupleRsvpSubmissions } from './coupleRsvpService';
 import { getCoupleGuests, updateCoupleGuest } from './coupleGuestService';
 
 const KEY = STORAGE_KEYS.COUPLE_GUEST_EVENTS;
@@ -103,6 +104,13 @@ export function removeCoupleGuestEvent(coupleEventId: string, eventId: string): 
       updateCoupleGuest(coupleEventId, g.id, { guestEventIds: g.guestEventIds.filter((x) => x !== eventId) });
     }
   });
+  // Scrub stale references to the removed event from guests' RSVPs, so the couple's
+  // per-event headcount and the guest itinerary don't reference a deleted event.
+  const rsvps = getCoupleRsvpSubmissions(coupleEventId);
+  const changed = rsvps
+    .filter((r) => (r.attendingEvents || []).includes(eventId))
+    .map((r) => ({ ...r, attendingEvents: (r.attendingEvents || []).filter((id) => id !== eventId) }));
+  if (changed.length > 0) setCoupleRsvpSubmissions(coupleEventId, rsvps.map((r) => changed.find((c) => c.id === r.id) || r));
 }
 
 /** Remove all guest events for a couple event (on delete). */
