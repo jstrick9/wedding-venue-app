@@ -1554,7 +1554,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                           />
                           <span>
                             {e.title}
-                            {e.startTime ? <span className="text-gray-400"> · {new Date(e.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> : ''}
+                            {e.startTime ? <span className="text-gray-400"> · {safeTime(e.startTime)}</span> : ''}
                           </span>
                         </label>
                       );
