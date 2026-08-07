@@ -110,6 +110,8 @@ export interface AdminPanelProps {
   layoutState?: any;
   /** When true, renders inline (not a full-screen overlay) for dashboard embedding. */
   inline?: boolean;
+  /** Opens the dedicated full-venue map designer module in the Layout Studio. */
+  onOpenVenueMap?: () => void;
 }
 
 const shapeOptions: ShapeType[] = ['circle', 'rectangle', 'triangle', 'semicircle', 'oval', 'hexagon', 'octagon', 'polygon'];
@@ -145,7 +147,7 @@ type AdminDialogState = AdminDialogOptions & {
   onConfirm?: () => void | Promise<void>;
 };
 
-export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layoutState, inline = false }: AdminPanelProps) {
+export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layoutState, inline = false, onOpenVenueMap }: AdminPanelProps) {
   const { createUser, deleteUser, getAllUsers, user, isAdmin, organizationId } = useAuth();
   const canAccessThisPanel = canAccessAdminPanel(user);
   const EVENT_ROLES_STORAGE_KEY = STORAGE_KEYS.EVENT_ROLES;
@@ -1040,7 +1042,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     // Couples Portal
     { id: 'couples', label: '💍 Couples', icon: '💍', Component: CoupleManagement, props: { config, venues, user, isAdmin, onShowSuccess: showSuccess }, group: 'Couples Portal' },
     { id: 'packages', label: '🎁 Packages & Add-ons', icon: '🎁', Component: PackageManagement, props: { onShowSuccess: showSuccess, venues }, group: 'Couples Portal' },
-    { id: 'wayfinding', label: '🗺️ Wayfinding & Rules', icon: '🗺️', Component: VenueWayfindingManagement, props: { config, venues, onShowSuccess: showSuccess }, group: 'Couples Portal' },
+    { id: 'wayfinding', label: '🗺️ Wayfinding & Rules', icon: '🗺️', Component: VenueWayfindingManagement, props: { config, venues, onShowSuccess: showSuccess, onOpenVenueMap }, group: 'Couples Portal' },
     { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps, group: 'Couples Portal' },
 
     // System Brand & Access

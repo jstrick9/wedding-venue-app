@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { VenueMapDesigner } from '../VenueMapDesigner';
 import type { AdminCommonProps } from './AdminTabTypes';
 import {
   VenueMapConfig,
@@ -25,6 +24,8 @@ interface Props {
   config: AdminCommonProps['config'];
   venues: AdminCommonProps['venues'];
   onShowSuccess: (msg: string) => void;
+  /** Opens the dedicated full-venue map designer module in the Layout Studio. */
+  onOpenVenueMap?: () => void;
 }
 
 
@@ -35,7 +36,7 @@ interface Props {
  * rules/regulations. The couple's guest portal surfaces the subset relevant to
  * that couple.
  */
-export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
+export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMap }: Props) {
   const [map, setMap] = useState<VenueMapConfig | null>(() => getVenueMapConfig());
   const [rules, setRules] = useState<string[]>(() => getVenueRules().rules);
   const [newRule, setNewRule] = useState('');
@@ -145,13 +146,43 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
         </p>
       </div>
 
-      {/* Interactive full-venue map designer */}
+      {/* Full-venue map overview — the interactive designer lives in the Layout Studio */}
       <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
-        <VenueMapDesigner
-          map={ensureMap()}
-          venues={venues}
-          onSave={(next) => update(next)}
-        />
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-sm">🗺️ Full-Venue Map</h3>
+          {onOpenVenueMap && (
+            <button
+              type="button"
+              onClick={onOpenVenueMap}
+              className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+            >
+              Open map designer →
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mb-3">
+          The full-property map (spaces, lodging, parking, entries) is designed as its own
+          module in the <span className="font-medium">Layout Studio</span>, then exported as a
+          printable Venue Map for wayfinding.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+          <div className="rounded-lg bg-teal-50 p-3">
+            <div className="text-xl font-bold text-teal-700">{map?.points.filter((p) => p.kind === 'space').length ?? 0}</div>
+            <div className="text-xs text-gray-500">Spaces</div>
+          </div>
+          <div className="rounded-lg bg-indigo-50 p-3">
+            <div className="text-xl font-bold text-indigo-700">{map?.points.filter((p) => p.kind === 'parking').length ?? 0}</div>
+            <div className="text-xs text-gray-500">Parking</div>
+          </div>
+          <div className="rounded-lg bg-green-50 p-3">
+            <div className="text-xl font-bold text-green-700">{map?.points.filter((p) => p.kind === 'entry').length ?? 0}</div>
+            <div className="text-xs text-gray-500">Entries</div>
+          </div>
+          <div className="rounded-lg bg-amber-50 p-3">
+            <div className="text-xl font-bold text-amber-700">{map?.routes?.length ?? 0}</div>
+            <div className="text-xs text-gray-500">Walkways</div>
+          </div>
+        </div>
       </div>
 
       {/* Rain contingency */}

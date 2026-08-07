@@ -37,6 +37,8 @@ import { UndoRedoProvider } from '../contexts/UndoRedoContext';
 import { UndoRedoToolbar } from './UndoRedoToolbar';
 import { VenueDashboard } from './VenueDashboard';
 import { StudioLayoutsHome } from './StudioLayoutsHome';
+import { VenueMapDesigner } from './VenueMapDesigner';
+import { getVenueMapConfig, saveVenueMapConfig, emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 import { emit, emitDataChanged, on, type UndoSnapshot } from '../utils/appEvents';
 import { useModals } from '../contexts/ModalContext';
 
@@ -64,7 +66,7 @@ export default function AuthenticatedApp() {
   const isStaff = user?.role === 'staff';
   const layoutState = useLayoutState();
 
-  const [view, setView] = useState<'dashboard' | 'studio' | 'admin'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'studio' | 'admin' | 'venuemap'>('dashboard');
 
   const canOpenAdminPanel = canAccessAdminPanel(user);
   const canOpenOperationsPanel = canAccessOperationsPanel(user);
@@ -90,6 +92,7 @@ export default function AuthenticatedApp() {
       const h = window.location.hash || '';
       if (h.startsWith('#/admin')) setView('admin');
       else if (h.startsWith('#/studio')) setView('studio');
+      else if (h.startsWith('#/venuemap')) setView('venuemap');
       else if (h.startsWith('#/dashboard') || h === '') setView('dashboard');
     };
     applyHash();
@@ -668,9 +671,40 @@ export default function AuthenticatedApp() {
               onClose={() => { window.location.hash = '#/dashboard'; setView('dashboard'); }}
               currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }}
               onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }}
+              onOpenVenueMap={() => { window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }}
             />
           ) : (
             <div className="p-6 text-sm text-gray-500">You don't have admin access.</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'venuemap') {
+    return (
+      <div className="h-screen flex flex-col" style={{ backgroundColor: '#f3f4f6' }}>
+        <header className="h-14 px-4 flex items-center justify-between bg-white border-b border-gray-200">
+          <button
+            type="button"
+            onClick={() => { window.location.hash = '#/studio'; setView('studio'); closeAll(); }}
+            className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+          >
+            ← Studio
+          </button>
+          <span className="text-sm font-semibold text-gray-700">🗺️ Venue Map Designer</span>
+          <div className="w-24" />
+        </header>
+        <div className="flex-1 overflow-auto p-4">
+          {canOpenAdminPanel ? (
+            <VenueMapDesigner
+              map={getVenueMapConfig() || emptyVenueMapConfig()}
+              venues={layoutState.venues}
+              onSave={(next) => { saveVenueMapConfig(next); emitDataChanged('venue-map'); }}
+              onClose={() => { window.location.hash = '#/studio'; setView('studio'); }}
+            />
+          ) : (
+            <div className="p-6 text-sm text-gray-500">You don't have permission to edit the venue map.</div>
           )}
         </div>
       </div>
@@ -720,6 +754,15 @@ export default function AuthenticatedApp() {
           <span className="text-gray-300">/</span>
           <span>{layoutState.currentVenue.name}</span>
           <span className="ml-auto flex items-center gap-3">
+            {canOpenAdminPanel && (
+              <button
+                type="button"
+                onClick={() => { window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }}
+                className="inline-flex items-center gap-1 rounded-md border border-teal-300 bg-teal-50 px-2 py-0.5 text-teal-800 hover:bg-teal-100"
+              >
+                🗺️ Venue Map
+              </button>
+            )}
             <button
               type="button"
               onClick={() => { setShowLayoutsHome(true); }}
@@ -876,7 +919,7 @@ export default function AuthenticatedApp() {
             </CenteredModal>
           )}
           {showDecorDesigner && <DecorDesigner onClose={() => close('decorDesigner')} onSave={(a) => { const currentArrangements = layoutState.getDecorArrangements(); const nextArrangements = currentArrangements.find(x => x.id === a.id) ? currentArrangements.map(x => x.id === a.id ? a : x) : [...currentArrangements, a]; layoutState.setDecorArrangements(nextArrangements); close('decorDesigner'); }} initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null} />}
-          {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }} />}
+          {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
           {showOverview && (
             <EventOverview
               guests={layoutState.guests}
@@ -917,9 +960,8 @@ export default function AuthenticatedApp() {
               }}
               onOpenVenueMap={canOpenAdminPanel ? () => {
                 setShowLayoutsHome(false);
-                try { localStorage.setItem(STORAGE_KEYS.ADMIN_LAST_TAB, 'wayfinding'); } catch { /* ignore */ }
-                window.location.hash = '#/admin';
-                setView('admin');
+                window.location.hash = '#/venuemap';
+                setView('venuemap');
                 closeAll();
               } : undefined}
               onClose={() => setShowLayoutsHome(false)}
