@@ -7,6 +7,10 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Safe date formatting, guest-event day/time editing, capacity warnings**: the
+  couple portal no longer crashes on malformed dates; the couple can edit a guest
+  event's day + start time; the venue creation form warns when guest count exceeds
+  package cap; the RSVP per-event summary flags over-capacity attendance. Committed.
 - ✅ **Guest seat/room assignment, capacity guards, deadline display, add-ons total**:
   couple can now assign each guest a table/seat & room (was shown in the guest portal
   but not editable; surfaced in venue guest view too); guarded guest-event capacity
