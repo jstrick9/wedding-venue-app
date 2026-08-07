@@ -1892,11 +1892,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       {coupleGuestEvents.map((ge) => {
                         const count = attending.filter((r) => (r.attendingEvents || []).includes(ge.id)).length;
                         const assigned = getAssignedGuestCount(event!.id, ge.id);
+                        const overCap = !!ge.capacity && count > ge.capacity;
                         return (
-                          <div key={ge.id} className="flex items-center justify-between text-sm">
+                          <div key={ge.id} className="flex items-center justify-between gap-3 text-sm">
                             <span className="text-gray-700">{ge.title}</span>
-                            <span className="text-xs text-gray-600">
+                            <span className={`text-xs ${overCap ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
                               {count} attending / {assigned} invited{ge.capacity ? ` / ${ge.capacity} cap` : ''}
+                              {overCap ? ' ⚠️ over capacity' : ''}
                             </span>
                           </div>
                         );
