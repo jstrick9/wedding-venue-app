@@ -7,6 +7,11 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue-admin persona test coverage** — added integration tests that exercise the
+  venue-admin flows through the real service layer: catalog setup (spaces, tables,
+  fixtures, templates, guidelines) and the couples & events workflow (create couple,
+  assign package, derive guest events, layout submit→approve, complete event).
+  Test count: **493 passing / 11 skipped**. Committed.
 - ✅ **Venue-admin focused sweep**: package delete now warns when couples are assigned
   (prevents silently detaching them + removing derived guest events); couple's
   preferred-vendor picker shows rating/website/description the venue curated; venue
