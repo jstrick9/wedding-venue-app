@@ -7,6 +7,10 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue-admin persona: Lodging Studio flow** — added integration tests verifying
+  the multi-floor lodging venue (floors/rooms/capacities) persists, over-capacity
+  guest assignment is detected, and a legacy single-floor venue (rooms w/o floors)
+  is handled. Test count: **501 passing / 11 skipped**. Committed.
 - ✅ **Venue-admin persona: Layout Studio canvas flow** — added integration tests
   exercising the layout-editing mutations a venue admin uses: place table/fixture/
   decor, move/duplicate/remove, save a master layout onto the venue, and load a
