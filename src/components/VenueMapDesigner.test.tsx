@@ -70,6 +70,22 @@ describe('VenueMapDesigner', () => {
     expect(screen.getByText(/2 spaces/)).toBeTruthy();
   });
 
+  it('reports dirty state: placing/editing fires onDirtyChange(true), saving fires false', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'Garden', kind: 'space', x: 30, y: 30, venueId: 'garden' });
+    const onDirtyChange = vi.fn();
+    const { container } = render(
+      <VenueMapDesigner map={map} venues={venues} onSave={() => {}} onDirtyChange={onDirtyChange} />,
+    );
+    // Place a new point on the canvas -> dirty.
+    const svg = container.querySelector('svg')!;
+    fireEvent.click(svg);
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+    // Saving the map clears the dirty state.
+    fireEvent.click(screen.getByRole('button', { name: /Save Venue Map/ }));
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+  });
+
   it('palette drives what kind gets placed on the canvas', () => {
     let map = emptyVenueMapConfig();
     const { container } = render(<VenueMapDesigner map={map} venues={venues} onSave={() => {}} />);

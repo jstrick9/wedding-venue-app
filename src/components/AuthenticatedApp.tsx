@@ -67,6 +67,13 @@ export default function AuthenticatedApp() {
   const layoutState = useLayoutState();
 
   const [view, setView] = useState<'dashboard' | 'studio' | 'admin' | 'venuemap'>('dashboard');
+  const [venueMapDirty, setVenueMapDirty] = useState(false);
+  const [confirmVenueMapLeave, setConfirmVenueMapLeave] = useState(false);
+
+  const leaveVenueMap = () => {
+    if (venueMapDirty) { setConfirmVenueMapLeave(true); return; }
+    window.location.hash = '#/studio'; setView('studio'); closeAll();
+  };
 
   const canOpenAdminPanel = canAccessAdminPanel(user);
   const canOpenOperationsPanel = canAccessOperationsPanel(user);
@@ -687,12 +694,15 @@ export default function AuthenticatedApp() {
         <header className="h-14 px-4 flex items-center justify-between bg-white border-b border-gray-200">
           <button
             type="button"
-            onClick={() => { window.location.hash = '#/studio'; setView('studio'); closeAll(); }}
+            onClick={leaveVenueMap}
             className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
           >
             ← Studio
           </button>
-          <span className="text-sm font-semibold text-gray-700">🗺️ Venue Map Designer</span>
+          <span className="text-sm font-semibold text-gray-700">
+            🗺️ Venue Map Designer
+            {venueMapDirty && <span className="ml-2 text-[11px] font-medium text-amber-600">● Unsaved</span>}
+          </span>
           <div className="w-24" />
         </header>
         <div className="flex-1 overflow-auto p-4">
@@ -700,13 +710,23 @@ export default function AuthenticatedApp() {
             <VenueMapDesigner
               map={getVenueMapConfig() || emptyVenueMapConfig()}
               venues={layoutState.venues}
+              mapTitle={brandingConfig.venueName || 'Venue Map'}
               onSave={(next) => { saveVenueMapConfig(next); emitDataChanged('venue-map'); }}
-              onClose={() => { window.location.hash = '#/studio'; setView('studio'); }}
+              onClose={leaveVenueMap}
+              onDirtyChange={setVenueMapDirty}
             />
           ) : (
             <div className="p-6 text-sm text-gray-500">You don't have permission to edit the venue map.</div>
           )}
         </div>
+        <ConfirmDialog
+          open={confirmVenueMapLeave}
+          title="Discard unsaved map changes?"
+          message="You have unsaved changes to the venue map. Leaving will discard them. Save the map first to keep your work."
+          confirmLabel="Leave anyway"
+          onConfirm={() => { setConfirmVenueMapLeave(false); setVenueMapDirty(false); window.location.hash = '#/studio'; setView('studio'); closeAll(); }}
+          onCancel={() => setConfirmVenueMapLeave(false)}
+        />
       </div>
     );
   }

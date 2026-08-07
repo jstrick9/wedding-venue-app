@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { VenueMapConfig, VenueMapPoint, VenueMapPointKind } from '../types';
-import { pointColor, pointKindIcon } from '../utils/venueMapDesigner';
+import { pointColor, pointKindIcon, pointKindLabel } from '../utils/venueMapDesigner';
 import { routePoints } from '../utils/venueMapDesigner';
 
 export interface VenueMapCanvasProps {
@@ -19,13 +19,17 @@ export interface VenueMapCanvasProps {
   onPointClick?: (point: VenueMapPoint) => void;
   /** Show labels (default true). */
   showLabels?: boolean;
+  /** Render a color legend (by point kind) in the corner of the map — included in exports. */
+  showLegend?: boolean;
   /** Forwarded so print/export can capture the rendered SVG. */
   svgRef?: React.RefObject<SVGSVGElement | null>;
-  /** Optional subtitle/header shown above the map (for the printable Venue Map). */
+  /** Optional title rendered inside the SVG (top center) so it appears in exports. */
   title?: string;
 }
 
 const KIND_RADIUS = { space: 5, parking: 5, entry: 4.5, amenity: 4, path: 2 };
+
+const ALL_KINDS: VenueMapPointKind[] = ['space', 'parking', 'entry', 'amenity', 'path'];
 
 /**
  * Shared, reusable interactive full-venue map renderer. Renders every point and
@@ -44,6 +48,7 @@ export function VenueMapCanvas({
   highlightPointIds,
   onPointClick,
   showLabels = true,
+  showLegend = false,
   svgRef,
   title,
 }: VenueMapCanvasProps) {
@@ -86,11 +91,14 @@ export function VenueMapCanvas({
 
   const endDrag = () => setDrag(null);
 
+  // Which kinds actually appear, for the color legend.
+  const legendKinds = ALL_KINDS.filter((k) => map.points.some((p) => p.kind === k));
+  const legendH = legendKinds.length * 6 + 6;
+  const longest = legendKinds.reduce((m, k) => Math.max(m, pointKindLabel(k).length), 0);
+  const legendW = Math.max(18, longest * 2 + 11);
+
   return (
     <div>
-      {title && (
-        <div className="text-center py-1 text-sm font-semibold text-gray-700">{title}</div>
-      )}
       <svg
         ref={ref}
         viewBox={`0 0 ${W} ${H}`}
@@ -102,6 +110,11 @@ export function VenueMapCanvas({
         onMouseLeave={endDrag}
         style={editable ? { cursor: 'crosshair' } : undefined}
       >
+        {title && (
+          <text x={W / 2} y={7} textAnchor="middle" fontSize={5} fontWeight="bold" fill="#374151">
+            {title}
+          </text>
+        )}
         {/* Walkway routes */}
         {(map.routes || []).map((route) => {
           const pts = routePoints(map, route);
@@ -154,6 +167,29 @@ export function VenueMapCanvas({
             </g>
           );
         })}
+        {/* Legend (bottom-right) */}
+        {showLegend && legendKinds.length > 0 && (
+          <g>
+            <rect
+              x={W - legendW - 2}
+              y={H - legendH - 2}
+              width={legendW}
+              height={legendH}
+              rx={2}
+              fill="#ffffff"
+              opacity={0.88}
+              stroke="#d1d5db"
+            />
+            {legendKinds.map((k, i) => (
+              <g key={k}>
+                <circle cx={W - legendW + 4} cy={H - legendH + 4 + i * 6} r={1.8} fill={pointColor(k)} />
+                <text x={W - legendW + 9} y={H - legendH + 5.4 + i * 6} fontSize={3.5} fill="#374151">
+                  {pointKindLabel(k)}
+                </text>
+              </g>
+            ))}
+          </g>
+        )}
       </svg>
     </div>
   );

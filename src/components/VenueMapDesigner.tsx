@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Venue, VenueMapConfig, VenueMapPoint, VenueMapPointKind } from '../types';
 import { VenueMapCanvas } from './VenueMapCanvas';
 import {
@@ -13,6 +13,10 @@ export interface VenueMapDesignerProps {
   venues: Venue[];
   onSave: (map: VenueMapConfig) => void;
   onClose?: () => void;
+  /** Optional title drawn on the map (e.g. the venue name) and included in exports. */
+  mapTitle?: string;
+  /** Fired whenever there are unsaved edits (so the shell can guard navigation). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const KINDS: VenueMapPointKind[] = ['space', 'parking', 'entry', 'amenity', 'path'];
@@ -23,8 +27,9 @@ const KINDS: VenueMapPointKind[] = ['space', 'parking', 'entry', 'amenity', 'pat
  * linking space points to venue/lodging, and drawing walkway routes. Supports
  * printing/exporting the resulting "Venue Map" (PNG/PDF).
  */
-export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: VenueMapDesignerProps) {
+export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, mapTitle, onDirtyChange }: VenueMapDesignerProps) {
   const [map, setMap] = useState<VenueMapConfig>(initialMap);
+  const [dirty, setDirty] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeKind, setActiveKind] = useState<VenueMapPointKind>('space');
   const [routeName, setRouteName] = useState('');
@@ -36,11 +41,15 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
 
   const selected: VenueMapPoint | undefined = map.points.find((p) => p.id === selectedId);
 
-  const update = (next: VenueMapConfig) => setMap(next);
-  const persist = (next: VenueMapConfig) => { setMap(next); onSave(next); };
+  const update = (next: VenueMapConfig) => { setMap(next); setDirty(true); };
+  const persist = (next: VenueMapConfig) => { setMap(next); onSave(next); setDirty(false); };
   // Any edit to a selected point flags unsaved changes so the "Save point"
   // affordance (and its warning) is honest about the draft state.
-  const editSelected = (next: VenueMapConfig) => { setEditing(true); setMap(next); };
+  const editSelected = (next: VenueMapConfig) => { setEditing(true); setMap(next); setDirty(true); };
+
+  // Notify the shell of unsaved edits so it can guard navigation away from the
+  // module (prevents silent loss of in-progress map work).
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
 
   const linkedVenueName = (venueId?: string) =>
     venues.find((v) => v.id === venueId)?.name || venueId || '—';
@@ -162,6 +171,8 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
             onSelectPoint={(id) => { setSelectedId(id); if (id) setEditing(false); }}
             onMovePoint={handleMove}
             onPlacePoint={handlePlace}
+            title={mapTitle}
+            showLegend
             svgRef={svgRef as React.RefObject<SVGSVGElement>}
           />
           {/* Palette + route drawing */}

@@ -40,9 +40,19 @@ gaps found.
 - `venueMapDesigner.test.ts` (+1): removing a point drops a route that falls below
   2 points while keeping one that still qualifies.
 
-## CI
-557 passing / 11 skipped (was 551). Typecheck, event-bus lint, unused-locals, and
-single-file build all green.
+## Follow-up — printable title/legend + unsaved-changes guard
+7. **In-SVG title & color legend.** The exported/printed Venue Map previously had
+   no title or key. `VenueMapCanvas` now draws an optional in-SVG title (top
+   center) and a color legend (bottom-right) for the kinds present, so both show
+   up on-screen **and** in the PNG/PDF export. The designer passes the venue name
+   (`mapTitle`) and enables the legend.
+8. **Unsaved-changes guard.** The designer now reports `dirty` state via
+   `onDirtyChange` (any canvas placement/drag/edit sets it; any save clears it).
+   The module view shows an "● Unsaved" badge and confirms before leaving when
+   dirty, so a venue admin can't silently lose in-progress map work.
+
+Tests: `VenueMapCanvas.test.tsx` (+1 legend), `VenueMapDesigner.test.tsx` (+1
+dirty-state). CI now **559 passing / 11 skipped**.
 
 ## Files
 - `src/components/VenueMapCanvas.tsx`
