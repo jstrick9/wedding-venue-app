@@ -82,10 +82,22 @@ const StaffOperationsPanel: React.FC<Props> = ({
       const savedTasks = localStorage.getItem(STORAGE_KEYS.STAFF_TASKS);
       const savedAreas = localStorage.getItem(STORAGE_KEYS.STAFF_AREAS);
       const savedShifts = localStorage.getItem(STORAGE_KEYS.STAFF_SHIFTS);
-      
-      if (savedTasks) setTasks(JSON.parse(savedTasks));
-      if (savedAreas) setAreas(JSON.parse(savedAreas));
-      if (savedShifts) setShifts(JSON.parse(savedShifts));
+      // Parse defensively: corrupted/unexpected data must not crash the panel.
+      const safeParse = (raw: string | null) => {
+        if (!raw) return null;
+        try {
+          const v = JSON.parse(raw);
+          return Array.isArray(v) ? v : null;
+        } catch {
+          return null;
+        }
+      };
+      const t = safeParse(savedTasks);
+      const a = safeParse(savedAreas);
+      const s = safeParse(savedShifts);
+      if (t) setTasks(t);
+      if (a) setAreas(a);
+      if (s) setShifts(s);
     };
 
     loadData();
