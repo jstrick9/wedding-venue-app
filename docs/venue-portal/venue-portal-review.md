@@ -7,6 +7,8 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Couple guest-portal password**: couples can now set / change / remove a guest
+  portal entry password (hashed) from their Portal Settings. Committed.
 - ✅ **Guest RSVP event checkboxes safe-time**: the "Which events will you attend?"
   checkboxes now use safe time formatting (no crash on malformed times). Committed.
 - ✅ **Venue dashboard recurring events**: the Today strip + Upcoming pipeline now
