@@ -7,6 +7,11 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue-admin persona: Operations & Staffing** — hardened the Operations panel's
+  task/area/shift load to parse defensively (corrupted data no longer crashes the
+  panel); added persona tests for staff tasks + checklist progress and the
+  calendar→shift link (assign/unassign/delete reconcile). Test count:
+  **506 passing / 11 skipped**. Committed.
 - ✅ **Venue-admin persona: Lodging Studio flow** — added integration tests verifying
   the multi-floor lodging venue (floors/rooms/capacities) persists, over-capacity
   guest assignment is detected, and a legacy single-floor venue (rooms w/o floors)
