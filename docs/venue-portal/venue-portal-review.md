@@ -7,6 +7,10 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Add-on removal cleans up suggested setup tasks** — removing a lodging/activity/
+  ceremony add-on now removes the auto-suggested venue setup task it created (only
+  tasks the couple's action marked suggested; venue's own custom tasks stay).
+  Committed.
 - ✅ **Wayfinding point coordinate validation** — fixed a bug where clearing or
   typing non-numeric X/Y coordinates (or going out of bounds) produced NaN/0 and
   broke the venue map; addPoint now validates finite non-negative in-bounds values.
