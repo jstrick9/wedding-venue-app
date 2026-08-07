@@ -537,9 +537,20 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-              {form.packageId && (
-                <p className="text-xs text-gray-500 mt-1">Setup tasks will be auto-suggested from this package.</p>
-              )}
+              {form.packageId && (() => {
+                const pkg = findWeddingPackage(form.packageId);
+                const gc = parseInt(form.guestCount, 10);
+                return (
+                  <div>
+                    <p className="text-xs text-gray-500 mt-1">Setup tasks will be auto-suggested from this package.</p>
+                    {pkg && !Number.isNaN(gc) && gc > pkg.maxGuests && (
+                      <p className="text-xs text-red-600 mt-1">
+                        ⚠️ This guest count ({gc}) exceeds the package's included guests ({pkg.maxGuests}).
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
           <div>
