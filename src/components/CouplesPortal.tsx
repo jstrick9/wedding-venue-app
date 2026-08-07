@@ -1940,7 +1940,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     <h3 className="font-semibold text-sm mb-2">🎟️ RSVPs per event</h3>
                     <div className="space-y-1.5">
                       {coupleGuestEvents.map((ge) => {
-                        const count = attending.filter((r) => (r.attendingEvents || []).includes(ge.id)).length;
+                        // Per-event headcount = attending guests (+ their plus-ones).
+                        const eventAttending = attending.filter((r) => (r.attendingEvents || []).includes(ge.id));
+                        const count = eventAttending.length + eventAttending.filter((r) => !!r.plusOneName).length;
                         const assigned = getAssignedGuestCount(event!.id, ge.id);
                         const overCap = !!ge.capacity && count > ge.capacity;
                         return (
