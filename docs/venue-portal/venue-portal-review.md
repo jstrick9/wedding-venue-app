@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Package & add-on numeric guards**: package forms now clamp prices/guest counts
+  to finite non-negative values and require `maxGuests > 0` (instead of silently
+  saving "unlimited"); add-on price is guarded from NaN/negative. Committed.
 - ✅ **Guest-access-closes guard**: the couple's Portal Settings "Guest access closes"
   field now treats empty/NaN as the default 36h instead of 0/NaN (which would close
   the portal at event-day end or break grace-period math). Committed.
