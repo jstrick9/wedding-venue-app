@@ -48,7 +48,7 @@ import { getCoupleVendors, addCoupleVendor, updateCoupleVendor, removeCoupleVend
 import { getVendorCategories, vendorCategoryLabel } from '../services/vendors/vendorCategoryService';
 import { findWeddingPackage, PACKAGE_DURATIONS, INCLUDED_ITEMS } from '../services/couples/couplePackageService';
 import { getActivePackageAddOns, findPackageAddOn, ADD_ON_CATEGORIES } from '../services/couples/coupleAddOnService';
-import { getCoupleSetupTasks, addCoupleSetupTask } from '../services/couples/coupleSetupService';
+import { getCoupleSetupTasks, addCoupleSetupTask, removeCoupleSetupTask } from '../services/couples/coupleSetupService';
 import {
   getCoupleGuestEvents,
   addCoupleGuestEvent,
@@ -423,6 +423,15 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
           addCoupleSetupTask(event.id, { title: t.title, suggested: true });
         }
       });
+    } else if (wasAdded && ao) {
+      // Removing an add-on: clean up the suggested setup task we auto-created so the
+      // venue isn't left with a stale prep item. (Only remove tasks we marked
+      // `suggested` from this add-on; the venue's own custom tasks stay.)
+      const existing = getCoupleSetupTasks(event.id);
+      const keywords = ao.category === 'lodging' ? ['lodging'] : ao.category === 'activity' ? ['activity'] : ao.category === 'ceremony-reception' ? ['ceremony'] : [];
+      existing
+        .filter((t) => t.suggested && keywords.some((k) => t.title.toLowerCase().includes(k)))
+        .forEach((t) => removeCoupleSetupTask(event.id, t.id));
     }
     setPkgTick((t) => t + 1);
   };
