@@ -7,6 +7,12 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Couple persona: full journey** — added integration tests exercising the couple's
+  end-to-end flow through the real services: invite-link resolution, adding
+  collaborators (with email dedupe), answering questions, selecting spaces, checklist,
+  vendors, guests + invite links + RSVPs, layout design → submit → venue approve,
+  complete event, and delete cascade. Test count: **520 passing / 11 skipped**.
+  Committed.
 - ✅ **Venue-admin persona: Print/export** — fixed a genuine bug: the built-in
   "Traditional Ceremony" template referenced a non-existent table spec
   (`ceremony-chair-row`; correct id is `seating-ceremony-row`), which broke template
