@@ -1948,24 +1948,61 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             )}
                           </div>
                         </div>
-                        {/* Edit capacity */}
+                        {/* Edit schedule (capacity, time) */}
                         {canManageGuests && (
-                          <div className="mt-2 flex items-center gap-2">
-                            <label className="text-xs text-gray-500">Capacity</label>
-                            <input
-                              type="number"
-                              min={1}
-                              value={ge.capacity}
-                              onChange={(e) => {
-                                const raw = e.target.value.trim();
-                                const n = raw === '' ? 1 : Number(raw);
-                                if (Number.isNaN(n) || n < 1) return; // ignore invalid/empty
-                                updateCoupleGuestEvent(event!.id, ge.id, { capacity: Math.round(n) });
-                                setGuestEventTick((t) => t + 1);
-                              }}
-                              className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-xs"
-                              aria-label={`Capacity for ${ge.title}`}
-                            />
+                          <div className="mt-2 flex flex-wrap items-center gap-3">
+                            <label className="flex items-center gap-2 text-xs text-gray-500">
+                              Capacity
+                              <input
+                                type="number"
+                                min={1}
+                                value={ge.capacity}
+                                onChange={(e) => {
+                                  const raw = e.target.value.trim();
+                                  const n = raw === '' ? 1 : Number(raw);
+                                  if (Number.isNaN(n) || n < 1) return; // ignore invalid/empty
+                                  updateCoupleGuestEvent(event!.id, ge.id, { capacity: Math.round(n) });
+                                  setGuestEventTick((t) => t + 1);
+                                }}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-xs"
+                                aria-label={`Capacity for ${ge.title}`}
+                              />
+                            </label>
+                            <label className="flex items-center gap-2 text-xs text-gray-500">
+                              Time
+                              <input
+                                type="datetime-local"
+                                value={ge.startTime ? ge.startTime.slice(0, 16) : ''}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (!v) return;
+                                  const dt = new Date(v);
+                                  if (Number.isNaN(dt.getTime())) return;
+                                  updateCoupleGuestEvent(event!.id, ge.id, { startTime: dt.toISOString() });
+                                  setGuestEventTick((t) => t + 1);
+                                }}
+                                className="px-2 py-1 border border-gray-300 rounded-lg text-xs"
+                                aria-label={`Start time for ${ge.title}`}
+                              />
+                            </label>
+                            {event?.days && event.days.length > 1 && (
+                              <label className="flex items-center gap-2 text-xs text-gray-500">
+                                Day
+                                <select
+                                  value={ge.dayIndex ?? 0}
+                                  onChange={(e) => {
+                                    updateCoupleGuestEvent(event!.id, ge.id, { dayIndex: Number(e.target.value) });
+                                    setGuestEventTick((t) => t + 1);
+                                  }}
+                                  className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white"
+                                  aria-label={`Day for ${ge.title}`}
+                                >
+                                  {event.days.map((d, idx) => (
+                                    <option key={d.id} value={idx}>{idx + 1}. {d.label}</option>
+                                  ))}
+                                </select>
+                              </label>
+                            )}
                           </div>
                         )}
                       </div>
