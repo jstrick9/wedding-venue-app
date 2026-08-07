@@ -7,6 +7,8 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Couple-event guest-count validation**: the venue's create/edit couple event
+  forms now reject NaN/negative/0 guest counts with a clear error. Committed.
 - ✅ **Package & add-on numeric guards**: package forms now clamp prices/guest counts
   to finite non-negative values and require `maxGuests > 0` (instead of silently
   saving "unlimited"); add-on price is guarded from NaN/negative. Committed.
