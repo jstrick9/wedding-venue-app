@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Staff-shift data-integrity**: deleting a calendar event now cascade-deletes its
+  linked staff shifts; shift sync now reconciles (removes dropped assignees, updates
+  times/roles, clears on unassign-all) instead of only adding. Committed.
 - ✅ **Calendar event detail + guest-event location**: the venue calendar detail now
   shows end time, venue space, notes, and recurrence; couples can set a guest
   event's location (shown in venue + guest itinerary). Committed.
