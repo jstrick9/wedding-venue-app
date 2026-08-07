@@ -39,7 +39,11 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
   const [editing, setEditing] = useState(false);
   const [sizeW, setSizeW] = useState(String(initialMap.width || 100));
   const [sizeH, setSizeH] = useState(String(initialMap.height || 80));
+  const [undoStack, setUndoStack] = useState<VenueMapConfig[]>([]);
+  const [redoStack, setRedoStack] = useState<VenueMapConfig[]>([]);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  // Captures the pre-drag snapshot so a drag undo is one step, not per-mousemove.
+  const pendingDragRef = useRef<VenueMapConfig | null>(null);
 
   const selected: VenueMapPoint | undefined = map.points.find((p) => p.id === selectedId);
 
@@ -52,6 +56,54 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
   // Notify the shell of unsaved edits so it can guard navigation away from the
   // module (prevents silent loss of in-progress map work).
   useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+
+  // ── Undo / redo ──────────────────────────────────────────────────────────
+  const pushUndo = (m: VenueMapConfig) => {
+    setUndoStack((prev) => [...prev, m].slice(-60));
+    setRedoStack([]);
+    pendingDragRef.current = null;
+  };
+  const undo = () => {
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    setUndoStack((u) => u.slice(0, -1));
+    setRedoStack((r) => [...r, map]);
+    setMap(prev);
+    setDirty(true);
+    pendingDragRef.current = null;
+  };
+  const redo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((r) => r.slice(0, -1));
+    setUndoStack((u) => [...u, map]);
+    setMap(next);
+    setDirty(true);
+    pendingDragRef.current = null;
+  };
+
+  const handleSelectPoint = (id: string | null) => {
+    setSelectedId(id);
+    if (id) {
+      setEditing(false);
+      pendingDragRef.current = map; // snapshot pre-drag state for undo coalescing
+    }
+  };
+
+  // Ctrl/Cmd+Z undo, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y redo, Delete/Backspace removes
+  // the selected point. Only fires outside text inputs.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      else if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedId) { e.preventDefault(); removeSelected(); } }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const linkedVenueName = (venueId?: string) =>
     venues.find((v) => v.id === venueId)?.name || venueId || '—';
@@ -74,6 +126,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
   );
 
   const handlePlace = (kind: VenueMapPointKind, x: number, y: number) => {
+    pushUndo(map);
     const label = `${pointKindLabel(kind)} ${map.points.filter((p) => p.kind === kind).length + 1}`;
     const next = addMapPoint(map, { label, kind, x, y, venueId: kind === 'space' ? '' : undefined });
     setSelectedId(next.points[next.points.length - 1].id);
@@ -81,7 +134,14 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
     update(next);
   };
 
-  const handleMove = (id: string, x: number, y: number) => update(moveMapPoint(map, id, x, y));
+  const handleMove = (id: string, x: number, y: number) => {
+    // First move of a drag pushes the pre-drag snapshot once (not per-mousemove).
+    if (pendingDragRef.current) {
+      pushUndo(pendingDragRef.current);
+      pendingDragRef.current = null;
+    }
+    update(moveMapPoint(map, id, x, y));
+  };
 
   const saveSelected = () => {
     if (!selected) return;
@@ -93,6 +153,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
 
   const removeSelected = () => {
     if (!selected) return;
+    pushUndo(map);
     persist(removeMapPoint(map, selected.id));
     setSelectedId(null);
     setEditing(false);
@@ -101,6 +162,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
 
   /** Place a space pin for a venue that has no pin yet, labeled with its name. */
   const addVenuePin = (venue: Venue) => {
+    pushUndo(map);
     const offset = map.points.length % 5;
     const row = Math.floor(map.points.length / 5) % 3;
     const next = addMapPoint(map, {
@@ -130,6 +192,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
 
   const commitRoute = () => {
     if (routePointIds.length < 2) { showToast('A walkway needs at least 2 points.', 'warning'); return; }
+    pushUndo(map);
     persist(addMapRoute(map, routeName, routePointIds));
     setRouteName(''); setRoutePointIds([]);
     showToast('Walkway added.', 'success');
@@ -141,6 +204,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
   };
   const commitRename = () => {
     if (renamingRoute) {
+      pushUndo(map);
       persist(renameMapRoute(map, renamingRoute, routeRename));
       showToast('Walkway renamed.', 'success');
     }
@@ -169,6 +233,24 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
           {summary.spaces} spaces · {summary.lodging} lodging · {summary.parking} parking · {summary.entries} entries
         </span>
         <div className="ml-auto flex gap-2">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={undoStack.length === 0}
+            className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Undo (Ctrl/Cmd+Z)"
+          >
+            ↩ Undo
+          </button>
+          <button
+            type="button"
+            onClick={redo}
+            disabled={redoStack.length === 0}
+            className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Redo (Ctrl/Cmd+Shift+Z)"
+          >
+            Redo ↪
+          </button>
           <button type="button" onClick={() => void exportMap('png')} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">🖼️ PNG</button>
           <button type="button" onClick={() => void exportMap('pdf')} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">📄 PDF</button>
         </div>
@@ -184,7 +266,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
               selectedPointId={selectedId}
               placeKind={activeKind}
               highlightPointIds={routePointIds}
-              onSelectPoint={(id) => { setSelectedId(id); if (id) setEditing(false); }}
+              onSelectPoint={handleSelectPoint}
               onMovePoint={handleMove}
               onPlacePoint={handlePlace}
               title={mapTitle}
@@ -299,6 +381,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
             <button
               type="button"
               onClick={() => {
+                pushUndo(map);
                 const next = updateMapSize(map, Number(sizeW), Number(sizeH));
                 setSizeW(String(next.width));
                 setSizeH(String(next.height));
@@ -439,7 +522,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
                         >
                           ✏️
                         </button>
-                        <button type="button" onClick={() => { persist(removeMapRoute(map, r.id)); }} className="text-red-400 hover:text-red-600" aria-label={`Delete ${r.name}`}>✕</button>
+                        <button type="button" onClick={() => { pushUndo(map); persist(removeMapRoute(map, r.id)); }} className="text-red-400 hover:text-red-600" aria-label={`Delete ${r.name}`}>✕</button>
                       </span>
                     </>
                   )}

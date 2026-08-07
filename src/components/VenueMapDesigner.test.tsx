@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { VenueMapDesigner } from './VenueMapDesigner';
 import { emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 import { addMapPoint, addMapRoute } from '../utils/venueMapDesigner';
@@ -103,6 +103,33 @@ describe('VenueMapDesigner', () => {
     // Saving the map clears the dirty state.
     fireEvent.click(screen.getByRole('button', { name: /Save Venue Map/ }));
     expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('undo/redo: placing a point can be undone then redone', () => {
+    const { container } = render(
+      <VenueMapDesigner map={emptyVenueMapConfig()} venues={venues} onSave={() => {}} />,
+    );
+    const svg = container.querySelector('svg')!;
+    fireEvent.click(svg); // place a space point
+    expect(screen.getByText(/1 spaces/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Undo/ }));
+    expect(screen.getByText(/0 spaces/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Redo/ }));
+    expect(screen.getByText(/1 spaces/)).toBeTruthy();
+  });
+
+  it('keyboard Delete removes the selected point', async () => {
+    const { container } = render(
+      <VenueMapDesigner map={emptyVenueMapConfig()} venues={venues} onSave={() => {}} />,
+    );
+    const svg = container.querySelector('svg')!;
+    fireEvent.click(svg); // place + auto-select a point
+    await waitFor(() => expect(screen.getByText(/1 spaces/)).toBeTruthy());
+
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' })); });
+    await waitFor(() => expect(screen.getByText(/0 spaces/)).toBeTruthy());
   });
 
   it('palette drives what kind gets placed on the canvas', () => {

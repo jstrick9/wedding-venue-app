@@ -64,6 +64,19 @@ dirty-state). CI now **559 passing / 11 skipped**.
 Tests: `VenueMapDesigner.test.tsx` (+2), `venueMapDesigner.test.ts` (+1).
 CI now **562 passing / 11 skipped**.
 
+## Follow-up — undo/redo + keyboard Delete
+11. **Undo / redo.** The designer now has undo/redo (header buttons + Ctrl/Cmd+Z,
+    Ctrl/Cmd+Shift+Z / Ctrl/Cmd+Y) across placements, drags (coalesced to one
+    step per drag), deletions, route add/delete/rename, and resize — capped at 60
+    steps. This addresses the biggest risk of a diagramming tool: accidental
+    placement/delete with no way back.
+12. **Keyboard Delete/Backspace** removes the selected point.
+13. **Scoped the floor-plan keyboard shortcuts to the Studio view.** The global
+    keydown handler in `AuthenticatedApp` used to run in every view and act on a
+    (possibly stale) floor-plan selection; it's now gated to `view === 'studio'`,
+    which both fixes that latent bug and lets the map module handle Delete safely.
+Tests: `VenueMapDesigner.test.tsx` (+2). CI now **564 passing / 11 skipped**.
+
 ## Files
 - `src/components/VenueMapCanvas.tsx`
 - `src/components/VenueMapDesigner.tsx`

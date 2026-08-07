@@ -584,6 +584,9 @@ export default function AuthenticatedApp() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // These are floor-plan canvas shortcuts; keep them scoped to the Studio so
+      // they don't act on a stale selection in other views (e.g. the venue map).
+      if (view !== 'studio') return;
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
       const mod = e.ctrlKey || e.metaKey;
       if ((e.key === 'Delete' || e.key === 'Backspace')) { if (layoutState.selectedId) { e.preventDefault(); layoutState.removeItem(layoutState.selectedId); } }
@@ -597,7 +600,7 @@ export default function AuthenticatedApp() {
       else if (e.key === 'Escape') { layoutState.setSelectedId(null); setShowProperties(false); setDragItem(null); }
     };
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [layoutState, pushUndoSnapshot, handleResetToVenue, handleResetToCanvas]);
+  }, [view, layoutState, pushUndoSnapshot, handleResetToVenue, handleResetToCanvas]);
 
   useEffect(() => { rootStyles(brandingConfig); }, [brandingConfig]);
 
