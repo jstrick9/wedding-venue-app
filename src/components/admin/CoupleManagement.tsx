@@ -641,6 +641,19 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       {ev.guestCount && <span>👥 {ev.guestCount} guests</span>}
                       {ev.packageId && (() => { const p = findWeddingPackage(ev.packageId); return p ? <span>🎁 {p.name}</span> : null; })()}
                       {(() => {
+                        // Flag when a couple's guest count exceeds their package's included
+                        // guests, so the venue can catch an overbooked event early.
+                        const pkg = ev.packageId ? findWeddingPackage(ev.packageId) : undefined;
+                        const limit = pkg?.maxGuests || ev.guestCount;
+                        const invited = getCoupleGuests(ev.id).length || ev.guestCount || 0;
+                        if (!limit || invited <= limit) return null;
+                        return (
+                          <span className="text-red-700 bg-red-50 rounded-full px-2 py-0.5" title="The couple has invited more guests than their package includes.">
+                            ⚠️ {invited}/{limit} guests (over package cap)
+                          </span>
+                        );
+                      })()}
+                      {(() => {
                         const st = getCoupleSetupTasks(ev.id);
                         if (st.length === 0) return null;
                         const done = st.filter((t) => t.status === 'done').length;
