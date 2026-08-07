@@ -73,6 +73,7 @@ import { createSecretRecord } from '../utils/auth';
 import { sendCoupleEmail } from '../services/couples/coupleEmailService';
 import { CoupleLayoutEditor } from './CoupleLayoutEditor';
 import { VenueMapCanvas } from './VenueMapCanvas';
+import { LodgingAssignmentsModal } from './LodgingAssignmentsModal';
 
 // Safe formatters that never throw on malformed/incomplete date strings, so the
 // couple portal can't crash with "Invalid time value" from bad schedule/guest data.
@@ -357,6 +358,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [pkgTick, setPkgTick] = useState(0);
   // Layout editor modal state.
   const [layoutEditorSpace, setLayoutEditorSpace] = useState<string | null>(null);
+  const [lodgingAssignVenue, setLodgingAssignVenue] = useState<string | null>(null);
   const bookedPackage = useMemo(() => (event ? findWeddingPackage(event.packageId) : undefined), [event, pkgTick]);
   const addOnCatalog = useMemo(() => getActivePackageAddOns(), []);
   const coupleAddOns = useMemo(() => event?.addOns || [], [event, pkgTick]);
@@ -1167,11 +1169,12 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       onPointClick={(p) => {
                         if (p.kind === 'space' && p.venueId) {
                           // Drill into the space: if it's an available event space, open
-                          // the layout editor; if it's lodging, go assign guests/rooms.
+                          // the layout editor; if it's lodging, open the room-assignment
+                          // panel so the couple can assign guests/rooms right from the map.
                           if (eligibleSpaces.some((v) => v.id === p.venueId)) {
                             setLayoutEditorSpace(p.venueId);
                           } else if (venues.find((v) => v.id === p.venueId)?.category === 'lodging') {
-                            setActiveTab('guests');
+                            setLodgingAssignVenue(p.venueId);
                           }
                         }
                       }}
@@ -3102,6 +3105,28 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
               showToast(`${venue.name} layout saved.`, 'success');
             }}
             onClose={() => setLayoutEditorSpace(null)}
+          />
+        );
+      })()}
+
+      {/* Lodging drill-in: assign guests/rooms from the venue map */}
+      {lodgingAssignVenue && (() => {
+        const venue = venues.find((v) => v.id === lodgingAssignVenue);
+        if (!venue) return null;
+        return (
+          <LodgingAssignmentsModal
+            venue={venue}
+            guests={coupleGuests}
+            onAssign={(guestId, room) => {
+              updateCoupleGuest(event.id, guestId, { roomId: room });
+              setGuestTick((t) => t + 1);
+              showToast('Guest assigned to a room.', 'success');
+            }}
+            onUnassign={(guestId) => {
+              updateCoupleGuest(event.id, guestId, { roomId: undefined });
+              setGuestTick((t) => t + 1);
+            }}
+            onClose={() => setLodgingAssignVenue(null)}
           />
         );
       })()}

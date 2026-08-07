@@ -27,6 +27,12 @@ P1 = valuable, P2 = polish).*
   both now use the shared renderer (one source of truth), keeping the tap-a-pin
   → open-in-Google-Maps behavior via `onPointClick`. Removed the duplicated
   `routePolyline` map code. Test count: **545 passing / 11 skipped**. Committed.
+- ✅ **Richer lodging drill-in on the couple's map** — clicking a lodging space on
+  the couple's venue map now opens a focused room-assignment panel (not just a
+  jump to the Guests tab): pick the venue's configured rooms (floors→rooms + legacy),
+  see occupancy/capacity with a full-room guard, assign guests to a room or a
+  free-text room, and remove assignments — all while staying in the map context.
+  Test count: **551 passing / 11 skipped**. Committed.
 - ✅ **Couple drill-in via the map** — the couple's Venue Spaces tab now shows an
   interactive map; clicking a space opens its layout editor, clicking a lodging
   point jumps to guest/room assignment. Committed.
