@@ -90,6 +90,10 @@ export function FloorPlanCanvas({
   const [dragState, setDragState] = useState<{ id: string; startX: number; startY: number; itemX: number; itemY: number; isExterior: boolean } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+  // Two-finger pinch-to-zoom: tracks the two active pointers and zooms about the
+  // midpoint between them (anchored to the point under the fingers).
+  const [pinch, setPinch] = useState<{ id1: number; id2: number; startDist: number; startZoom: number; startMidX: number; startMidY: number } | null>(null);
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   
   const tableSpecs = getTableSpecs();
   const fixtureTypes = getFixtureTypes();
@@ -794,6 +798,10 @@ export function FloorPlanCanvas({
     e.stopPropagation();
     if (e.button === 1 || e.shiftKey) return;
 
+    // Register the pointer so that putting a second finger on the canvas
+    // transitions into a pinch (which cancels this item drag).
+    if (e.pointerType !== 'mouse') updatePointers(e);
+
     onSelect(id);
     dragMovedRef.current = false;
     setDragState({
@@ -1005,6 +1013,69 @@ export function FloorPlanCanvas({
     }
   };
 
+  // ── Pinch-to-zoom (two-finger) ─────────────────────────────────────────────
+  // Track every active pointer. When two pointers are down on the canvas, we
+  // enter pinch mode and zoom about the midpoint between them, anchored so the
+  // point under the fingers stays put (same math as the ctrl+wheel zoom).
+  const updatePointers = (e: React.PointerEvent) => {
+    const map = pointersRef.current;
+    if (e.pointerType === 'mouse') return; // mice are one pointer; pinch is touch/pen
+    if (e.type === 'pointerdown') map.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    else if (e.type === 'pointermove' && map.has(e.pointerId)) map.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    else if (e.type === 'pointerup' || e.type === 'pointercancel') map.delete(e.pointerId);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    updatePointers(e);
+    // Only start pinch when exactly two non-mouse pointers are active.
+    if (pointersRef.current.size !== 2) return;
+    const [a, b] = [...pointersRef.current.values()];
+    const startDist = Math.hypot(b.x - a.x, b.y - a.y);
+    if (startDist < 5) return;
+    // End any item drag so a two-finger gesture doesn't move the selected item.
+    setDragState(null);
+    setPinch({
+      id1: [...pointersRef.current.keys()][0],
+      id2: [...pointersRef.current.keys()][1],
+      startDist,
+      startZoom: zoom,
+      startMidX: (a.x + b.x) / 2,
+      startMidY: (a.y + b.y) / 2,
+    });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    updatePointers(e);
+    if (!pinch) return;
+    const p1 = pointersRef.current.get(pinch.id1);
+    const p2 = pointersRef.current.get(pinch.id2);
+    if (!p1 || !p2) return;
+    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const scale = dist / Math.max(1, pinch.startDist);
+    const newZoom = Math.max(0.25, Math.min(2, pinch.startZoom * scale));
+    if (newZoom === zoom) return;
+
+    const container = containerRef.current;
+    const rect = container?.getBoundingClientRect();
+    if (container && rect) {
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+      const localX = midX - rect.left + container.scrollLeft;
+      const localY = midY - rect.top + container.scrollTop;
+      const baseX = (localX - panOffset.x) / pinch.startZoom;
+      const baseY = (localY - panOffset.y) / pinch.startZoom;
+      onPanChange(
+        clampPan({ x: localX - baseX * newZoom, y: localY - baseY * newZoom }),
+      );
+    }
+    onZoomChange(newZoom);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    updatePointers(e);
+    if (pointersRef.current.size < 2) setPinch(null);
+  };
+
   // Handle drag over and drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1030,11 +1101,14 @@ export function FloorPlanCanvas({
     <div
       ref={containerRef}
       className="relative w-full h-full overflow-auto bg-gray-100"
-      onPointerDown={handlePanStart}
+      onPointerDown={(e) => { handlePointerDown(e); handlePanStart(e); }}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={handleCanvasClick}
-      style={{ cursor: isPanning ? 'grabbing' : isDragging ? 'crosshair' : 'default', touchAction: isPanning || dragState ? 'none' : 'pan-x pan-y' }}
+      style={{ cursor: isPanning ? 'grabbing' : isDragging ? 'crosshair' : 'default', touchAction: pinch || isPanning || dragState ? 'none' : 'pan-x pan-y' }}
     >
       <style>{`
         @keyframes spm-pulse-aura {

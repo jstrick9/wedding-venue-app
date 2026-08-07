@@ -34,12 +34,26 @@ describe('Design Studio mobile/tablet responsiveness', () => {
 
   it('uses pointer events for canvas drag/pan (touch support)', () => {
     const source = readFileSync(CANVAS, 'utf8');
-    expect(source).toMatch(/onPointerDown=\{handlePanStart\}/);
+    expect(source).toContain('handlePointerDown(e); handlePanStart(e);');
     expect(source).toMatch(/handleItemPointerDown/);
     expect(source).toMatch(/pointermove/);
     expect(source).toMatch(/pointerup/);
     expect(source).toMatch(/touchAction/);
     // No remaining mouse-only item drag handlers.
     expect(source).not.toMatch(/onMouseDown=\{handleItemMouseDown\}/);
+  });
+
+  it('supports two-finger pinch-to-zoom anchored to the pinch midpoint', () => {
+    const source = readFileSync(CANVAS, 'utf8');
+    expect(source).toMatch(/handlePointerDown/);
+    expect(source).toMatch(/handlePointerMove/);
+    expect(source).toMatch(/handlePointerUp/);
+    expect(source).toMatch(/pointersRef/);
+    expect(source).toMatch(/startDist/);
+    // Zoom about the midpoint between the two pointers.
+    expect(source).toMatch(/\(p1\.x \+ p2\.x\) \/ 2/);
+    // Container wires the pinch handlers.
+    expect(source).toMatch(/onPointerMove=\{handlePointerMove\}/);
+    expect(source).toMatch(/onPointerCancel=\{handlePointerUp\}/);
   });
 });

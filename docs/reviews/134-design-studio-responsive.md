@@ -22,15 +22,23 @@ squeezed to a sliver (on 768px: 280 + 320 = 600px of panels → ~168px of canvas
    uses pointer events (`onPointerDown`, `pointermove`, `pointerup`), which unify
    mouse + touch + pen, plus `touch-action` so the page doesn't scroll mid-drag.
 
+## Follow-up — two-finger pinch-to-zoom
+3. `FloorPlanCanvas` now supports **pinch-to-zoom** on touch: when two non-mouse
+   pointers are down on the canvas, it zooms about the midpoint between them,
+   anchored so the point under the fingers stays put (same math as ctrl+wheel
+   zoom), clamped to 25%–200%. A second finger placed while dragging an item
+   cancels the drag and starts a pinch. `touch-action` is set to `none` during a
+   pinch so the page doesn't scroll.
+
 ## Tests
-- `src/components/AuthenticatedApp.responsive.test.ts` (new, 3, static): overlay
+- `src/components/AuthenticatedApp.responsive.test.ts` (4, static): overlay
   wrappers present, mobile defaults to collapsed + not persisted over desktop
-  prefs, and the canvas uses pointer events / touch-action with no mouse-only item
-  handler.
+  prefs, canvas uses pointer events / touch-action with no mouse-only item handler,
+  and pinch-to-zoom handlers + midpoint math are wired.
 - Existing `App.operations.test.tsx` (renders the full app) stays green.
 
-## CI
-587 passing / 11 skipped (was 584). Typecheck, event-bus lint, unused-locals, and
+## CI (final)
+588 passing / 11 skipped (was 584). Typecheck, event-bus lint, unused-locals, and
 single-file build all green.
 
 ## Files
