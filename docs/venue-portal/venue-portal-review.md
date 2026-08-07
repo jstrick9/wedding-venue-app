@@ -7,6 +7,10 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue-admin persona: Layout Studio canvas flow** — added integration tests
+  exercising the layout-editing mutations a venue admin uses: place table/fixture/
+  decor, move/duplicate/remove, save a master layout onto the venue, and load a
+  template onto the canvas. Test count: **498 passing / 11 skipped**. Committed.
 - ✅ **Venue-admin persona test coverage** — added integration tests that exercise the
   venue-admin flows through the real service layer: catalog setup (spaces, tables,
   fixtures, templates, guidelines) and the couples & events workflow (create couple,
