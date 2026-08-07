@@ -2739,6 +2739,24 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           onChange={(e) => setPortalDraft({ ...portalDraft, rsvpDeadlineDate: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Guests can RSVP until this date. Leave blank to keep RSVP open until the event.
+                        </p>
+                        {!portalDraft.rsvpDeadlineDate && event.eventDate && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const d = new Date(event.eventDate + 'T00:00:00');
+                              d.setDate(d.getDate() - 21); // ~3 weeks before
+                              if (!Number.isNaN(d.getTime())) {
+                                setPortalDraft({ ...portalDraft, rsvpDeadlineDate: d.toISOString().slice(0, 10) });
+                              }
+                            }}
+                            className="mt-1 text-xs text-[#4A1942] hover:underline"
+                          >
+                            ✨ Set to ~3 weeks before your event
+                          </button>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
