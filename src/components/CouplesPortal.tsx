@@ -72,6 +72,21 @@ import { showToast } from './Toast';
 import { sendCoupleEmail } from '../services/couples/coupleEmailService';
 import { CoupleLayoutEditor } from './CoupleLayoutEditor';
 
+// Safe formatters that never throw on malformed/incomplete date strings, so the
+// couple portal can't crash with "Invalid time value" from bad schedule/guest data.
+function safeTime(value?: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+function safeDateTime(value?: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
+}
+
 type TabId = 'overview' | 'package' | 'spaces' | 'questions' | 'design' | 'checklist' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
 
 interface CouplesPortalProps {
@@ -1918,7 +1933,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             </div>
                             <div className="text-xs text-gray-500 mt-0.5">
                               {ge.dayIndex != null && event.days?.[ge.dayIndex] ? `Day ${ge.dayIndex + 1} (${event.days[ge.dayIndex].date})` : 'All days'}
-                              {ge.startTime ? ` · ${new Date(ge.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                              {ge.startTime ? ` · ${safeTime(ge.startTime)}` : ''}
                               {ge.location ? ` · ${ge.location}` : ''}
                             </div>
                           </div>
@@ -2681,7 +2696,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         {(portalDraft.scheduleItems || []).map((item) => (
                           <div key={item.id} className="flex items-center gap-2 text-sm">
                             <span className="flex-1">{item.title}</span>
-                            <span className="text-gray-500 text-xs">{item.startTime ? new Date(item.startTime).toLocaleString() : ''}</span>
+                            <span className="text-gray-500 text-xs">{safeDateTime(item.startTime)}</span>
                             <button
                               type="button"
                               onClick={() => setPortalDraft({ ...portalDraft, scheduleItems: (portalDraft.scheduleItems || []).filter((s) => s.id !== item.id) })}
