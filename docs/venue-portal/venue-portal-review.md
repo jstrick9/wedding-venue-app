@@ -7,6 +7,11 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Brand consistency completion + calendar/couple/warning/mobile round**: brand
+  purple extended to every active venue/admin surface (removed leftover indigo);
+  blocked-date conflict detection now covers multi-day couple events; couple portal
+  warns on submitting with no drawn layout; venue couples admin flags over-capacity
+  guest counts; venue dashboard sidebar is now a mobile drawer. Committed.
 - ✅ **Venue-branding + per-couple guest-portal theming (user-directive)**: the
   Couples Portal now uses the venue brand accent (was off-brand indigo); added a
   per-couple **Theme color** setting so each couple can brand their own guest
