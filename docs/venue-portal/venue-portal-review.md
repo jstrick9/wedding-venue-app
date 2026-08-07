@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Guest-event removal scrubs RSVP references** — removing a guest event now also
+  removes it from guests' RSVP `attendingEvents`, so per-event headcounts and guest
+  itineraries don't reference a deleted event. Committed.
 - ✅ **Add-on removal cleans up suggested setup tasks** — removing a lodging/activity/
   ceremony add-on now removes the auto-suggested venue setup task it created (only
   tasks the couple's action marked suggested; venue's own custom tasks stay).
