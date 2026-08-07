@@ -7,6 +7,8 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue couple card space names**: the venue's couple list now shows the selected
+  space names (tooltip) for at-a-glance planning. Committed.
 - ✅ **Couple guest-portal password**: couples can now set / change / remove a guest
   portal entry password (hashed) from their Portal Settings. Committed.
 - ✅ **Guest RSVP event checkboxes safe-time**: the "Which events will you attend?"
