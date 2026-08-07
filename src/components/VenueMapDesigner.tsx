@@ -38,6 +38,9 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
 
   const update = (next: VenueMapConfig) => setMap(next);
   const persist = (next: VenueMapConfig) => { setMap(next); onSave(next); };
+  // Any edit to a selected point flags unsaved changes so the "Save point"
+  // affordance (and its warning) is honest about the draft state.
+  const editSelected = (next: VenueMapConfig) => { setEditing(true); setMap(next); };
 
   const linkedVenueName = (venueId?: string) =>
     venues.find((v) => v.id === venueId)?.name || venueId || '—';
@@ -52,6 +55,12 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
       entries: count('entry'),
     };
   }, [map, venues]);
+
+  // Venues (event spaces + lodging) that have no pin linked to them. These won't
+  // surface on the couple/guest map, so the venue admin should pin them.
+  const missingVenues = venues.filter(
+    (v) => !map.points.some((p) => p.kind === 'space' && p.venueId === v.id),
+  );
 
   const handlePlace = (kind: VenueMapPointKind, x: number, y: number) => {
     const label = `${pointKindLabel(kind)} ${map.points.filter((p) => p.kind === kind).length + 1}`;
@@ -77,6 +86,35 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
     setSelectedId(null);
     setEditing(false);
     showToast('Point removed.', 'success');
+  };
+
+  /** Place a space pin for a venue that has no pin yet, labeled with its name. */
+  const addVenuePin = (venue: Venue) => {
+    const offset = map.points.length % 5;
+    const row = Math.floor(map.points.length / 5) % 3;
+    const next = addMapPoint(map, {
+      label: venue.name,
+      kind: 'space',
+      x: Math.round(map.width * 0.5 + offset * 10 - 20),
+      y: Math.round(map.height * 0.5 + row * 10),
+      venueId: venue.id,
+    });
+    setSelectedId(next.points[next.points.length - 1].id);
+    setEditing(true);
+    update(next);
+    showToast(`${venue.name} pin added — drag it into place.`, 'info');
+  };
+
+  /** Link the selected point to a venue; auto-suggest the venue name as the label. */
+  const linkVenue = (venueId: string) => {
+    if (!selected) return;
+    const venue = venues.find((v) => v.id === venueId);
+    const genericLabel = !selected.label.trim() ||
+      new RegExp(`^${pointKindLabel(selected.kind)}( \\d+)?$`).test(selected.label.trim());
+    editSelected(updateMapPoint(map, selected.id, {
+      venueId: venueId || undefined,
+      ...(venue && genericLabel ? { label: venue.name } : {}),
+    }));
   };
 
   const commitRoute = () => {
@@ -119,6 +157,8 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
             map={map}
             editable
             selectedPointId={selectedId}
+            placeKind={activeKind}
+            highlightPointIds={routePointIds}
             onSelectPoint={(id) => { setSelectedId(id); if (id) setEditing(false); }}
             onMovePoint={handleMove}
             onPlacePoint={handlePlace}
@@ -162,6 +202,29 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
             </div>
             <button type="button" onClick={() => setRoutePointIds([])} className="px-2 py-1 rounded text-xs text-gray-500 hover:underline">Clear route</button>
           </div>
+          {routePointIds.length > 0 && (
+            <div className="mt-2 rounded-lg border border-gray-200 p-2">
+              <span className="text-[11px] text-gray-500 font-medium">Route points (in order):</span>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {routePointIds.map((id, i) => {
+                  const pt = map.points.find((p) => p.id === id);
+                  return (
+                    <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#4A1942]/10 text-[#4A1942] px-2 py-0.5 text-[11px]">
+                      <span className="text-gray-400">{i + 1}.</span> {pt?.label || '?'}
+                      <button
+                        type="button"
+                        onClick={() => setRoutePointIds((prev) => prev.filter((x) => x !== id))}
+                        className="text-[#4A1942]/60 hover:text-[#4A1942]"
+                        aria-label={`Remove ${pt?.label || 'point'} from route`}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Side panel */}
@@ -212,6 +275,43 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
             <p className="text-[11px] text-gray-400">Points are clamped if the map shrinks beneath them.</p>
           </div>
 
+          {/* Venue coverage */}
+          <div className="rounded-xl border border-gray-200 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-800">🗂️ Map coverage</span>
+              <span className="text-xs text-gray-400">
+                {venues.length - missingVenues.length}/{venues.length} pinned
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500">
+              Any venue without a pin won't appear on the couple or guest map. Add a
+              pin for each space &amp; lodging, then drag it into place.
+            </p>
+            {missingVenues.length === 0 ? (
+              <p className="text-xs text-emerald-600">✓ Every venue has a map pin.</p>
+            ) : (
+              <ul className="space-y-1">
+                {missingVenues.slice(0, 8).map((v) => (
+                  <li key={v.id} className="flex items-center justify-between text-xs text-gray-700">
+                    <span>
+                      {v.category === 'lodging' ? '🛏️' : '🏛️'} {v.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => addVenuePin(v)}
+                      className="text-teal-700 hover:underline"
+                    >
+                      + Add pin
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {missingVenues.length > 8 && (
+              <p className="text-[11px] text-gray-400">…and {missingVenues.length - 8} more.</p>
+            )}
+          </div>
+
           {!selected ? (
             <div className="rounded-xl border border-dashed border-gray-300 p-4 text-center text-sm text-gray-500">
               Click a point on the map (or place a new one) to edit its details.
@@ -225,16 +325,16 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
                 <span className="text-xs text-gray-400" style={{ color: pointColor(selected.kind) }}>● {selected.id.slice(0, 6)}</span>
               </div>
               <label className="block text-xs text-gray-500">Label
-                <input type="text" value={selected.label} onChange={(e) => update(updateMapPoint(map, selected.id, { label: e.target.value }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                <input type="text" value={selected.label} onChange={(e) => editSelected(updateMapPoint(map, selected.id, { label: e.target.value }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block text-xs text-gray-500">Kind
-                  <select value={selected.kind} onChange={(e) => update(updateMapPoint(map, selected.id, { kind: e.target.value as VenueMapPointKind }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white">
+                  <select value={selected.kind} onChange={(e) => editSelected(updateMapPoint(map, selected.id, { kind: e.target.value as VenueMapPointKind }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white">
                     {KINDS.map((k) => <option key={k} value={k}>{pointKindLabel(k)}</option>)}
                   </select>
                 </label>
                 <label className="block text-xs text-gray-500">Linked venue
-                  <select value={selected.venueId || ''} onChange={(e) => update(updateMapPoint(map, selected.id, { venueId: e.target.value || undefined }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white">
+                  <select value={selected.venueId || ''} onChange={(e) => linkVenue(e.target.value)} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white">
                     <option value="">(none)</option>
                     {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                   </select>
@@ -242,18 +342,18 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block text-xs text-gray-500">X
-                  <input type="number" value={Math.round(selected.x * 10) / 10} onChange={(e) => update(moveMapPoint(map, selected.id, Number(e.target.value), selected.y))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                  <input type="number" value={Math.round(selected.x * 10) / 10} onChange={(e) => editSelected(moveMapPoint(map, selected.id, Number(e.target.value), selected.y))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                 </label>
                 <label className="block text-xs text-gray-500">Y
-                  <input type="number" value={Math.round(selected.y * 10) / 10} onChange={(e) => update(moveMapPoint(map, selected.id, selected.x, Number(e.target.value)))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                  <input type="number" value={Math.round(selected.y * 10) / 10} onChange={(e) => editSelected(moveMapPoint(map, selected.id, selected.x, Number(e.target.value)))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block text-xs text-gray-500">GPS lat
-                  <input type="number" value={selected.lat ?? ''} onChange={(e) => update(updateMapPoint(map, selected.id, { lat: e.target.value === '' ? undefined : Number(e.target.value) }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                  <input type="number" value={selected.lat ?? ''} onChange={(e) => editSelected(updateMapPoint(map, selected.id, { lat: e.target.value === '' ? undefined : Number(e.target.value) }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                 </label>
                 <label className="block text-xs text-gray-500">GPS lng
-                  <input type="number" value={selected.lng ?? ''} onChange={(e) => update(updateMapPoint(map, selected.id, { lng: e.target.value === '' ? undefined : Number(e.target.value) }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
+                  <input type="number" value={selected.lng ?? ''} onChange={(e) => editSelected(updateMapPoint(map, selected.id, { lng: e.target.value === '' ? undefined : Number(e.target.value) }))} className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm" />
                 </label>
               </div>
               {selected.venueId && (

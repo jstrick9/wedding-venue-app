@@ -11,6 +11,10 @@ export interface VenueMapCanvasProps {
   onSelectPoint?: (id: string | null) => void;
   onMovePoint?: (id: string, x: number, y: number) => void;
   onPlacePoint?: (kind: VenueMapPointKind, x: number, y: number) => void;
+  /** Which point kind a click on empty canvas places (designer mode; default 'space'). */
+  placeKind?: VenueMapPointKind;
+  /** Point ids to visually highlight (e.g. pins already added to an in-progress route). */
+  highlightPointIds?: string[];
   /** Fired on click/tap of a point even in read-only mode (e.g. couple drill-in). */
   onPointClick?: (point: VenueMapPoint) => void;
   /** Show labels (default true). */
@@ -36,6 +40,8 @@ export function VenueMapCanvas({
   onSelectPoint,
   onMovePoint,
   onPlacePoint,
+  placeKind = 'space',
+  highlightPointIds,
   onPointClick,
   showLabels = true,
   svgRef,
@@ -61,7 +67,7 @@ export function VenueMapCanvas({
     if (!editable || !onPlacePoint) return;
     if (e.target !== e.currentTarget) return; // ignore clicks on points/routes
     const { x, y } = toMap(e);
-    onPlacePoint('space', x, y);
+    onPlacePoint(placeKind, x, y);
   };
 
   const handlePointDown = (e: React.MouseEvent<SVGGElement>, p: VenueMapPoint) => {
@@ -116,6 +122,7 @@ export function VenueMapCanvas({
         {map.points.map((p) => {
           const r = KIND_RADIUS[p.kind] ?? 4;
           const selected = selectedPointId === p.id;
+          const highlighted = highlightPointIds?.includes(p.id) ?? false;
           return (
             <g
               key={p.id}
@@ -123,6 +130,9 @@ export function VenueMapCanvas({
               onClick={(e) => { if (!editable) { e.stopPropagation(); onPointClick?.(p); } }}
               style={{ cursor: editable ? 'grab' : onPointClick && p.kind !== 'path' ? 'pointer' : 'default' }}
             >
+              {highlighted && p.kind !== 'path' && (
+                <circle cx={p.x} cy={p.y} r={r + 3.5} fill="none" stroke="#4A1942" strokeWidth={1.1} strokeDasharray="2,1.5" />
+              )}
               {p.kind !== 'path' && (
                 <circle
                   cx={p.x}

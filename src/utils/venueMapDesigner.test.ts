@@ -86,4 +86,18 @@ describe('venue map designer helpers', () => {
     expect(map.width).toBe(100); // fallback to current width
     expect(map.height).toBe(40);
   });
+
+  it('drops a route entirely when removing a point leaves fewer than 2 points', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'A', kind: 'entry', x: 5, y: 5 });
+    map = addMapPoint(map, { label: 'B', kind: 'space', x: 20, y: 20 });
+    map = addMapPoint(map, { label: 'C', kind: 'space', x: 40, y: 20 });
+    map = addMapRoute(map, 'Short', [map.points[0].id, map.points[1].id]); // 2 points
+    map = addMapRoute(map, 'Long', map.points.map((p) => p.id)); // 3 points
+    // Remove point B (shared by both routes).
+    map = removeMapPoint(map, map.points[1].id);
+    // 'Short' drops below 2 -> removed; 'Long' keeps 2 -> retained.
+    expect(map.routes.map((r) => r.name)).toEqual(['Long']);
+    expect(map.routes[0].pointIds).toHaveLength(2);
+  });
 });

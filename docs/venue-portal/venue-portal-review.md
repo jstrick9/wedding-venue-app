@@ -7,6 +7,12 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue Map admin fixes** — palette now drives point placement (was a dead
+  control), the "Save point" unsaved-changes indicator is accurate, deleting a
+  point drops now-empty walkways, a new **Map coverage** panel lists venues
+  missing a pin (with one-click "+ Add pin"), linking a venue auto-labels the
+  point, and route-building highlights the in-progress pins. Test count:
+  **557 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

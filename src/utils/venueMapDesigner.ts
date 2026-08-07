@@ -136,10 +136,14 @@ export function removeMapPoint(
   return {
     ...map,
     points: map.points.filter((p) => p.id !== pointId),
-    routes: (map.routes || []).map((r) => ({
-      ...r,
-      pointIds: r.pointIds.filter((id) => id !== pointId),
-    })),
+    // A walkway needs at least 2 points to render; drop any route that falls
+    // below that after the point is removed.
+    routes: (map.routes || [])
+      .map((r) => ({
+        ...r,
+        pointIds: r.pointIds.filter((id) => id !== pointId),
+      }))
+      .filter((r) => r.pointIds.length >= 2),
     updatedAt: new Date().toISOString(),
   };
 }
