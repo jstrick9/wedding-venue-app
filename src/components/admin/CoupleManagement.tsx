@@ -128,11 +128,21 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       setError('The end date must be on or after the start date.');
       return;
     }
+    // Guard the guest count so a NaN/negative/0 value can't silently be saved.
+    let guestCount: number | undefined;
+    if (form.guestCount && form.guestCount.trim()) {
+      const gc = parseInt(form.guestCount, 10);
+      if (Number.isNaN(gc) || gc < 1) {
+        setError('Enter a valid guest count (greater than 0).');
+        return;
+      }
+      guestCount = gc;
+    }
     const created = createCoupleEvent({
       coupleName: form.coupleName,
       eventDate: form.eventDate || undefined,
       eventEndDate: form.eventEndDate || undefined,
-      guestCount: form.guestCount ? parseInt(form.guestCount, 10) || undefined : undefined,
+      guestCount,
       packageId: form.packageId || undefined,
       availableSpaces: form.availableSpaces,
       createdBy: user?.id,
@@ -186,12 +196,21 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       onShowSuccess('The end date must be on or after the start date.');
       return;
     }
+    let guestCount: number | undefined;
+    if (editForm.guestCount && editForm.guestCount.trim()) {
+      const gc = parseInt(editForm.guestCount, 10);
+      if (Number.isNaN(gc) || gc < 1) {
+        onShowSuccess('Enter a valid guest count (greater than 0).');
+        return;
+      }
+      guestCount = gc;
+    }
     const updated = findCoupleEventById(editEventId);
     const availableSet = new Set(editForm.availableSpaces);
     updateCoupleEvent(editEventId, {
       eventDate: editForm.eventDate || undefined,
       eventEndDate: editForm.eventEndDate || undefined,
-      guestCount: editForm.guestCount ? parseInt(editForm.guestCount, 10) || undefined : undefined,
+      guestCount,
       packageId: editForm.packageId || undefined,
       availableSpaces: editForm.availableSpaces,
       // Drop any selected spaces that are no longer available to avoid orphaned selections.
