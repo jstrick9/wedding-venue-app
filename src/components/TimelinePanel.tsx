@@ -9,6 +9,13 @@ interface TimelinePanelProps {
   inline?: boolean;
 }
 
+// Format a date-only (YYYY-MM-DD) value as the intended local day, avoiding the
+// UTC-midnight off-by-one when using new Date("2026-09-01") directly.
+function fmtDay(dateStr: string): string {
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? new Date(dateStr + 'T00:00:00') : new Date(dateStr);
+  return Number.isNaN(d.getTime()) ? dateStr : d.toLocaleDateString();
+}
+
 export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
   const {
     timelines,
@@ -175,7 +182,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                           <div>
                             <div className="font-medium">{t.name}</div>
                             <div className="text-xs text-gray-500">
-                              {new Date(t.weddingDate).toLocaleDateString()} • {t.days.length} day(s)
+                              {fmtDay(t.weddingDate)} • {t.days.length} day(s)
                             </div>
                           </div>
                           <span className="text-gray-400">→</span>
@@ -196,7 +203,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                 <div>
                   <h3 className="text-lg font-semibold">{activeTimeline.name}</h3>
                   <p className="text-sm text-gray-500">
-                    Wedding Date: {new Date(activeTimeline.weddingDate).toLocaleDateString()}
+                    Wedding Date: {fmtDay(activeTimeline.weddingDate)}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -222,7 +229,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                     <div>
                       <h4 className="font-semibold text-gray-800">{day.label}</h4>
                       <p className="text-sm text-gray-500">
-                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                        {fmtDay(day.date)}
                       </p>
                     </div>
                     <div className="flex gap-2">
