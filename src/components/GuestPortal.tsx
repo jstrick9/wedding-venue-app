@@ -53,6 +53,7 @@ import {
 } from '../utils/guestPortal';
 import { verifySecret } from '../utils/auth';
 import { getConfig } from '../config';
+import { deriveShades } from '../utils/color';
 import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
 import {
   getCoupleGuests,
@@ -272,6 +273,23 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   const rsvpClosed = rsvpDeadline
     ? today.getTime() > rsvpDeadline.getTime()
     : false;
+
+  // Guest portal accent color: a couple's custom theme color wins; otherwise the
+  // venue's brand primary color ties through by default. Shades are derived for
+  // hover/active states. Guards against invalid hex so a bad value never crashes.
+  const accentColor = useMemo(() => {
+    const theme = (config as any)?.themeColor?.trim();
+    const venue = getConfig().primaryColor || '#4A1942';
+    const base = theme && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(theme) ? theme : venue;
+    const shades = deriveShades(base, 0.18, 0.62);
+    return { base, shades };
+  }, [config]);
+
+  const accentVars = {
+    '--accent': accentColor.base,
+    '--accent-dark': accentColor.shades.dark,
+    '--accent-light': accentColor.shades.light,
+  } as React.CSSProperties;
 
   const scopedGuests = useMemo(() => {
     if (!activeEventName) return portalData.guests;
@@ -687,7 +705,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
           )}
 
           {daysUntilEvent !== null && (
-            <p className="text-sm text-indigo-600 font-medium">
+            <p className="text-sm text-[var(--accent)] font-medium">
               {daysUntilEvent === 0
                 ? 'Today is the big day!'
                 : daysUntilEvent > 0
@@ -798,12 +816,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 {location && <p>📍 {location}</p>}
                 {phone && (
                   <p>
-                    <a href={`tel:${phone}`} className="text-indigo-600 hover:underline">📞 {phone}</a>
+                    <a href={`tel:${phone}`} className="text-[var(--accent)] hover:underline">📞 {phone}</a>
                   </p>
                 )}
                 {email && (
                   <p>
-                    <a href={`mailto:${email}`} className="text-indigo-600 hover:underline">✉️ {email}</a>
+                    <a href={`mailto:${email}`} className="text-[var(--accent)] hover:underline">✉️ {email}</a>
                   </p>
                 )}
               </div>
@@ -880,7 +898,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
           <div key={venue.id} className="bg-white rounded-xl shadow p-4 mt-2">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-gray-800">{venue.name}</h2>
-              <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 capitalize">
+              <span className="text-xs px-2 py-1 rounded-full bg-[var(--accent-light)] text-[var(--accent)] capitalize">
                 {venue.category}
               </span>
             </div>
@@ -938,7 +956,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               )}
 
               {!venue.imageUrl && (
-                <div className="w-full h-24 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center mt-2">
+                <div className="w-full h-24 rounded-lg bg-gradient-to-br from-[var(--accent-light)] to-purple-50 flex items-center justify-center mt-2">
                   <span className="text-3xl opacity-40">🏛️</span>
                 </div>
               )}
@@ -1025,7 +1043,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                       {e.location ? ` · ${e.location}` : ''}
                     </div>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--accent)]">
                     {rsvpForm.attendingEvents?.includes(e.id) ? 'Attending' : 'Invited'}
                   </span>
                 </div>
@@ -1042,7 +1060,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 onClick={() => setSelectedDayIndex(d)}
                 className={`px-3 py-1.5 text-xs rounded-full border ${
                   effectiveDay === d
-                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
                     : 'bg-white text-gray-700 border-gray-200'
                 }`}
               >
@@ -1050,7 +1068,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 {(() => {
                   const date = eventDates(config.eventStartDate, config.eventEndDate)[d];
                   return date ? (
-                    <span className={`block ${effectiveDay === d ? 'text-indigo-200' : 'text-gray-400'}`}>
+                    <span className={`block ${effectiveDay === d ? 'text-[var(--accent-light)]' : 'text-gray-400'}`}>
                       {new Date(date + 'T00:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                   ) : null;
@@ -1096,7 +1114,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                   <p
                     className={`text-sm ${
                       item.isHighlight
-                        ? 'font-semibold text-indigo-700'
+                        ? 'font-semibold text-[var(--accent)]'
                         : 'font-medium text-gray-800'
                     }`}
                   >
@@ -1107,7 +1125,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 <button
                   type="button"
                   onClick={() => handleAddToCalendar(item)}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-indigo-50 text-indigo-700"
+                  className="px-3 py-1.5 text-xs rounded-lg bg-[var(--accent-light)] text-[var(--accent)]"
                 >
                   Add to Calendar
                 </button>
@@ -1257,16 +1275,16 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             <button
               type="button"
               onClick={handleGetDirections}
-              className="w-full mt-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
+              className="w-full mt-2 px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-medium"
             >
               Get Directions
             </button>
           </div>
 
           {wayfindingResult && (
-            <div className="mt-4 bg-indigo-50 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-semibold text-indigo-800">Directions</p>
-              <ul className="text-xs text-indigo-900 list-disc list-inside space-y-1">
+            <div className="mt-4 bg-[var(--accent-light)] rounded-lg p-3 space-y-1">
+              <p className="text-xs font-semibold text-[var(--accent-dark)]">Directions</p>
+              <ul className="text-xs text-[var(--accent-dark)] list-disc list-inside space-y-1">
                 {wayfindingResult.map((step, idx) => (
                   <li key={idx}>{step}</li>
                 ))}
@@ -1340,7 +1358,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         <div className="pb-24">
           <div className="bg-white rounded-xl shadow p-4 mt-4 space-y-3 relative overflow-hidden">
             <div className="absolute -top-4 -left-4 w-16 h-16 bg-pink-200 rounded-full opacity-60" />
-            <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-indigo-200 rounded-full opacity-60" />
+            <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-[var(--accent-light)] rounded-full opacity-60" />
 
             <div className="relative space-y-2">
               <p className="text-sm font-semibold text-gray-800">
@@ -1376,7 +1394,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               <button
                 type="button"
                 onClick={() => setRsvpSuccess(null)}
-                className="mt-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
+                className="mt-2 px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-medium"
               >
                 Edit RSVP
               </button>
@@ -1461,7 +1479,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 aria-pressed={rsvpForm.attending === 'yes'}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border ${
                   rsvpForm.attending === 'yes'
-                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
                     : 'bg-white text-gray-800 border-gray-300'
                 }`}
               >
@@ -1473,7 +1491,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 aria-pressed={rsvpForm.attending === 'no'}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border ${
                   rsvpForm.attending === 'no'
-                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
                     : 'bg-white text-gray-800 border-gray-300'
                 }`}
               >
@@ -1660,7 +1678,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
           <button
             type="submit"
             disabled={isSubmittingRSVP}
-            className="w-full mt-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-60"
+            className="w-full mt-2 px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-medium disabled:opacity-60"
           >
             {isSubmittingRSVP
               ? 'Submitting...'
@@ -1714,7 +1732,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
           <div key={venue.id} className="bg-white rounded-xl shadow p-4 mt-2 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-800">{venue.name}</h2>
-              <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700">
+              <span className="text-xs px-2 py-1 rounded-full bg-[var(--accent-light)] text-[var(--accent)]">
                 Lodging
               </span>
             </div>
@@ -1826,8 +1844,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     const portalNotConfigured = !config;
 
     return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-slate-100 flex flex-col">
-        <header className="px-4 pt-4 pb-2 flex items-center justify-between bg-white/60 backdrop-blur-sm border-b border-indigo-100">
+      <div className="min-h-screen bg-gradient-to-b from-[var(--accent-light)] to-slate-100 flex flex-col">
+        <header className="px-4 pt-4 pb-2 flex items-center justify-between bg-white/60 backdrop-blur-sm border-b border-[var(--accent-light)]">
           <button
             type="button"
             onClick={onExitPortal}
@@ -1908,7 +1926,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 <input
                   id="guest-portal-event"
                   type="text"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)]"
                   value={eventInput}
                   onChange={(e) => setEventInput(e.target.value)}
                   autoComplete="off"
@@ -1927,7 +1945,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                 <input
                   id="guest-portal-guest-identifier"
                   type="text"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)]"
                   value={guestIdentifier}
                   onChange={(e) => setGuestIdentifier(e.target.value)}
                   autoComplete="off"
@@ -1946,7 +1964,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                   <input
                     id="guest-portal-password"
                     type="password"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)]"
                     value={passwordInput}
                     onChange={(e) => setPasswordInput(e.target.value)}
                     autoComplete="current-password"
@@ -1968,7 +1986,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               <button
                 type="submit"
                 disabled={!eventInput.trim() || !guestIdentifier.trim()}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold shadow hover:bg-[var(--accent-dark)] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Access My Portal →
               </button>
@@ -2055,7 +2073,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col" style={accentVars}>
       <header className="sticky top-0 z-10 px-4 pt-3 pb-3 flex items-center justify-between bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <button
           type="button"
@@ -2083,7 +2101,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
           onClick={() => setActiveTab('home')}
           className={`px-3 py-1.5 rounded-full ${
             activeTab === 'home'
-              ? 'bg-indigo-600 text-white'
+              ? 'bg-[var(--accent)] text-white'
               : 'bg-white text-gray-700 border border-gray-200'
           }`}
         >
@@ -2096,7 +2114,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             onClick={() => setActiveTab('map')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'map'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[var(--accent)] text-white'
                 : 'bg-white text-gray-700 border border-gray-200'
             }`}
           >
@@ -2110,7 +2128,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             onClick={() => setActiveTab('schedule')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'schedule'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[var(--accent)] text-white'
                 : 'bg-white text-gray-700 border border-gray-200'
             }`}
           >
@@ -2124,7 +2142,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             onClick={() => setActiveTab('wayfinding')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'wayfinding'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[var(--accent)] text-white'
                 : 'bg-white text-gray-700 border border-gray-200'
             }`}
           >
@@ -2138,7 +2156,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             onClick={() => setActiveTab('rsvp')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'rsvp'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[var(--accent)] text-white'
                 : 'bg-white text-gray-700 border border-gray-200'
             }`}
           >
@@ -2152,7 +2170,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             onClick={() => setActiveTab('lodging')}
             className={`px-3 py-1.5 rounded-full ${
               activeTab === 'lodging'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[var(--accent)] text-white'
                 : 'bg-white text-gray-700 border border-gray-200'
             }`}
           >
@@ -2187,7 +2205,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             onClick={() => setActiveTab('home')}
             aria-current={activeTab === 'home' ? 'page' : undefined}
             className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
-              activeTab === 'home' ? 'text-indigo-600' : 'text-gray-500'
+              activeTab === 'home' ? 'text-[var(--accent)]' : 'text-gray-500'
             }`}
           >
             <span className="text-lg">🏠</span>
@@ -2200,7 +2218,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               onClick={() => setActiveTab('map')}
               aria-current={activeTab === 'map' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
-                activeTab === 'map' ? 'text-indigo-600' : 'text-gray-500'
+                activeTab === 'map' ? 'text-[var(--accent)]' : 'text-gray-500'
               }`}
             >
               <span className="text-lg">🗺️</span>
@@ -2214,7 +2232,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               onClick={() => setActiveTab('schedule')}
               aria-current={activeTab === 'schedule' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
-                activeTab === 'schedule' ? 'text-indigo-600' : 'text-gray-500'
+                activeTab === 'schedule' ? 'text-[var(--accent)]' : 'text-gray-500'
               }`}
             >
               <span className="text-lg">📅</span>
@@ -2228,7 +2246,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               onClick={() => setActiveTab('wayfinding')}
               aria-current={activeTab === 'wayfinding' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
-                activeTab === 'wayfinding' ? 'text-indigo-600' : 'text-gray-500'
+                activeTab === 'wayfinding' ? 'text-[var(--accent)]' : 'text-gray-500'
               }`}
             >
               <span className="text-lg">🧭</span>
@@ -2242,7 +2260,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               onClick={() => setActiveTab('rsvp')}
               aria-current={activeTab === 'rsvp' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
-                activeTab === 'rsvp' ? 'text-indigo-600' : 'text-gray-500'
+                activeTab === 'rsvp' ? 'text-[var(--accent)]' : 'text-gray-500'
               }`}
             >
               <span className="text-lg">📝</span>
@@ -2256,7 +2274,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
               onClick={() => setActiveTab('lodging')}
               aria-current={activeTab === 'lodging' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center px-2 py-1 min-w-[64px] ${
-                activeTab === 'lodging' ? 'text-indigo-600' : 'text-gray-500'
+                activeTab === 'lodging' ? 'text-[var(--accent)]' : 'text-gray-500'
               }`}
             >
               <span className="text-lg">🛏️</span>

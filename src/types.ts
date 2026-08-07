@@ -919,6 +919,13 @@ export interface GuestPortalConfig {
    * Defaults to 36 so EST venues don't lose access mid-event.
    */
   accessGracePeriodHours?: number;
+  /**
+   * Theme/accent color for this couple's guest portal (e.g. "love & blush" pink).
+   * When unset, the portal falls back to the venue's brand primary color so the
+   * venue brand ties through by default; the couple can override to brand their
+   * own portal.
+   */
+  themeColor?: string;
 }
 
 export interface GuestPortalGuestRecord extends Guest {

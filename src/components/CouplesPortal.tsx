@@ -523,12 +523,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     const hasHero = !!portalConfig.heroImageUrl;
     const welcomeChanged = !!portalConfig.welcomeMessage && portalConfig.welcomeMessage !== venueCfg?.welcomeMessage;
     const deadlineSet = !!portalConfig.rsvpDeadlineDate;
+    const themeSet = !!portalConfig.themeColor;
     const mealsChanged =
       !!portalConfig.mealOptions &&
       portalConfig.mealOptions.length > 0 &&
       (portalConfig.mealOptions.length !== (venueCfg?.mealOptions?.length ?? 0) ||
         portalConfig.mealOptions.some((o, i) => o.value !== venueCfg?.mealOptions?.[i]?.value));
-    return hasHero || welcomeChanged || deadlineSet || mealsChanged;
+    return hasHero || welcomeChanged || deadlineSet || themeSet || mealsChanged;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portalConfig]);
 
@@ -725,8 +726,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const eligibleSpaces = venues.filter((v) => event.availableSpaces.includes(v.id));
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-slate-100 flex flex-col">
-      <header className="px-4 pt-4 pb-2 flex items-center justify-between bg-white/70 backdrop-blur-sm border-b border-indigo-100">
+    <div className="min-h-screen bg-gradient-to-b from-[#4A1942]/5 to-slate-100 flex flex-col">
+      <header className="px-4 pt-4 pb-2 flex items-center justify-between bg-white/70 backdrop-blur-sm border-b border-[#4A1942]/10">
         <button
           type="button"
           onClick={onExitPortal}
@@ -747,7 +748,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-6">
         {/* Hero */}
-        <div className="rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 shadow">
+        <div className="rounded-2xl bg-gradient-to-r from-[#4A1942] to-purple-600 text-white p-6 shadow">
           <div className="text-xs uppercase tracking-wider text-white/70">Your event</div>
           <h2 className="text-2xl font-bold mt-1">{event.coupleName}</h2>
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -836,9 +837,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 <button
                   type="button"
                   onClick={() => setActiveTab('package')}
-                  className="w-full rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 p-4 text-left shadow-sm hover:border-indigo-300"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#4A1942]/5 to-purple-50 border border-[#4A1942]/10 p-4 text-left shadow-sm hover:border-[#4A1942]/40"
                 >
-                  <div className="text-xs text-indigo-500 font-medium mb-1">Your package</div>
+                  <div className="text-xs text-[#4A1942] font-medium mb-1">Your package</div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-gray-800">{bookedPackage.name}</span>
                     <span className="text-xs text-gray-500">
@@ -925,7 +926,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         () => showToast('Could not copy — copy the link below.', 'warning'),
                       );
                     }}
-                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                    className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                   >
                     🔗 Copy portal link
                   </button>
@@ -955,7 +956,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-lg font-bold text-gray-900">{bookedPackage.name}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[#4A1942]/10 text-[#4A1942]">
                         {PACKAGE_DURATIONS.find((d) => d.id === bookedPackage.durationType)?.label}
                       </span>
                     </div>
@@ -1031,7 +1032,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               className={`shrink-0 text-xs px-3 py-1.5 rounded-lg ${
                                 added
                                   ? 'bg-green-600 text-white'
-                                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                  : 'bg-[#4A1942] text-white hover:bg-[#3b1435]'
                               } disabled:opacity-50`}
                             >
                               {added ? '✓ Added' : '+ Add'}
@@ -1082,10 +1083,10 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         className={`text-left rounded-xl border p-4 transition-all ${
                           canEditSpaces
                             ? selected
-                              ? 'border-indigo-500 bg-indigo-50 shadow-sm'
-                              : 'border-gray-200 bg-white hover:border-indigo-300'
+                              ? 'border-[#4A1942] bg-[#4A1942]/10 shadow-sm'
+                              : 'border-gray-200 bg-white hover:border-[#4A1942]/40'
                             : selected
-                              ? 'border-indigo-300 bg-indigo-50'
+                              ? 'border-[#4A1942]/40 bg-[#4A1942]/10'
                               : 'border-gray-200 bg-gray-50 cursor-default'
                         }`}
                       >
@@ -1185,7 +1186,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 <button
                   type="button"
                   onClick={handleInvite}
-                  className="mt-3 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                  className="mt-3 px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                 >
                   ➕ Send invite
                 </button>
@@ -1210,7 +1211,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         <button
                           type="button"
                           onClick={() => handleCopyInviteLink(c.inviteToken)}
-                          className="text-xs text-indigo-600 hover:underline"
+                          className="text-xs text-[#4A1942] hover:underline"
                         >
                           Copy link
                         </button>
@@ -1219,7 +1220,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         <button
                           type="button"
                           onClick={() => handleEmailCollaborator(c.email, c.name, c.inviteToken)}
-                          className="text-xs text-indigo-600 hover:underline"
+                          className="text-xs text-[#4A1942] hover:underline"
                         >
                           ✉️ Email invite
                         </button>
@@ -1352,7 +1353,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     submitCoupleLayout(event.id, { byName: me?.name });
                     refresh();
                   }}
-                  className="mt-3 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  className="mt-3 px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435] disabled:opacity-50"
                   disabled={event.layoutStatus === 'pending' || event.layoutStatus === 'approved' || !canEditDesign}
                 >
                   {event.layoutStatus === 'pending'
@@ -1419,7 +1420,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               <button
                                 type="button"
                                 onClick={() => setLayoutEditorSpace(spaceId)}
-                                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700"
+                                className="px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-xs font-medium hover:bg-[#3b1435]"
                               >
                                 🎨 {sl?.layout ? 'Edit layout' : 'Open layout editor'}
                               </button>
@@ -1508,7 +1509,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       <button
                         type="button"
                         onClick={addCheckItem}
-                        className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                        className="px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                       >
                         Add
                       </button>
@@ -1636,7 +1637,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               className={`shrink-0 text-xs px-3 py-1.5 rounded-lg ${
                                 already
                                   ? 'bg-gray-100 text-gray-500 cursor-default'
-                                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                  : 'bg-[#4A1942] text-white hover:bg-[#3b1435]'
                               }`}
                             >
                               {already ? '✓ Added' : '+ Add'}
@@ -1708,7 +1709,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   <button
                     type="button"
                     onClick={addCustomVendor}
-                    className="mt-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                    className="mt-2 px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                   >
                     Add vendor
                   </button>
@@ -1882,7 +1883,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-medium text-gray-800">{ge.title}</span>
                               <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{GUEST_EVENT_KIND_LABELS[ge.kind]}</span>
-                              {ge.derived && <span className="text-xs text-indigo-400">auto</span>}
+                              {ge.derived && <span className="text-xs text-[#4A1942]/70">auto</span>}
                             </div>
                             <div className="text-xs text-gray-500 mt-0.5">
                               {ge.dayIndex != null && event.days?.[ge.dayIndex] ? `Day ${ge.dayIndex + 1} (${event.days[ge.dayIndex].date})` : 'All days'}
@@ -1891,7 +1892,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${over ? 'bg-red-100 text-red-700' : 'bg-indigo-50 text-indigo-700'}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${over ? 'bg-red-100 text-red-700' : 'bg-[#4A1942]/10 text-[#4A1942]'}`}>
                               {assigned}/{ge.capacity} assigned
                             </span>
                             {canManageGuests && (
@@ -1926,7 +1927,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       <input type="text" value={newGuestEvent.title} onChange={(e) => setNewGuestEvent({ ...newGuestEvent, title: e.target.value })} placeholder="Event name" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Custom event name" />
                       <input type="number" value={newGuestEvent.capacity} min={1} onChange={(e) => setNewGuestEvent({ ...newGuestEvent, capacity: e.target.value })} placeholder="Capacity" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Custom event capacity" />
                     </div>
-                    <button type="button" onClick={addGuestEvent} className="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700">+ Add event</button>
+                    <button type="button" onClick={addGuestEvent} className="mt-2 px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-xs font-medium hover:bg-[#3b1435]">+ Add event</button>
                   </div>
                 )}
               </div>
@@ -1969,7 +1970,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     <button
                       type="button"
                       onClick={handleAddGuest}
-                      className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                      className="px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                     >
                       ➕ Add guest
                     </button>
@@ -2000,7 +2001,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     exportCoupleGuestsCsv(event.id, coupleRsvps);
                     showToast('Guest list exported as CSV.', 'success');
                   }}
-                  className="ml-3 text-xs text-indigo-600 hover:underline"
+                  className="ml-3 text-xs text-[#4A1942] hover:underline"
                 >
                   📤 Export CSV
                 </button>
@@ -2104,7 +2105,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               <button
                                 type="button"
                                 onClick={() => handleCopyGuestLink(g.token!)}
-                                className="text-xs text-indigo-600 hover:underline"
+                                className="text-xs text-[#4A1942] hover:underline"
                               >
                                 Copy link
                               </button>
@@ -2113,7 +2114,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               <button
                                 type="button"
                                 onClick={() => handleEmailGuest(g.email!, g.name, g.token!)}
-                                className="text-xs text-indigo-600 hover:underline"
+                                className="text-xs text-[#4A1942] hover:underline"
                               >
                                 ✉️ Email invite
                               </button>
@@ -2202,7 +2203,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 <button
                                   type="button"
                                   onClick={handleSaveGuestEdit}
-                                  className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                                  className="px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                                 >
                                   Save
                                 </button>
@@ -2335,10 +2336,10 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                       }}
                                       className={`text-[11px] px-2 py-1 rounded-full border disabled:cursor-default ${
                                         checked
-                                          ? 'bg-indigo-600 text-white border-indigo-600'
+                                          ? 'bg-[#4A1942] text-white border-[#4A1942]'
                                           : atCap
                                             ? 'bg-gray-100 text-gray-400 border-gray-200'
-                                            : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-300'
+                                            : 'bg-white text-gray-600 border-gray-300 hover:border-[#4A1942]/40'
                                       }`}
                                     >
                                       {checked ? '✓ ' : ''}{ge.title}{atCap && !checked ? ` (full)` : ''}
@@ -2432,6 +2433,41 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         />
                       )}
                     </div>
+                    {/* Theme color — lets each couple brand their own guest portal.
+                        Defaults to the venue brand color when unset. */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Theme color
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={portalDraft.themeColor || ''}
+                          onChange={(e) => setPortalDraft({ ...portalDraft, themeColor: e.target.value })}
+                          className="w-10 h-9 rounded border border-gray-300 cursor-pointer bg-white"
+                          aria-label="Guest portal theme color"
+                        />
+                        <input
+                          type="text"
+                          value={portalDraft.themeColor || ''}
+                          onChange={(e) => setPortalDraft({ ...portalDraft, themeColor: e.target.value })}
+                          placeholder="e.g. #B76E79 (blush) — blank uses the venue brand color"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          aria-label="Guest portal theme color hex"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPortalDraft({ ...portalDraft, themeColor: '' })}
+                          className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-500 hover:bg-gray-50"
+                          title="Reset to the venue's brand color"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Pick a color that matches your wedding. Leave blank to use the venue's brand color.
+                      </p>
+                    </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Welcome message
@@ -2519,7 +2555,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           ? portalDraft.mealOptions
                           : DEFAULT_MEAL_OPTIONS
                         ).map((opt) => (
-                          <span key={opt.value} className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm text-indigo-800">
+                          <span key={opt.value} className="inline-flex items-center gap-1.5 rounded-full border border-[#4A1942]/20 bg-[#4A1942]/10 px-3 py-1 text-sm text-[#4A1942]">
                             {opt.label}
                             <button
                               type="button"
@@ -2532,7 +2568,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                   ).filter((o) => o.value !== opt.value),
                                 })
                               }
-                              className="text-indigo-400 hover:text-indigo-700 font-bold leading-none"
+                              className="text-[#4A1942]/70 hover:text-[#4A1942] font-bold leading-none"
                               aria-label={`Remove ${opt.label}`}
                             >
                               ✕
@@ -2574,7 +2610,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             }
                             setNewMealOption('');
                           }}
-                          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                          className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                         >
                           Add
                         </button>
@@ -2657,7 +2693,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             setPortalDraft({ ...portalDraft, scheduleItems: [...(portalDraft.scheduleItems || []), item] });
                             setNewScheduleItem({ title: '', startTime: '', location: '', dayIndex: 0 });
                           }}
-                          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                          className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                         >
                           Add
                         </button>
@@ -2691,11 +2727,11 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       key={m.id}
                       className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
                         m.senderSide === 'couple'
-                          ? 'ml-auto bg-indigo-600 text-white'
+                          ? 'ml-auto bg-[#4A1942] text-white'
                           : 'bg-white border border-gray-200 text-gray-800'
                       }`}
                     >
-                      <div className={`text-[10px] font-semibold ${m.senderSide === 'couple' ? 'text-indigo-200' : 'text-gray-400'}`}>
+                      <div className={`text-[10px] font-semibold ${m.senderSide === 'couple' ? 'text-[#4A1942]/60' : 'text-gray-400'}`}>
                         {m.senderName} · {m.senderSide === 'venue' ? 'Venue' : 'Couple'}
                         {m.createdAt && <span className="font-normal"> · {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                       </div>
@@ -2719,7 +2755,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 <button
                   type="button"
                   onClick={handleSendMessage}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                  className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
                 >
                   Send
                 </button>
