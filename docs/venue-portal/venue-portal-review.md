@@ -7,6 +7,8 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Plus-one headcount**: the couple's Attending KPI and catering meal accounting
+  (and the venue's catering summary) now include plus-ones. Committed.
 - ✅ **Venue couple card space names**: the venue's couple list now shows the selected
   space names (tooltip) for at-a-glance planning. Committed.
 - ✅ **Couple guest-portal password**: couples can now set / change / remove a guest
