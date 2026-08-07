@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Guest CSV export includes Table/Seat & Room**: the couple's exported guest list
+  now carries seating and lodging assignments (which were editable but not exported).
+  Committed.
 - ✅ **Collaborator role editing**: the couple can now change a collaborator's role
   (planner/family/vendor) after inviting, without removing + re-inviting. Committed.
 - ✅ **Staff-shift data-integrity**: deleting a calendar event now cascade-deletes its
