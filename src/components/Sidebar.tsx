@@ -182,7 +182,9 @@ export function Sidebar({
 
   const handleZoomInputBlur = () => {
     const value = parseInt(zoomInput, 10);
-    if (!Number.isNaN(value) && value >= 25 && value <= 200) {
+    // Match the slider/buttons range (10%–300%); the numeric box previously
+    // rejected 10–24% and 201–300%, which the slider could already reach.
+    if (!Number.isNaN(value) && value >= 10 && value <= 300) {
       onZoomChange(value / 100);
     } else {
       setZoomInput(String(Math.round(zoom * 100)));

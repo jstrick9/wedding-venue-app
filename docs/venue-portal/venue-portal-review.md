@@ -19,6 +19,12 @@ P1 = valuable, P2 = polish).*
   Delete, a "👁 Preview as couple/guest" read-only toggle, and a "⧉ Copy"
   duplicate-point action. Floor-plan keyboard shortcuts are now scoped to the
   Studio view. Test count: **569 passing / 11 skipped**. Committed.
+- ✅ **Design Studio venue-admin pass** — removed dead guest props from the
+  Properties panel (venue guest management was removed), aligned the zoom numeric
+  input to the slider's 10–300% range, and added couple-capacity verification to
+  the canvas (shows the booked couples, the largest expected guest count, and a
+  ⚠️ under-capacity flag when placed seats can't cover it). Test count:
+  **574 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

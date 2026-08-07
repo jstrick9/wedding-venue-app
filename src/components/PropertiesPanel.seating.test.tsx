@@ -51,14 +51,11 @@ describe('PropertiesPanel seating types', () => {
           },
         ]}
         fixtures={[]}
-        guests={[]}
         onUpdateTable={onUpdateTable}
         onUpdateFixture={() => undefined}
         onRemoveItem={() => undefined}
         onDuplicateItem={() => undefined}
         onClose={() => undefined}
-        onAddGuest={() => undefined}
-        onRemoveGuestFromTable={() => undefined}
         onViewImage={() => undefined}
         visible
         onToggleVisibility={() => undefined}

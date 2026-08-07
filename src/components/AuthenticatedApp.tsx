@@ -39,6 +39,8 @@ import { VenueDashboard } from './VenueDashboard';
 import { StudioLayoutsHome } from './StudioLayoutsHome';
 import { VenueMapDesigner } from './VenueMapDesigner';
 import { getVenueMapConfig, saveVenueMapConfig, emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
+import { getCoupleEvents } from '../services/couples/coupleService';
+import { computeSpaceSeating } from '../utils/spaceSeating';
 import { emit, emitDataChanged, on, type UndoSnapshot } from '../utils/appEvents';
 import { useModals } from '../contexts/ModalContext';
 
@@ -445,6 +447,13 @@ export default function AuthenticatedApp() {
     return () => offs.forEach((off) => off());
   }, [open]);
 
+  // Couples booked into the current space (venue-side verification). Lets the
+  // venue admin confirm the placed seating will seat every couple's expected
+  // guest count for this space — guest mgmt lives in the couples portal.
+  const spaceCouples = useMemo(
+    () => getCoupleEvents().filter((ev) => (ev.selectedSpaces || []).includes(layoutState.currentVenue.id)),
+    [layoutState.currentVenue.id],
+  );
   const getTotalCapacity = useCallback(() => {
     const tableSpecs = getTableSpecs();
     return layoutState.layout.tables.reduce((sum, table) => {
@@ -816,9 +825,42 @@ export default function AuthenticatedApp() {
               venue={layoutState.currentVenue} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} decor={layoutState.layout.decor} guests={layoutState.guests} selectedId={layoutState.selectedId} zoom={zoom} showGrid={showGrid} gridSize={gridSize} gridContrast={gridContrast}
               onSelect={handleSelectItem} onDoubleClick={handleDoubleClickItem} onMove={handleMoveItem} onDrop={handleDrop} onClickToPlace={handleDrop} onDragStart={pushUndoSnapshot} isDragging={!!dragItem} isDraggingExterior={dragItem?.isExterior || false} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })} panOffset={panOffset} onPanChange={setPanOffset} onZoomChange={setZoom} svgRef={floorPlanSvgRef}
             />
-            <div className="absolute bottom-4 left-4 flex items-center gap-2">
+            <div className="absolute bottom-4 left-4 flex items-center gap-2 flex-wrap">
               <div className="bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-lg text-sm">
-                <span className="font-medium">Capacity:</span> <span className={getTotalCapacity() > layoutState.currentVenue.capacity ? 'text-red-600 font-bold' : 'text-green-600'}>{getTotalCapacity()} / {layoutState.currentVenue.capacity}</span>
+                {(() => {
+                  const placed = getTotalCapacity();
+                  const seating = computeSpaceSeating(placed, layoutState.currentVenue.capacity, spaceCouples);
+                  return (
+                    <>
+                      <span className="font-medium">Capacity:</span>{' '}
+                      <span className={seating.overVenueCapacity ? 'text-red-600 font-bold' : 'text-green-600'}>
+                        {placed} / {layoutState.currentVenue.capacity}
+                      </span>
+                      {seating.hasCouples && (
+                        <>
+                          <span className="ml-2 text-gray-500">
+                            · Needs seats for{' '}
+                            <span className={seating.underCapacity ? 'text-amber-700 font-semibold' : 'text-green-700'}>
+                              {seating.expectedGuests}
+                            </span>{' '}
+                            guests
+                          </span>
+                          {seating.underCapacity && (
+                            <span
+                              className="ml-1 text-amber-700 font-semibold"
+                              title="Couples using this space expect more guests than the placed seating seats."
+                            >
+                              ⚠️ under-capacity
+                            </span>
+                          )}
+                          <span className="block text-[11px] text-gray-400 mt-0.5">
+                            Booked couples: {spaceCouples.map((c) => c.coupleName).join(', ')}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               <button
                 type="button"
@@ -867,8 +909,8 @@ export default function AuthenticatedApp() {
             )}
           </div>
           <PropertiesPanel
-            selectedId={layoutState.selectedId} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} guests={layoutState.guests} onUpdateTable={handleUpdateTableSafe} onUpdateFixture={handleUpdateFixtureSafe}
-            onRemoveItem={layoutState.removeItem} onDuplicateItem={layoutState.duplicateItem} onClose={() => setShowProperties(false)} onAddGuest={(name, tableId) => layoutState.addGuest(name, undefined, tableId)} onRemoveGuestFromTable={(id) => layoutState.assignGuestToTable(id, null)}
+            selectedId={layoutState.selectedId} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} onUpdateTable={handleUpdateTableSafe} onUpdateFixture={handleUpdateFixtureSafe}
+            onRemoveItem={layoutState.removeItem} onDuplicateItem={layoutState.duplicateItem} onClose={() => setShowProperties(false)}
             onViewImage={(url, title) => setImagePreview({ url, title })} visible={showProperties} onToggleVisibility={() => setShowProperties(v => !v)} arrangements={layoutState.getDecorArrangements()}
           />
         </div>

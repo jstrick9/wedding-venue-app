@@ -1,4 +1,4 @@
-import { PlacedTable, PlacedFixture, Guest, ChairType } from '../types';
+import { PlacedTable, PlacedFixture, ChairType } from '../types';
 import { getTableSpecs, getFixtureTypes, getLinenColors } from '../hooks/useLayoutState';
 import { getChairSpecs } from '../data/venueData';
 import { getConfig } from '../config';
@@ -9,14 +9,11 @@ export interface PropertiesPanelProps {
   selectedId: string | null;
   tables: PlacedTable[];
   fixtures: PlacedFixture[];
-  guests: Guest[];
   onUpdateTable: (id: string, updates: Partial<PlacedTable>) => void;
   onUpdateFixture: (id: string, updates: Partial<PlacedFixture>) => void;
   onRemoveItem: (id: string) => void;
   onDuplicateItem: (id: string) => void;
   onClose: () => void;
-  onAddGuest: (name: string, tableId?: string) => void;
-  onRemoveGuestFromTable: (guestId: string) => void;
   onViewImage: (url: string, title: string) => void;
   visible: boolean;
   onToggleVisibility: () => void;
@@ -27,14 +24,11 @@ export function PropertiesPanel({
   selectedId,
   tables,
   fixtures,
-  guests,
   onUpdateTable,
   onUpdateFixture,
   onRemoveItem,
   onDuplicateItem,
   onClose,
-  onAddGuest,
-  onRemoveGuestFromTable,
   onViewImage,
   visible,
   onToggleVisibility,
