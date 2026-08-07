@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useConfirm } from '../useConfirm';
+import { VenueMapDesigner } from '../VenueMapDesigner';
 import type { AdminCommonProps } from './AdminTabTypes';
 import {
   VenueMapConfig,
-  VenueMapPoint,
   RainContingency,
   VenueWeatherConfig,
 } from '../../types';
@@ -13,7 +12,6 @@ import {
   emptyVenueMapConfig,
   getVenueRules,
   saveVenueRules,
-  routePolyline,
 } from '../../services/wayfinding/venueWayfindingService';
 import {
   getVenueWeather,
@@ -29,13 +27,7 @@ interface Props {
   onShowSuccess: (msg: string) => void;
 }
 
-const KIND_LABEL: Record<VenueMapPoint['kind'], string> = {
-  space: 'Venue Space',
-  parking: 'Parking',
-  entry: 'Entry',
-  amenity: 'Amenity',
-  path: 'Path',
-};
+
 
 /**
  * Venue-controlled wayfinding — the venue builds the full property map (spaces,
@@ -44,15 +36,9 @@ const KIND_LABEL: Record<VenueMapPoint['kind'], string> = {
  * that couple.
  */
 export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
-  const { confirm, confirmDialog } = useConfirm();
   const [map, setMap] = useState<VenueMapConfig | null>(() => getVenueMapConfig());
   const [rules, setRules] = useState<string[]>(() => getVenueRules().rules);
   const [newRule, setNewRule] = useState('');
-  const [newPoint, setNewPoint] = useState({ label: '', kind: 'space' as VenueMapPoint['kind'], x: 50, y: 50, venueId: '', lat: '', lng: '' });
-  // Route builder state
-  const [routeName, setRouteName] = useState('');
-  const [routePointIds, setRoutePointIds] = useState<string[]>([]);
-
   // Weather state
   const [weather, setWeather] = useState(() => getVenueWeather());
   const [weatherLocation, setWeatherLocation] = useState(() => getVenueWeather().location || '');
@@ -101,82 +87,6 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
   const update = (next: VenueMapConfig) => {
     setMap(next);
     saveVenueMapConfig(next);
-  };
-
-  const addPoint = () => {
-    // Validate GPS coordinates when provided (both must be valid, or neither).
-    const latS = newPoint.lat.trim();
-    const lngS = newPoint.lng.trim();
-    const latN = latS === '' ? undefined : Number(latS);
-    const lngN = lngS === '' ? undefined : Number(lngS);
-    const latValid = latN === undefined || (Number.isFinite(latN) && latN >= -90 && latN <= 90);
-    const lngValid = lngN === undefined || (Number.isFinite(lngN) && lngN >= -180 && lngN <= 180);
-    if (!latValid || !lngValid) {
-      onShowSuccess('Latitude must be -90 to 90 and longitude -180 to 180. Enter both, or leave both blank.');
-      return;
-    }
-    if ((latN === undefined) !== (lngN === undefined)) {
-      onShowSuccess('Enter both latitude and longitude (or leave both blank).');
-      return;
-    }
-    // Validate the SVG x/y coordinates so a NaN or out-of-bounds value can't break
-    // the map rendering (an invalid <circle cx=NaN> silently breaks wayfinding).
-    const xN = Number(newPoint.x);
-    const yN = Number(newPoint.y);
-    if (!Number.isFinite(xN) || !Number.isFinite(yN) || xN < 0 || yN < 0) {
-      onShowSuccess('X and Y must be valid coordinates (0 or greater).');
-      return;
-    }
-    const m = ensureMap();
-    const mWidth = m.width || 1000;
-    const mHeight = m.height || 1000;
-    if (xN > mWidth || yN > mHeight) {
-      onShowSuccess(`Coordinates should be within the map (0–${mWidth} × 0–${mHeight}).`);
-      return;
-    }
-    const p: VenueMapPoint = {
-      id: `pt-${Date.now()}`,
-      label: newPoint.label.trim() || 'Point',
-      kind: newPoint.kind,
-      x: xN,
-      y: yN,
-      venueId: newPoint.kind === 'space' ? newPoint.venueId || undefined : undefined,
-      lat: latN,
-      lng: lngN,
-    };
-    update({ ...m, points: [...m.points, p], updatedAt: new Date().toISOString() });
-    setNewPoint({ label: '', kind: 'space', x: 50, y: 50, venueId: '', lat: '', lng: '' });
-  };
-
-  const removePoint = (id: string) => {
-    const m = ensureMap();
-    update({
-      ...m,
-      points: m.points.filter((p) => p.id !== id),
-      routes: (m.routes || []).map((r) => ({ ...r, pointIds: r.pointIds.filter((pid) => pid !== id) })),
-      updatedAt: new Date().toISOString(),
-    });
-  };
-
-  const addRoute = () => {
-    if (routePointIds.length < 2) {
-      onShowSuccess('A walkway needs at least 2 points. Add more points to the path first.');
-      return;
-    }
-    const m = ensureMap();
-    const route = {
-      id: `route-${Date.now()}`,
-      name: routeName.trim() || 'Path',
-      pointIds: routePointIds,
-    };
-    update({ ...m, routes: [...(m.routes || []), route], updatedAt: new Date().toISOString() });
-    setRouteName('');
-    setRoutePointIds([]);
-  };
-
-  const removeRoute = (id: string) => {
-    const m = ensureMap();
-    update({ ...m, routes: (m.routes || []).filter((r) => r.id !== id), updatedAt: new Date().toISOString() });
   };
 
   // Rain contingency: for each outdoor venue the couple might use, pick an indoor backup.
@@ -235,215 +145,13 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
         </p>
       </div>
 
-      {/* Map preview + builder */}
+      {/* Interactive full-venue map designer */}
       <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-sm">Property Map</h3>
-          <button
-            type="button"
-            onClick={async () => {
-              const ok = await confirm({ title: 'Reset venue map?', message: 'This removes all points, paths, and rain-contingency backups.', tone: 'danger', confirmLabel: 'Reset' });
-              if (ok) update(emptyVenueMapConfig());
-            }}
-            className="text-xs text-gray-400 hover:text-gray-600"
-          >
-            Reset map
-          </button>
-        </div>
-        {map && map.points.length > 0 ? (
-          <div className="rounded-lg border border-gray-200 overflow-hidden">
-            <svg viewBox={`0 0 ${map.width} ${map.height}`} className="w-full h-64 bg-teal-50">
-              {(map.routes || []).map((route) => {
-                const pts = routePolyline(map, route.id);
-                if (pts.length < 2) return null;
-                return (
-                  <polyline
-                    key={route.id}
-                    points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
-                    fill="none"
-                    stroke="#14b8a6"
-                    strokeWidth={1}
-                    strokeDasharray="2,1.5"
-                  />
-                );
-              })}
-              {map.points
-                .filter((p) => p.kind === 'path')
-                .map((p) => (
-                  <circle key={p.id} cx={p.x} cy={p.y} r={1.5} fill="#94a3b8" />
-                ))}
-              {map.points
-                .filter((p) => p.kind !== 'path')
-                .map((p) => {
-                  const color =
-                    p.kind === 'space' ? '#0d9488' : p.kind === 'parking' ? '#6366f1' : p.kind === 'entry' ? '#16a34a' : '#f59e0b';
-                  return (
-                    <g key={p.id}>
-                      <circle cx={p.x} cy={p.y} r={4} fill={color} stroke="white" strokeWidth={1} />
-                      <text x={p.x + 5} y={p.y - 3} fontSize={5} fill="#374151">{p.label}</text>
-                    </g>
-                  );
-                })}
-            </svg>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-gray-300 px-6 py-8 text-center text-gray-400 text-sm">
-            No points yet. Add spaces, parking, and entries below to build the map.
-          </div>
-        )}
-
-        {/* Add point */}
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-6 gap-2">
-          <input
-            type="text"
-            placeholder="Label"
-            value={newPoint.label}
-            onChange={(e) => setNewPoint({ ...newPoint, label: e.target.value })}
-            className="col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            aria-label="Point label"
-          />
-          <select
-            value={newPoint.kind}
-            onChange={(e) => setNewPoint({ ...newPoint, kind: e.target.value as VenueMapPoint['kind'] })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-            aria-label="Point kind"
-          >
-            {(Object.keys(KIND_LABEL) as VenueMapPoint['kind'][]).map((k) => (
-              <option key={k} value={k}>{KIND_LABEL[k]}</option>
-            ))}
-          </select>
-          <input
-            type="number"
-            placeholder="X"
-            value={newPoint.x}
-            onChange={(e) => setNewPoint({ ...newPoint, x: Number(e.target.value) })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            aria-label="X coordinate"
-          />
-          <input
-            type="number"
-            placeholder="Y"
-            value={newPoint.y}
-            onChange={(e) => setNewPoint({ ...newPoint, y: Number(e.target.value) })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            aria-label="Y coordinate"
-          />
-          <input
-            type="text"
-            placeholder="Lat"
-            value={newPoint.lat}
-            onChange={(e) => setNewPoint({ ...newPoint, lat: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            aria-label="Latitude (GPS)"
-          />
-          <input
-            type="text"
-            placeholder="Lng"
-            value={newPoint.lng}
-            onChange={(e) => setNewPoint({ ...newPoint, lng: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            aria-label="Longitude (GPS)"
-          />
-          <button
-            type="button"
-            onClick={addPoint}
-            className="px-3 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
-          >
-            + Add
-          </button>
-        </div>
-        {newPoint.kind === 'space' && (
-          <div className="mt-2">
-            <select
-              value={newPoint.venueId}
-              onChange={(e) => setNewPoint({ ...newPoint, venueId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-              aria-label="Linked venue space"
-            >
-              <option value="">Link to a venue space…</option>
-              {venues.map((v) => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Points list */}
-        {map && map.points.length > 0 && (
-          <div className="mt-3 space-y-1">
-            {map.points.map((p) => (
-              <div key={p.id} className="flex items-center justify-between text-sm">
-                <span className="text-gray-700">
-                  {p.label} <span className="text-gray-400 text-xs">({KIND_LABEL[p.kind]}, {p.x},{p.y})</span>
-                </span>
-                <button type="button" onClick={() => removePoint(p.id)} className="text-red-400 hover:text-red-600" aria-label={`Remove ${p.label}`}>
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Routes / paths */}
-      <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
-        <h3 className="font-semibold text-sm mb-2">🛤️ Walkways &amp; Paths</h3>
-        <p className="text-xs text-gray-500 mb-3">
-          Draw a walkway by naming it and selecting the points it connects in order
-          (e.g. Main Entry → Ceremony Garden). Paths render as dashed polylines.
-        </p>
-        {map && map.points.length > 0 ? (
-          <div className="flex flex-col sm:flex-row gap-2 mb-3">
-            <input
-              type="text"
-              value={routeName}
-              onChange={(e) => setRouteName(e.target.value)}
-              placeholder="Route name"
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              aria-label="Route name"
-            />
-            <select
-              multiple
-              value={routePointIds}
-              onChange={(e) =>
-                setRoutePointIds(Array.from(e.target.selectedOptions).map((o) => o.value))
-              }
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-              aria-label="Route points (in order)"
-            >
-              {map.points
-                .filter((p) => p.kind !== 'path')
-                .map((p) => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
-                ))}
-            </select>
-            <button
-              type="button"
-              onClick={addRoute}
-              className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
-            >
-              + Add path
-            </button>
-          </div>
-        ) : (
-          <p className="text-xs text-gray-400">Add points first to draw paths between them.</p>
-        )}
-
-        <div className="space-y-1">
-          {(map?.routes || []).map((r) => (
-            <div key={r.id} className="flex items-center justify-between text-sm">
-              <span className="text-gray-700">
-                {r.name} <span className="text-gray-400 text-xs">({r.pointIds.length} points)</span>
-              </span>
-              <button type="button" onClick={() => removeRoute(r.id)} className="text-red-400 hover:text-red-600" aria-label={`Remove ${r.name}`}>
-                ✕
-              </button>
-            </div>
-          ))}
-          {(!map || !map.routes || map.routes.length === 0) && (
-            <p className="text-xs text-gray-400">No paths drawn yet.</p>
-          )}
-        </div>
+        <VenueMapDesigner
+          map={ensureMap()}
+          venues={venues}
+          onSave={(next) => update(next)}
+        />
       </div>
 
       {/* Rain contingency */}
@@ -668,7 +376,6 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
           )}
         </div>
       </div>
-      {confirmDialog}
     </div>
   );
 }
