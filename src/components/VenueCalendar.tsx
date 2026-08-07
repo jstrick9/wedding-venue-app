@@ -428,7 +428,20 @@ export function VenueCalendar({
             <p className="text-sm text-gray-600">
               {new Date(detail.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
               {detail.startTime ? ` · ${detail.startTime}` : ''}
+              {detail.endTime ? ` – ${detail.endTime}` : ''}
             </p>
+            {detail.venue?.spaceId && (() => {
+              const space = venues.find((v) => v.id === detail.venue!.spaceId);
+              return space ? (
+                <p className="text-sm text-gray-600">🏛️ {space.name}</p>
+              ) : null;
+            })()}
+            {detail.venue?.notes && (
+              <p className="text-sm text-gray-600 whitespace-pre-line"><span className="font-medium">Notes:</span> {detail.venue.notes}</p>
+            )}
+            {detail.venue?.recurrence && (
+              <p className="text-sm text-gray-500">↻ Repeats {detail.venue.recurrence}</p>
+            )}
             {detail.venue && detail.venue.assignees && detail.venue.assignees.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {detail.venue.assignees.map((id) => (
