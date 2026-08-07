@@ -699,7 +699,9 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                         const cls = assigned > cap ? 'text-red-700 bg-red-50' : 'text-[#4A1942] bg-[#4A1942]/10';
                         return <span className={`rounded-full px-2 py-0.5 ${cls}`}>🛏️ {assigned}/{cap} overnight</span>;
                       })()}
-                      <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
+                      <span
+                        title={ev.selectedSpaces.map((id) => venues.find((v) => v.id === id)?.name || id).join(', ') || 'None selected'}
+                      >🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
                       <span>👥 {ev.collaborators.length} people</span>
                       {(() => {
                         const guests = getCoupleGuests(ev.id);
