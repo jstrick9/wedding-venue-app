@@ -7,6 +7,12 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue-branding + per-couple guest-portal theming (user-directive)**: the
+  Couples Portal now uses the venue brand accent (was off-brand indigo); added a
+  per-couple **Theme color** setting so each couple can brand their own guest
+  portal, which falls back to the venue brand color by default. Also: venue
+  calendar event-form validation, and guest search + RSVP filter in the couple's
+  guest list. Committed.
 - ✅ **Couples portal + dashboard polish round**: couple checklist grouped by phase;
   fixed add-on→guest-event auto-derivation for add-ons added later; replaced the
   horizontal-scroll tab bar with wrapping pill tabs; fixed the dashboard "This week"
