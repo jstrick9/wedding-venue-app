@@ -7,6 +7,11 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue-admin persona: Admin & System Settings** — added tests for Access Control
+  (RBAC role→permission resolution incl. inheritance, fail-closed on deleted role)
+  and team invites (create + accept in local mode). Verified RBAC roles/groups/audit
+  are in backup domains and user management has validation + filters. Test count:
+  **511 passing / 11 skipped**. Committed.
 - ✅ **Venue-admin persona: Operations & Staffing** — hardened the Operations panel's
   task/area/shift load to parse defensively (corrupted data no longer crashes the
   panel); added persona tests for staff tasks + checklist progress and the
