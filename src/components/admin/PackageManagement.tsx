@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useConfirm } from '../useConfirm';
+import { getCoupleEvents } from '../../services/couples/coupleService';
 import {
   WeddingPackage,
   WeddingPackageDuration,
@@ -121,7 +122,17 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
     onShowSuccess('Package saved.');
   };
   const removePkg = async (id: string) => {
-    const ok = await confirm({ title: 'Delete package?', message: 'This package will be permanently removed.', tone: 'danger', confirmLabel: 'Delete' });
+    // Warn if couples are currently on this package — deleting it would silently
+    // detach them and remove their package-based derived guest events.
+    const inUseCount = getCoupleEvents().filter((ev) => ev.packageId === id).length;
+    const ok = await confirm({
+      title: 'Delete package?',
+      message: inUseCount > 0
+        ? `This package is assigned to ${inUseCount} couple event${inUseCount === 1 ? '' : 's'}. Deleting it will remove their package and derived guest events. Continue?`
+        : 'This package will be permanently removed.',
+      tone: 'danger',
+      confirmLabel: 'Delete',
+    });
     if (!ok) return;
     deleteWeddingPackage(id);
     setPackages(getWeddingPackages());
