@@ -89,19 +89,28 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
   };
   const savePkg = () => {
     if (!pkgForm.name.trim()) { onShowSuccess('Enter a package name.'); return; }
-    const price: WeddingSeasonPrice = {
-      nonPeak: pkgForm.nonPeak ? Number(pkgForm.nonPeak) : 0,
-      peak: pkgForm.peak ? Number(pkgForm.peak) : 0,
-      premier: pkgForm.premier ? Number(pkgForm.premier) : 0,
+    // Guard numeric fields against NaN / negatives / empty→0 so a package can't
+    // end up "unlimited" (0 guests) or with invalid pricing by accident.
+    const num = (v: string, fallback = 0) => {
+      const n = Number(v.trim());
+      return Number.isNaN(n) || n < 0 ? fallback : n;
     };
+    const price: WeddingSeasonPrice = {
+      nonPeak: num(pkgForm.nonPeak),
+      peak: num(pkgForm.peak),
+      premier: num(pkgForm.premier),
+    };
+    const maxGuests = Math.round(num(pkgForm.maxGuests));
+    const maxOvernightGuests = Math.round(num(pkgForm.maxOvernightGuests));
+    if (maxGuests <= 0) { onShowSuccess('Enter a guest limit greater than 0.'); return; }
     saveWeddingPackage({
       id: pkgForm.id || undefined,
       name: pkgForm.name,
       description: pkgForm.description,
       durationType: pkgForm.durationType,
       price,
-      maxGuests: pkgForm.maxGuests ? Number(pkgForm.maxGuests) : 0,
-      maxOvernightGuests: pkgForm.maxOvernightGuests ? Number(pkgForm.maxOvernightGuests) : 0,
+      maxGuests,
+      maxOvernightGuests,
       lodgingIncluded: pkgForm.lodgingIncluded,
       includedLodgingVenueIds: pkgForm.includedLodgingVenueIds,
       includedItems: pkgForm.includedItems,
@@ -137,7 +146,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
       id: aoForm.id || undefined,
       name: aoForm.name,
       category: aoForm.category,
-      price: aoForm.price ? Number(aoForm.price) : 0,
+      price: (() => { const n = Number((aoForm.price || '').trim()); return Number.isNaN(n) || n < 0 ? 0 : n; })(),
       priceNote: aoForm.priceNote,
       description: aoForm.description,
       venueVendorId: aoForm.venueVendorId || undefined,
