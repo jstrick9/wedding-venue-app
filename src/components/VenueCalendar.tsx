@@ -186,7 +186,9 @@ export function VenueCalendar({
     const saved = editEv
       ? (updateVenueCalendarEvent(editEv.id, input), getVenueCalendarEvents().find((e) => e.id === editEv.id) || null)
       : addVenueCalendarEvent({ ...input, createdBy: undefined });
-    if (saved && saved.assignees && saved.assignees.length > 0) syncShiftsForCalendarEvent(saved);
+    // Always reconcile shifts (syncShiftsForCalendarEvent removes dropped assignees,
+    // so editing an event to unassign everyone clears its stale shifts too).
+    if (saved) syncShiftsForCalendarEvent(saved);
     setShowForm(false);
     setEditEv(null);
     refresh();

@@ -32,17 +32,37 @@ export function getShiftsForCalendarEvent(calendarEventId: string): StaffShift[]
  * already linked) so the event drives staffing.
  */
 export function syncShiftsForCalendarEvent(ev: VenueCalendarEvent): void {
-  if (!ev.assignees || ev.assignees.length === 0) return;
-  const shifts = readShifts();
-  let changed = false;
   const start = ev.startTime ? `${ev.date}T${ev.startTime}:00` : `${ev.date}T12:00:00`;
   const end = ev.endTime ? `${ev.date}T${ev.endTime}:00` : undefined;
-  ev.assignees.forEach((staffId) => {
-    const exists = shifts.some(
+  const assignees = ev.assignees || [];
+  const shifts = readShifts();
+  let changed = false;
+
+  // Remove shifts for assignees no longer on the event (or when there are none).
+  const kept = shifts.filter((s) => {
+    if (s.calendarEventId !== ev.id) return true;
+    return assignees.includes(s.staffId);
+  });
+  if (kept.length !== shifts.length) {
+    changed = true;
+  }
+
+  // Add shifts for new assignees, and refresh time/role/name/notes on existing ones.
+  const next = [...kept];
+  assignees.forEach((staffId) => {
+    const idx = next.findIndex(
       (s) => s.calendarEventId === ev.id && s.staffId === staffId,
     );
-    if (exists) return;
-    shifts.push({
+    if (idx >= 0) {
+      const cur = next[idx];
+      const role = ev.category === 'couple' ? 'coordinator' : ev.category === 'staffing' ? 'other' : 'other';
+      if (cur.startTime !== start || cur.endTime !== (end || start) || cur.role !== role || cur.eventName !== ev.title || cur.notes !== ev.notes) {
+        next[idx] = { ...cur, startTime: start, endTime: end || start, role, eventName: ev.title, notes: ev.notes };
+        changed = true;
+      }
+      return;
+    }
+    next.push({
       id: `shift-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       staffId,
       role: ev.category === 'couple' ? 'coordinator' : ev.category === 'staffing' ? 'other' : 'other',
@@ -54,7 +74,8 @@ export function syncShiftsForCalendarEvent(ev: VenueCalendarEvent): void {
     });
     changed = true;
   });
-  if (changed) writeShifts(shifts);
+
+  if (changed) writeShifts(next);
 }
 
 /** Remove shifts linked to a calendar event (on event delete). */
