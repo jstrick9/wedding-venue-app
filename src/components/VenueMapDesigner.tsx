@@ -3,7 +3,7 @@ import { Venue, VenueMapConfig, VenueMapPoint, VenueMapPointKind } from '../type
 import { VenueMapCanvas } from './VenueMapCanvas';
 import {
   addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint,
-  addMapRoute, removeMapRoute, pointKindLabel, pointKindIcon, pointColor, updateMapSize,
+  addMapRoute, removeMapRoute, renameMapRoute, pointKindLabel, pointKindIcon, pointColor, updateMapSize,
 } from '../utils/venueMapDesigner';
 import { downloadLayoutPng, downloadLayoutPdf } from '../utils/layoutExport';
 import { showToast } from './Toast';
@@ -34,6 +34,8 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
   const [activeKind, setActiveKind] = useState<VenueMapPointKind>('space');
   const [routeName, setRouteName] = useState('');
   const [routePointIds, setRoutePointIds] = useState<string[]>([]);
+  const [renamingRoute, setRenamingRoute] = useState<string | null>(null);
+  const [routeRename, setRouteRename] = useState('');
   const [editing, setEditing] = useState(false);
   const [sizeW, setSizeW] = useState(String(initialMap.width || 100));
   const [sizeH, setSizeH] = useState(String(initialMap.height || 80));
@@ -133,6 +135,19 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
     showToast('Walkway added.', 'success');
   };
 
+  const startRename = (id: string, current: string) => {
+    setRenamingRoute(id);
+    setRouteRename(current);
+  };
+  const commitRename = () => {
+    if (renamingRoute) {
+      persist(renameMapRoute(map, renamingRoute, routeRename));
+      showToast('Walkway renamed.', 'success');
+    }
+    setRenamingRoute(null);
+    setRouteRename('');
+  };
+
   const exportMap = async (kind: 'png' | 'pdf') => {
     const svg = svgRef.current;
     if (!svg) { showToast('Map is not ready to export yet.', 'warning'); return; }
@@ -162,19 +177,30 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Canvas */}
         <div className="lg:col-span-2">
-          <VenueMapCanvas
-            map={map}
-            editable
-            selectedPointId={selectedId}
-            placeKind={activeKind}
-            highlightPointIds={routePointIds}
-            onSelectPoint={(id) => { setSelectedId(id); if (id) setEditing(false); }}
-            onMovePoint={handleMove}
-            onPlacePoint={handlePlace}
-            title={mapTitle}
-            showLegend
-            svgRef={svgRef as React.RefObject<SVGSVGElement>}
-          />
+          <div className="relative">
+            <VenueMapCanvas
+              map={map}
+              editable
+              selectedPointId={selectedId}
+              placeKind={activeKind}
+              highlightPointIds={routePointIds}
+              onSelectPoint={(id) => { setSelectedId(id); if (id) setEditing(false); }}
+              onMovePoint={handleMove}
+              onPlacePoint={handlePlace}
+              title={mapTitle}
+              showLegend
+              svgRef={svgRef as React.RefObject<SVGSVGElement>}
+            />
+            {map.points.length === 0 && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="bg-white/85 rounded-lg px-4 py-2 text-center text-sm text-gray-600 shadow">
+                  <span className="text-xl block mb-1">🗺️</span>
+                  Start your map — click the canvas to place a point, or add venue
+                  pins from the side panel.
+                </div>
+              </div>
+            )}
+          </div>
           {/* Palette + route drawing */}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="text-xs text-gray-500 font-medium">Click canvas to place:</span>
@@ -383,9 +409,40 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
             <span className="text-sm font-semibold text-gray-800">Walkway routes</span>
             <div className="mt-2 space-y-1">
               {(map.routes || []).map((r) => (
-                <div key={r.id} className="flex items-center justify-between text-xs">
-                  <span className="text-gray-700">🚶 {r.name}</span>
-                  <button type="button" onClick={() => { persist(removeMapRoute(map, r.id)); }} className="text-red-400 hover:text-red-600" aria-label={`Delete ${r.name}`}>✕</button>
+                <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
+                  {renamingRoute === r.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={routeRename}
+                        onChange={(e) => setRouteRename(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitRename();
+                          if (e.key === 'Escape') { setRenamingRoute(null); setRouteRename(''); }
+                        }}
+                        onBlur={commitRename}
+                        autoFocus
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+                        aria-label={`Rename ${r.name}`}
+                      />
+                      <button type="button" onClick={commitRename} className="text-teal-600 hover:underline">Save</button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-gray-700 truncate">🚶 {r.name}</span>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => startRename(r.id, r.name)}
+                          className="text-gray-400 hover:text-gray-600"
+                          aria-label={`Rename ${r.name}`}
+                        >
+                          ✏️
+                        </button>
+                        <button type="button" onClick={() => { persist(removeMapRoute(map, r.id)); }} className="text-red-400 hover:text-red-600" aria-label={`Delete ${r.name}`}>✕</button>
+                      </span>
+                    </>
+                  )}
                 </div>
               ))}
               {(!map.routes || map.routes.length === 0) && <p className="text-xs text-gray-400">No walkways yet.</p>}

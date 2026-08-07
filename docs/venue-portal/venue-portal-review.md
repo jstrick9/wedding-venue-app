@@ -12,9 +12,10 @@ P1 = valuable, P2 = polish).*
   point drops now-empty walkways, a new **Map coverage** panel lists venues
   missing a pin (with one-click "+ Add pin"), linking a venue auto-labels the
   point, route-building highlights the in-progress pins, the exported/printed
-  map now carries a title + color legend, and the module guards leaving with
-  unsaved changes ("● Unsaved" + confirm). Test count:
-  **559 passing / 11 skipped**. Committed.
+  map now carries a title + color legend, the module guards leaving with
+  unsaved changes ("● Unsaved" + confirm), walkways can be renamed inline, and a
+  fresh map shows an empty-state "how to start" hint. Test count:
+  **562 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

@@ -70,6 +70,25 @@ describe('VenueMapDesigner', () => {
     expect(screen.getByText(/2 spaces/)).toBeTruthy();
   });
 
+  it('shows an empty-state hint when the map has no points', () => {
+    render(<VenueMapDesigner map={emptyVenueMapConfig()} venues={venues} onSave={() => {}} />);
+    expect(screen.getByText(/Start your map/)).toBeTruthy();
+  });
+
+  it('renames a walkway route via the inline editor', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'A', kind: 'entry', x: 5, y: 5 });
+    map = addMapPoint(map, { label: 'B', kind: 'space', x: 20, y: 20 });
+    map = addMapRoute(map, 'Old Walkway', map.points.map((p) => p.id));
+    render(<VenueMapDesigner map={map} venues={venues} onSave={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Old Walkway' }));
+    const input = screen.getByLabelText('Rename Old Walkway');
+    fireEvent.change(input, { target: { value: 'Ceremony Path' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByText('🚶 Ceremony Path')).toBeTruthy();
+  });
+
   it('reports dirty state: placing/editing fires onDirtyChange(true), saving fires false', () => {
     let map = emptyVenueMapConfig();
     map = addMapPoint(map, { label: 'Garden', kind: 'space', x: 30, y: 30, venueId: 'garden' });

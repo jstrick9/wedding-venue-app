@@ -54,6 +54,16 @@ gaps found.
 Tests: `VenueMapCanvas.test.tsx` (+1 legend), `VenueMapDesigner.test.tsx` (+1
 dirty-state). CI now **559 passing / 11 skipped**.
 
+## Follow-up — walkway rename + empty-state guidance
+9. **Rename walkways.** Each route now has a ✏️ rename action (inline input,
+   Enter to save, Escape to cancel, blank keeps the current name) via a pure
+   `renameMapRoute` helper (+ test).
+10. **Empty-state guidance.** A fresh (no-pin) map now shows a centered hint over
+    the canvas — "click the canvas to place a point, or add venue pins from the
+    side panel" — so a venue admin knows how to start.
+Tests: `VenueMapDesigner.test.tsx` (+2), `venueMapDesigner.test.ts` (+1).
+CI now **562 passing / 11 skipped**.
+
 ## Files
 - `src/components/VenueMapCanvas.tsx`
 - `src/components/VenueMapDesigner.tsx`

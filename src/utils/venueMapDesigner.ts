@@ -177,6 +177,22 @@ export function removeMapRoute(
   };
 }
 
+/** Rename a walkway route (blank input keeps the existing name). */
+export function renameMapRoute(
+  map: VenueMapConfig,
+  routeId: string,
+  name: string,
+): VenueMapConfig {
+  const trimmed = (name || '').trim();
+  return {
+    ...map,
+    routes: (map.routes || []).map((r) =>
+      r.id === routeId ? { ...r, name: trimmed || r.name } : r,
+    ),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 /** Ordered coordinates for a route (for SVG polyline). */
 export function routePoints(
   map: VenueMapConfig | null,

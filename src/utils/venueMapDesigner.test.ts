@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint,
-  addMapRoute, removeMapRoute, routePoints, pointColor, updateMapSize,
+  addMapRoute, removeMapRoute, renameMapRoute, routePoints, pointColor, updateMapSize,
 } from './venueMapDesigner';
 import { emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 
@@ -85,6 +85,19 @@ describe('venue map designer helpers', () => {
     map = updateMapSize(emptyVenueMapConfig(), NaN, 40);
     expect(map.width).toBe(100); // fallback to current width
     expect(map.height).toBe(40);
+  });
+
+  it('renames a route and keeps the existing name for a blank input', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'A', kind: 'entry', x: 5, y: 5 });
+    map = addMapPoint(map, { label: 'B', kind: 'space', x: 20, y: 20 });
+    map = addMapRoute(map, 'Old Name', map.points.map((p) => p.id));
+    const id = map.routes[0].id;
+    map = renameMapRoute(map, id, 'Ceremony Walkway');
+    expect(map.routes[0].name).toBe('Ceremony Walkway');
+    // Blank keeps the current name.
+    map = renameMapRoute(map, id, '   ');
+    expect(map.routes[0].name).toBe('Ceremony Walkway');
   });
 
   it('drops a route entirely when removing a point leaves fewer than 2 points', () => {
