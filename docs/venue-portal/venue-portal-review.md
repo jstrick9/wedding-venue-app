@@ -7,6 +7,8 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Collaborator role editing**: the couple can now change a collaborator's role
+  (planner/family/vendor) after inviting, without removing + re-inviting. Committed.
 - ✅ **Staff-shift data-integrity**: deleting a calendar event now cascade-deletes its
   linked staff shifts; shift sync now reconciles (removes dropped assignees, updates
   times/roles, clears on unassign-all) instead of only adding. Committed.
