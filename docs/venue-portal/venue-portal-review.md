@@ -7,6 +7,16 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Interactive Full-Venue Map (Design Studio)** — built a hybrid map designer
+  (`VenueMapCanvas` shared renderer + `VenueMapDesigner` canvas-with-side-panel):
+  drag/click-to-place points (spaces, lodging, parking, entries, amenities, paths),
+  precise numeric entry + GPS + venue-linking, walkway route drawing, and
+  PNG/PDF export of the "Venue Map". Wired into Admin Wayfinding & Rules (replacing
+  the form-based builder) and surfaced via a "Design the full-venue map" shortcut in
+  the Studio home. Test count: **535 passing / 11 skipped**. Committed.
+- ✅ **Couple drill-in via the map** — the couple's Venue Spaces tab now shows an
+  interactive map; clicking a space opens its layout editor, clicking a lodging
+  point jumps to guest/room assignment. Committed.
 - ✅ **Guest persona: full journey** — added integration tests covering sign-in lookup
   (by email/name/token), access gating (portal/lodging/RSVP/map), multi-day celebration
   countdown (before/during/after), and the post-event access grace window. Test count:
