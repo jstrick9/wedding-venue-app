@@ -32,6 +32,12 @@ P1 = valuable, P2 = polish).*
 - ✅ **Design Studio: confirm before deleting a saved layout** — the Header's Load
   Layout dialog now confirms before deleting a saved layout (was a one-click,
   irreversible delete). Test count: **578 passing / 11 skipped**. Committed.
+- ✅ **Design Studio: unsaved-changes guard + Save Layout overwrite** — the working
+  canvas layout now tracks dirty state (`layoutDirty`), warns before leaving the
+  Studio (Dashboard/Admin/Venue Map/logout) or refreshing, and shows a "● Unsaved"
+  badge. The Save Layout dialog now offers **Overwrite existing** (updates in
+  place) vs **Save as new copy** instead of silently duplicating. Removed a
+  double clear-confirmation. Test count: **581 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

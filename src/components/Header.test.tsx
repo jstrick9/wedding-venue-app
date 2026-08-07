@@ -188,6 +188,25 @@ describe('Header', () => {
     expect(within(dialog).getByText('My Layout')).toBeInTheDocument();
   });
 
+  it('offers overwrite vs new-copy when saving a layout name that already exists', async () => {
+    const user = userEvent.setup();
+    const onSaveLayout = vi.fn();
+    const onSaveLayoutOverwrite = vi.fn();
+    renderHeader({ onSaveLayout, onSaveLayoutOverwrite });
+
+    await user.click(screen.getByRole('button', { name: /menu/i }));
+    await user.click(screen.getByRole('button', { name: /save layout/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /save layout/i });
+    const input = within(dialog).getByPlaceholderText(/enter layout name/i);
+    fireEvent.change(input, { target: { value: 'My Layout' } }); // exists in fixture
+
+    // Both overwrite and new-copy are available for the colliding name.
+    await user.click(screen.getByRole('button', { name: /overwrite existing/i }));
+    expect(onSaveLayoutOverwrite).toHaveBeenCalledWith('My Layout');
+    expect(onSaveLayout).not.toHaveBeenCalled();
+  });
+
   it('confirms before deleting a saved layout', async () => {
     const user = userEvent.setup();
     const onDeleteSavedLayout = vi.fn();

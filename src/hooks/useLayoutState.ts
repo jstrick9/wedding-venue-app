@@ -314,6 +314,11 @@ function createInitialLayout(venueId: string): Layout {
   };
 }
 
+/** A stable content key for the working layout (tables/fixtures/decor only). */
+function layoutSnapshotKey(layout: Layout): string {
+  return JSON.stringify([layout.tables, layout.fixtures, layout.decor]);
+}
+
 // Main hook
 export function useLayoutState(initialVenueId: string = 'setup-venue') {
   const [venues, setVenuesState] = useState<Venue[]>(() => getVenues());
@@ -332,6 +337,29 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+
+  // ── Unsaved-work (dirty) tracking ──────────────────────────────────────────
+  // The working layout is in-memory until explicitly saved (named layout or the
+  // venue master). We track whether it has drifted from the last clean baseline
+  // (initial load / venue switch / save / load-layout / load-template / save-master)
+  // so the app shell can warn before navigating away or refreshing.
+  const layoutDirtyRef = useRef(false);
+  const [layoutDirty, setLayoutDirty] = useState(false);
+  const layoutBaselineRef = useRef<string>(layoutSnapshotKey(layout));
+
+  // Recompute dirty whenever the working layout changes.
+  useEffect(() => {
+    const dirty = layoutSnapshotKey(layout) !== layoutBaselineRef.current;
+    layoutDirtyRef.current = dirty;
+    setLayoutDirty(dirty);
+  }, [layout]);
+
+  // Clear dirty, treating the current layout as the new baseline.
+  const markLayoutClean = useCallback(() => {
+    layoutBaselineRef.current = layoutSnapshotKey(layout);
+    layoutDirtyRef.current = false;
+    setLayoutDirty(false);
+  }, [layout]);
 
   // Keep the layout-health warnings in sync with the current layout + venue.
   // Collision rules are also enforced at placement time (toasts); this provides
@@ -783,17 +811,16 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
     URL.revokeObjectURL(url);
   }, [guests, layout.tables]);
 
-  // Clear layout
+  // Clear layout. Confirmation is handled by the caller (the Sidebar's
+  // ConfirmDialog), so no native confirm here to avoid a double-prompt.
   const clearLayout = useCallback(() => {
-    if (confirm('Clear all tables and fixtures from this layout?')) {
-      setLayout((prev) => ({
-        ...prev,
-        tables: [],
-        fixtures: [],
-        updatedAt: new Date().toISOString(),
-      }));
-      setSelectedId(null);
-    }
+    setLayout((prev) => ({
+      ...prev,
+      tables: [],
+      fixtures: [],
+      updatedAt: new Date().toISOString(),
+    }));
+    setSelectedId(null);
   }, []);
 
   // Save layout
@@ -814,9 +841,57 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
       };
 
       setSavedLayouts([...savedLayouts, newLayout]);
+      markLayoutClean();
       return newLayout.id;
     },
-    [currentVenue.id, layout.tables, layout.fixtures, layout.decor, guests],
+    [currentVenue.id, layout.tables, layout.fixtures, layout.decor, guests, markLayoutClean],
+  );
+
+  // Save with optional overwrite: if a saved layout with the same name exists,
+  // update it in place (instead of always creating a duplicate); otherwise create
+  // a new one. Returns the id of the layout that was saved/updated.
+  const saveLayoutWithOverwrite = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      const savedLayouts = getSavedLayouts();
+      const existing = savedLayouts.find(
+        (l) => l.name.toLowerCase() === trimmed.toLowerCase(),
+      );
+
+      if (existing) {
+        const updated: SavedLayout = {
+          ...existing,
+          name: trimmed,
+          venueId: currentVenue.id,
+          tables: layout.tables,
+          fixtures: layout.fixtures,
+          decor: layout.decor,
+          guests,
+          updatedAt: new Date().toISOString(),
+        };
+        setSavedLayouts(
+          savedLayouts.map((l) => (l.id === existing.id ? updated : l)),
+        );
+        markLayoutClean();
+        return existing.id;
+      }
+
+      const newLayout: SavedLayout = {
+        id: `saved-${Date.now()}`,
+        name: trimmed,
+        venueId: currentVenue.id,
+        tables: layout.tables,
+        fixtures: layout.fixtures,
+        decor: layout.decor,
+        guests,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setSavedLayouts([...savedLayouts, newLayout]);
+      markLayoutClean();
+      return newLayout.id;
+    },
+    [currentVenue.id, layout.tables, layout.fixtures, layout.decor, guests, markLayoutClean],
   );
 
   // Load layout
@@ -965,10 +1040,12 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
     guests,
     selectedId,
     warnings,
+    layoutDirty,
 
     // Setters
     setSelectedId,
     setOnVenueChange,
+    markLayoutClean,
 
     // Actions
     changeVenue,
@@ -991,6 +1068,7 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
     exportGuestsToCSV,
     clearLayout,
     saveLayout,
+    saveLayoutWithOverwrite,
     loadLayout,
     deleteSavedLayout,
     loadTemplate,

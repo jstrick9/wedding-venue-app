@@ -20,6 +20,8 @@ export interface HeaderProps {
   onChangeVenue: (venueId: string) => void;
   onChangeVenueCategories?: (categories: string[]) => void;
   onSaveLayout: (name: string) => void;
+  /** Saves a layout, overwriting an existing one with the same name (otherwise creates new). */
+  onSaveLayoutOverwrite?: (name: string) => void;
   onSaveMasterLayout?: () => void;
   onClearMasterLayout?: () => void;
   onPrint: () => void;
@@ -47,6 +49,7 @@ export function Header({
   onChangeVenue,
   onChangeVenueCategories,
   onSaveLayout,
+  onSaveLayoutOverwrite,
   onSaveMasterLayout,
   onClearMasterLayout,
   onPrint,
@@ -114,6 +117,21 @@ export function Header({
       setShowSaveModal(false);
     }
   };
+
+  // Overwrites an existing layout with the same name (updates in place).
+  const handleSaveOverwrite = () => {
+    if (layoutName.trim() && onSaveLayoutOverwrite) {
+      onSaveLayoutOverwrite(layoutName.trim());
+      setLayoutName('');
+      setShowSaveModal(false);
+    }
+  };
+
+  const layoutNameExists =
+    layoutName.trim().length > 0 &&
+    savedLayouts.some(
+      (l) => l.name.toLowerCase() === layoutName.trim().toLowerCase(),
+    );
 
   const handleVenueSelect = (venueId: string) => {
     setShowVenueDropdown(false);
@@ -844,17 +862,14 @@ export function Header({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
               autoFocus
             />
-            {layoutName.trim() &&
-              savedLayouts.some(
-                (l) => l.name.toLowerCase() === layoutName.trim().toLowerCase(),
-              ) && (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  ⚠️ A saved layout named "{layoutName.trim()}" already exists. Saving
-                  will create a duplicate.
-                </p>
-              )}
+            {layoutNameExists && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                ⚠️ A saved layout named "{layoutName.trim()}" already exists. You can
+                overwrite it or save a new copy.
+              </p>
+            )}
 
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-wrap gap-3 justify-end">
               <button
                 type="button"
                 onClick={() => setShowSaveModal(false)}
@@ -862,14 +877,36 @@ export function Header({
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!layoutName.trim()}
-                className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Save Layout
-              </button>
+              {layoutNameExists && onSaveLayoutOverwrite ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!layoutName.trim()}
+                    className="px-4 py-2 border border-[#4A1942] text-[#4A1942] rounded-lg hover:bg-[#4A1942]/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Create a new, separate saved layout with this name"
+                  >
+                    Save as new copy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveOverwrite}
+                    className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64]"
+                    title="Update the existing saved layout with this name"
+                  >
+                    Overwrite existing
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!layoutName.trim()}
+                  className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save Layout
+                </button>
+              )}
             </div>
           </div>
         </ModalDialog>

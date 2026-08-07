@@ -71,11 +71,23 @@ export default function AuthenticatedApp() {
   const [view, setView] = useState<'dashboard' | 'studio' | 'admin' | 'venuemap'>('dashboard');
   const [venueMapDirty, setVenueMapDirty] = useState(false);
   const [confirmVenueMapLeave, setConfirmVenueMapLeave] = useState(false);
+  // Guard leaving the studio while the working layout has unsaved changes.
+  const [pendingStudioLeave, setPendingStudioLeave] = useState<(() => void) | null>(null);
 
   const leaveVenueMap = () => {
     if (venueMapDirty) { setConfirmVenueMapLeave(true); return; }
     window.location.hash = '#/studio'; setView('studio'); closeAll();
   };
+
+  // Any navigation away from the Studio (Dashboard/Admin/Venue Map/logout) checks
+  // the layout dirty flag; if set, ask before discarding the in-memory layout.
+  const guardStudioLeave = useCallback((action: () => void) => {
+    if (layoutState.layoutDirty) {
+      setPendingStudioLeave(() => action);
+      return;
+    }
+    action();
+  }, [layoutState.layoutDirty]);
 
   const canOpenAdminPanel = canAccessAdminPanel(user);
   const canOpenOperationsPanel = canAccessOperationsPanel(user);
@@ -594,6 +606,7 @@ export default function AuthenticatedApp() {
       return;
     }
     layoutState.changeVenue(venueId);
+    layoutState.markLayoutClean();
     setTimeout(fitAndCenterVenue, 100);
   }, [layoutState, fitAndCenterVenue]);
 
@@ -602,6 +615,7 @@ export default function AuthenticatedApp() {
     const venueId = pendingVenueChange;
     setPendingVenueChange(null);
     layoutState.changeVenue(venueId);
+    layoutState.markLayoutClean();
     setTimeout(fitAndCenterVenue, 100);
   }, [pendingVenueChange, layoutState, fitAndCenterVenue]);
 
@@ -634,11 +648,52 @@ export default function AuthenticatedApp() {
       : 'Wedding Layout Planner';
   }, [brandingConfig.venueName]);
 
+  // Warn before a browser refresh/close if the working layout has unsaved changes.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (layoutState.layoutDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [layoutState.layoutDirty]);
+
   // Save/delete wrappers that flush to the shared backend after the local
   // localStorage write (no-op when the platform backend is disabled).
   const handleSaveLayoutWithSync = useCallback(
     (name: string) => {
       const id = layoutState.saveLayout(name);
+      layoutState.markLayoutClean();
+      void layoutBackendSync.saveToBackend();
+      showToast(`Layout "${name}" saved.`, 'success');
+      return id;
+    },
+    [layoutState, layoutBackendSync],
+  );
+
+  // Load a saved layout, then treat the loaded content as the clean baseline.
+  const handleLoadSavedLayout = useCallback(
+    (id: string) => {
+      layoutState.loadLayout(id);
+      layoutState.markLayoutClean();
+      handleResetView();
+      showToast('Saved layout loaded.', 'success');
+    },
+    [layoutState, handleResetView],
+  );
+
+  const handleSaveMasterLayout = useCallback(() => {
+    layoutState.saveMasterLayout();
+    layoutState.markLayoutClean();
+    showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success');
+  }, [layoutState]);
+
+  const handleSaveLayoutOverwriteWithSync = useCallback(
+    (name: string) => {
+      const id = layoutState.saveLayoutWithOverwrite(name);
+      layoutState.markLayoutClean();
       void layoutBackendSync.saveToBackend();
       showToast(`Layout "${name}" saved.`, 'success');
       return id;
@@ -671,6 +726,7 @@ export default function AuthenticatedApp() {
       const proceed = () => {
         if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId);
         layoutState.loadTemplate(t);
+        layoutState.markLayoutClean();
         handleResetView();
         closeAll();
       };
@@ -703,7 +759,7 @@ export default function AuthenticatedApp() {
               inline
               onClose={() => { window.location.hash = '#/dashboard'; setView('dashboard'); }}
               currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }}
-              onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }}
+              onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }}
               onOpenVenueMap={() => { window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }}
             />
           ) : (
@@ -808,7 +864,7 @@ export default function AuthenticatedApp() {
             {canOpenAdminPanel && (
               <button
                 type="button"
-                onClick={() => { window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }}
+                onClick={() => guardStudioLeave(() => { window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); })}
                 className="inline-flex items-center gap-1 rounded-md border border-teal-300 bg-teal-50 px-2 py-0.5 text-teal-800 hover:bg-teal-100"
               >
                 🗺️ Venue Map
@@ -821,14 +877,17 @@ export default function AuthenticatedApp() {
             >
               🏛️ Spaces &amp; Layouts
             </button>
-            <button type="button" onClick={() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); }} className="text-[#4A1942] hover:underline">← Dashboard</button>
+            {layoutState.layoutDirty && (
+              <span className="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[10px] font-semibold">● Unsaved</span>
+            )}
+            <button type="button" onClick={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })} className="text-[#4A1942] hover:underline">← Dashboard</button>
           </span>
         </div>
         <Header
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
-          onSaveLayout={handleSaveLayoutWithSync} onSaveMasterLayout={isAdmin ? () => { layoutState.saveMasterLayout(); showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success'); } : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
-          onShowTemplates={() => open('templates')} onShowAdmin={canOpenAdminPanel ? () => { closeAll(); window.location.hash = '#/admin'; setView('admin'); } : undefined} onShowDashboard={() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); }} onLogout={logout} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
-          onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={layoutState.loadLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
+          onSaveLayout={handleSaveLayoutWithSync} onSaveLayoutOverwrite={handleSaveLayoutOverwriteWithSync} onSaveMasterLayout={isAdmin ? handleSaveMasterLayout : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
+          onShowTemplates={() => open('templates')} onShowAdmin={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/admin'; setView('admin'); }) : undefined} onShowDashboard={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })} onLogout={() => guardStudioLeave(logout)} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
+          onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={handleLoadSavedLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
         />
         <AppStatusBar items={statusItems} />
@@ -1003,7 +1062,7 @@ export default function AuthenticatedApp() {
             </CenteredModal>
           )}
           {showDecorDesigner && <DecorDesigner onClose={() => close('decorDesigner')} onSave={(a) => { const currentArrangements = layoutState.getDecorArrangements(); const nextArrangements = currentArrangements.find(x => x.id === a.id) ? currentArrangements.map(x => x.id === a.id ? a : x) : [...currentArrangements, a]; layoutState.setDecorArrangements(nextArrangements); close('decorDesigner'); }} initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null} />}
-          {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
+          {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
           {showOverview && (
             <EventOverview
               guests={layoutState.guests}
@@ -1044,9 +1103,7 @@ export default function AuthenticatedApp() {
               }}
               onOpenVenueMap={canOpenAdminPanel ? () => {
                 setShowLayoutsHome(false);
-                window.location.hash = '#/venuemap';
-                setView('venuemap');
-                closeAll();
+                guardStudioLeave(() => { window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); });
               } : undefined}
               onClose={() => setShowLayoutsHome(false)}
             />
@@ -1091,6 +1148,19 @@ export default function AuthenticatedApp() {
               setPendingOverwrite(null);
             }}
             onCancel={() => setPendingOverwrite(null)}
+          />
+
+          <ConfirmDialog
+            open={!!pendingStudioLeave}
+            title="Discard unsaved layout changes?"
+            message="You have unsaved changes to this layout. Leaving the Studio will discard them. Save the layout first to keep your work."
+            confirmLabel="Leave anyway"
+            onConfirm={() => {
+              const action = pendingStudioLeave;
+              setPendingStudioLeave(null);
+              action?.();
+            }}
+            onCancel={() => setPendingStudioLeave(null)}
           />
         </Suspense>
       </div>
