@@ -9,6 +9,7 @@ import {
   addCoupleCollaborator,
 } from '../services/couples/coupleService';
 import type { CoupleCollaboratorRole } from '../types';
+import { saveVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 
 vi.mock('../hooks/useLayoutState', () => ({
   getVenues: () => [
@@ -46,6 +47,24 @@ describe('CouplesPortal', () => {
     fireEvent.click(screen.getByText('Ceremony Garden'));
     const updated = getCoupleEvents()[0];
     expect(updated.selectedSpaces).toContain('ceremony');
+  });
+
+  it('shows the interactive venue map and lets a couple open a space', () => {
+    // Seed a venue map config (points for ceremony + reception spaces).
+    saveVenueMapConfig({
+      width: 100, height: 80, points: [
+        { id: 'p1', label: 'Ceremony Garden', kind: 'space', x: 20, y: 20, venueId: 'ceremony' },
+        { id: 'p2', label: 'Reception Hall', kind: 'space', x: 60, y: 40, venueId: 'reception' },
+      ], rainContingencies: [], routes: [], updatedAt: new Date().toISOString(),
+    });
+
+    setupSession('Map & Co', { availableSpaces: ['ceremony', 'reception'] });
+    render(<CouplesPortal onExitPortal={() => {}} />);
+    fireEvent.click(screen.getByText('Venue Spaces'));
+
+    // The map section renders.
+    expect(screen.getByText(/Venue map/)).toBeTruthy();
+    expect(screen.getByText(/Tap a space pin to design its layout/)).toBeTruthy();
   });
 
   it('shows invalid invite state for a bad token', () => {

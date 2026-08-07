@@ -11,6 +11,8 @@ export interface VenueMapCanvasProps {
   onSelectPoint?: (id: string | null) => void;
   onMovePoint?: (id: string, x: number, y: number) => void;
   onPlacePoint?: (kind: VenueMapPointKind, x: number, y: number) => void;
+  /** Fired on click/tap of a point even in read-only mode (e.g. couple drill-in). */
+  onPointClick?: (point: VenueMapPoint) => void;
   /** Show labels (default true). */
   showLabels?: boolean;
   /** Forwarded so print/export can capture the rendered SVG. */
@@ -34,6 +36,7 @@ export function VenueMapCanvas({
   onSelectPoint,
   onMovePoint,
   onPlacePoint,
+  onPointClick,
   showLabels = true,
   svgRef,
   title,
@@ -117,7 +120,8 @@ export function VenueMapCanvas({
             <g
               key={p.id}
               onMouseDown={(e) => handlePointDown(e, p)}
-              style={{ cursor: editable ? 'grab' : 'default' }}
+              onClick={(e) => { if (!editable) { e.stopPropagation(); onPointClick?.(p); } }}
+              style={{ cursor: editable ? 'grab' : onPointClick && p.kind !== 'path' ? 'pointer' : 'default' }}
             >
               {p.kind !== 'path' && (
                 <circle

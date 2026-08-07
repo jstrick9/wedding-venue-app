@@ -72,6 +72,7 @@ import { showToast } from './Toast';
 import { createSecretRecord } from '../utils/auth';
 import { sendCoupleEmail } from '../services/couples/coupleEmailService';
 import { CoupleLayoutEditor } from './CoupleLayoutEditor';
+import { VenueMapCanvas } from './VenueMapCanvas';
 
 // Safe formatters that never throw on malformed/incomplete date strings, so the
 // couple portal can't crash with "Invalid time value" from bad schedule/guest data.
@@ -1149,8 +1150,38 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
             <div className="space-y-3">
               <p className="text-sm text-gray-700">
                 Pick which venue spaces you'd like to use for your event (ceremony,
-                reception, cocktail hour, and more).
+                reception, cocktail hour, and more). Tap a pin on the map to open that
+                space, or choose from the list below.
               </p>
+
+              {/* Interactive venue map — drill into spaces/lodging */}
+              {(() => {
+                const vmap = getVenueMapConfig();
+                if (!vmap || vmap.points.length === 0) return null;
+                return (
+                  <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
+                    <h3 className="font-semibold text-sm mb-2">🗺️ Venue map</h3>
+                    <VenueMapCanvas
+                      map={vmap}
+                      editable={false}
+                      onPointClick={(p) => {
+                        if (p.kind === 'space' && p.venueId) {
+                          // Drill into the space: if it's an available event space, open
+                          // the layout editor; if it's lodging, go assign guests/rooms.
+                          if (eligibleSpaces.some((v) => v.id === p.venueId)) {
+                            setLayoutEditorSpace(p.venueId);
+                          } else if (venues.find((v) => v.id === p.venueId)?.category === 'lodging') {
+                            setActiveTab('guests');
+                          }
+                        }
+                      }}
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Tap a space pin to design its layout, or a lodging pin to assign guests &amp; rooms.
+                    </p>
+                  </div>
+                );
+              })()}
               {!canEditSpaces && (
                 <p className="text-xs text-gray-500 italic">View-only — your role cannot change the selected spaces.</p>
               )}
