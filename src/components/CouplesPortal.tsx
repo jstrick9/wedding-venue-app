@@ -2683,10 +2683,21 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           type="button"
                           onClick={() => {
                             if (!newScheduleItem.title.trim()) return;
+                            // If the couple left the time blank, anchor the item to
+                            // noon on its day (instead of an arbitrary "now").
+                            let startTime = '';
+                            if (newScheduleItem.startTime) {
+                              startTime = new Date(newScheduleItem.startTime).toISOString();
+                            } else {
+                              const dayDate = event?.days?.[newScheduleItem.dayIndex]?.date || event?.eventDate;
+                              startTime = dayDate
+                                ? new Date(`${dayDate}T12:00:00`).toISOString()
+                                : new Date().toISOString(); // last resort: keep type valid
+                            }
                             const item: PortalScheduleItem = {
                               id: `sched-${Date.now()}`,
                               title: newScheduleItem.title.trim(),
-                              startTime: newScheduleItem.startTime ? new Date(newScheduleItem.startTime).toISOString() : new Date().toISOString(),
+                              startTime,
                               location: newScheduleItem.location || undefined,
                               dayIndex: newScheduleItem.dayIndex,
                             };
