@@ -54,6 +54,8 @@ const dayKey = (d: Date) => {
 export function VenueDashboard(props: Props) {
   const { isAdmin, isStaff, user } = props;
   const [section, setSection] = useState<Section>('home');
+  // Mobile drawer toggle for the left sidebar.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const venues = useMemo(() => getVenues(), []);
   const config = getConfig();
 
@@ -126,11 +128,19 @@ export function VenueDashboard(props: Props) {
     { id: 'admin', label: 'Admin & System Settings', icon: '🔐', action: () => props.onOpenAdmin() },
     { id: 'studio', label: 'Design Studio', icon: '🎨', action: () => { props.onOpenStudio(); } },
   ];
-  const sidebarItems = items.filter((i) => {
-    if (i.id === 'admin') return props.canAdmin;
-    if (i.id === 'ops') return props.canOps;
-    return true;
-  });
+  const sidebarItems = items
+    .filter((i) => {
+      if (i.id === 'admin') return props.canAdmin;
+      if (i.id === 'ops') return props.canOps;
+      return true;
+    })
+    .map((i) => ({
+      ...i,
+      action: () => {
+        setSidebarOpen(false); // close the mobile drawer on navigation
+        i.action();
+      },
+    }));
 
   const catChip = (cat: string) => {
     const map = { couple: 'bg-[#4A1942]/10 text-[#4A1942]', 'open-house': 'bg-emerald-100 text-emerald-700', staffing: 'bg-amber-100 text-amber-700', blocked: 'bg-red-100 text-red-700', other: 'bg-slate-100 text-slate-700' };
@@ -139,8 +149,24 @@ export function VenueDashboard(props: Props) {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: config.backgroundColor || '#f3f4f6' }}>
-      {/* Persistent left sidebar */}
-      <aside className="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col" style={{ color: config.textColor }}>
+      {/* Mobile hamburger (top-left) */}
+      <button
+        type="button"
+        onClick={() => setSidebarOpen((v) => !v)}
+        className="lg:hidden fixed top-3 left-3 z-30 inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 shadow-sm"
+        aria-expanded={sidebarOpen}
+        aria-label="Toggle navigation menu"
+      >
+        ☰ <span className="hidden sm:inline">Menu</span>
+      </button>
+
+      {/* Persistent left sidebar — off-canvas on mobile, static on lg+ */}
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-20 w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col transition-transform lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ color: config.textColor }}
+      >
         <div className="px-4 py-4 border-b border-gray-100">
           <div className="font-bold" style={{ color: config.primaryColor }}>{config.venueName || 'Venue'}</div>
           <div className="text-xs text-gray-500 mt-0.5">Workspace</div>
@@ -173,8 +199,18 @@ export function VenueDashboard(props: Props) {
         </div>
       </aside>
 
+      {/* Mobile overlay to dismiss the drawer */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-10 lg:hidden bg-black/30"
+        />
+      )}
+
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto p-5">
+      <main className="flex-1 overflow-y-auto p-5 lg:pl-5 pl-16">
         {section === 'home' && (
           <div className="space-y-5">
             <div>
