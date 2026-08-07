@@ -88,8 +88,8 @@ export function VenueDashboard(props: Props) {
         overnightCap += pkg?.maxOvernightGuests || lodging.capacity;
       }
     });
-    return { active: active.length, pending, unread, setupDone, setupTotal, overnightTotal, overnightCap };
-  }, [coupleEvents]);
+    return { active: active.length, pending, unread, setupDone, setupTotal, overnightTotal, overnightCap, blocked: calendarEvents.filter((e) => e.category === 'blocked').length };
+  }, [coupleEvents, calendarEvents]);
 
   const today = dayKey(new Date());
   const in30 = dayKey(new Date(Date.now() + 30 * 86400000));
@@ -264,13 +264,13 @@ export function VenueDashboard(props: Props) {
               </Card>
               <button
                 type="button"
-                onClick={() => setSection('couples')}
+                onClick={() => setSection('calendar')}
                 className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
-                title="Open Couples Portal to approve layouts"
-                aria-label={`${stats.pending} approvals due`}
+                title="Open the calendar to manage availability"
+                aria-label={`${stats.blocked} blocked dates`}
               >
-                <div className={`text-2xl font-bold ${stats.pending > 0 ? 'text-amber-600' : 'text-gray-700'}`}>{stats.pending}</div>
-                <div className="text-xs text-gray-500 mt-0.5">Approvals due</div>
+                <div className={`text-2xl font-bold ${stats.blocked > 0 ? 'text-red-600' : 'text-gray-400'}`}>{stats.blocked}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Blocked dates</div>
               </button>
             </div>
 
