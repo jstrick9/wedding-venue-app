@@ -357,10 +357,12 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       showToast('Enter an event name.', 'warning');
       return;
     }
+    const rawCap = newGuestEvent.capacity.trim();
+    const cap = rawCap === '' ? 25 : Number(rawCap);
     addCoupleGuestEvent(event.id, {
       title: newGuestEvent.title,
       kind: 'custom',
-      capacity: newGuestEvent.capacity ? Number(newGuestEvent.capacity) : 25,
+      capacity: Number.isNaN(cap) || cap < 1 ? 25 : Math.round(cap),
     });
     setNewGuestEvent({ title: '', capacity: '25' });
     setGuestEventTick((t) => t + 1);
@@ -1924,7 +1926,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               type="number"
                               min={1}
                               value={ge.capacity}
-                              onChange={(e) => { updateCoupleGuestEvent(event!.id, ge.id, { capacity: Number(e.target.value) }); setGuestEventTick((t) => t + 1); }}
+                              onChange={(e) => {
+                                const raw = e.target.value.trim();
+                                const n = raw === '' ? 1 : Number(raw);
+                                if (Number.isNaN(n) || n < 1) return; // ignore invalid/empty
+                                updateCoupleGuestEvent(event!.id, ge.id, { capacity: Math.round(n) });
+                                setGuestEventTick((t) => t + 1);
+                              }}
                               className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-xs"
                               aria-label={`Capacity for ${ge.title}`}
                             />
