@@ -1868,7 +1868,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: 'Invited', value: coupleGuests.length, color: 'text-gray-800', icon: '👥' },
-                  { label: 'Attending', value: coupleGuests.filter((g) => coupleRsvps.some((r) => r.guestId === g.id && r.attending)).length, color: 'text-green-600', icon: '✅' },
+                  // "Attending" = guests attending + their plus-ones, since plus-ones
+                  // attend as the guest's guest and add to the headcount/catering.
+                  { label: 'Attending', value: coupleGuests.filter((g) => coupleRsvps.some((r) => r.guestId === g.id && r.attending)).length + coupleRsvps.filter((r) => r.attending && !!r.plusOneName).length, color: 'text-green-600', icon: '✅' },
                   { label: 'Not attending', value: coupleGuests.filter((g) => coupleRsvps.some((r) => r.guestId === g.id && !r.attending)).length, color: 'text-red-600', icon: '❌' },
                   { label: 'No response', value: coupleGuests.filter((g) => !coupleRsvps.some((r) => r.guestId === g.id)).length, color: 'text-amber-600', icon: '⏳' },
                 ].map((s) => (
@@ -1893,13 +1895,19 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
               {/* Meal summary (for catering) */}
               {(() => {
                 const attending = coupleRsvps.filter((r) => r.attending);
+                // Total headcount = attending guests + their plus-ones.
+                const headcount = attending.length + attending.filter((r) => !!r.plusOneName).length;
                 const counts = new Map<string, number>();
                 let unselected = 0;
                 attending.forEach((r) => {
                   if (r.mealChoice) counts.set(r.mealChoice, (counts.get(r.mealChoice) || 0) + 1);
                   else unselected += 1; // attending guest with no meal chosen
-                  // Plus-one meals count toward catering too.
-                  if (r.plusOneMealChoice) counts.set(r.plusOneMealChoice, (counts.get(r.plusOneMealChoice) || 0) + 1);
+                  // Plus-one headcount: a plus-one with a meal counts toward that
+                  // meal; a plus-one without a meal still adds an "unselected" seat.
+                  if (r.plusOneName) {
+                    if (r.plusOneMealChoice) counts.set(r.plusOneMealChoice, (counts.get(r.plusOneMealChoice) || 0) + 1);
+                    else unselected += 1;
+                  }
                 });
                 const totalMeals = Array.from(counts.values()).reduce((a, b) => a + b, 0) + unselected;
                 if (totalMeals === 0) return null;
@@ -1919,7 +1927,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       )}
                     </div>
                     <p className="text-xs text-gray-400 mt-2">
-                      {attending.length} attending · {totalMeals} total meal(s) for catering.
+                      {headcount} attending (incl. plus-ones) · {totalMeals} total meal(s) for catering.
                     </p>
                   </div>
                 );

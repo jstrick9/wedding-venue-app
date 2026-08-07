@@ -850,10 +850,16 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       {/* Per-meal catering summary for the venue */}
                       {(() => {
                         const counts = new Map<string, number>();
+                        let noMeal = 0;
                         rsvps.filter((r) => r.attending).forEach((r) => {
                           if (r.mealChoice) counts.set(r.mealChoice, (counts.get(r.mealChoice) || 0) + 1);
-                          if (r.plusOneMealChoice) counts.set(r.plusOneMealChoice, (counts.get(r.plusOneMealChoice) || 0) + 1);
+                          else noMeal += 1;
+                          if (r.plusOneName) {
+                            if (r.plusOneMealChoice) counts.set(r.plusOneMealChoice, (counts.get(r.plusOneMealChoice) || 0) + 1);
+                            else noMeal += 1;
+                          }
                         });
+                        if (noMeal > 0) counts.set('No meal selected', noMeal);
                         if (counts.size === 0) return null;
                         return (
                           <div className="mb-2 flex flex-wrap gap-1.5">
