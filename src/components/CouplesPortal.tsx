@@ -1350,6 +1350,18 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       showToast('Please select at least one venue space before submitting.', 'warning');
                       return;
                     }
+                    // A soft nudge: warn if no selected space has an actual drawn
+                    // layout yet (the venue will review drawings). The couple can
+                    // still submit if they intend to share notes only.
+                    const layouts = event.spaceLayouts || {};
+                    const hasAnyDrawn = event.selectedSpaces.some((sid) => {
+                      const sl = layouts[sid];
+                      return sl?.layout && (sl.layout.tables.length > 0 || sl.layout.fixtures.length > 0 || sl.layout.decor.length > 0);
+                    });
+                    if (!hasAnyDrawn) {
+                      showToast('You haven\'t drawn a layout for any selected space yet — the venue won\'t have a plan to review. Consider opening the layout editor for each space.', 'warning');
+                      return;
+                    }
                     submitCoupleLayout(event.id, { byName: me?.name });
                     refresh();
                   }}
