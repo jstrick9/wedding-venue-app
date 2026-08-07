@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue dashboard recurring events**: the Today strip + Upcoming pipeline now
+  expand recurring calendar events (weekly/monthly/yearly) across all occurrences.
+  Committed.
 - ✅ **Guest personal events: add-to-calendar + safe time**: the guest's "Your invited
   events" list now has an Add to calendar action and uses safe time formatting.
   Committed.
