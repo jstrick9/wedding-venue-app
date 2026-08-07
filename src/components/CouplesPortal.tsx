@@ -69,6 +69,7 @@ import { getConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
+import { createSecretRecord } from '../utils/auth';
 import { sendCoupleEmail } from '../services/couples/coupleEmailService';
 import { CoupleLayoutEditor } from './CoupleLayoutEditor';
 
@@ -557,14 +558,35 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [newMealOption, setNewMealOption] = useState('');
   const [newScheduleItem, setNewScheduleItem] = useState<{ title: string; startTime: string; location: string; dayIndex: number }>({ title: '', startTime: '', location: '', dayIndex: 0 });
   const [portalSaved, setPortalSaved] = useState(false);
+  // Guest portal password the couple can set/change; empty keeps current, "clear" removes it.
+  const [portalPasswordDraft, setPortalPasswordDraft] = useState('');
+  const [portalPasswordDraftClear, setPortalPasswordDraftClear] = useState(false);
 
   useEffect(() => {
     if (portalConfig) setPortalDraft(portalConfig);
   }, [portalConfig]);
 
-  const savePortalSettings = () => {
+  const savePortalSettings = async () => {
     if (!event || !portalDraft) return;
-    setCouplePortalConfig(event.id, portalDraft);
+    let next = portalDraft;
+    // Handle the portal password: set a new one (hashed), or clear it.
+    const pw = portalPasswordDraft.trim();
+    if (portalPasswordDraftClear) {
+      next = { ...next, portalPasswordHash: undefined, portalPasswordSalt: undefined, portalPassword: undefined };
+      setPortalPasswordDraft('');
+      setPortalPasswordDraftClear(false);
+    } else if (pw) {
+      try {
+        const { hash, salt } = await createSecretRecord(pw);
+        next = { ...next, portalPasswordHash: hash, portalPasswordSalt: salt, portalPassword: undefined };
+      } catch {
+        showToast('Could not secure that password on this device.', 'warning');
+        return;
+      }
+      setPortalPasswordDraft('');
+    }
+    setCouplePortalConfig(event.id, next);
+    setPortalDraft(next);
     setPortalConfigTick((t) => t + 1);
     setPortalSaved(true);
     setTimeout(() => setPortalSaved(false), 2000);
@@ -2611,6 +2633,35 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       <p className="text-[11px] text-gray-400 mt-1">
                         Pick a color that matches your wedding. Leave blank to use the venue's brand color.
                       </p>
+                    </div>
+                    {/* Portal password (optional) */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Portal password (optional)
+                      </label>
+                      <input
+                        type="password"
+                        value={portalPasswordDraft}
+                        onChange={(e) => { setPortalPasswordDraft(e.target.value); setPortalPasswordDraftClear(false); }}
+                        placeholder={portalDraft.portalPasswordHash ? '•••••••• (a password is set — type a new one to change)' : 'Set a password guests must enter'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        aria-label="Guest portal password"
+                        autoComplete="new-password"
+                      />
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Require guests to enter a password to view the portal. Leave blank to keep the current password.
+                      </p>
+                      {portalDraft.portalPasswordHash && (
+                        <label className="mt-2 inline-flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={portalPasswordDraftClear}
+                            onChange={(e) => { setPortalPasswordDraftClear(e.target.checked); if (e.target.checked) setPortalPasswordDraft(''); }}
+                            className="w-4 h-4 rounded border-gray-300"
+                          />
+                          Remove the password (no password required)
+                        </label>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
