@@ -1005,11 +1005,26 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
               {/* Add-ons */}
               <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
-                <h3 className="font-semibold text-sm mb-1">Add-ons you can add</h3>
-                <p className="text-xs text-gray-500 mb-3">
-                  Add extras to your day — lodging, activities, horse &amp; carriage, and more. You can
-                  add or remove these anytime.
-                </p>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1">Add-ons you can add</h3>
+                    <p className="text-xs text-gray-500">
+                      Add extras to your day — lodging, activities, horse &amp; carriage, and more. You can
+                      add or remove these anytime.
+                    </p>
+                  </div>
+                  {coupleAddOns.length > 0 && (() => {
+                    const total = resolvedAddOns.reduce((s, a) => s + (a.price || 0), 0);
+                    return (
+                      <div className="text-right">
+                        <div className="text-[11px] text-gray-400 uppercase tracking-wide">Selected add-ons</div>
+                        <div className="text-lg font-bold text-[#4A1942]">
+                          {coupleAddOns.length} · ${total.toLocaleString()}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
                 {addOnCatalog.length === 0 ? (
                   <p className="text-xs text-gray-400">No add-ons available right now.</p>
                 ) : (
