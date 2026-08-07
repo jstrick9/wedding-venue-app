@@ -7,6 +7,8 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Guest RSVP event checkboxes safe-time**: the "Which events will you attend?"
+  checkboxes now use safe time formatting (no crash on malformed times). Committed.
 - ✅ **Venue dashboard recurring events**: the Today strip + Upcoming pipeline now
   expand recurring calendar events (weekly/monthly/yearly) across all occurrences.
   Committed.
