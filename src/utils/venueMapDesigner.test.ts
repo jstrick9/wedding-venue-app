@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint,
-  addMapRoute, removeMapRoute, renameMapRoute, routePoints, pointColor, updateMapSize,
+  addMapRoute, removeMapRoute, renameMapRoute, duplicateMapPoint, routePoints, pointColor, updateMapSize,
 } from './venueMapDesigner';
 import { emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 
@@ -85,6 +85,35 @@ describe('venue map designer helpers', () => {
     map = updateMapSize(emptyVenueMapConfig(), NaN, 40);
     expect(map.width).toBe(100); // fallback to current width
     expect(map.height).toBe(40);
+  });
+
+  it('duplicates a point at a small offset, labeled "(copy)"', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'Ceremony', kind: 'space', x: 30, y: 30, venueId: 'garden' });
+    const id = map.points[0].id;
+    map = duplicateMapPoint(map, id);
+    expect(map.points).toHaveLength(2);
+    const copy = map.points[1];
+    expect(copy.label).toBe('Ceremony (copy)');
+    expect(copy.x).toBeGreaterThan(30); // offset in +x
+    expect(copy.y).toBeGreaterThan(30); // offset in +y
+    expect(copy.id).not.toBe(id);
+  });
+
+  it('duplicate is clamped to bounds and does not copy route membership', () => {
+    let map = emptyVenueMapConfig(); // 100 x 80
+    map = addMapPoint(map, { label: 'Edge', kind: 'space', x: 95, y: 75 });
+    map = addMapPoint(map, { label: 'Other', kind: 'entry', x: 5, y: 5 });
+    map = addMapRoute(map, 'Walkway', map.points.map((p) => p.id));
+    const id = map.points[0].id;
+    map = duplicateMapPoint(map, id, 20);
+    // The copy is the appended point.
+    const copy = map.points[map.points.length - 1];
+    expect(copy.label).toBe('Edge (copy)');
+    expect(copy.x).toBe(100); // clamped to width
+    expect(copy.y).toBe(80);  // clamped to height
+    // The new point isn't in any route (route only references the two originals).
+    expect(map.routes[0].pointIds).not.toContain(copy.id);
   });
 
   it('renames a route and keeps the existing name for a blank input', () => {

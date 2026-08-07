@@ -193,6 +193,34 @@ export function renameMapRoute(
   };
 }
 
+/**
+ * Duplicate an existing point at a small offset (clamped to bounds). The copy is
+ * labeled "<original> (copy)" so it's distinguishable; it does not join any
+ * existing walkway routes.
+ */
+export function duplicateMapPoint(
+  map: VenueMapConfig,
+  pointId: string,
+  offset = 8,
+): VenueMapConfig {
+  const src = map.points.find((p) => p.id === pointId);
+  if (!src) return map;
+  const x = clampCoord(src.x + offset, map.width);
+  const y = clampCoord(src.y + offset, map.height);
+  const copy: VenueMapPoint = {
+    ...src,
+    id: uid('pt'),
+    x,
+    y,
+    label: `${src.label} (copy)`,
+  };
+  return {
+    ...map,
+    points: [...map.points, copy],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 /** Ordered coordinates for a route (for SVG polyline). */
 export function routePoints(
   map: VenueMapConfig | null,

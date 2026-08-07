@@ -132,6 +132,54 @@ describe('VenueMapDesigner', () => {
     await waitFor(() => expect(screen.getByText(/0 spaces/)).toBeTruthy());
   });
 
+  it('undo covers field-by-field edits (single undo per edit session)', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'Ceremony', kind: 'space', x: 30, y: 30, venueId: 'garden' });
+    const { container } = render(<VenueMapDesigner map={map} venues={venues} onSave={() => {}} />);
+
+    // Select the existing point by mousedown on its circle.
+    const circle = container.querySelectorAll('circle')[0];
+    fireEvent.mouseDown(circle);
+
+    // Edit the label field (a field-level edit).
+    const labelInput = screen.getByLabelText('Label');
+    fireEvent.change(labelInput, { target: { value: 'Main Ceremony' } });
+    // Edit the X coordinate too — same session.
+    const xInput = screen.getByLabelText('X');
+    fireEvent.change(xInput, { target: { value: '45' } });
+
+    // A single undo reverts the whole edit session back to the original point.
+    fireEvent.click(screen.getByRole('button', { name: /Undo/ }));
+    const labelEl = screen.getByLabelText('Label') as HTMLInputElement;
+    expect(labelEl.value).toBe('Ceremony');
+  });
+
+  it('duplicates the selected point via the Copy button', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'Parking', kind: 'parking', x: 40, y: 30 });
+    const { container } = render(<VenueMapDesigner map={map} venues={venues} onSave={() => {}} />);
+    // Select the point by mousedown on its circle.
+    const circle = container.querySelectorAll('circle')[0];
+    fireEvent.mouseDown(circle);
+
+    fireEvent.click(screen.getByRole('button', { name: /Copy/ }));
+    expect(screen.getByText(/2 parking/)).toBeTruthy();
+  });
+
+  it('preview toggle shows a read-only couple/guest view and hides editing chrome', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'Ceremony', kind: 'space', x: 30, y: 30, venueId: 'garden' });
+    render(<VenueMapDesigner map={map} venues={venues} onSave={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Preview/ }));
+    expect(screen.getByText(/couple \/ guest view/i)).toBeTruthy();
+    // The click-to-place palette is hidden in preview.
+    expect(screen.queryByText(/Click canvas to place/)).toBeNull();
+    // Exiting preview restores editing chrome.
+    fireEvent.click(screen.getByRole('button', { name: /Back to editing/ }));
+    expect(screen.getByText(/Click canvas to place/)).toBeTruthy();
+  });
+
   it('palette drives what kind gets placed on the canvas', () => {
     let map = emptyVenueMapConfig();
     const { container } = render(<VenueMapDesigner map={map} venues={venues} onSave={() => {}} />);

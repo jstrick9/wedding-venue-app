@@ -77,6 +77,24 @@ CI now **562 passing / 11 skipped**.
     which both fixes that latent bug and lets the map module handle Delete safely.
 Tests: `VenueMapDesigner.test.tsx` (+2). CI now **564 passing / 11 skipped**.
 
+## Follow-up — field-edit undo, couple/guest preview, duplicate point
+14. **Undo covers field-by-field edits.** Label/kind/GPS/X/Y/venue keystrokes were
+    previously not in the undo stack. Each selected-point "edit session" now
+    captures a single undo snapshot on the first field change, so one Ctrl/Cmd+Z
+    reverts the whole session (cleared on reselect/save). `venueMapDesigner` pure
+    helpers unchanged.
+15. **"Preview as couple/guest" toggle.** A "👁 Preview" header button swaps the
+    editable designer for a read-only, full-width `VenueMapCanvas` (title + legend,
+    tap-a-GPS-pin opens Google Maps) — exactly what couples & guests see — with a
+    banner and a "Back to editing" action. Editing chrome (palette, route builder,
+    side panel) is hidden while previewing.
+16. **Duplicate-point action.** A "⧉ Copy" button on the selected point's panel
+    (plus a pure `duplicateMapPoint` helper) clones the point at a small clamped
+    offset, labels it "(copy)", and selects the copy. Does not join existing
+    walkways; undoable.
+Tests: `venueMapDesigner.test.ts` (+2 duplicate), `VenueMapDesigner.test.tsx`
+(+3). CI now **569 passing / 11 skipped**.
+
 ## Files
 - `src/components/VenueMapCanvas.tsx`
 - `src/components/VenueMapDesigner.tsx`

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Venue, VenueMapConfig, VenueMapPoint, VenueMapPointKind } from '../types';
 import { VenueMapCanvas } from './VenueMapCanvas';
 import {
-  addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint,
+  addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint, duplicateMapPoint,
   addMapRoute, removeMapRoute, renameMapRoute, pointKindLabel, pointKindIcon, pointColor, updateMapSize,
 } from '../utils/venueMapDesigner';
 import { downloadLayoutPng, downloadLayoutPdf } from '../utils/layoutExport';
@@ -41,17 +41,30 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
   const [sizeH, setSizeH] = useState(String(initialMap.height || 80));
   const [undoStack, setUndoStack] = useState<VenueMapConfig[]>([]);
   const [redoStack, setRedoStack] = useState<VenueMapConfig[]>([]);
+  const [preview, setPreview] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   // Captures the pre-drag snapshot so a drag undo is one step, not per-mousemove.
   const pendingDragRef = useRef<VenueMapConfig | null>(null);
+  // Coalesces field-by-field edits (label/kind/GPS/X/Y/venue) into a single undo
+  // step per "edit session" of the selected point (cleared on reselect/save).
+  const fieldUndoCapturedRef = useRef(false);
 
   const selected: VenueMapPoint | undefined = map.points.find((p) => p.id === selectedId);
 
   const update = (next: VenueMapConfig) => { setMap(next); setDirty(true); };
   const persist = (next: VenueMapConfig) => { setMap(next); onSave(next); setDirty(false); };
   // Any edit to a selected point flags unsaved changes so the "Save point"
-  // affordance (and its warning) is honest about the draft state.
-  const editSelected = (next: VenueMapConfig) => { setEditing(true); setMap(next); setDirty(true); };
+  // affordance (and its warning) is honest about the draft state. The first edit
+  // of a session captures an undo snapshot so a whole edit session is one undo.
+  const editSelected = (next: VenueMapConfig) => {
+    if (!fieldUndoCapturedRef.current) {
+      pushUndo(map);
+      fieldUndoCapturedRef.current = true;
+    }
+    setEditing(true);
+    setMap(next);
+    setDirty(true);
+  };
 
   // Notify the shell of unsaved edits so it can guard navigation away from the
   // module (prevents silent loss of in-progress map work).
@@ -71,6 +84,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
     setMap(prev);
     setDirty(true);
     pendingDragRef.current = null;
+    fieldUndoCapturedRef.current = false;
   };
   const redo = () => {
     if (redoStack.length === 0) return;
@@ -80,10 +94,12 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
     setMap(next);
     setDirty(true);
     pendingDragRef.current = null;
+    fieldUndoCapturedRef.current = false;
   };
 
   const handleSelectPoint = (id: string | null) => {
     setSelectedId(id);
+    fieldUndoCapturedRef.current = false;
     if (id) {
       setEditing(false);
       pendingDragRef.current = map; // snapshot pre-drag state for undo coalescing
@@ -127,6 +143,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
 
   const handlePlace = (kind: VenueMapPointKind, x: number, y: number) => {
     pushUndo(map);
+    fieldUndoCapturedRef.current = false;
     const label = `${pointKindLabel(kind)} ${map.points.filter((p) => p.kind === kind).length + 1}`;
     const next = addMapPoint(map, { label, kind, x, y, venueId: kind === 'space' ? '' : undefined });
     setSelectedId(next.points[next.points.length - 1].id);
@@ -148,6 +165,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
     const label = selected.label.trim() || 'Point';
     persist(updateMapPoint(map, selected.id, { label, venueId: selected.venueId || undefined }));
     setEditing(false);
+    fieldUndoCapturedRef.current = false;
     showToast('Point updated.', 'success');
   };
 
@@ -157,12 +175,33 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
     persist(removeMapPoint(map, selected.id));
     setSelectedId(null);
     setEditing(false);
+    fieldUndoCapturedRef.current = false;
     showToast('Point removed.', 'success');
+  };
+
+  /** Duplicate the selected point at a small offset and select the copy. */
+  const duplicateSelected = () => {
+    if (!selected) return;
+    pushUndo(map);
+    fieldUndoCapturedRef.current = false;
+    const next = duplicateMapPoint(map, selected.id);
+    const copy = next.points[next.points.length - 1];
+    setSelectedId(copy.id);
+    setEditing(true);
+    update(next);
+    showToast('Point duplicated.', 'success');
+  };
+
+  /** Open a point's GPS location in Google Maps (used in preview mode). */
+  const openInMaps = (p: VenueMapPoint) => {
+    if (p.lat == null || p.lng == null) return;
+    window.open(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`, '_blank');
   };
 
   /** Place a space pin for a venue that has no pin yet, labeled with its name. */
   const addVenuePin = (venue: Venue) => {
     pushUndo(map);
+    fieldUndoCapturedRef.current = false;
     const offset = map.points.length % 5;
     const row = Math.floor(map.points.length / 5) % 3;
     const next = addMapPoint(map, {
@@ -251,12 +290,49 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
           >
             Redo ↪
           </button>
+          <button
+            type="button"
+            onClick={() => setPreview((p) => !p)}
+            className={`px-3 py-1.5 rounded-lg border text-sm ${preview ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+            title="Preview the map as a couple or guest would see it"
+          >
+            {preview ? '✕ Exit preview' : '👁 Preview'}
+          </button>
           <button type="button" onClick={() => void exportMap('png')} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">🖼️ PNG</button>
           <button type="button" onClick={() => void exportMap('pdf')} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">📄 PDF</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {preview ? (
+          /* Preview as couple/guest: read-only full map, editing chrome hidden */
+          <div className="lg:col-span-3 space-y-3">
+            <div className="rounded-xl border border-teal-300 bg-teal-50/60 p-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="text-sm font-semibold text-teal-800">👁 Preview — couple / guest view</span>
+                <p className="text-xs text-teal-700 mt-0.5">
+                  This is the read-only map couples &amp; guests see. Tap a GPS pin to open it
+                  in Google Maps. Editing controls are hidden.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreview(false)}
+                className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+              >
+                Back to editing
+              </button>
+            </div>
+            <VenueMapCanvas
+              map={map}
+              editable={false}
+              onPointClick={openInMaps}
+              title={mapTitle}
+              showLegend
+            />
+          </div>
+        ) : (
+        <>
         {/* Canvas */}
         <div className="lg:col-span-2">
           <div className="relative">
@@ -479,8 +555,9 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
               {selected.venueId && (
                 <p className="text-xs text-gray-500">→ {linkedVenueName(selected.venueId)}</p>
               )}
-              <div className="flex gap-2 pt-1">
+              <div className="flex flex-wrap gap-2 pt-1">
                 <button type="button" onClick={saveSelected} className="flex-1 px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-sm">Save point</button>
+                <button type="button" onClick={duplicateSelected} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50" title="Duplicate this point">⧉ Copy</button>
                 <button type="button" onClick={() => { setEditing(false); setSelectedId(null); }} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600">Cancel</button>
                 <button type="button" onClick={removeSelected} className="px-3 py-1.5 rounded-lg border border-red-200 text-sm text-red-600 hover:bg-red-50">Delete</button>
               </div>
@@ -532,6 +609,8 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       <div className="flex justify-end gap-2">

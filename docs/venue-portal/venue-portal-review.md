@@ -15,9 +15,10 @@ P1 = valuable, P2 = polish).*
   map now carries a title + color legend, the module guards leaving with
   unsaved changes ("● Unsaved" + confirm), walkways can be renamed inline, a
   fresh map shows an empty-state "how to start" hint, and the designer gained
-  undo/redo (buttons + Ctrl/Cmd+Z) and keyboard Delete. Floor-plan keyboard
-  shortcuts are now scoped to the Studio view. Test count:
-  **564 passing / 11 skipped**. Committed.
+  undo/redo (buttons + Ctrl/Cmd+Z) covering field-by-field edits too, keyboard
+  Delete, a "👁 Preview as couple/guest" read-only toggle, and a "⧉ Copy"
+  duplicate-point action. Floor-plan keyboard shortcuts are now scoped to the
+  Studio view. Test count: **569 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design
