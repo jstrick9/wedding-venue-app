@@ -915,6 +915,13 @@ export default function AuthenticatedApp() {
                 setShowLayoutsHome(false);
                 handleTemplateSelect(t);
               }}
+              onOpenVenueMap={canOpenAdminPanel ? () => {
+                setShowLayoutsHome(false);
+                try { localStorage.setItem(STORAGE_KEYS.ADMIN_LAST_TAB, 'wayfinding'); } catch { /* ignore */ }
+                window.location.hash = '#/admin';
+                setView('admin');
+                closeAll();
+              } : undefined}
               onClose={() => setShowLayoutsHome(false)}
             />
           )}

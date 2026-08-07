@@ -12,6 +12,7 @@ export interface StudioLayoutsHomeProps {
   canEdit: boolean;
   onOpenVenue: (venueId: string) => void;
   onSelectTemplate: (template: LayoutTemplate) => void;
+  onOpenVenueMap?: () => void;
   onClose: () => void;
 }
 
@@ -28,6 +29,7 @@ export function StudioLayoutsHome({
   canEdit,
   onOpenVenue,
   onSelectTemplate,
+  onOpenVenueMap,
   onClose,
 }: StudioLayoutsHomeProps) {
   const [selectedCategory, setSelectedCategory] = useState<'all' | string>('all');
@@ -48,6 +50,26 @@ export function StudioLayoutsHome({
       className="max-w-5xl"
     >
       <div className="space-y-6">
+        {/* Full-venue map shortcut */}
+        {onOpenVenueMap && (
+          <button
+            type="button"
+            onClick={onOpenVenueMap}
+            className="w-full rounded-xl border border-teal-300 bg-teal-50 p-4 text-left hover:border-teal-400 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🗺️</span>
+              <div>
+                <div className="font-semibold text-gray-800">Design the full-venue map</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  Map every space, lodging, parking &amp; entry; then print/export your Venue Map for wayfinding.
+                </div>
+              </div>
+              <span className="ml-auto text-teal-700 font-medium text-sm">Open →</span>
+            </div>
+          </button>
+        )}
+
         {/* Summary strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="p-4">

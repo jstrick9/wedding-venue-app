@@ -147,3 +147,40 @@ describe('StudioLayoutsHome', () => {
     expect(onSelectTemplate).toHaveBeenCalledWith(templates[0]);
   });
 });
+
+describe('StudioLayoutsHome full-venue map shortcut', () => {
+  it('calls onOpenVenueMap when present and shows the shortcut', () => {
+    const onOpenVenueMap = vi.fn();
+    render(
+      <StudioLayoutsHome
+        venues={venues}
+        currentVenueId="v1"
+        templates={templates}
+        layoutCategories={categories}
+        canEdit
+        onOpenVenue={vi.fn()}
+        onSelectTemplate={vi.fn()}
+        onOpenVenueMap={onOpenVenueMap}
+        onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Design the full-venue map/ }));
+    expect(onOpenVenueMap).toHaveBeenCalled();
+  });
+
+  it('hides the map shortcut when onOpenVenueMap is undefined', () => {
+    render(
+      <StudioLayoutsHome
+        venues={venues}
+        currentVenueId="v1"
+        templates={templates}
+        layoutCategories={categories}
+        canEdit
+        onOpenVenue={vi.fn()}
+        onSelectTemplate={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Design the full-venue map/ })).toBeNull();
+  });
+});
