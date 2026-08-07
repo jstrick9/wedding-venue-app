@@ -107,7 +107,7 @@ export function exportCoupleGuestsCsv(
   const guests = getCoupleGuests(coupleEventId);
   const byId = new Map((rsvps || []).map((r) => [r.guestId, r]));
   const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const header = ['Name', 'Email', 'Phone', 'RSVP', 'Meal', 'Plus One', 'Dietary Notes'];
+  const header = ['Name', 'Email', 'Phone', 'RSVP', 'Meal', 'Plus One', 'Dietary Notes', 'Table / Seat', 'Room'];
   const rows = guests.map((g) => {
     const r = byId.get(g.id);
     return [
@@ -118,6 +118,8 @@ export function exportCoupleGuestsCsv(
       r?.mealChoice || '',
       r?.plusOneName || '',
       r?.dietaryNotes || '',
+      g.tableId || '',
+      g.roomId || '',
     ].map(esc).join(',');
   });
   const csv = [header.join(','), ...rows].join('\n');
