@@ -799,6 +799,11 @@ export default function AuthenticatedApp() {
           <span className="font-semibold text-gray-700">🎨 Layout Studio</span>
           <span className="text-gray-300">/</span>
           <span>{layoutState.currentVenue.name}</span>
+          {layoutState.currentVenue.isMaster ? (
+            <span className="rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-[10px] font-semibold" title="This space's layout is the venue master.">★ Master</span>
+          ) : (
+            <span className="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[10px] font-semibold" title="This space is a draft — its layout is not yet the venue master.">Draft</span>
+          )}
           <span className="ml-auto flex items-center gap-3">
             {canOpenAdminPanel && (
               <button
