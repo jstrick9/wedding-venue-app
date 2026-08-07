@@ -1034,12 +1034,12 @@ export const defaultLayoutTemplates: LayoutTemplate[] = [
     category: 'ceremony',
     venueId: 'ceremony-lawn',
     tables: [
-      { id: 'c1', type: 'table', specId: 'ceremony-chair-row', x: 15, y: 15, rotation: 0, label: 'Row 1 Left', guests: [] },
-      { id: 'c2', type: 'table', specId: 'ceremony-chair-row', x: 45, y: 15, rotation: 0, label: 'Row 1 Right', guests: [] },
-      { id: 'c3', type: 'table', specId: 'ceremony-chair-row', x: 15, y: 22, rotation: 0, label: 'Row 2 Left', guests: [] },
-      { id: 'c4', type: 'table', specId: 'ceremony-chair-row', x: 45, y: 22, rotation: 0, label: 'Row 2 Right', guests: [] },
-      { id: 'c5', type: 'table', specId: 'ceremony-chair-row', x: 15, y: 30, rotation: 0, label: 'Row 3 Left', guests: [] },
-      { id: 'c6', type: 'table', specId: 'ceremony-chair-row', x: 45, y: 30, rotation: 0, label: 'Row 3 Right', guests: [] },
+      { id: 'c1', type: 'table', specId: 'seating-ceremony-row', x: 15, y: 15, rotation: 0, label: 'Row 1 Left', guests: [] },
+      { id: 'c2', type: 'table', specId: 'seating-ceremony-row', x: 45, y: 15, rotation: 0, label: 'Row 1 Right', guests: [] },
+      { id: 'c3', type: 'table', specId: 'seating-ceremony-row', x: 15, y: 22, rotation: 0, label: 'Row 2 Left', guests: [] },
+      { id: 'c4', type: 'table', specId: 'seating-ceremony-row', x: 45, y: 22, rotation: 0, label: 'Row 2 Right', guests: [] },
+      { id: 'c5', type: 'table', specId: 'seating-ceremony-row', x: 15, y: 30, rotation: 0, label: 'Row 3 Left', guests: [] },
+      { id: 'c6', type: 'table', specId: 'seating-ceremony-row', x: 45, y: 30, rotation: 0, label: 'Row 3 Right', guests: [] },
     ],
     fixtures: [
       { id: 'f1', type: 'fixture', specId: 'altar', x: 30, y: 5, rotation: 0, label: 'Altar' },
