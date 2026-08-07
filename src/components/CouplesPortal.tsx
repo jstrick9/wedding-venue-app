@@ -1749,14 +1749,21 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     {preferredVendors.map((v) => {
                       const already = coupleVendors.some((cv) => cv.venueVendorId === v.id);
                       return (
-                        <div key={v.id} className="rounded-lg border border-gray-200 p-3 flex items-center justify-between gap-3">
+                        <div key={v.id} className="rounded-lg border border-gray-200 p-3 flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-800">{v.name}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-800">{v.name}</span>
+                              {v.rating ? <span className="text-xs text-amber-500">⭐ {v.rating}</span> : null}
+                            </div>
                             <div className="text-xs text-gray-500 truncate">
                               {vendorCategoryLabel(v.category)}
                               {v.contactName ? ` · ${v.contactName}` : ''}
                               {v.email ? ` · ${v.email}` : ''}
+                              {v.website ? ` · ${v.website}` : ''}
                             </div>
+                            {v.description && (
+                              <p className="text-xs text-gray-600 mt-1 line-clamp-2">{v.description}</p>
+                            )}
                           </div>
                           {canManageGuests && (
                             <button
