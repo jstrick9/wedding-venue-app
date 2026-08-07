@@ -7,6 +7,11 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Couple onboarding "next step" CTA** — the couple's Overview now shows a smart
+  "Next step" card that walks them through Questions → Spaces → Design → Guests →
+  Portal in order (with an inline CTA), and a "completed" state. Committed.
+- ✅ **RSVP deadline guidance** — added a hint under the couple's RSVP-deadline field
+  and a "Set to ~3 weeks before your event" quick-set button. Committed.
 - ✅ **Plus-one per-event headcount**: the couple's "RSVPs per event" now includes
   plus-ones in attending counts (and over-capacity flagging). Committed.
 - ✅ **Plus-one headcount**: the couple's Attending KPI and catering meal accounting
