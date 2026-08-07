@@ -406,6 +406,20 @@ export default function AuthenticatedApp() {
     layoutState.updateLayout({ tables: snapshot.tables, fixtures: snapshot.fixtures, decor: snapshot.decor || [], });
   }, [layoutState]);
 
+  // Clear the whole layout as a single undoable action. Previously it called
+  // clearLayout() directly with no undo snapshot, so an accidental "Clear All
+  // Items" was irreversible (unlike single-item delete).
+  const handleClearLayout = useCallback(() => {
+    const hasItems =
+      layoutState.layout.tables.length > 0 ||
+      layoutState.layout.fixtures.length > 0 ||
+      (layoutState.layout.decor || []).length > 0;
+    if (!hasItems) return;
+    pushUndoSnapshot();
+    layoutState.clearLayout();
+    showToast('Layout cleared.', 'success');
+  }, [layoutState, pushUndoSnapshot]);
+
   async function handleAutoRepair() {
     await createEmergencyRecoverySnapshot({ id: user.id, name: user.name });
     const repaired = recoverCorruptDomains();
@@ -816,7 +830,7 @@ export default function AuthenticatedApp() {
         <div className="flex-1 flex overflow-hidden">
           <Sidebar
             width={sidebarWidth} collapsed={sidebarCollapsed} onWidthChange={setSidebarWidth} onCollapsedChange={setSidebarCollapsed} zoom={zoom} onZoomChange={setZoom} showGrid={showGrid} onShowGridChange={setShowGrid} gridSize={gridSize} onGridSizeChange={setGridSize} gridContrast={gridContrast} onGridContrastChange={setGridContrast} snapToGrid={snapToGrid} onSnapToGridChange={setSnapToGrid}
-            onDragStart={handleDragStart} onDragEnd={handleDragEnd} currentDragItem={dragItem} onClearLayout={layoutState.clearLayout} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })}
+            onDragStart={handleDragStart} onDragEnd={handleDragEnd} currentDragItem={dragItem} onClearLayout={handleClearLayout} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })}
             layoutCategories={layoutCategories} currentVenueCategory={layoutState.currentVenue.category} venueWidth={layoutState.currentVenue.width} venueHeight={layoutState.currentVenue.height} canvasWidth={layoutState.currentVenue.canvasWidth} canvasHeight={layoutState.currentVenue.canvasHeight}
             onResetView={handleResetView} onResetToVenue={handleResetToVenue} onResetToCanvas={handleResetToCanvas} placedTables={layoutState.layout.tables} placedFixtures={layoutState.layout.fixtures} currentUser={user}
           />
