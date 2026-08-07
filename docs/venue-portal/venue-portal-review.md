@@ -7,6 +7,10 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Wayfinding point coordinate validation** — fixed a bug where clearing or
+  typing non-numeric X/Y coordinates (or going out of bounds) produced NaN/0 and
+  broke the venue map; addPoint now validates finite non-negative in-bounds values.
+  Committed.
 - ✅ **Couple onboarding "next step" CTA** — the couple's Overview now shows a smart
   "Next step" card that walks them through Questions → Spaces → Design → Guests →
   Portal in order (with an inline CTA), and a "completed" state. Committed.
