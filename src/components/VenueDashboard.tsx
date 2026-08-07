@@ -4,7 +4,7 @@ import { VenueCalendar } from './VenueCalendar';
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { getCoupleSetupTasks } from '../services/couples/coupleSetupService';
 import { getCoupleGuestEvents, getAssignedGuestCount } from '../services/couples/coupleGuestEventService';
-import { getVenueCalendarEvents } from '../services/calendar/venueCalendarService';
+import { getVenueCalendarEvents, recurringDatesForEvent } from '../services/calendar/venueCalendarService';
 import { getUnreadCoupleMessageCounts } from '../services/couples/coupleChatService';
 import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { getVenues } from '../hooks/useLayoutState';
@@ -108,8 +108,20 @@ export function VenueDashboard(props: Props) {
         }
       });
     });
-    calendarEvents.filter((e) => e.date >= today && e.date <= in60).forEach((e) => {
-      list.push({ date: e.date, title: e.title, category: e.category, id: e.id, venueEv: e });
+    calendarEvents.forEach((e) => {
+      if (e.recurrence) {
+        // Recurring events (weekly/monthly/yearly open houses, etc.) should show up
+        // on every occurrence within the window, not just the seed date.
+        recurringDatesForEvent(e, today, in60).forEach((d) => {
+          if (d && d >= today && d <= in60) {
+            list.push({ date: d, title: e.title, category: e.category, id: `${e.id}-${d}`, venueEv: e });
+          }
+        });
+        return;
+      }
+      if (e.date >= today && e.date <= in60) {
+        list.push({ date: e.date, title: e.title, category: e.category, id: e.id, venueEv: e });
+      }
     });
     return list.sort((a, b) => (a.date < b.date ? -1 : 1)).slice(0, 12);
   }, [coupleEvents, calendarEvents, today, in60]);
@@ -314,7 +326,10 @@ export function VenueDashboard(props: Props) {
                 if (e.eventDate === today) return true;
                 return (e.days || []).some((d) => d.date === today);
               }).map((e) => ({ id: e.id, title: e.coupleName, category: 'couple' }));
-              const todayEvents = [...todayCouples, ...calendarEvents.filter((e) => e.date === today)];
+              const todayEvents = [
+                ...todayCouples,
+                ...calendarEvents.filter((e) => e.date === today || (e.recurrence && recurringDatesForEvent(e, today, today).length > 0)),
+              ];
               if (todayEvents.length === 0) return null;
               return (
                 <Card className="px-4 py-3 flex items-center gap-3">
