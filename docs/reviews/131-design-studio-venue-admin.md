@@ -42,3 +42,17 @@ single-file build all green.
 - `src/components/Sidebar.tsx`
 - `src/components/PropertiesPanel.seating.test.tsx`
 - `src/utils/spaceSeating.ts` (new) + `src/utils/spaceSeating.test.ts` (new)
+
+## Follow-up — undoable Clear All + Studio space-picker demand
+4. **"Clear All Items" is now undoable.** It previously called `clearLayout()`
+   directly with no undo snapshot, so an accidental clear of the whole layout was
+   irreversible (single-item delete is undoable). It now pushes an undo snapshot
+   first and no-ops on an empty layout. Committed separately (`6e0da5a`).
+5. **Studio space picker shows couple demand.** The Layout Studio home now lists,
+   per venue card, the **booked couples** and **"up to N guests"** (largest expected
+   guest count) for each space — so the venue admin sees at a glance which spaces
+   need seating capacity attention. Backed by a tested pure helper
+   `coupleDemandForVenue` (`src/utils/spaceSeating.ts`, +3 tests).
+
+## CI (final)
+577 passing / 11 skipped. Build/typecheck/lint green.

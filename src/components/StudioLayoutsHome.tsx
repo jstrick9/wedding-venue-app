@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Venue, LayoutTemplate, LayoutCategoryInfo } from '../types';
 import { Badge, Card, EmptyState } from './ui';
 import ModalDialog from './ModalDialog';
 import { formatDate, formatTime } from '../utils/dateTime';
+import { getCoupleEvents } from '../services/couples/coupleService';
+import { coupleDemandForVenue } from '../utils/spaceSeating';
 
 export interface StudioLayoutsHomeProps {
   venues: Venue[];
@@ -33,6 +35,11 @@ export function StudioLayoutsHome({
   onClose,
 }: StudioLayoutsHomeProps) {
   const [selectedCategory, setSelectedCategory] = useState<'all' | string>('all');
+
+  // Couple demand per space (guest management lives in the couples portal; the
+  // venue still needs to see which spaces are booked and how many guests to seat).
+  const coupleEvents = useMemo(() => getCoupleEvents(), []);
+  const demandFor = (venueId: string) => coupleDemandForVenue(coupleEvents, venueId);
 
   const filteredTemplates =
     selectedCategory === 'all'
@@ -107,6 +114,7 @@ export function StudioLayoutsHome({
                 const isCurrent = v.id === currentVenueId;
                 const master = v.masterLayout;
                 const masterTables = master?.tables?.length ?? 0;
+                const demand = demandFor(v.id);
                 return (
                   <Card key={v.id} className={`p-4 ${isCurrent ? 'ring-2 ring-[#4A1942]' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
@@ -126,6 +134,17 @@ export function StudioLayoutsHome({
                         <dt>Seating capacity</dt>
                         <dd className="font-medium text-gray-900">{v.capacity || '—'}</dd>
                       </div>
+                      {demand.couples > 0 && (
+                        <div className="flex justify-between">
+                          <dt>Booked couples</dt>
+                          <dd className="font-medium text-gray-900">
+                            {demand.couples}
+                            {demand.maxGuests > 0 && (
+                              <span className="text-gray-500 font-normal"> · up to {demand.maxGuests} guests</span>
+                            )}
+                          </dd>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <dt>Dimensions</dt>
                         <dd className="font-medium text-gray-900">

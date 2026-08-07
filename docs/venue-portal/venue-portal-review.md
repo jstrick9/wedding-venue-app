@@ -25,6 +25,10 @@ P1 = valuable, P2 = polish).*
   the canvas (shows the booked couples, the largest expected guest count, and a
   ⚠️ under-capacity flag when placed seats can't cover it). Test count:
   **574 passing / 11 skipped**. Committed.
+- ✅ **Design Studio follow-up** — "Clear All Items" is now undoable (was
+  irreversible), and the Studio space picker shows each space's booked couples and
+  largest expected guest count so the venue can prioritize seating. Test count:
+  **577 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

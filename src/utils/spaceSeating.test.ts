@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeSpaceSeating } from './spaceSeating';
+import { computeSpaceSeating, coupleDemandForVenue } from './spaceSeating';
 
 describe('computeSpaceSeating (Design Studio venue verification)', () => {
   it('reports no couples when none are booked into the space', () => {
@@ -43,5 +43,31 @@ describe('computeSpaceSeating (Design Studio venue verification)', () => {
     ]);
     expect(info.expectedGuests).toBe(0);
     expect(info.underCapacity).toBe(false);
+  });
+});
+
+describe('coupleDemandForVenue (Studio space picker)', () => {
+  it('aggregates couples + max guests for a selected space', () => {
+    const demand = coupleDemandForVenue([
+      { selectedSpaces: ['ballroom'], guestCount: 120 },
+      { selectedSpaces: ['ballroom', 'garden'], guestCount: 80 },
+      { selectedSpaces: ['garden'], guestCount: 60 },
+    ], 'ballroom');
+    expect(demand.couples).toBe(2);
+    expect(demand.maxGuests).toBe(120);
+  });
+
+  it('returns zero when no couple uses the space', () => {
+    const demand = coupleDemandForVenue([
+      { selectedSpaces: ['garden'], guestCount: 60 },
+    ], 'ballroom');
+    expect(demand.couples).toBe(0);
+    expect(demand.maxGuests).toBe(0);
+  });
+
+  it('is tolerant of missing selectedSpaces', () => {
+    const demand = coupleDemandForVenue([{ guestCount: 40 }], 'ballroom');
+    expect(demand.couples).toBe(0);
+    expect(demand.maxGuests).toBe(0);
   });
 });

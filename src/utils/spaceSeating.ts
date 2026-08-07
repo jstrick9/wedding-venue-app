@@ -36,3 +36,30 @@ export function computeSpaceSeating(
     hasCouples: couples.length > 0,
   };
 }
+
+export interface SpaceCoupleDemand {
+  /** Number of couples that have selected this space. */
+  couples: number;
+  /** Largest expected guest count among those couples (0 if none). */
+  maxGuests: number;
+}
+
+/** A couple event as needed for venue-demand aggregation. */
+export interface SpaceEventLike {
+  selectedSpaces?: string[];
+  guestCount?: number;
+}
+
+/**
+ * Aggregate couple demand for a single venue space (for the Studio space picker).
+ */
+export function coupleDemandForVenue(
+  events: SpaceEventLike[],
+  venueId: string,
+): SpaceCoupleDemand {
+  const relevant = events.filter((ev) => (ev.selectedSpaces || []).includes(venueId));
+  return {
+    couples: relevant.length,
+    maxGuests: relevant.reduce((m, c) => Math.max(m, c.guestCount || 0), 0),
+  };
+}
