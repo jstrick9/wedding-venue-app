@@ -842,7 +842,11 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                             return (
                               <div key={g.id} className="flex flex-col gap-1 text-sm">
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className="text-gray-700 truncate">{g.name}</span>
+                                  <span className="text-gray-700 truncate">
+                                    {g.name}
+                                    {g.tableId ? <span className="text-gray-400"> • 🪑 {g.tableId}</span> : ''}
+                                    {g.roomId ? <span className="text-gray-400"> • 🛏️ {g.roomId}</span> : ''}
+                                  </span>
                                 <span className="flex items-center gap-2 shrink-0">
                                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                                     rsvp ? (rsvp.attending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-500'

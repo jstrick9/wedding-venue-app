@@ -258,7 +258,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [guestForm, setGuestForm] = useState({ name: '', email: '', phone: '' });
   const [expandedGuestRsvp, setExpandedGuestRsvp] = useState<string | null>(null);
   const [guestError, setGuestError] = useState('');
-  const [editingGuest, setEditingGuest] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
+  const [editingGuest, setEditingGuest] = useState<{ id: string; name: string; email: string; phone: string; tableId?: string; roomId?: string } | null>(null);
   // Guest list search + RSVP filter so large weddings stay navigable.
   const [guestSearch, setGuestSearch] = useState('');
   const [guestFilter, setGuestFilter] = useState<'all' | 'attending' | 'not-attending' | 'no-response'>('all');
@@ -443,6 +443,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       name: editingGuest.name.trim(),
       email: editingGuest.email.trim(),
       phone: editingGuest.phone.trim(),
+      tableId: editingGuest.tableId?.trim() || undefined,
+      roomId: editingGuest.roomId?.trim() || undefined,
     });
     setEditingGuest(null);
     setGuestTick((t) => t + 1);
@@ -2100,6 +2102,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                               <div className="font-medium text-sm text-gray-800 truncate">{g.name}</div>
                               <div className="text-xs text-gray-500 truncate">
                                 {g.email || '—'} {g.phone ? `• ${g.phone}` : ''}
+                                {g.tableId ? ` • 🪑 ${g.tableId}` : ''}
+                                {g.roomId ? ` • 🛏️ ${g.roomId}` : ''}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
@@ -2163,7 +2167,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             {canManageGuests && (
                               <button
                                 type="button"
-                                onClick={() => setEditingGuest({ id: g.id, name: g.name, email: g.email || '', phone: g.phone || '' })}
+                                onClick={() => setEditingGuest({ id: g.id, name: g.name, email: g.email || '', phone: g.phone || '', tableId: g.tableId || '', roomId: g.roomId || '' })}
                                 className="text-xs text-gray-500 hover:underline"
                               >
                                 ✏️ Edit
@@ -2186,7 +2190,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             </div>
                           </div>
                           {editingGuest && editingGuest.id === g.id && (
-                            <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-4 gap-2">
+                            <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-2">
                               <input
                                 type="text"
                                 value={editingGuest.name}
@@ -2210,6 +2214,22 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                 placeholder="Phone"
                                 aria-label="Edit guest phone"
+                              />
+                              <input
+                                type="text"
+                                value={editingGuest.tableId || ''}
+                                onChange={(e) => setEditingGuest({ ...editingGuest, tableId: e.target.value })}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Table / seat (e.g. Table 4)"
+                                aria-label="Edit guest table or seat"
+                              />
+                              <input
+                                type="text"
+                                value={editingGuest.roomId || ''}
+                                onChange={(e) => setEditingGuest({ ...editingGuest, roomId: e.target.value })}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Room (e.g. Room 12)"
+                                aria-label="Edit guest room"
                               />
                               <div className="flex gap-2">
                                 <button
