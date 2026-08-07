@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Calendar event detail + guest-event location**: the venue calendar detail now
+  shows end time, venue space, notes, and recurrence; couples can set a guest
+  event's location (shown in venue + guest itinerary). Committed.
 - ✅ **Safe date formatting, guest-event day/time editing, capacity warnings**: the
   couple portal no longer crashes on malformed dates; the couple can edit a guest
   event's day + start time; the venue creation form warns when guest count exceeds
