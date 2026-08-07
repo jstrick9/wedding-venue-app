@@ -1090,7 +1090,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
                                   {ge.dayIndex != null && ev.days?.[ge.dayIndex] ? `Day ${ge.dayIndex + 1} (${ev.days[ge.dayIndex].date})` : 'All days'}
-                                  {ge.startTime ? ` · ${new Date(ge.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                  {ge.startTime ? ` · ${(() => { try { return new Date(ge.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return ge.startTime; } })()}` : ''}
+                                  {ge.location ? ` · 📍 ${ge.location}` : ''}
                                 </div>
                                 {invitedNames.length > 0 && (
                                   <div className="mt-1 text-xs text-gray-500 truncate" title={invitedNames.join(', ')}>

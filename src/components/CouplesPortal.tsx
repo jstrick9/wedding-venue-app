@@ -366,7 +366,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [event, guestEventTick],
   );
-  const [newGuestEvent, setNewGuestEvent] = useState({ title: '', capacity: '25' });
+  const [newGuestEvent, setNewGuestEvent] = useState({ title: '', capacity: '25', location: '' });
   const addGuestEvent = () => {
     if (!event || !newGuestEvent.title.trim()) {
       showToast('Enter an event name.', 'warning');
@@ -378,8 +378,9 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       title: newGuestEvent.title,
       kind: 'custom',
       capacity: Number.isNaN(cap) || cap < 1 ? 25 : Math.round(cap),
+      location: newGuestEvent.location.trim() || undefined,
     });
-    setNewGuestEvent({ title: '', capacity: '25' });
+    setNewGuestEvent({ title: '', capacity: '25', location: '' });
     setGuestEventTick((t) => t + 1);
   };
   // Resolve the couple's selected add-ons to their catalog entries.
@@ -1950,7 +1951,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             )}
                           </div>
                         </div>
-                        {/* Edit schedule (capacity, time) */}
+                        {/* Edit schedule (capacity, time, location) */}
                         {canManageGuests && (
                           <div className="mt-2 flex flex-wrap items-center gap-3">
                             <label className="flex items-center gap-2 text-xs text-gray-500">
@@ -1968,6 +1969,20 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 }}
                                 className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-xs"
                                 aria-label={`Capacity for ${ge.title}`}
+                              />
+                            </label>
+                            <label className="flex items-center gap-2 text-xs text-gray-500">
+                              Location
+                              <input
+                                type="text"
+                                value={ge.location || ''}
+                                onChange={(e) => {
+                                  updateCoupleGuestEvent(event!.id, ge.id, { location: e.target.value || undefined });
+                                  setGuestEventTick((t) => t + 1);
+                                }}
+                                placeholder="e.g. Garden"
+                                className="px-2 py-1 border border-gray-300 rounded-lg text-xs w-32"
+                                aria-label={`Location for ${ge.title}`}
                               />
                             </label>
                             <label className="flex items-center gap-2 text-xs text-gray-500">
@@ -2017,6 +2032,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input type="text" value={newGuestEvent.title} onChange={(e) => setNewGuestEvent({ ...newGuestEvent, title: e.target.value })} placeholder="Event name" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Custom event name" />
                       <input type="number" value={newGuestEvent.capacity} min={1} onChange={(e) => setNewGuestEvent({ ...newGuestEvent, capacity: e.target.value })} placeholder="Capacity" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Custom event capacity" />
+                      <input type="text" value={newGuestEvent.location} onChange={(e) => setNewGuestEvent({ ...newGuestEvent, location: e.target.value })} placeholder="Location (optional)" className="px-3 py-2 border border-gray-300 rounded-lg text-sm sm:col-span-2" aria-label="Custom event location" />
                     </div>
                     <button type="button" onClick={addGuestEvent} className="mt-2 px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-xs font-medium hover:bg-[#3b1435]">+ Add event</button>
                   </div>
