@@ -43,6 +43,10 @@ P1 = valuable, P2 = polish).*
   venue-switch + template-overwrite guards use the dirty tracker instead of item
   count (protects metadata-only edits from silent loss). Test count:
   **582 passing / 11 skipped**. Committed.
+- ✅ **Design Studio: decor data-integrity** — deleting a decor arrangement now
+  scrubs stale `appliedArrangementId` references from placed tables/fixtures (no
+  more broken "Design Active" badge / "Edit Design"). Test count:
+  **584 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

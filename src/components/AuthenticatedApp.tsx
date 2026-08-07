@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { useLayoutState, getSavedLayouts, setSavedLayouts, getTemplates, getTableSpecs, getFixtureTypes } from '../hooks/useLayoutState';
+import { useLayoutState, getSavedLayouts, setSavedLayouts, getTemplates, getTableSpecs, getFixtureTypes, getDecorArrangements } from '../hooks/useLayoutState';
+import { scrubArrangementRefs } from '../utils/decorCleanup';
 import { useLayoutBackendSync } from '../hooks/useLayoutBackendSync';
 import { useEntityBackendSync } from '../hooks/useEntityBackendSync';
 import { EventAnswer, EventQuestion, LayoutTemplate } from '../types';
@@ -406,6 +407,30 @@ export default function AuthenticatedApp() {
       void entityBackendSync.saveDomainToBackend(type);
     });
   }, [entityBackendSync]);
+
+  // Data-integrity: when decor arrangements change (a design is deleted), scrub
+  // stale appliedArrangementId references from placed tables/fixtures so no item
+  // points at a deleted design (broken "Design Active" badge / "Edit Design").
+  useEffect(() => {
+    return on('spm_data_changed', () => {
+      const valid = new Set(getDecorArrangements().map((a) => a.id));
+      const tablesNeedScrub = layoutState.layout.tables.some(
+        (t) => t.appliedArrangementId && !valid.has(t.appliedArrangementId),
+      );
+      const fixturesNeedScrub = layoutState.layout.fixtures.some(
+        (f) => f.appliedArrangementId && !valid.has(f.appliedArrangementId),
+      );
+      if (!tablesNeedScrub && !fixturesNeedScrub) return;
+      layoutState.updateLayout({
+        tables: tablesNeedScrub
+          ? scrubArrangementRefs(layoutState.layout.tables, valid)
+          : layoutState.layout.tables,
+        fixtures: fixturesNeedScrub
+          ? scrubArrangementRefs(layoutState.layout.fixtures, valid)
+          : layoutState.layout.fixtures,
+      });
+    });
+  }, [layoutState]);
   const pushUndoSnapshot = useCallback(() => {
     const snapshot = {
       tables: [...layoutState.layout.tables], fixtures: [...layoutState.layout.fixtures],

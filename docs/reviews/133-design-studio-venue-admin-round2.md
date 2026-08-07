@@ -26,11 +26,21 @@ data-loss protection, and dependency conflicts.
 - `Header.test.tsx` (+1): "Clear Master Layout" asks for confirmation and only
   clears after the venue admin confirms.
 
-## CI
-582 passing / 11 skipped (was 581). Typecheck, event-bus lint, unused-locals, and
+## Follow-up — decor arrangement data-integrity
+4. **Deleting a decor arrangement now scrubs stale references.** Placed
+   tables/fixtures with an `appliedArrangementId` pointing at a deleted design kept
+   a stale reference (a "Design Active" badge that no longer resolves and a broken
+   "Edit Design" action). Added a pure `scrubArrangementRefs` helper and wired a
+   listener in `AuthenticatedApp` that, on any decor-arrangements change, removes
+   `appliedArrangementId` from items whose design no longer exists.
+   Tests: `src/utils/decorCleanup.test.ts` (new, 2).
+
+## CI (final)
+584 passing / 11 skipped (was 582). Typecheck, event-bus lint, unused-locals, and
 single-file build all green.
 
 ## Files
 - `src/components/AuthenticatedApp.tsx`
 - `src/components/Header.tsx`
 - `src/components/Header.test.tsx`
+- `src/utils/decorCleanup.ts` (new) + `src/utils/decorCleanup.test.ts` (new)
