@@ -51,7 +51,7 @@ describe('venue operations & staffing (venue admin)', () => {
   it('assigning staff to a calendar event creates one shift per staff member', () => {
     const ev: VenueCalendarEvent = {
       id: 'ev1', title: 'Open House', category: 'open-house', date: '2026-09-10',
-      startTime: '10:00', endTime: '14:00', assignees: ['u1', 'u2'],
+      startTime: '10:00', endTime: '14:00', assignees: ['u1', 'u2'], createdAt: new Date().toISOString(),
     };
     syncShiftsForCalendarEvent(ev);
     const shifts = getShiftsForCalendarEvent('ev1');
@@ -63,7 +63,7 @@ describe('venue operations & staffing (venue admin)', () => {
   });
 
   it('unassigning staff reconciles shifts (removes dropped assignees)', () => {
-    const ev: VenueCalendarEvent = { id: 'ev1', title: 'Open House', category: 'open-house', date: '2026-09-10', startTime: '10:00', assignees: ['u1', 'u2'] };
+    const ev: VenueCalendarEvent = { id: 'ev1', title: 'Open House', category: 'open-house', date: '2026-09-10', startTime: '10:00', assignees: ['u1', 'u2'], createdAt: new Date().toISOString() };
     syncShiftsForCalendarEvent(ev);
     expect(getShiftsForCalendarEvent('ev1')).toHaveLength(2);
     syncShiftsForCalendarEvent({ ...ev, assignees: ['u1'] });
@@ -73,7 +73,7 @@ describe('venue operations & staffing (venue admin)', () => {
   });
 
   it('deleting a calendar event removes its linked shifts', () => {
-    const ev: VenueCalendarEvent = { id: 'ev1', title: 'Setup', category: 'staffing', date: '2026-09-11', assignees: ['u1'] };
+    const ev: VenueCalendarEvent = { id: 'ev1', title: 'Setup', category: 'staffing', date: '2026-09-11', assignees: ['u1'], createdAt: new Date().toISOString() };
     syncShiftsForCalendarEvent(ev);
     expect(getShiftsForCalendarEvent('ev1')).toHaveLength(1);
     removeShiftsForCalendarEvent('ev1');
