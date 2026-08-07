@@ -7,6 +7,12 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue-admin focused sweep**: package delete now warns when couples are assigned
+  (prevents silently detaching them + removing derived guest events); couple's
+  preferred-vendor picker shows rating/website/description the venue curated; venue
+  timeline date-only days display as the correct local day (UTC off-by-one); dashboard
+  deduped duplicate "Approvals due" KPI into a useful "Blocked dates" metric; venue
+  calendar gained a Delete action (was impossible to delete events). Committed.
 - ✅ **Venue calendar: add Delete action on event detail** — venue admins previously
   could create/edit calendar events but had no way to delete them. Added a Delete
   action (with confirm) that also cleans up linked staff shifts. Committed.
