@@ -41,6 +41,15 @@ the canvas never leaves points off-map). `updateMapSize` is covered by two new
 helper tests (resize+clamp, bound-clamping / NaN fallback). Test count
 **543 passing / 11 skipped**.
 
+## Follow-up — guest portal maps share the renderer
+The guest portal's "Venue Map" card and the Wayfinding tab previously duplicated
+their own SVG map code (inline color mapping + `routePolyline`). Both now render
+the shared `VenueMapCanvas` (read-only) wired to `onPointClick={(p) => openInMaps(p)}`,
+keeping the tap-a-pin → Google Maps behavior with a single map renderer. The now
+unused `routePolyline` import/usage was removed. Added a static
+`GuestPortal.sharedMap.test.ts` guarding against the duplication returning.
+Test count **545 passing / 11 skipped**.
+
 ## Files
 - `src/components/AuthenticatedApp.tsx`
 - `src/components/admin/VenueWayfindingManagement.tsx`

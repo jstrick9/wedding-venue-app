@@ -69,8 +69,8 @@ import {
   getVenueMapConfig,
   getVenueRules,
   coupleWayfindingPoints,
-  routePolyline,
 } from '../services/wayfinding/venueWayfindingService';
+import { VenueMapCanvas } from './VenueMapCanvas';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import {
   guestCanAccessLodging,
@@ -868,26 +868,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
           return (
             <div className="bg-white rounded-xl shadow p-4 mt-2">
               <h2 className="text-sm font-semibold text-gray-800 mb-3">Venue Map</h2>
-              <div className="rounded-lg border border-teal-100 overflow-hidden">
-                <svg viewBox={`0 0 ${vmap.width} ${vmap.height}`} preserveAspectRatio="xMidYMid meet" className="w-full h-56 bg-teal-50">
-                  {(vmap.routes || []).map((route) => {
-                    const pts = routePolyline(vmap, route.id);
-                    if (pts.length < 2) return null;
-                    return (
-                      <polyline key={route.id} points={pts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#14b8a6" strokeWidth={1} strokeDasharray="2,1.5" />
-                    );
-                  })}
-                  {vmap.points.filter((p) => p.kind !== 'path').map((p) => {
-                    const color = p.kind === 'space' ? '#0d9488' : p.kind === 'parking' ? '#6366f1' : p.kind === 'entry' ? '#16a34a' : '#f59e0b';
-                    return (
-                      <g key={p.id} onClick={() => openInMaps(p)} style={{ cursor: p.lat != null && p.lng != null ? 'pointer' : 'default' }}>
-                        <circle cx={p.x} cy={p.y} r={4} fill={color} stroke="white" strokeWidth={1} />
-                        <text x={p.x + 5} y={p.y - 3} fontSize={5} fill="#374151">{p.label}</text>
-                      </g>
-                    );
-                  })}
-                </svg>
-              </div>
+              <VenueMapCanvas
+                map={vmap}
+                onPointClick={(p) => openInMaps(p)}
+              />
               <div className="mt-1 text-[10px] text-gray-400 px-1">
                 Tap a pin that has GPS to open it in Google Maps.
               </div>
@@ -1212,52 +1196,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     return (
       <div className="space-y-4 pb-24">
         <div className="bg-white rounded-xl shadow p-4 mt-4">
-          <div className="relative w-full h-64 bg-teal-50 rounded-lg border border-teal-100 overflow-hidden">
-            <svg viewBox={`0 0 ${venueMap!.width} ${venueMap!.height}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-              {/* Drawn walkway routes */}
-              {(venueMap!.routes || []).map((route) => {
-                const pts = routePolyline(venueMap, route.id);
-                if (pts.length < 2) return null;
-                return (
-                  <polyline
-                    key={route.id}
-                    points={pts.map((p) => `${p.x},${p.y}`).join(' ')}
-                    fill="none"
-                    stroke="#14b8a6"
-                    strokeWidth={1}
-                    strokeDasharray="2,1.5"
-                  />
-                );
-              })}
-              {/* Paths */}
-              {venueMap!.points
-                .filter((p) => p.kind === 'path')
-                .map((p) => (
-                  <circle key={p.id} cx={p.x} cy={p.y} r={1.2} fill="#94a3b8" />
-                ))}
-              {/* Space/parking/entry points */}
-              {venueMap!.points
-                .filter((p) => p.kind !== 'path')
-                .map((p) => {
-                  const color =
-                    p.kind === 'space'
-                      ? '#0d9488'
-                      : p.kind === 'parking'
-                        ? '#6366f1'
-                        : p.kind === 'entry'
-                          ? '#16a34a'
-                          : '#f59e0b';
-                  return (
-                    <g key={p.id} onClick={() => openInMaps(p)} style={{ cursor: p.lat != null && p.lng != null ? 'pointer' : 'default' }}>
-                      <circle cx={p.x} cy={p.y} r={4} fill={color} stroke="white" strokeWidth={1} />
-                      <text x={p.x + 5} y={p.y - 3} fontSize={5} fill="#374151">{p.label}</text>
-                    </g>
-                  );
-                })}
-            </svg>
-            <div className="mt-1 text-[10px] text-gray-400 px-1">
-              Tip: tap a pin that has GPS to open it in Google Maps.
-            </div>
+          <VenueMapCanvas
+            map={venueMap!}
+            onPointClick={(p) => openInMaps(p)}
+          />
+          <div className="mt-1 text-[10px] text-gray-400 px-1">
+            Tip: tap a pin that has GPS to open it in Google Maps.
           </div>
 
           <div className="mt-4 space-y-3">

@@ -22,6 +22,11 @@ P1 = valuable, P2 = polish).*
   block to set the canvas width/height (clamped to 20–500, points re-clamped when
   the map shrinks beneath them; pure `updateMapSize` helper + tests). Test count:
   **543 passing / 11 skipped**. Committed.
+- ✅ **Guest portal maps use the shared `VenueMapCanvas`** — the guest portal's
+  "Venue Map" card and the Wayfinding tab no longer hand-roll their own SVG map;
+  both now use the shared renderer (one source of truth), keeping the tap-a-pin
+  → open-in-Google-Maps behavior via `onPointClick`. Removed the duplicated
+  `routePolyline` map code. Test count: **545 passing / 11 skipped**. Committed.
 - ✅ **Couple drill-in via the map** — the couple's Venue Spaces tab now shows an
   interactive map; clicking a space opens its layout editor, clicking a lodging
   point jumps to guest/room assignment. Committed.
