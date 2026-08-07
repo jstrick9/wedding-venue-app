@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Guest-access-closes guard**: the couple's Portal Settings "Guest access closes"
+  field now treats empty/NaN as the default 36h instead of 0/NaN (which would close
+  the portal at event-day end or break grace-period math). Committed.
 - ✅ **Guest CSV export includes Table/Seat & Room**: the couple's exported guest list
   now carries seating and lodging assignments (which were editable but not exported).
   Committed.
