@@ -119,13 +119,27 @@ export function VenueWayfindingManagement({ venues, onShowSuccess }: Props) {
       onShowSuccess('Enter both latitude and longitude (or leave both blank).');
       return;
     }
+    // Validate the SVG x/y coordinates so a NaN or out-of-bounds value can't break
+    // the map rendering (an invalid <circle cx=NaN> silently breaks wayfinding).
+    const xN = Number(newPoint.x);
+    const yN = Number(newPoint.y);
+    if (!Number.isFinite(xN) || !Number.isFinite(yN) || xN < 0 || yN < 0) {
+      onShowSuccess('X and Y must be valid coordinates (0 or greater).');
+      return;
+    }
     const m = ensureMap();
+    const mWidth = m.width || 1000;
+    const mHeight = m.height || 1000;
+    if (xN > mWidth || yN > mHeight) {
+      onShowSuccess(`Coordinates should be within the map (0–${mWidth} × 0–${mHeight}).`);
+      return;
+    }
     const p: VenueMapPoint = {
       id: `pt-${Date.now()}`,
       label: newPoint.label.trim() || 'Point',
       kind: newPoint.kind,
-      x: newPoint.x,
-      y: newPoint.y,
+      x: xN,
+      y: yN,
       venueId: newPoint.kind === 'space' ? newPoint.venueId || undefined : undefined,
       lat: latN,
       lng: lngN,
