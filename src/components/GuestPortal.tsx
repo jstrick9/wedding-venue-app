@@ -1344,8 +1344,15 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             {rsvpDeadline && (
               <p className="text-sm text-gray-700">
                 The RSVP deadline was{' '}
-                {safeDate((config as any)?.rsvpDeadlineDate)}
-                .
+                {(() => {
+                  const raw = (config as any)?.rsvpDeadlineDate as string | undefined;
+                  // Format the deadline as the intended local day (a date-only value
+                  // is the whole local day, not UTC midnight).
+                  if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+                    return new Date(raw + 'T00:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+                  }
+                  return safeDate(raw);
+                })()}.
               </p>
             )}
           </div>
