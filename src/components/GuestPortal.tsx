@@ -1033,21 +1033,41 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
           <div className="rounded-xl bg-white shadow p-4 mt-2">
             <h2 className="text-sm font-semibold text-gray-800 mb-2">Your invited events</h2>
             <div className="space-y-2">
-              {personalEvents.map((e) => (
+              {personalEvents.map((e) => {
+                const st = e.startTime;
+                return (
                 <div key={e.id} className="flex items-center justify-between gap-3 text-sm">
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-medium text-gray-800">{e.title}</div>
                     <div className="text-xs text-gray-500">
                       {e.dayIndex != null ? `Day ${e.dayIndex + 1}` : ''}
-                      {e.startTime ? ` · ${new Date(e.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                      {st ? ` · ${safeTime(st)}` : ''}
                       {e.location ? ` · ${e.location}` : ''}
                     </div>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--accent)]">
-                    {rsvpForm.attendingEvents?.includes(e.id) ? 'Attending' : 'Invited'}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {st && (
+                      <button
+                        type="button"
+                        onClick={() => handleAddToCalendar({
+                          id: e.id,
+                          title: e.title,
+                          location: e.location,
+                          startTime: st,
+                        })}
+                        className="text-[11px] px-2 py-1 rounded-lg bg-[var(--accent-light)] text-[var(--accent)]"
+                        title="Add to my calendar"
+                      >
+                        📅 Add to calendar
+                      </button>
+                    )}
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--accent)]">
+                      {rsvpForm.attendingEvents?.includes(e.id) ? 'Attending' : 'Invited'}
+                    </span>
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
