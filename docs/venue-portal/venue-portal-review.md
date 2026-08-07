@@ -7,6 +7,12 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue-admin persona: Print/export** — fixed a genuine bug: the built-in
+  "Traditional Ceremony" template referenced a non-existent table spec
+  (`ceremony-chair-row`; correct id is `seating-ceremony-row`), which broke template
+  rendering and made backup restore fail preflight validation. Added persona tests
+  for floor-plan PDF validity and backup/restore round-trip. Test count:
+  **513 passing / 11 skipped**. Committed.
 - ✅ **Venue-admin persona: Admin & System Settings** — added tests for Access Control
   (RBAC role→permission resolution incl. inheritance, fail-closed on deleted role)
   and team invites (create + accept in local mode). Verified RBAC roles/groups/audit
