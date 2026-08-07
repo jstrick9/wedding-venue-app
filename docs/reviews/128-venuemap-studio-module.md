@@ -30,8 +30,16 @@ first-class module, not hidden inside the admin settings console.
   union + hash route present; `VenueMapDesigner` imported/rendered with
   `getVenueMapConfig`/`emptyVenueMapConfig`/`saveVenueMapConfig`; the shortcut no
   longer writes `ADMIN_LAST_TAB` or routes to `#/admin`.
-- Full suite: **541 passing / 11 skipped** (was 535). Typecheck, event-bus lint,
+- Full suite: **543 passing / 11 skipped** (was 535). Typecheck, event-bus lint,
   unused-locals, and single-file build all green.
+
+## Follow-up — map canvas size editing
+Added a "📐 Map size" block to the designer side panel (width/height inputs +
+"Apply size"), backed by a pure `updateMapSize(map, w, h)` helper that clamps the
+dimensions to 20–500 and re-clamps every point into the new bounds (so shrinking
+the canvas never leaves points off-map). `updateMapSize` is covered by two new
+helper tests (resize+clamp, bound-clamping / NaN fallback). Test count
+**543 passing / 11 skipped**.
 
 ## Files
 - `src/components/AuthenticatedApp.tsx`

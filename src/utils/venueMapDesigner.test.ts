@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint,
-  addMapRoute, removeMapRoute, routePoints, pointColor,
+  addMapRoute, removeMapRoute, routePoints, pointColor, updateMapSize,
 } from './venueMapDesigner';
 import { emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 
@@ -59,5 +59,31 @@ describe('venue map designer helpers', () => {
     expect(pointColor('space')).toBe('#0d9488');
     expect(pointColor('parking')).toBe('#6366f1');
     expect(pointColor('path')).toBe('#94a3b8');
+  });
+
+  it('resizes the map and clamps points back into bounds', () => {
+    let map = emptyVenueMapConfig(); // 100 x 80
+    map = addMapPoint(map, { label: 'Ceremony', kind: 'space', x: 90, y: 75 });
+    map = addMapPoint(map, { label: 'Parking', kind: 'parking', x: 5, y: 5 });
+    // Shrink below existing points -> they clamp into the new bounds.
+    map = updateMapSize(map, 50, 40);
+    expect(map.width).toBe(50);
+    expect(map.height).toBe(40);
+    const ceremony = map.points.find((p) => p.label === 'Ceremony')!;
+    expect(ceremony.x).toBe(50);
+    expect(ceremony.y).toBe(40);
+    // Grow keeps points where they are.
+    map = updateMapSize(map, 200, 160);
+    expect(map.width).toBe(200);
+    expect(map.points.find((p) => p.label === 'Parking')!.x).toBe(5);
+  });
+
+  it('clamps size input to sane bounds and ignores non-finite values', () => {
+    let map = updateMapSize(emptyVenueMapConfig(), 5, 9999); // below/above bounds
+    expect(map.width).toBe(20);
+    expect(map.height).toBe(500);
+    map = updateMapSize(emptyVenueMapConfig(), NaN, 40);
+    expect(map.width).toBe(100); // fallback to current width
+    expect(map.height).toBe(40);
   });
 });

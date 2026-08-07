@@ -13,6 +13,10 @@ import {
 
 const uid = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+/** Minimum/maximum map canvas dimensions (abstract map units). */
+const MIN_SIZE = 20;
+const MAX_SIZE = 500;
+
 /** A point's kind-dependent accent color (shared by designer + read-only views). */
 export function pointColor(kind: VenueMapPointKind): string {
   switch (kind) {
@@ -64,6 +68,33 @@ export function addMapPoint(
 function clampCoord(v: number, max: number): number {
   if (!Number.isFinite(v)) return 0;
   return Math.max(0, Math.min(Math.round(v * 10) / 10, max));
+}
+
+function clampSize(v: number, fallback: number): number {
+  if (!Number.isFinite(v)) return fallback;
+  return Math.max(MIN_SIZE, Math.min(Math.round(v), MAX_SIZE));
+}
+
+/** Resize the map canvas, clamping every point back into the new bounds. */
+export function updateMapSize(
+  map: VenueMapConfig,
+  width: number,
+  height: number,
+): VenueMapConfig {
+  const w = clampSize(width, map.width);
+  const h = clampSize(height, map.height);
+  const clampPoint = (p: VenueMapPoint) => ({
+    ...p,
+    x: clampCoord(p.x, w),
+    y: clampCoord(p.y, h),
+  });
+  return {
+    ...map,
+    width: w,
+    height: h,
+    points: map.points.map(clampPoint),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 /** Move an existing point to a new position (clamped). */

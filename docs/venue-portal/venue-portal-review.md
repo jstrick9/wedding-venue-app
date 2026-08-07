@@ -18,6 +18,10 @@ P1 = valuable, P2 = polish).*
   designer →" button instead of embedding the editor (single source of truth). Map
   editing stays RBAC-gated to admins. Test count: **541 passing / 11 skipped**.
   Committed.
+- ✅ **Map canvas size editing** — the designer's side panel now has a "Map size"
+  block to set the canvas width/height (clamped to 20–500, points re-clamped when
+  the map shrinks beneath them; pure `updateMapSize` helper + tests). Test count:
+  **543 passing / 11 skipped**. Committed.
 - ✅ **Couple drill-in via the map** — the couple's Venue Spaces tab now shows an
   interactive map; clicking a space opens its layout editor, clicking a lodging
   point jumps to guest/room assignment. Committed.

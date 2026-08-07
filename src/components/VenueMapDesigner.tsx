@@ -3,7 +3,7 @@ import { Venue, VenueMapConfig, VenueMapPoint, VenueMapPointKind } from '../type
 import { VenueMapCanvas } from './VenueMapCanvas';
 import {
   addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint,
-  addMapRoute, removeMapRoute, pointKindLabel, pointKindIcon, pointColor,
+  addMapRoute, removeMapRoute, pointKindLabel, pointKindIcon, pointColor, updateMapSize,
 } from '../utils/venueMapDesigner';
 import { downloadLayoutPng, downloadLayoutPdf } from '../utils/layoutExport';
 import { showToast } from './Toast';
@@ -30,6 +30,8 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
   const [routeName, setRouteName] = useState('');
   const [routePointIds, setRoutePointIds] = useState<string[]>([]);
   const [editing, setEditing] = useState(false);
+  const [sizeW, setSizeW] = useState(String(initialMap.width || 100));
+  const [sizeH, setSizeH] = useState(String(initialMap.height || 80));
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const selected: VenueMapPoint | undefined = map.points.find((p) => p.id === selectedId);
@@ -164,6 +166,52 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose }: V
 
         {/* Side panel */}
         <div className="space-y-3">
+          {/* Map size */}
+          <div className="rounded-xl border border-gray-200 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-800">📐 Map size</span>
+              <span className="text-xs text-gray-400">{Math.round(map.width)}×{Math.round(map.height)}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-xs text-gray-500">Width
+                <input
+                  type="number"
+                  value={sizeW}
+                  min={20}
+                  max={500}
+                  onChange={(e) => setSizeW(e.target.value)}
+                  className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                  aria-label="Map width"
+                />
+              </label>
+              <label className="block text-xs text-gray-500">Height
+                <input
+                  type="number"
+                  value={sizeH}
+                  min={20}
+                  max={500}
+                  onChange={(e) => setSizeH(e.target.value)}
+                  className="mt-1 w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                  aria-label="Map height"
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = updateMapSize(map, Number(sizeW), Number(sizeH));
+                setSizeW(String(next.width));
+                setSizeH(String(next.height));
+                update(next);
+                showToast(`Map resized to ${next.width}×${next.height}.`, 'success');
+              }}
+              className="w-full px-3 py-1.5 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+            >
+              Apply size
+            </button>
+            <p className="text-[11px] text-gray-400">Points are clamped if the map shrinks beneath them.</p>
+          </div>
+
           {!selected ? (
             <div className="rounded-xl border border-dashed border-gray-300 p-4 text-center text-sm text-gray-500">
               Click a point on the map (or place a new one) to edit its details.
