@@ -922,6 +922,38 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 </div>
               </div>
 
+              {/* Smart "next step" call-to-action */}
+              {(() => {
+                if (!canEditDesign && !canManageGuests && !canAnswerQuestions) return null;
+                const steps: { label: string; hint: string; done: boolean; tab: TabId }[] = [
+                  { label: 'Answer the venue\'s questions', hint: 'Narrows which spaces work for your day', done: coupleAnswers.length > 0, tab: 'questions' },
+                  { label: 'Select your venue spaces', hint: 'Choose the spaces you\'ll use', done: event.selectedSpaces.length > 0, tab: 'spaces' },
+                  { label: 'Design & submit your layouts', hint: 'The venue reviews and approves these', done: event.layoutStatus === 'pending' || event.layoutStatus === 'approved', tab: 'design' },
+                  { label: 'Invite your guests', hint: 'Send each guest their own link', done: coupleGuests.length > 0, tab: 'guests' },
+                  { label: 'Personalize your guest portal', hint: 'Theme, schedule, meal options', done: portalPersonalized, tab: 'portal' },
+                ];
+                const next = steps.find((s) => !s.done);
+                if (!next) {
+                  return (
+                    <div className="rounded-xl bg-green-50 border border-green-200 p-4">
+                      <p className="text-sm font-semibold text-green-800">🎉 You've completed all the planning steps!</p>
+                      <p className="text-xs text-green-700 mt-1">Keep refining in the other tabs anytime.</p>
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(next.tab)}
+                    className="w-full text-left rounded-xl bg-[#4A1942] text-white p-4 shadow-sm hover:bg-[#3b1435] transition-colors"
+                  >
+                    <p className="text-[11px] uppercase tracking-wide text-white/70">Next step</p>
+                    <p className="font-semibold mt-1">👉 {next.label}</p>
+                    <p className="text-xs text-white/80 mt-0.5">{next.hint} — tap to get started →</p>
+                  </button>
+                );
+              })()}
+
               {/* Weather for the event days (helps plan outdoor spaces) */}
               {(() => {
                 const dates = eventDates(event.eventDate, event.eventEndDate);
