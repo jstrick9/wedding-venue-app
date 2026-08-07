@@ -7,6 +7,12 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue calendar: add Delete action on event detail** — venue admins previously
+  could create/edit calendar events but had no way to delete them. Added a Delete
+  action (with confirm) that also cleans up linked staff shifts. Committed.
+- ✅ **Venue dashboard: dedupe KPIs** — replaced the duplicate "Approvals due" KPI
+  (same count as "Awaiting layout review") with a useful "Blocked dates" availability
+  metric. Committed.
 - ✅ **Guest-event removal scrubs RSVP references** — removing a guest event now also
   removes it from guests' RSVP `attendingEvents`, so per-event headcounts and guest
   itineraries don't reference a deleted event. Committed.
