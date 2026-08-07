@@ -38,6 +38,11 @@ P1 = valuable, P2 = polish).*
   badge. The Save Layout dialog now offers **Overwrite existing** (updates in
   place) vs **Save as new copy** instead of silently duplicating. Removed a
   double clear-confirmation. Test count: **581 passing / 11 skipped**. Committed.
+- ✅ **Design Studio venue-admin round 2** — Properties panel Duplicate/Delete are
+  now undoable (matched to keyboard), "Clear Master Layout" now confirms, and the
+  venue-switch + template-overwrite guards use the dirty tracker instead of item
+  count (protects metadata-only edits from silent loss). Test count:
+  **582 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

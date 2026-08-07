@@ -207,6 +207,29 @@ describe('Header', () => {
     expect(onSaveLayout).not.toHaveBeenCalled();
   });
 
+  it('confirms before clearing the master layout', async () => {
+    const user = userEvent.setup();
+    const onClearMasterLayout = vi.fn();
+    renderHeader({
+      isAdmin: true,
+      currentVenue: {
+        ...venues[0],
+        masterLayout: { tables: [], fixtures: [], decor: [], savedAt: new Date().toISOString() },
+      } as any,
+      onClearMasterLayout,
+    });
+
+    await user.click(screen.getByRole('button', { name: /menu/i }));
+    await user.click(screen.getByRole('button', { name: /clear master layout/i }));
+
+    // Confirmation appears; clear does not happen yet.
+    expect(screen.getByText(/clear master layout/i)).toBeInTheDocument();
+    expect(onClearMasterLayout).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /clear master$/i }));
+    expect(onClearMasterLayout).toHaveBeenCalledTimes(1);
+  });
+
   it('confirms before deleting a saved layout', async () => {
     const user = userEvent.setup();
     const onDeleteSavedLayout = vi.fn();

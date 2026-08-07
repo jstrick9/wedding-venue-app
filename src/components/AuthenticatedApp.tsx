@@ -432,6 +432,18 @@ export default function AuthenticatedApp() {
     showToast('Layout cleared.', 'success');
   }, [layoutState, pushUndoSnapshot]);
 
+  // Delete/duplicate via the Properties panel must be undoable, matching the
+  // keyboard shortcuts (Delete / Ctrl+D) which already push an undo snapshot.
+  const handleRemoveItem = useCallback((id: string) => {
+    pushUndoSnapshot();
+    layoutState.removeItem(id);
+  }, [layoutState, pushUndoSnapshot]);
+
+  const handleDuplicateItem = useCallback((id: string) => {
+    pushUndoSnapshot();
+    layoutState.duplicateItem(id);
+  }, [layoutState, pushUndoSnapshot]);
+
   async function handleAutoRepair() {
     await createEmergencyRecoverySnapshot({ id: user.id, name: user.name });
     const repaired = recoverCorruptDomains();
@@ -595,13 +607,10 @@ export default function AuthenticatedApp() {
 
   const handleVenueChange = useCallback((venueId: string) => {
     // Changing venues loads that venue's master layout, which replaces the current
-    // layout. If the current layout has placed (unsaved) work, ask first so a user
-    // doesn't lose items silently.
-    const hasWork =
-      layoutState.layout.tables.length > 0 ||
-      layoutState.layout.fixtures.length > 0 ||
-      layoutState.layout.decor.length > 0;
-    if (hasWork && venueId !== layoutState.currentVenue.id) {
+    // layout. Use the dirty tracker (not just item count) so any unsaved edit —
+    // including a metadata change with the same item count — prompts before the
+    // work is discarded.
+    if (layoutState.layoutDirty && venueId !== layoutState.currentVenue.id) {
       setPendingVenueChange(venueId);
       return;
     }
@@ -719,10 +728,6 @@ export default function AuthenticatedApp() {
   // then switch space + load.
   const handleTemplateSelect = useCallback(
     (t: LayoutTemplate) => {
-      const hasWork =
-        layoutState.layout.tables.length > 0 ||
-        layoutState.layout.fixtures.length > 0 ||
-        (layoutState.layout.decor || []).length > 0;
       const proceed = () => {
         if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId);
         layoutState.loadTemplate(t);
@@ -730,7 +735,7 @@ export default function AuthenticatedApp() {
         handleResetView();
         closeAll();
       };
-      if (hasWork) {
+      if (layoutState.layoutDirty) {
         setPendingOverwrite(() => proceed);
         return;
       }
@@ -988,7 +993,7 @@ export default function AuthenticatedApp() {
           </div>
           <PropertiesPanel
             selectedId={layoutState.selectedId} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} onUpdateTable={handleUpdateTableSafe} onUpdateFixture={handleUpdateFixtureSafe}
-            onRemoveItem={layoutState.removeItem} onDuplicateItem={layoutState.duplicateItem} onClose={() => setShowProperties(false)}
+            onRemoveItem={handleRemoveItem} onDuplicateItem={handleDuplicateItem} onClose={() => setShowProperties(false)}
             onViewImage={(url, title) => setImagePreview({ url, title })} visible={showProperties} onToggleVisibility={() => setShowProperties(v => !v)} arrangements={layoutState.getDecorArrangements()}
           />
         </div>

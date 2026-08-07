@@ -76,6 +76,7 @@ export function Header({
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
   const [showVenueFilter, setShowVenueFilter] = useState(false);
   const [layoutToDelete, setLayoutToDelete] = useState<SavedLayout | null>(null);
+  const [confirmClearMaster, setConfirmClearMaster] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const venueDropdownRef = useRef<HTMLDivElement>(null);
@@ -557,8 +558,8 @@ export function Header({
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
-                            onClearMasterLayout();
                             setShowMenu(false);
+                            setConfirmClearMaster(true);
                           }}
                           className="w-full text-left px-4 py-2 text-red-700 hover:bg-red-50 flex items-center gap-2"
                         >
@@ -923,6 +924,19 @@ export function Header({
           setLayoutToDelete(null);
         }}
         onCancel={() => setLayoutToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmClearMaster}
+        title="Clear master layout?"
+        message={`Remove the saved master layout for ${currentVenue.name}? This space will become a draft until you save a new master layout. This cannot be undone.`}
+        confirmLabel="Clear Master"
+        tone="danger"
+        onConfirm={() => {
+          onClearMasterLayout?.();
+          setConfirmClearMaster(false);
+        }}
+        onCancel={() => setConfirmClearMaster(false)}
       />
 
       {showLoadModal && (
