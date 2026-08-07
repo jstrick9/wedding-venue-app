@@ -32,6 +32,7 @@ import SafeImage from './SafeImage';
 import { showToast } from './Toast';
 import { ConfirmDialog } from './ConfirmDialog';
 import { emit, on } from '../utils/appEvents';
+import { countTableUsage, countFixtureUsage, inventoryState } from '../utils/inventoryUsage';
 
 interface DragItem {
   type: 'table' | 'fixture' | 'arrangement';
@@ -418,22 +419,15 @@ export function Sidebar({
         ? canUseTableSpec(currentUser, item as TableSpec)
         : canPlaceFixtureType(currentUser, item as FixtureType);
 
-    let usedCount = 0;
     const totalInventory = item.inventoryCount;
-    let remainingInventory: number | undefined = undefined;
-    let isOutOfStock = false;
-
-    if (totalInventory !== undefined) {
-      if (type === 'table') {
-        usedCount = placedTables.filter((t) => t.specId === item.id).length;
-      } else if (!isExterior) {
-        usedCount = placedFixtures.filter(
-          (f) => f.specId === item.id && !f.isExterior,
-        ).length;
-      }
-      remainingInventory = totalInventory - usedCount;
-      isOutOfStock = remainingInventory <= 0;
-    }
+    const usedCount =
+      type === 'table'
+        ? countTableUsage(placedTables, item.id)
+        : countFixtureUsage(placedFixtures, item.id, !!isExterior);
+    const { remaining: remainingInventory, outOfStock: isOutOfStock } = inventoryState(
+      usedCount,
+      totalInventory,
+    );
 
     const chairUsageInfo = type === 'table'
       ? getChairSpecs()

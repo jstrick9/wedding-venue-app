@@ -55,6 +55,11 @@ P1 = valuable, P2 = polish).*
   two-finger pinch on touch, anchored to the pinch midpoint (clamped 25–200%);
   a second finger while dragging an item cancels the drag and starts a pinch.
   Test count: **588 passing / 11 skipped**. Committed.
+- ✅ **Design Studio: exterior/architectural inventory tracking** — exterior
+  features now count their placed instances (previously always 0), so they show
+  remaining inventory and block out-of-stock placement like interior items. Logic
+  extracted to a tested `inventoryUsage` helper. Test count:
+  **592 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design
