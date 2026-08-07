@@ -7,6 +7,11 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Guest seat/room assignment, capacity guards, deadline display, add-ons total**:
+  couple can now assign each guest a table/seat & room (was shown in the guest portal
+  but not editable; surfaced in venue guest view too); guarded guest-event capacity
+  from NaN/0; fixed RSVP-deadline message off-by-one; added selected add-ons count +
+  total on the Package tab. Committed.
 - ✅ **Brand consistency completion + calendar/couple/warning/mobile round**: brand
   purple extended to every active venue/admin surface (removed leftover indigo);
   blocked-date conflict detection now covers multi-day couple events; couple portal
