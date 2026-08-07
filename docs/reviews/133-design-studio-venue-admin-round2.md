@@ -39,6 +39,12 @@ data-loss protection, and dependency conflicts.
 584 passing / 11 skipped (was 582). Typecheck, event-bus lint, unused-locals, and
 single-file build all green.
 
+## Follow-up — master/draft badge accuracy
+5. The breadcrumb badge keyed off `venue.isMaster`, but "Clear Master Layout"
+   removes the masterLayout data while leaving `isMaster` true — so a cleared space
+   still showed "★ Master". The badge now keys off the actual `masterLayout`
+   presence, so a cleared space correctly shows "Draft".
+
 ## Files
 - `src/components/AuthenticatedApp.tsx`
 - `src/components/Header.tsx`
