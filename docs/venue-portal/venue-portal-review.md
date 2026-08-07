@@ -7,6 +7,8 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Plus-one per-event headcount**: the couple's "RSVPs per event" now includes
+  plus-ones in attending counts (and over-capacity flagging). Committed.
 - ✅ **Plus-one headcount**: the couple's Attending KPI and catering meal accounting
   (and the venue's catering summary) now include plus-ones. Committed.
 - ✅ **Venue couple card space names**: the venue's couple list now shows the selected
