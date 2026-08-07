@@ -54,5 +54,11 @@ single-file build all green.
    need seating capacity attention. Backed by a tested pure helper
    `coupleDemandForVenue` (`src/utils/spaceSeating.ts`, +3 tests).
 
+## Follow-up — confirm before deleting a saved layout
+6. The Header's **Load Layout** dialog previously deleted a saved layout with a
+   one-click 🗑️ and no confirmation, risking accidental data loss. It now opens a
+   `ConfirmDialog` ("Delete saved layout?") that only calls `onDeleteSavedLayout`
+   after the venue admin confirms. Added a test to `Header.test.tsx` (5 tests).
+
 ## CI (final)
-577 passing / 11 skipped. Build/typecheck/lint green.
+578 passing / 11 skipped. Build/typecheck/lint green.

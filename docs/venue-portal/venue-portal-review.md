@@ -29,6 +29,9 @@ P1 = valuable, P2 = polish).*
   irreversible), and the Studio space picker shows each space's booked couples and
   largest expected guest count so the venue can prioritize seating. Test count:
   **577 passing / 11 skipped**. Committed.
+- ✅ **Design Studio: confirm before deleting a saved layout** — the Header's Load
+  Layout dialog now confirms before deleting a saved layout (was a one-click,
+  irreversible delete). Test count: **578 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

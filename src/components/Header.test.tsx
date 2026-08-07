@@ -188,6 +188,23 @@ describe('Header', () => {
     expect(within(dialog).getByText('My Layout')).toBeInTheDocument();
   });
 
+  it('confirms before deleting a saved layout', async () => {
+    const user = userEvent.setup();
+    const onDeleteSavedLayout = vi.fn();
+    renderHeader({ onDeleteSavedLayout });
+
+    await user.click(screen.getByRole('button', { name: /menu/i }));
+    await user.click(screen.getByRole('button', { name: /load layout/i }));
+    await user.click(screen.getByRole('button', { name: /delete saved layout my layout/i }));
+
+    // Confirmation dialog appears; deleting does not happen yet.
+    expect(screen.getByText(/delete saved layout/i)).toBeInTheDocument();
+    expect(onDeleteSavedLayout).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /delete$/i }));
+    expect(onDeleteSavedLayout).toHaveBeenCalledWith('layout-1');
+  });
+
   it('labels a basic master user accurately in the signed-in line', async () => {
     const user = userEvent.setup();
     renderHeader({

@@ -11,6 +11,7 @@ import {
 import ModalDialog from './ModalDialog';
 import Logo from './Logo';
 import { emit } from '../utils/appEvents';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export interface HeaderProps {
   currentVenue: Venue;
@@ -71,6 +72,7 @@ export function Header({
   const [showMenu, setShowMenu] = useState(false);
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
   const [showVenueFilter, setShowVenueFilter] = useState(false);
+  const [layoutToDelete, setLayoutToDelete] = useState<SavedLayout | null>(null);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const venueDropdownRef = useRef<HTMLDivElement>(null);
@@ -873,6 +875,19 @@ export function Header({
         </ModalDialog>
       )}
 
+      <ConfirmDialog
+        open={!!layoutToDelete}
+        title="Delete saved layout?"
+        message={`Delete "${layoutToDelete?.name || ''}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={() => {
+          if (layoutToDelete) onDeleteSavedLayout(layoutToDelete.id);
+          setLayoutToDelete(null);
+        }}
+        onCancel={() => setLayoutToDelete(null)}
+      />
+
       {showLoadModal && (
         <ModalDialog
           title="Load Layout"
@@ -918,8 +933,9 @@ export function Header({
                       </button>
                       <button
                         type="button"
-                        onClick={() => onDeleteSavedLayout(layout.id)}
+                        onClick={() => setLayoutToDelete(layout)}
                         className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm hover:bg-red-200"
+                        aria-label={`Delete saved layout ${layout.name}`}
                       >
                         🗑️
                       </button>
