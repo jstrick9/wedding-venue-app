@@ -7,6 +7,10 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Guest persona: full journey** — added integration tests covering sign-in lookup
+  (by email/name/token), access gating (portal/lodging/RSVP/map), multi-day celebration
+  countdown (before/during/after), and the post-event access grace window. Test count:
+  **524 passing / 11 skipped**. Committed.
 - ✅ **Couple persona: full journey** — added integration tests exercising the couple's
   end-to-end flow through the real services: invite-link resolution, adding
   collaborators (with email dedupe), answering questions, selecting spaces, checklist,
