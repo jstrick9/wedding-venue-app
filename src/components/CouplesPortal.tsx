@@ -2655,7 +2655,11 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           type="number"
                           min={0}
                           value={portalDraft.accessGracePeriodHours ?? 36}
-                          onChange={(e) => setPortalDraft({ ...portalDraft, accessGracePeriodHours: Number(e.target.value) })}
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            const n = raw === '' ? 36 : Number(raw);
+                            setPortalDraft({ ...portalDraft, accessGracePeriodHours: Number.isNaN(n) || n < 0 ? 36 : n });
+                          }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         />
                       </div>
