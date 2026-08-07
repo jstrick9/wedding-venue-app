@@ -21,6 +21,7 @@ import { getUsers } from '../hooks/useLayoutState';
 import { showToast } from './Toast';
 import { syncShiftsForCalendarEvent, getShiftsForCalendarEvent } from '../services/calendar/venueShiftService';
 import { Button, Badge, EmptyState } from './ui';
+import { useConfirm } from './useConfirm';
 import { findBlockedBookedConflicts } from '../utils/calendarConflicts';
 
 type View = 'month' | 'week' | 'day' | 'agenda';
@@ -76,8 +77,23 @@ export function VenueCalendar({
   const [, force] = useState(0);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   const refresh = () => force((n) => n + 1);
+
+  const handleDeleteEvent = async (e: EventItem) => {
+    const ok = await confirm({
+      title: 'Delete this event?',
+      message: `Delete "${e.title}"? This also removes its linked staff shifts and cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok || !e.venue) return;
+    removeVenueCalendarEvent(e.venue.id);
+    setDetail(null);
+    refresh();
+    showToast('Event deleted.', 'success');
+  };
 
   // Couple events as read-only calendar entries.
   const coupleEntries: EventItem[] = useMemo(() => {
@@ -467,7 +483,10 @@ export function VenueCalendar({
             )}
             <div className="flex gap-2 justify-end pt-2">
               {detail.venue && (
-                <button type="button" onClick={() => { setEditEv(detail.venue!); setDetail(null); }} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600">Edit</button>
+                <>
+                  <button type="button" onClick={() => { void handleDeleteEvent(detail!); }} className="px-3 py-1.5 rounded-lg border border-red-200 text-sm text-red-600 hover:bg-red-50">Delete</button>
+                  <button type="button" onClick={() => { setEditEv(detail.venue!); setDetail(null); }} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600">Edit</button>
+                </>
               )}
               <button type="button" onClick={() => setDetail(null)} className="px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-sm">Close</button>
             </div>
@@ -484,6 +503,7 @@ export function VenueCalendar({
           onSave={saveForm}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }
