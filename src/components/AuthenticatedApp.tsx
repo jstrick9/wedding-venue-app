@@ -96,6 +96,10 @@ export default function AuthenticatedApp() {
   const canEditCurrentLayout = canEditLayout(user);
   
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  // Coalesces property-panel edits (label/linen/chairs/applied design) into undo
+  // steps: a discrete action is one step, and rapid text typing doesn't flood the
+  // undo history (updates to the same item within a short window share a step).
+  const propertyEditUndoRef = useRef<{ id: string; at: number } | null>(null);
   const floorPlanSvgRef = useRef<SVGSVGElement>(null);
   const [brandingConfig, setBrandingConfig] = useState(() => getConfig());
   const [projectHealth, setProjectHealth] = useState<ProjectHealthReport | null>(null);
@@ -590,6 +594,7 @@ export default function AuthenticatedApp() {
         return spec && x >= t.x && x <= t.x + spec.width && y >= t.y && y <= t.y + spec.height;
       });
       if (targetTable) {
+        pushUndoSnapshot();
         layoutState.updateTable(targetTable.id, { appliedArrangementId: dragItem.specId });
         showToast(`Applied design to ${targetTable.label}`, 'success');
         setDragItem(null); return;
@@ -628,22 +633,43 @@ export default function AuthenticatedApp() {
     }
   }, [layoutState, resolvePlacement, user, ensureCanEditLayout]);
 
+  // Push an undo snapshot for a property-panel edit, coalescing bursts to the
+  // same item within a short window so typing a label is ~1 step, not per-keystroke.
+  const pushPropertyUndo = useCallback((id: string) => {
+    const now = Date.now();
+    const last = propertyEditUndoRef.current;
+    if (last && last.id === id && now - last.at < 800) return;
+    pushUndoSnapshot();
+    propertyEditUndoRef.current = { id, at: now };
+  }, [pushUndoSnapshot]);
+
   const handleUpdateTableSafe = useCallback((id: string, updates: Partial<any>) => {
     if (!ensureCanEditLayout()) return;
     const existing = layoutState.layout.tables.find(t => t.id === id);
     if (!existing) return;
-    if (updates.x === undefined && updates.y === undefined) { layoutState.updateTable(id, updates); return; }
-    const placement = resolvePlacement({ x: updates.x ?? existing.x, y: updates.y ?? existing.y }, { kind: 'table', id, specId: existing.specId, ...updates });
-    if (placement.ok) { pushUndoSnapshot(); layoutState.updateTable(id, { ...updates, x: placement.position.x, y: placement.position.y }); }
-  }, [layoutState, resolvePlacement, ensureCanEditLayout]);
+    if (updates.x !== undefined || updates.y !== undefined) {
+      const placement = resolvePlacement({ x: updates.x ?? existing.x, y: updates.y ?? existing.y }, { kind: 'table', id, specId: existing.specId, ...updates });
+      if (placement.ok) { pushUndoSnapshot(); layoutState.updateTable(id, { ...updates, x: placement.position.x, y: placement.position.y }); }
+      return;
+    }
+    // Metadata/property edits (label, linen, chairs, applied design) are undoable
+    // too — coalesced so rapid typing doesn't flood history.
+    pushPropertyUndo(id);
+    layoutState.updateTable(id, updates);
+  }, [layoutState, resolvePlacement, ensureCanEditLayout, pushPropertyUndo]);
 
   const handleUpdateFixtureSafe = useCallback((id: string, updates: Partial<any>) => {
     if (!ensureCanEditLayout()) return;
     const existing = layoutState.layout.fixtures.find(f => f.id === id);
     if (!existing) return;
-    const placement = resolvePlacement({ x: updates.x ?? existing.x, y: updates.y ?? existing.y }, { kind: 'fixture', id, specId: existing.specId, ...updates });
-    if (placement.ok) { pushUndoSnapshot(); layoutState.updateFixture(id, { ...updates, x: placement.position.x, y: placement.position.y }); }
-  }, [layoutState, resolvePlacement, ensureCanEditLayout]);
+    if (updates.x !== undefined || updates.y !== undefined) {
+      const placement = resolvePlacement({ x: updates.x ?? existing.x, y: updates.y ?? existing.y }, { kind: 'fixture', id, specId: existing.specId, ...updates });
+      if (placement.ok) { pushUndoSnapshot(); layoutState.updateFixture(id, { ...updates, x: placement.position.x, y: placement.position.y }); }
+      return;
+    }
+    pushPropertyUndo(id);
+    layoutState.updateFixture(id, updates);
+  }, [layoutState, resolvePlacement, ensureCanEditLayout, pushPropertyUndo]);
 
   const handleVenueChange = useCallback((venueId: string) => {
     // Changing venues loads that venue's master layout, which replaces the current

@@ -60,6 +60,10 @@ P1 = valuable, P2 = polish).*
   remaining inventory and block out-of-stock placement like interior items. Logic
   extracted to a tested `inventoryUsage` helper. Test count:
   **592 passing / 11 skipped**. Committed.
+- ✅ **Design Studio: property-panel edits & design-application are undoable** —
+  metadata edits (label/linen/chairs/applied design, coalesced per item) and
+  dropping a decor design onto a table now push an undo snapshot, so every canvas
+  edit is undoable. Test count: **592 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design
