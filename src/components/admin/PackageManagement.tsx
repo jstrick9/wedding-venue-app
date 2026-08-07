@@ -159,7 +159,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
+      <div className="rounded-xl bg-gradient-to-r from-[#4A1942] to-purple-600 p-4 text-white">
         <h2 className="text-base font-bold">🎁 Wedding Packages & Add-ons</h2>
         <p className="text-xs text-white/80 mt-1">
           Configure the packages you sell (single-day, multi-day, full weekend) with season
@@ -172,14 +172,14 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
         <button
           type="button"
           onClick={() => setSection('packages')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${section === 'packages' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${section === 'packages' ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
         >
           📦 Packages
         </button>
         <button
           type="button"
           onClick={() => setSection('addons')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${section === 'addons' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${section === 'addons' ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
         >
           ➕ Add-ons
         </button>
@@ -190,7 +190,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
           <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-sm">{pkgForm.id ? 'Edit package' : 'New package'}</h3>
-              <button type="button" onClick={startNewPkg} className="text-xs text-indigo-600 hover:underline">New</button>
+              <button type="button" onClick={startNewPkg} className="text-xs text-[#4A1942] hover:underline">New</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input type="text" value={pkgForm.name} onChange={(e) => setPkgForm({ ...pkgForm, name: e.target.value })} placeholder="Package name" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" aria-label="Package name" />
@@ -239,7 +239,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
                         ...f,
                         includedLodgingVenueIds: f.includedLodgingVenueIds.includes(v.id) ? f.includedLodgingVenueIds.filter((x) => x !== v.id) : [...f.includedLodgingVenueIds, v.id],
                       }))}
-                      className={`px-3 py-1.5 rounded-full border text-sm ${pkgForm.includedLodgingVenueIds.includes(v.id) ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 text-gray-600'}`}
+                      className={`px-3 py-1.5 rounded-full border text-sm ${pkgForm.includedLodgingVenueIds.includes(v.id) ? 'border-[#4A1942] bg-[#4A1942]/10 text-[#4A1942]' : 'border-gray-300 text-gray-600'}`}
                     >
                       {v.name}
                     </button>
@@ -254,7 +254,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
               <div className="text-xs text-gray-600 mb-1">Included items</div>
               <div className="flex flex-wrap gap-2">
                 {INCLUDED_ITEMS.map((it) => (
-                  <button key={it.id} type="button" onClick={() => toggleInclude(it.id)} className={`px-3 py-1.5 rounded-full border text-xs ${pkgForm.includedItems.includes(it.id) ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 text-gray-600'}`}>
+                  <button key={it.id} type="button" onClick={() => toggleInclude(it.id)} className={`px-3 py-1.5 rounded-full border text-xs ${pkgForm.includedItems.includes(it.id) ? 'border-[#4A1942] bg-[#4A1942]/10 text-[#4A1942]' : 'border-gray-300 text-gray-600'}`}>
                     {it.label}
                   </button>
                 ))}
@@ -264,7 +264,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
               <input type="checkbox" checked={pkgForm.active} onChange={(e) => setPkgForm({ ...pkgForm, active: e.target.checked })} className="w-4 h-4 rounded border-gray-300" />
               Active (available to book)
             </label>
-            <button type="button" onClick={savePkg} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+            <button type="button" onClick={savePkg} className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]">
               💾 Save Package
             </button>
           </div>
@@ -279,7 +279,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className={`text-sm font-medium ${p.active ? 'text-gray-800' : 'text-gray-400 line-through'}`}>{p.name}</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">{PACKAGE_DURATIONS.find((d) => d.id === p.durationType)?.label}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#4A1942]/10 text-[#4A1942]">{PACKAGE_DURATIONS.find((d) => d.id === p.durationType)?.label}</span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {money(p.price.nonPeak)} / {money(p.price.peak)} / {money(p.price.premier)} (NP/P/PR) · {p.maxGuests} guests
@@ -339,7 +339,7 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
               Active
             </label>
             <div className="flex gap-2">
-              <button type="button" onClick={saveAo} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">💾 Save Add-on</button>
+              <button type="button" onClick={saveAo} className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]">💾 Save Add-on</button>
               <button type="button" onClick={startNewAo} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600">New</button>
             </div>
           </div>

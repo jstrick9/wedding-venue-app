@@ -299,7 +299,7 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
             <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-[#4A1942]">Rooms</h3>
-                <button onClick={addRoom} disabled={!activeFloor} className="px-3 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 disabled:opacity-50">+ Add Room</button>
+                <button onClick={addRoom} disabled={!activeFloor} className="px-3 py-1.5 text-sm bg-[#4A1942]/10 text-[#4A1942] rounded-lg hover:bg-[#4A1942]/20 disabled:opacity-50">+ Add Room</button>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -309,7 +309,7 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
                   <button
                     key={shape.id}
                     onClick={() => setRoomShapeDraft(shape.id as 'rectangle' | 'custom')}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${roomShapeDraft === shape.id ? 'bg-indigo-100 border-indigo-300 text-indigo-800' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${roomShapeDraft === shape.id ? 'bg-[#4A1942]/10 border-[#4A1942]/40 text-[#4A1942]' : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'}`}
                   >
                     {shape.label}
                   </button>
@@ -370,7 +370,7 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
                   <button
                     key={room.id}
                     onClick={() => { setSelectedRoomId(room.id); setSelectedFurnitureId(null); }}
-                    className={`w-full text-left p-3 rounded-lg border transition-colors ${selectedRoomId === room.id ? 'bg-indigo-50 border-indigo-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+                    className={`w-full text-left p-3 rounded-lg border transition-colors ${selectedRoomId === room.id ? 'bg-[#4A1942]/10 border-[#4A1942]/40' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
                   >
                     <div className="font-medium text-gray-800">{room.name}</div>
                     <div className="text-xs text-gray-500 mt-1">{room.width}’ × {room.height}’ • {room.assignedGuests.length}/{room.capacity} guests</div>
@@ -402,7 +402,7 @@ export const LodgingBuilder: React.FC<LodgingBuilderProps> = ({ venue, onSave, o
                 {activeFloor.rooms.map(room => (
                   <div
                     key={room.id}
-                    className={`absolute border-2 rounded-lg shadow-sm cursor-move overflow-hidden ${selectedRoomId === room.id ? 'border-indigo-500 ring-2 ring-indigo-300' : 'border-gray-400'}`}
+                    className={`absolute border-2 rounded-lg shadow-sm cursor-move overflow-hidden ${selectedRoomId === room.id ? 'border-[#4A1942] ring-2 ring-[#4A1942]/30' : 'border-gray-400'}`}
                     style={{
                       left: room.x * SCALE,
                       top: room.y * SCALE,

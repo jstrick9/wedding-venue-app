@@ -426,7 +426,7 @@ export function TemplateManagement(props: AdminCommonProps) {
               </div>
               
               {/* How To Guide - Collapsible */}
-              <details className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl overflow-hidden">
+              <details className="bg-gradient-to-r from-blue-50 to-[#4A1942]/5 border border-blue-200 rounded-xl overflow-hidden">
                 <summary className="p-4 cursor-pointer hover:bg-blue-100/50 transition-colors flex items-center gap-3">
                   <span className="text-2xl">💡</span>
                   <span className="font-semibold text-blue-800">How to Create & Manage Templates</span>

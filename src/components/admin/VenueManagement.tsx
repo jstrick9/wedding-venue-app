@@ -428,7 +428,7 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-3 py-2 bg-white border border-indigo-300 rounded-lg text-sm hover:bg-indigo-50 hover:border-indigo-400 transition-all flex items-center gap-2 shadow-sm"
+                    className="px-3 py-2 bg-white border border-[#4A1942]/40 rounded-lg text-sm hover:bg-[#4A1942]/10 hover:border-[#4A1942] transition-all flex items-center gap-2 shadow-sm"
                   >
                     🏨 Lodging
                   </button>
@@ -693,7 +693,7 @@ export function VenueManagement(props: AdminCommonProps) {
                             </button>
                             <button
                               onClick={() => setLodgingVenueId(venue.id)}
-                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors font-medium shadow-sm whitespace-nowrap"
+                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-[#3b1435] text-white rounded-lg hover:from-blue-700 hover:to-[#3b1435] transition-colors font-medium shadow-sm whitespace-nowrap"
                               title="Open lodging builder (floors, rooms, furniture, guest assignments)"
                             >
                               🏨 Lodging

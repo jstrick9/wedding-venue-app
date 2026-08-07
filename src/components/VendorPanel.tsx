@@ -127,9 +127,9 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Category filter tiles */}
           <div className="flex items-center gap-2 flex-wrap">
-            <button type="button" onClick={() => setActiveCategory('all')} className={`px-3 py-1.5 rounded-full text-sm ${activeCategory === 'all' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}>All ({vendors.length})</button>
+            <button type="button" onClick={() => setActiveCategory('all')} className={`px-3 py-1.5 rounded-full text-sm ${activeCategory === 'all' ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}>All ({vendors.length})</button>
             {categories.map((c) => (
-              <button key={c.id} type="button" onClick={() => setActiveCategory(c.id)} className={`px-3 py-1.5 rounded-full text-sm ${activeCategory === c.id ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}>
+              <button key={c.id} type="button" onClick={() => setActiveCategory(c.id)} className={`px-3 py-1.5 rounded-full text-sm ${activeCategory === c.id ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}>
                 {c.icon} {c.label} ({countsByCategory[c.id] || 0})
               </button>
             ))}
@@ -200,18 +200,18 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
                         {v.contactName && <div className="text-xs text-gray-400">{v.contactName}</div>}
                       </div>
                     </div>
-                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">⭐ Preferred</span>
+                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-[#4A1942]/10 text-[#4A1942]">⭐ Preferred</span>
                   </div>
                   {v.description && <p className="text-sm text-gray-600 mt-2">{v.description}</p>}
                   {couplesUsingVendor[v.id] ? (
                     <div className="mt-2 text-xs text-gray-500">
-                      Used by <span className="font-semibold text-indigo-600">{couplesUsingVendor[v.id]}</span> couple{couplesUsingVendor[v.id] === 1 ? '' : 's'}
+                      Used by <span className="font-semibold text-[#4A1942]">{couplesUsingVendor[v.id]}</span> couple{couplesUsingVendor[v.id] === 1 ? '' : 's'}
                     </div>
                   ) : null}
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                    {v.phone && <a href={`tel:${v.phone}`} className="text-indigo-600 hover:underline">📞 {v.phone}</a>}
-                    {v.email && <a href={`mailto:${v.email}`} className="text-indigo-600 hover:underline">✉️</a>}
-                    {v.website && <a href={v.website} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">🌐</a>}
+                    {v.phone && <a href={`tel:${v.phone}`} className="text-[#4A1942] hover:underline">📞 {v.phone}</a>}
+                    {v.email && <a href={`mailto:${v.email}`} className="text-[#4A1942] hover:underline">✉️</a>}
+                    {v.website && <a href={v.website} target="_blank" rel="noreferrer" className="text-[#4A1942] hover:underline">🌐</a>}
                   </div>
                   <div className="flex items-center gap-2 mt-3">
                     <button type="button" onClick={() => handleStartEdit(v)} className="text-xs text-gray-600 hover:underline">Edit</button>

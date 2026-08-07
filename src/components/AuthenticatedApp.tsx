@@ -723,11 +723,11 @@ export default function AuthenticatedApp() {
             <button
               type="button"
               onClick={() => { setShowLayoutsHome(true); }}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-0.5 text-indigo-600 hover:bg-indigo-50"
+              className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-0.5 text-[#4A1942] hover:bg-[#4A1942]/10"
             >
               🏛️ Spaces &amp; Layouts
             </button>
-            <button type="button" onClick={() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); }} className="text-indigo-600 hover:underline">← Dashboard</button>
+            <button type="button" onClick={() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); }} className="text-[#4A1942] hover:underline">← Dashboard</button>
           </span>
         </div>
         <Header

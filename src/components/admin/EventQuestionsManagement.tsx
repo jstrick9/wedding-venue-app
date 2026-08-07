@@ -205,7 +205,7 @@ export function EventQuestionsManagement({ eventQuestions, config, setEventQuest
                     {q.text} {q.required && <span className="text-red-500">*</span>}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">{q.group}</span>
+                    <span className="bg-[#4A1942]/10 text-[#4A1942] px-2 py-0.5 rounded">{q.group}</span>
                     <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded capitalize">{q.answerType}</span>
                     {q.answerType === 'dropdown' && q.options && q.options.length > 0 && (
                       <span className="text-gray-500">{q.options.length} options</span>

@@ -461,10 +461,10 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
             <button
               type="button"
               onClick={handleOpenGuestPortal}
-              className="w-full rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-3 text-left hover:bg-indigo-100 transition-colors"
+              className="w-full rounded-xl border border-[#4A1942]/40 bg-[#4A1942]/10 px-4 py-3 text-left hover:bg-[#4A1942]/10 transition-colors"
             >
-              <span className="block text-sm font-semibold text-indigo-800">💍 Open Wedding Guest Portal</span>
-              <span className="mt-1 block text-xs text-indigo-700/80">
+              <span className="block text-sm font-semibold text-[#4A1942]">💍 Open Wedding Guest Portal</span>
+              <span className="mt-1 block text-xs text-[#4A1942]/80">
                 RSVP, view the event schedule, check lodging, and get directions.
               </span>
             </button>

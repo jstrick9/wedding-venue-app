@@ -26,7 +26,7 @@ import { findBlockedBookedConflicts } from '../utils/calendarConflicts';
 type View = 'month' | 'week' | 'day' | 'agenda';
 
 const CAT_STYLE: Record<VenueCalendarCategory, { dot: string; chip: string }> = {
-  couple: { dot: 'bg-indigo-500', chip: 'bg-indigo-100 text-indigo-700' },
+  couple: { dot: 'bg-[#4A1942]/100', chip: 'bg-[#4A1942]/10 text-[#4A1942]' },
   'open-house': { dot: 'bg-emerald-500', chip: 'bg-emerald-100 text-emerald-700' },
   staffing: { dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700' },
   blocked: { dot: 'bg-red-500', chip: 'bg-red-100 text-red-700' },
@@ -311,7 +311,7 @@ export function VenueCalendar({
               <div
                 key={i}
                 onClick={() => { setSelectedDate(k || today); setView('day'); }}
-                className={`min-h-[72px] border border-gray-100 p-1 cursor-pointer ${k && isToday(k) ? 'bg-indigo-50' : 'hover:bg-gray-50'} ${!k ? 'bg-gray-50' : ''} ${dragOver === k ? 'ring-2 ring-indigo-400' : ''}`}
+                className={`min-h-[72px] border border-gray-100 p-1 cursor-pointer ${k && isToday(k) ? 'bg-[#4A1942]/10' : 'hover:bg-gray-50'} ${!k ? 'bg-gray-50' : ''} ${dragOver === k ? 'ring-2 ring-[#4A1942]' : ''}`}
                 {...(k ? cellDragProps(k) : {})}
               >
                 {k && (
@@ -336,15 +336,15 @@ export function VenueCalendar({
         <div className="rounded-xl bg-white border border-gray-200 overflow-hidden shadow-sm">
           <div className="grid grid-cols-7 bg-gray-50 text-xs font-medium text-gray-500">
             {weekDays.map((k) => (
-              <div key={k} className="px-2 py-2 text-center cursor-pointer hover:bg-indigo-50" onClick={() => { setSelectedDate(k); setView('day'); }}>
+              <div key={k} className="px-2 py-2 text-center cursor-pointer hover:bg-[#4A1942]/10" onClick={() => { setSelectedDate(k); setView('day'); }}>
                 <div>{DAYS[new Date(k + 'T00:00:00').getDay()]}</div>
-                <div className={`font-bold ${isToday(k) ? 'text-indigo-600' : ''}`}>{Number(k.slice(8))}</div>
+                <div className={`font-bold ${isToday(k) ? 'text-[#4A1942]' : ''}`}>{Number(k.slice(8))}</div>
               </div>
             ))}
           </div>
           <div className="grid grid-cols-7 border-t border-gray-100">
             {weekDays.map((k) => (
-              <div key={k} className={`min-h-[160px] border border-gray-100 p-1 cursor-pointer hover:bg-gray-50 ${dragOver === k ? 'ring-2 ring-indigo-400' : ''}`} onClick={() => { setSelectedDate(k); setView('day'); }} {...cellDragProps(k)}>
+              <div key={k} className={`min-h-[160px] border border-gray-100 p-1 cursor-pointer hover:bg-gray-50 ${dragOver === k ? 'ring-2 ring-[#4A1942]' : ''}`} onClick={() => { setSelectedDate(k); setView('day'); }} {...cellDragProps(k)}>
                 <div className="space-y-0.5">
                   {itemsByDate(k).map(renderChip)}
                   <button type="button" onClick={(e) => { e.stopPropagation(); openCreate(k); }} className="text-[10px] text-emerald-600 hover:underline pl-1">+</button>
@@ -376,7 +376,7 @@ export function VenueCalendar({
                   <span className="text-xs text-sky-700">👤 {e.venue.assignees.length}</span>
                 )}
                 {e.coupleEventId && onOpenCouple ? (
-                  <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-indigo-600 hover:underline">Open</button>
+                  <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-[#4A1942] hover:underline">Open</button>
                 ) : e.venue ? (
                   <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
                 ) : null}
@@ -405,10 +405,10 @@ export function VenueCalendar({
                   <span className="flex-1 text-gray-800">{e.title}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_STYLE[e.category].chip}`}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
                   {e.venue?.recurrence && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 capitalize">↻ {e.venue.recurrence}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#4A1942]/10 text-[#4A1942] capitalize">↻ {e.venue.recurrence}</span>
                   )}
                   {e.coupleEventId && onOpenCouple ? (
-                    <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-indigo-600 hover:underline">Open</button>
+                    <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-[#4A1942] hover:underline">Open</button>
                   ) : e.venue ? (
                     <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
                   ) : null}
@@ -454,7 +454,7 @@ export function VenueCalendar({
               {detail.venue && (
                 <button type="button" onClick={() => { setEditEv(detail.venue!); setDetail(null); }} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600">Edit</button>
               )}
-              <button type="button" onClick={() => setDetail(null)} className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm">Close</button>
+              <button type="button" onClick={() => setDetail(null)} className="px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-sm">Close</button>
             </div>
           </div>
         </div>
@@ -605,7 +605,7 @@ function CalendarEventForm({
                     key={u.id}
                     type="button"
                     onClick={() => toggleAssignee(u.id)}
-                    className={`text-xs px-2 py-1 rounded-full border ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300'}`}
+                    className={`text-xs px-2 py-1 rounded-full border ${on ? 'bg-[#4A1942] text-white border-[#4A1942]' : 'bg-white text-gray-600 border-gray-300'}`}
                   >
                     {on ? '✓ ' : ''}{u.name || u.username}
                   </button>
@@ -624,7 +624,7 @@ function CalendarEventForm({
           <button
             type="button"
             onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium"
+            className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium"
           >
             Save
           </button>

@@ -133,7 +133,7 @@ export function VenueDashboard(props: Props) {
   });
 
   const catChip = (cat: string) => {
-    const map = { couple: 'bg-indigo-100 text-indigo-700', 'open-house': 'bg-emerald-100 text-emerald-700', staffing: 'bg-amber-100 text-amber-700', blocked: 'bg-red-100 text-red-700', other: 'bg-slate-100 text-slate-700' };
+    const map = { couple: 'bg-[#4A1942]/10 text-[#4A1942]', 'open-house': 'bg-emerald-100 text-emerald-700', staffing: 'bg-amber-100 text-amber-700', blocked: 'bg-red-100 text-red-700', other: 'bg-slate-100 text-slate-700' };
     return map[cat] || 'bg-gray-100 text-gray-600';
   };
 
@@ -169,7 +169,7 @@ export function VenueDashboard(props: Props) {
         </nav>
         <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-500">
           <div className="truncate">{user?.name || user?.username}</div>
-          <button type="button" onClick={props.onLogout} className="mt-1 text-indigo-600 hover:underline">Sign out</button>
+          <button type="button" onClick={props.onLogout} className="mt-1 text-[#4A1942] hover:underline">Sign out</button>
         </div>
       </aside>
 
@@ -191,7 +191,7 @@ export function VenueDashboard(props: Props) {
               <button
                 type="button"
                 onClick={() => setSection('couples')}
-                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
                 title="Open Couples Portal to review layouts"
                 aria-label={`${stats.pending} awaiting layout review`}
               >
@@ -203,7 +203,7 @@ export function VenueDashboard(props: Props) {
                 <div className="text-xs text-gray-500 mt-0.5">Setup ({stats.setupDone}/{stats.setupTotal})</div>
               </Card>
               <Card className="p-4">
-                <div className={`text-2xl font-bold ${stats.overnightTotal > stats.overnightCap ? 'text-red-600' : 'text-indigo-700'}`}>{stats.overnightTotal}<span className="text-sm text-gray-400">/{stats.overnightCap}</span></div>
+                <div className={`text-2xl font-bold ${stats.overnightTotal > stats.overnightCap ? 'text-red-600' : 'text-[#4A1942]'}`}>{stats.overnightTotal}<span className="text-sm text-gray-400">/{stats.overnightCap}</span></div>
                 <div className="text-xs text-gray-500 mt-0.5">Overnight guests</div>
               </Card>
               <Card className="p-4">
@@ -217,7 +217,7 @@ export function VenueDashboard(props: Props) {
               <button
                 type="button"
                 onClick={() => setSection('couples')}
-                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
                 title="Open Couples Portal to approve layouts"
                 aria-label={`${stats.pending} approvals due`}
               >
@@ -228,14 +228,14 @@ export function VenueDashboard(props: Props) {
 
             {/* Onboarding empty-state for first-time venues */}
             {needsOnboarding && (
-              <div className="rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/60 p-5">
-                <h2 className="font-semibold text-indigo-900">Let's set up {config.venueName || 'your venue'} 🎉</h2>
-                <p className="text-sm text-indigo-800/80 mt-1">A few quick steps to get everything running.</p>
+              <div className="rounded-2xl border-2 border-dashed border-[#4A1942]/20 bg-[#4A1942]/10/60 p-5">
+                <h2 className="font-semibold text-[#4A1942]">Let's set up {config.venueName || 'your venue'} 🎉</h2>
+                <p className="text-sm text-[#4A1942]/80 mt-1">A few quick steps to get everything running.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   <button
                     type="button"
                     onClick={props.onOpenAdmin}
-                    className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
+                    className="rounded-xl bg-white border border-[#4A1942]/20 p-4 text-left hover:border-[#4A1942]"
                   >
                     <div className="text-2xl">🏛️</div>
                     <div className="font-medium mt-1 text-gray-800">{venuesCount === 0 ? 'Add your venue spaces' : 'Manage venue spaces'}</div>
@@ -244,7 +244,7 @@ export function VenueDashboard(props: Props) {
                   <button
                     type="button"
                     onClick={props.onOpenAdmin}
-                    className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
+                    className="rounded-xl bg-white border border-[#4A1942]/20 p-4 text-left hover:border-[#4A1942]"
                   >
                     <div className="text-2xl">🎁</div>
                     <div className="font-medium mt-1 text-gray-800">Review packages & add-ons</div>
@@ -253,7 +253,7 @@ export function VenueDashboard(props: Props) {
                   <button
                     type="button"
                     onClick={() => setSection('couples')}
-                    className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
+                    className="rounded-xl bg-white border border-[#4A1942]/20 p-4 text-left hover:border-[#4A1942]"
                   >
                     <div className="text-2xl">💍</div>
                     <div className="font-medium mt-1 text-gray-800">{couplesCount === 0 ? 'Create your first couple event' : 'Open Couples Portal'}</div>
@@ -262,7 +262,7 @@ export function VenueDashboard(props: Props) {
                   <button
                     type="button"
                     onClick={() => setSection('calendar')}
-                    className="rounded-xl bg-white border border-indigo-200 p-4 text-left hover:border-indigo-400"
+                    className="rounded-xl bg-white border border-[#4A1942]/20 p-4 text-left hover:border-[#4A1942]"
                   >
                     <div className="text-2xl">📅</div>
                     <div className="font-medium mt-1 text-gray-800">{openHouses === 0 ? 'Schedule an open house' : 'Open the calendar'}</div>
@@ -286,7 +286,7 @@ export function VenueDashboard(props: Props) {
                   <span className="text-sm font-semibold text-gray-700">Today</span>
                   <div className="flex flex-wrap gap-2">
                     {todayEvents.map((e, i) => (
-                      <span key={`${e.id}-${i}`} className="text-xs bg-indigo-50 text-indigo-700 rounded-full px-2.5 py-1">{e.title}</span>
+                      <span key={`${e.id}-${i}`} className="text-xs bg-[#4A1942]/10 text-[#4A1942] rounded-full px-2.5 py-1">{e.title}</span>
                     ))}
                   </div>
                 </Card>
@@ -298,7 +298,7 @@ export function VenueDashboard(props: Props) {
               <div className="lg:col-span-2 rounded-xl bg-white border border-gray-200 shadow-sm">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="font-semibold">Upcoming events</h2>
-                  <button type="button" onClick={() => setSection('calendar')} className="text-xs text-indigo-600 hover:underline">Open calendar →</button>
+                  <button type="button" onClick={() => setSection('calendar')} className="text-xs text-[#4A1942] hover:underline">Open calendar →</button>
                 </div>
                 {upcoming.length === 0 ? (
                   <EmptyState
@@ -318,7 +318,7 @@ export function VenueDashboard(props: Props) {
                         <span className="text-gray-500 w-24">{new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                         <span className="flex-1 font-medium text-gray-800 truncate">{e.title}</span>
                         {e.id.startsWith('couple-') || e.category === 'couple' ? (
-                          <button type="button" onClick={() => openCouplePortal(e.id.replace('couple-', ''))} className="text-xs text-indigo-600 hover:underline">Open</button>
+                          <button type="button" onClick={() => openCouplePortal(e.id.replace('couple-', ''))} className="text-xs text-[#4A1942] hover:underline">Open</button>
                         ) : null}
                       </div>
                     );
@@ -348,7 +348,7 @@ export function VenueDashboard(props: Props) {
                     <div className="space-y-2">
                       {next7.map((e, i) => (
                         <div key={`${e.id}-${i}`} className="flex items-center gap-2 text-sm">
-                          <span className={`w-2.5 h-2.5 rounded-full ${e.category === 'couple' ? 'bg-indigo-500' : e.category === 'open-house' ? 'bg-emerald-500' : e.category === 'staffing' ? 'bg-amber-500' : 'bg-slate-500'}`} />
+                          <span className={`w-2.5 h-2.5 rounded-full ${e.category === 'couple' ? 'bg-[#4A1942]/100' : e.category === 'open-house' ? 'bg-emerald-500' : e.category === 'staffing' ? 'bg-amber-500' : 'bg-slate-500'}`} />
                           <span className="text-gray-500 text-xs w-14">{new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short' })}</span>
                           <span className="flex-1 text-gray-700 truncate">{e.title}</span>
                         </div>
@@ -410,7 +410,7 @@ export function VenueDashboard(props: Props) {
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{e.status}</span>
                   </div>
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    <button type="button" onClick={() => openCouplePortal(e.id)} className="text-xs text-indigo-600 hover:underline">Open couple portal →</button>
+                    <button type="button" onClick={() => openCouplePortal(e.id)} className="text-xs text-[#4A1942] hover:underline">Open couple portal →</button>
                     {(e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
                       <button type="button" onClick={props.onOpenAdmin} className="text-xs text-amber-700 hover:underline">Review →</button>
                     )}

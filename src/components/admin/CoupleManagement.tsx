@@ -342,7 +342,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
               <div className="text-xs text-gray-500 mt-0.5">Setup complete ({setupDone}/{setupTotal})</div>
             </div>
             <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-              <div className={`text-2xl font-bold ${overnightTotal > overnightCap ? 'text-red-600' : 'text-indigo-700'}`}>{overnightTotal}<span className="text-sm text-gray-400">/{overnightCap}</span></div>
+              <div className={`text-2xl font-bold ${overnightTotal > overnightCap ? 'text-red-600' : 'text-[#4A1942]'}`}>{overnightTotal}<span className="text-sm text-gray-400">/{overnightCap}</span></div>
               <div className="text-xs text-gray-500 mt-0.5">Overnight guests</div>
             </div>
           </div>
@@ -386,7 +386,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       const v = venues.find((x) => x.id === spaceId);
                       const statusBadge =
                         sl.status === 'submitted'
-                          ? 'bg-indigo-100 text-indigo-700'
+                          ? 'bg-[#4A1942]/10 text-[#4A1942]'
                           : sl.status === 'designed'
                             ? 'bg-green-100 text-green-700'
                             : 'bg-gray-100 text-gray-600';
@@ -653,7 +653,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                         if (!lodgingEvent) return null;
                         const assigned = getAssignedGuestCount(ev.id, lodgingEvent.id);
                         const cap = pkg?.maxOvernightGuests || lodgingEvent.capacity;
-                        const cls = assigned > cap ? 'text-red-700 bg-red-50' : 'text-indigo-700 bg-indigo-50';
+                        const cls = assigned > cap ? 'text-red-700 bg-red-50' : 'text-[#4A1942] bg-[#4A1942]/10';
                         return <span className={`rounded-full px-2 py-0.5 ${cls}`}>🛏️ {assigned}/{cap} overnight</span>;
                       })()}
                       <span>🏛️ {ev.selectedSpaces.length}/{ev.availableSpaces.length} spaces</span>
@@ -772,7 +772,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                           <button
                             type="button"
                             onClick={() => handleCopy(c.inviteToken)}
-                            className="text-indigo-600 hover:underline"
+                            className="text-[#4A1942] hover:underline"
                             title="Copy collaborator invite link"
                           >
                             📋
@@ -788,7 +788,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     <div className="text-xs font-medium text-gray-500 mb-1">Event days</div>
                     <div className="flex flex-wrap gap-2">
                       {ev.days.map((d) => (
-                        <span key={d.id} className="text-xs bg-indigo-50 text-indigo-700 rounded-full px-2 py-0.5">
+                        <span key={d.id} className="text-xs bg-[#4A1942]/10 text-[#4A1942] rounded-full px-2 py-0.5">
                           {d.date} · {d.label}
                         </span>
                       ))}
@@ -813,7 +813,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                         return (
                           <div className="mb-2 flex flex-wrap gap-1.5">
                             {Array.from(counts.entries()).map(([k, n]) => (
-                              <span key={k} className="text-[11px] bg-indigo-50 text-indigo-700 rounded-full px-2 py-0.5">
+                              <span key={k} className="text-[11px] bg-[#4A1942]/10 text-[#4A1942] rounded-full px-2 py-0.5">
                                 {k}: {n}
                               </span>
                             ))}
@@ -1056,7 +1056,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                     <span className="text-sm font-medium text-gray-800">{ge.title}</span>
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{GUEST_EVENT_KIND_LABELS[ge.kind]}</span>
                                   </div>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full ${over ? 'bg-red-100 text-red-700' : 'bg-indigo-50 text-indigo-700'}`}>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${over ? 'bg-red-100 text-red-700' : 'bg-[#4A1942]/10 text-[#4A1942]'}`}>
                                     {assigned} invited · {attendCount} attending / {ge.capacity} cap
                                   </span>
                                 </div>

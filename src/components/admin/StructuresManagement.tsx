@@ -30,7 +30,7 @@ export function StructuresManagement(props: AdminCommonProps) {
             onClick={() => setSub(t.id)}
             className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
               sub === t.id
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-[#4A1942] text-white'
                 : 'bg-white border border-gray-200 text-gray-700'
             }`}
           >

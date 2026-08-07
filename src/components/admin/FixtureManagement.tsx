@@ -395,7 +395,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                       ];
                       handleSaveFixtures([...fixtureTypes, ...presets]);
                     }}
-                    className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium text-center"
+                    className="px-3 py-2 bg-[#4A1942]/10 text-[#4A1942] rounded-lg hover:bg-[#4A1942]/20 transition-colors text-sm font-medium text-center"
                   >
                     📸 Guest Areas
                   </button>
@@ -771,11 +771,11 @@ export function FixtureManagement(props: AdminCommonProps) {
                         )}
                       </div>
                       {/* Venue Category Availability - Venue Fixtures */}
-                      <div className="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                        <h4 className="text-sm font-semibold text-indigo-800 mb-2 flex items-center gap-2">
+                      <div className="mt-3 p-3 bg-[#4A1942]/10 rounded-lg border border-[#4A1942]/20">
+                        <h4 className="text-sm font-semibold text-[#4A1942] mb-2 flex items-center gap-2">
                           🏛️ Venue Category Availability
                         </h4>
-                        <p className="text-xs text-indigo-600 mb-3">Choose which venue categories can use this venue fixture. Leave all unchecked to allow in all categories.</p>
+                        <p className="text-xs text-[#4A1942] mb-3">Choose which venue categories can use this venue fixture. Leave all unchecked to allow in all categories.</p>
                         <div className="flex flex-wrap gap-2">
                           {layoutCategories.map(cat => {
                             const selected = (fixture.venueCategories || []).includes(cat.id as any);
@@ -790,7 +790,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                                     : [...current, cat.id as any];
                                   handleSaveFixtures(fixtureTypes.map(f => f.id === fixture.id ? { ...f, venueCategories } : f));
                                 }}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${selected ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-50'}`}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${selected ? 'bg-[#4A1942] text-white' : 'bg-white text-[#4A1942] border border-[#4A1942]/20 hover:bg-[#4A1942]/10'}`}
                               >
                                 {cat.icon} {cat.name}
                               </button>
@@ -945,7 +945,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-1 rounded">{fixture.width}' × {fixture.height}'</span>
-                          {fixture.lodgingType === 'rooms' && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Max {fixture.capacity || 0}</span>}
+                          {fixture.lodgingType === 'rooms' && <span className="text-xs bg-[#4A1942]/10 text-[#4A1942] px-2 py-1 rounded">Max {fixture.capacity || 0}</span>}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1063,7 +1063,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                            <div className="p-3 bg-[#4A1942]/10 rounded-lg border border-[#4A1942]/20">
                               <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Type</label>
                               <select
                                 value={fixture.lodgingType || 'other'}
@@ -1074,7 +1074,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                                   capacity: e.target.value === 'rooms' ? (f.capacity || 2) : undefined,
                                   inventoryCount: e.target.value === 'rooms' ? undefined : f.inventoryCount
                                 } : f))}
-                                className="w-full px-3 py-2 border border-indigo-300 rounded-lg"
+                                className="w-full px-3 py-2 border border-[#4A1942]/40 rounded-lg"
                               >
                                 <option value="furniture">Furniture</option>
                                 <option value="appliances">Appliances</option>
@@ -1084,7 +1084,7 @@ export function FixtureManagement(props: AdminCommonProps) {
                                 <option value="rooms">Rooms</option>
                                 <option value="other">Other</option>
                               </select>
-                              <p className="text-xs text-indigo-700 mt-2">Classify this lodging/utility item for easier organization and room behavior.</p>
+                              <p className="text-xs text-[#4A1942] mt-2">Classify this lodging/utility item for easier organization and room behavior.</p>
                             </div>
                             {fixture.lodgingType === 'rooms' ? (
                               <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">

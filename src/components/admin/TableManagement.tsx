@@ -463,7 +463,7 @@ export function TableManagement(props: AdminCommonProps) {
                       handleSaveTables([...tableSpecs, newTable]);
                       setExpandedTables(new Set([...expandedTables, id]));
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors font-medium shadow-sm flex items-center gap-1"
+                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-[#3b1435] text-white rounded-lg hover:from-blue-700 hover:to-[#3b1435] transition-colors font-medium shadow-sm flex items-center gap-1"
                   >
                     <span>+</span> Add Table Type
                   </button>
@@ -748,13 +748,13 @@ export function TableManagement(props: AdminCommonProps) {
                           </div>
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide text-indigo-600">Decor Designer</label>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide text-[#4A1942]">Decor Designer</label>
                           <div className="flex items-center gap-2 mt-2">
                             <input
                               type="checkbox"
                               checked={table.allowAsDecorBase !== false}
                               onChange={(e) => handleSaveTables(tableSpecs.map(t => t.id === table.id ? { ...t, allowAsDecorBase: e.target.checked } : t))}
-                              className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              className="w-5 h-5 rounded border-gray-300 text-[#4A1942] focus:ring-[#4A1942]"
                             />
                             <span className="text-sm text-gray-600">Available in Decor Designer</span>
                           </div>
@@ -796,11 +796,11 @@ export function TableManagement(props: AdminCommonProps) {
                     </div>
                     
                     {/* Venue Category Availability */}
-                    <div className="mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-                      <h4 className="text-sm font-semibold text-indigo-800 mb-2 flex items-center gap-2">
+                    <div className="mt-4 p-3 bg-[#4A1942]/10 rounded-lg border border-[#4A1942]/20">
+                      <h4 className="text-sm font-semibold text-[#4A1942] mb-2 flex items-center gap-2">
                         🏛️ Venue Category Availability
                       </h4>
-                      <p className="text-xs text-indigo-600 mb-3">Choose which venue categories can use this table. Leave all unchecked to allow in all categories.</p>
+                      <p className="text-xs text-[#4A1942] mb-3">Choose which venue categories can use this table. Leave all unchecked to allow in all categories.</p>
                       <div className="flex flex-wrap gap-2">
                         {layoutCategories.map(cat => {
                           const selected = (table.venueCategories || []).includes(cat.id as any);
@@ -815,7 +815,7 @@ export function TableManagement(props: AdminCommonProps) {
                                   : [...current, cat.id as any];
                                 handleSaveTables(tableSpecs.map(t => t.id === table.id ? { ...t, venueCategories } : t));
                               }}
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${selected ? 'bg-indigo-600 text-white' : 'bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-50'}`}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${selected ? 'bg-[#4A1942] text-white' : 'bg-white text-[#4A1942] border border-[#4A1942]/20 hover:bg-[#4A1942]/10'}`}
                             >
                               {cat.icon} {cat.name}
                             </button>
@@ -993,7 +993,7 @@ export function TableManagement(props: AdminCommonProps) {
                         handleSaveTables([...tableSpecs, newSeating]);
                         setExpandedSeatingTypes(new Set([...expandedSeatingTypes, id]));
                       }}
-                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg text-sm hover:from-purple-700 hover:to-indigo-700 transition-colors"
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-[#3b1435] text-white rounded-lg text-sm hover:from-purple-700 hover:to-[#3b1435] transition-colors"
                     >
                       + Add Seating Type
                     </button>
@@ -1151,13 +1151,13 @@ export function TableManagement(props: AdminCommonProps) {
                           </select>
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide text-indigo-600">Decor Designer</label>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide text-[#4A1942]">Decor Designer</label>
                           <div className="flex items-center gap-2 mt-2">
                             <input
                               type="checkbox"
                               checked={seat.allowAsDecorBase !== false}
                               onChange={(e) => handleSaveTables(tableSpecs.map(t => t.id === seat.id ? { ...t, allowAsDecorBase: e.target.checked } : t))}
-                              className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              className="w-5 h-5 rounded border-gray-300 text-[#4A1942] focus:ring-[#4A1942]"
                             />
                             <span className="text-sm text-gray-600">Available in Decor Designer</span>
                           </div>
