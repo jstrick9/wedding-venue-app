@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Guest personal events: add-to-calendar + safe time**: the guest's "Your invited
+  events" list now has an Add to calendar action and uses safe time formatting.
+  Committed.
 - ✅ **Couple-event guest-count validation**: the venue's create/edit couple event
   forms now reject NaN/negative/0 guest counts with a clear error. Committed.
 - ✅ **Package & add-on numeric guards**: package forms now clamp prices/guest counts
