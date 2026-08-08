@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from '../App';
+import { emit } from '../utils/appEvents';
 
 describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
   beforeEach(() => {
@@ -50,8 +51,8 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(window.location.hash).toBe('#/dashboard');
 
     // Click close button in Vendors header
-    const closeBtns = screen.getAllByRole('button', { name: /^close$/i });
-    fireEvent.click(closeBtns[0]);
+    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard/i });
+    fireEvent.click(closeBtn);
 
     // Verify user is back on dashboard home and did not jump to #/studio
     expect(screen.queryByRole('heading', { name: /preferred vendors/i })).not.toBeInTheDocument();
@@ -71,8 +72,49 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(await screen.findByRole('heading', { name: /wedding timeline/i })).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtns = screen.getAllByRole('button', { name: /^✕$/i });
-    fireEvent.click(closeBtns[0]);
+    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard/i });
+    fireEvent.click(closeBtn);
+
+    expect(screen.queryByRole('heading', { name: /wedding timeline/i })).not.toBeInTheDocument();
+    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/dashboard');
+  });
+
+  it('keeps user on #dashboard when clicking Operations Studio and closing returns to dashboard home', async () => {
+    window.location.hash = '#/dashboard';
+    render(<App />);
+
+    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+
+    const opsBtn = screen.getByRole('button', { name: /operations studio/i });
+    fireEvent.click(opsBtn);
+
+    expect(await screen.findByRole('heading', { name: /staff & operations/i })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/dashboard');
+
+    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard/i });
+    fireEvent.click(closeBtn);
+
+    expect(screen.queryByRole('heading', { name: /staff & operations/i })).not.toBeInTheDocument();
+    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/dashboard');
+  });
+
+  it('emits spm_open_timeline to navigate directly to #dashboard timeline section and close returns to home', async () => {
+    window.location.hash = '#/dashboard';
+    render(<App />);
+
+    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+
+    act(() => {
+      emit('spm_open_timeline');
+    });
+
+    expect(await screen.findByRole('heading', { name: /wedding timeline/i })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/dashboard');
+
+    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard/i });
+    fireEvent.click(closeBtn);
 
     expect(screen.queryByRole('heading', { name: /wedding timeline/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();

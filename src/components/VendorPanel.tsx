@@ -121,7 +121,17 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
             <h1 className="text-lg font-bold">🧰 Preferred Vendors</h1>
             <p className="text-xs opacity-80">Curate the vendors you recommend to your couples, organized by category.</p>
           </div>
-          <button type="button" onClick={onClose} className="text-white text-xl hover:opacity-80" aria-label="Close">✕</button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+            >
+              <span>←</span>
+              <span>Dashboard</span>
+            </button>
+            <button type="button" onClick={onClose} className="text-white text-xl hover:opacity-80 p-1" aria-label="Close">✕</button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">

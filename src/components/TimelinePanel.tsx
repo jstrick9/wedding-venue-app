@@ -49,6 +49,9 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newTimelineName, setNewTimelineName] = useState('');
   const [newTimelineDate, setNewTimelineDate] = useState('');
+  const [eventSearch, setEventSearch] = useState('');
+  const [eventCategoryFilter, setEventCategoryFilter] = useState<string>('all');
+  const [hideCompletedEvents, setHideCompletedEvents] = useState<boolean>(false);
   const [coupleEvents, setCoupleEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
   const [selectedCoupleId, setSelectedCoupleId] = useState<string | null>(null);
   const [showAddCoordinationConfirm, setShowAddCoordinationConfirm] = useState(false);
@@ -199,12 +202,35 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
               {activeTimeline ? activeTimeline.name : 'Plan your wedding day schedule'}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            {activeTimeline && (
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                title="Print timeline sheet"
+              >
+                <span>🖨️</span>
+                <span>Print</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+            >
+              <span>←</span>
+              <span>Dashboard</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="no-print p-2 hover:bg-white/20 rounded-lg transition-colors text-xl leading-none"
+              aria-label="Close timeline panel"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Couple Event Selector / Filter Bar */}
@@ -391,6 +417,89 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                 </div>
               </div>
 
+              {(() => {
+                const allEvents = activeTimeline.days.flatMap(d => d.events);
+                const completedCount = allEvents.filter(e => e.isCompleted).length;
+                const progressPct = allEvents.length > 0 ? Math.round((completedCount / allEvents.length) * 100) : 0;
+                const hasActiveFilter = eventSearch.trim() || eventCategoryFilter !== 'all' || hideCompletedEvents;
+                return (
+                  <>
+                    {/* KPI Stats Bar */}
+                    <div className="no-print grid grid-cols-1 sm:grid-cols-3 gap-3 bg-purple-50/60 border border-purple-200 rounded-xl p-3">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-purple-700 font-medium">Total Events</span>
+                        <span className="text-lg font-bold text-purple-900">{allEvents.length} event{allEvents.length === 1 ? '' : 's'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-purple-700 font-medium">Completed</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-purple-900">{completedCount} / {allEvents.length}</span>
+                          <span className="text-xs text-purple-600 font-semibold">({progressPct}%)</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <div className="w-full bg-purple-200 rounded-full h-2.5 overflow-hidden">
+                          <div className="bg-[#4A1942] h-2.5 rounded-full transition-all duration-300" style={{ width: `${progressPct}%` }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Filter Bar */}
+                    {allEvents.length > 0 && (
+                      <div className="no-print bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap shadow-sm">
+                        <div className="flex items-center gap-2 flex-wrap flex-1">
+                          <div className="relative flex-1 min-w-[180px]">
+                            <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-xs">🔍</span>
+                            <input
+                              type="text"
+                              value={eventSearch}
+                              onChange={(e) => setEventSearch(e.target.value)}
+                              placeholder="Search timeline events..."
+                              className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg text-xs"
+                            />
+                          </div>
+                          <select
+                            value={eventCategoryFilter}
+                            onChange={(e) => setEventCategoryFilter(e.target.value)}
+                            className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 bg-white"
+                            aria-label="Filter events by category"
+                          >
+                            <option value="all">All Categories ({allEvents.length})</option>
+                            {TIMELINE_CATEGORIES.map((c) => {
+                              const count = allEvents.filter(ev => ev.category === c.id).length;
+                              if (count === 0) return null;
+                              return (
+                                <option key={c.id} value={c.id}>
+                                  {c.icon} {c.label} ({count})
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={hideCompletedEvents}
+                              onChange={(e) => setHideCompletedEvents(e.target.checked)}
+                              className="rounded border-gray-300 text-[#4A1942] focus:ring-[#4A1942]"
+                            />
+                            <span>Show incomplete only</span>
+                          </label>
+                        </div>
+                        {hasActiveFilter && (
+                          <button
+                            type="button"
+                            onClick={() => { setEventSearch(''); setEventCategoryFilter('all'); setHideCompletedEvents(false); }}
+                            className="text-xs text-[#4A1942] hover:underline font-semibold whitespace-nowrap"
+                          >
+                            Clear filters
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
               {/* Days */}
               {activeTimeline.days.map(day => (
                 <div key={day.id} className="bg-gray-50 rounded-xl p-4">
@@ -498,68 +607,102 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                   )}
 
                   {/* Events list */}
-                  {day.events.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <p>No events scheduled for this day</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {day.events.map(event => {
-                        const categoryInfo = getCategoryInfo(event.category);
-                        return (
-                          <div
-                            key={event.id}
-                            className={`flex items-center gap-3 p-3 bg-white rounded-lg border-l-4 transition-all ${
-                              event.isCompleted ? 'opacity-60' : ''
-                            }`}
-                            style={{ borderLeftColor: categoryInfo.color }}
-                          >
+                  {(() => {
+                    const filteredEvents = day.events.filter((event) => {
+                      if (eventCategoryFilter !== 'all' && event.category !== eventCategoryFilter) return false;
+                      if (hideCompletedEvents && event.isCompleted) return false;
+                      if (eventSearch.trim()) {
+                        const q = eventSearch.trim().toLowerCase();
+                        const matchTitle = event.title.toLowerCase().includes(q);
+                        const matchLoc = (event.location || '').toLowerCase().includes(q);
+                        const matchCat = (getCategoryInfo(event.category).label || '').toLowerCase().includes(q);
+                        if (!matchTitle && !matchLoc && !matchCat) return false;
+                      }
+                      return true;
+                    });
+                    const hasActiveFilter = eventSearch.trim() || eventCategoryFilter !== 'all' || hideCompletedEvents;
+                    if (day.events.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-gray-400">
+                          <p>No events scheduled for this day</p>
+                        </div>
+                      );
+                    }
+                    if (filteredEvents.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-gray-400 space-y-2">
+                          <p>No events match your search/filter ({day.events.length} event{day.events.length === 1 ? '' : 's'} hidden)</p>
+                          {hasActiveFilter && (
                             <button
-                              onClick={() => canEdit && activeTimelineId && toggleEventComplete(activeTimelineId, day.id, event.id)}
-                              disabled={!canEdit}
-                              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                event.isCompleted
-                                  ? 'bg-green-500 border-green-500 text-white'
-                                  : 'border-gray-300 hover:border-green-400'
-                              } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              type="button"
+                              onClick={() => { setEventSearch(''); setEventCategoryFilter('all'); setHideCompletedEvents(false); }}
+                              className="text-xs text-[#4A1942] hover:underline font-semibold"
                             >
-                              {event.isCompleted && '✓'}
+                              Clear filters
                             </button>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">{categoryInfo.icon}</span>
-                                <span className={`font-medium ${event.isCompleted ? 'line-through text-gray-400' : ''}`}>
-                                  {event.title}
-                                </span>
+                          )}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-2">
+                        {filteredEvents.map(event => {
+                          const categoryInfo = getCategoryInfo(event.category);
+                          return (
+                            <div
+                              key={event.id}
+                              className={`flex items-center gap-3 p-3 bg-white rounded-lg border-l-4 transition-all ${
+                                event.isCompleted ? 'opacity-60' : ''
+                              }`}
+                              style={{ borderLeftColor: categoryInfo.color }}
+                            >
+                              <button
+                                onClick={() => canEdit && activeTimelineId && toggleEventComplete(activeTimelineId, day.id, event.id)}
+                                disabled={!canEdit}
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                  event.isCompleted
+                                    ? 'bg-green-500 border-green-500 text-white'
+                                    : 'border-gray-300 hover:border-green-400'
+                                } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                {event.isCompleted && '✓'}
+                              </button>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">{categoryInfo.icon}</span>
+                                  <span className={`font-medium ${event.isCompleted ? 'line-through text-gray-400' : ''}`}>
+                                    {event.title}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
+                                  <span>🕐 {formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
+                                  {event.location && <span>📍 {event.location}</span>}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
-                                <span>🕐 {formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
-                                {event.location && <span>📍 {event.location}</span>}
-                              </div>
+                              {canEdit && (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleStartEditEvent(day.id, event)}
+                                    className="p-1.5 text-gray-400 hover:text-[#4A1942] hover:bg-gray-100 rounded transition-colors"
+                                    title="Edit event"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={() => activeTimelineId && removeEvent(activeTimelineId, day.id, event.id)}
+                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                    title="Delete event"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                            {canEdit && (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleStartEditEvent(day.id, event)}
-                                  className="p-1.5 text-gray-400 hover:text-[#4A1942] hover:bg-gray-100 rounded transition-colors"
-                                  title="Edit event"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={() => activeTimelineId && removeEvent(activeTimelineId, day.id, event.id)}
-                                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                                  title="Delete event"
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
 

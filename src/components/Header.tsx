@@ -507,7 +507,10 @@ export function Header({
                   )}
 				  
 				    <button
-					  onClick={() => emit('spm_open_vendors')}
+					  onClick={() => {
+					    emit('spm_open_vendors');
+					    setShowMenu(false);
+					  }}
 					  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 					  title="Vendor Management"
 					>
@@ -515,12 +518,28 @@ export function Header({
 					</button>
 				  
 					<button
-				      onClick={() => emit('spm_open_timeline')}
+				      onClick={() => {
+				        emit('spm_open_timeline');
+				        setShowMenu(false);
+				      }}
 				      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 				      title="Wedding Timeline"
 				    >
 				      📅 Timeline
 				    </button>
+
+					{canOpenOperations && (
+					  <button
+					    onClick={() => {
+					      emit('spm_open_ops');
+					      setShowMenu(false);
+					    }}
+					    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+					    title="Operations Studio"
+					  >
+					    🛠️ Operations
+					  </button>
+					)}
 				  
                   {isStudioPage && (
                     <>
@@ -757,6 +776,29 @@ export function Header({
                   📋 Operations
                 </button>
               )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    emit('spm_open_vendors');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
+                >
+                  🤝 Vendors
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    emit('spm_open_timeline');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
+                >
+                  📅 Timeline
+                </button>
+              </div>
 
               <div className="grid grid-cols-2 gap-2">
                 {isStudioPage && (

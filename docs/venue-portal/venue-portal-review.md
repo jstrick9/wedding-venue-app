@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue Portal Timeline module exit fix & comprehensive UI/UX enhancement pass (#145)** —
+  fixed Timeline module exit bug and `spm_open_timeline`/`spm_open_vendors`/`spm_open_ops` modal trap where exiting or emitting events warped to `#studio`; wired events to navigate directly to `#dashboard` inline section and return to dashboard home on close; added explicit **"← Dashboard"** buttons next to close icons in `TimelinePanel.tsx`, `VendorPanel.tsx`, and `StaffOperationsPanel.tsx`; added **"← Dashboard Home"** buttons to `VenueCalendar` and `Couples Portal` dashboard views; updated sidebar highlighting so all modules show active state; added interactive **Summary Stats KPI card**, **Search & Category Filter bar** (`eventSearch`, `eventCategoryFilter`, `hideCompletedEvents`), and **"🖨️ Print"** button to `TimelinePanel.tsx`; added **"🛠️ Operations"** button to `Header.tsx` menu dropdown.
+  Test count: **638 passing / 11 skipped** (145 test files). Committed.
 - ✅ **Venue Portal navigation & dashboard UX enhancement pass** —
   fixed inline panel exit bug where closing Vendors, Timeline, or Operations on
   Venue Dashboard warped to `#studio` (now returns to Dashboard `'home'` section);

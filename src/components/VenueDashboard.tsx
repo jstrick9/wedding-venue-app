@@ -197,7 +197,7 @@ export function VenueDashboard(props: Props) {
         </div>
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {sidebarItems.map((item) => {
-            const active = item.id === section && ['home', 'calendar', 'couples'].includes(item.id);
+            const active = item.id === section;
             const divider = item.id === 'ops' || item.id === 'studio';
             return (
               <div key={item.id}>
@@ -479,13 +479,38 @@ export function VenueDashboard(props: Props) {
         )}
 
         {section === 'calendar' && (
-          <VenueCalendar venues={venues} onOpenCouple={(id) => openCouplePortal(id)} />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSection('home')}
+                  className="inline-flex items-center gap-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                >
+                  <span>←</span>
+                  <span>Dashboard Home</span>
+                </button>
+                <h1 className="text-xl font-bold text-gray-800">📅 Venue Calendar</h1>
+              </div>
+            </div>
+            <VenueCalendar venues={venues} onOpenCouple={(id) => openCouplePortal(id)} />
+          </div>
         )}
 
         {section === 'couples' && (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold">Couples Portal</h1>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSection('home')}
+                  className="inline-flex items-center gap-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                >
+                  <span>←</span>
+                  <span>Dashboard Home</span>
+                </button>
+                <h1 className="text-2xl font-bold">💍 Couples Portal</h1>
+              </div>
               {coupleEvents.some((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
                 <Button tone="primary" size="sm" onClick={props.onOpenAdmin}>
                   Review &amp; approve layouts in Admin

@@ -521,15 +521,31 @@ export default function AuthenticatedApp() {
   // open modals without prop-drilling). Previously handled by useAppModals.
   useEffect(() => {
     const offs = [
-      on('spm_open_vendors', () => open('vendors')),
-      on('spm_open_timeline', () => open('timeline')),
+      on('spm_open_vendors', () => {
+        closeAll();
+        window.location.hash = '#/dashboard';
+        setView('dashboard');
+        emit('spm_dashboard_open_section', 'vendors');
+      }),
+      on('spm_open_timeline', () => {
+        closeAll();
+        window.location.hash = '#/dashboard';
+        setView('dashboard');
+        emit('spm_dashboard_open_section', 'timeline');
+      }),
+      on('spm_open_ops', () => {
+        closeAll();
+        window.location.hash = '#/dashboard';
+        setView('dashboard');
+        emit('spm_dashboard_open_section', 'ops');
+      }),
       on('spm_open_decor_designer', (detail) => {
         if (detail?.arrangementId) setEditingArrangementId(detail.arrangementId);
         open('decorDesigner');
       }),
     ];
     return () => offs.forEach((off) => off());
-  }, [open]);
+  }, [open, closeAll]);
 
   // Couples booked into the current space (venue-side verification). Lets the
   // venue admin confirm the placed seating will seat every couple's expected
@@ -1007,7 +1023,17 @@ export default function AuthenticatedApp() {
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
           onSaveLayout={handleSaveLayoutWithSync} onSaveLayoutOverwrite={handleSaveLayoutOverwriteWithSync} onSaveMasterLayout={isAdmin ? handleSaveMasterLayout : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
           onShowTemplates={() => open('templates')} onShowAdmin={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/admin'; setView('admin'); }) : undefined} onShowDashboard={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })} onLogout={() => guardStudioLeave(logout)} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
-          onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={handleLoadSavedLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
+          onOpenOperations={
+            canOpenOperationsPanel
+              ? () => guardStudioLeave(() => {
+                  closeAll();
+                  window.location.hash = '#/dashboard';
+                  setView('dashboard');
+                  emit('spm_dashboard_open_section', 'ops');
+                })
+              : undefined
+          }
+          savedLayouts={savedLayouts} onLoadSavedLayout={handleLoadSavedLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
         />
         <div className="no-print spm-studio-chrome">
@@ -1123,7 +1149,12 @@ export default function AuthenticatedApp() {
         <Suspense fallback={null}>
           {showOperations && (
             <StaffOperationsPanel
-              onClose={() => close('operations')}
+              onClose={() => {
+                close('operations');
+                window.location.hash = '#/dashboard';
+                setView('dashboard');
+                emit('spm_dashboard_go_home');
+              }}
               currentUser={user}
               isAdmin={isAdmin}
               venueId={layoutState.currentVenue.id}
@@ -1132,8 +1163,26 @@ export default function AuthenticatedApp() {
               venues={selectableVenues}
             />
           )}
-          {showVendors && <VendorPanel onClose={() => close('vendors')} />}
-          {showTimeline && <TimelinePanel onClose={() => close('timeline')} />}
+          {showVendors && (
+            <VendorPanel
+              onClose={() => {
+                close('vendors');
+                window.location.hash = '#/dashboard';
+                setView('dashboard');
+                emit('spm_dashboard_go_home');
+              }}
+            />
+          )}
+          {showTimeline && (
+            <TimelinePanel
+              onClose={() => {
+                close('timeline');
+                window.location.hash = '#/dashboard';
+                setView('dashboard');
+                emit('spm_dashboard_go_home');
+              }}
+            />
+          )}
           {showPrint && canPrintCurrentLayout && (
             <PrintView
               venue={layoutState.currentVenue}
@@ -1190,7 +1239,7 @@ export default function AuthenticatedApp() {
             </CenteredModal>
           )}
           {showDecorDesigner && <DecorDesigner onClose={() => close('decorDesigner')} onSave={(a) => { const currentArrangements = layoutState.getDecorArrangements(); const nextArrangements = currentArrangements.find(x => x.id === a.id) ? currentArrangements.map(x => x.id === a.id ? a : x) : [...currentArrangements, a]; layoutState.setDecorArrangements(nextArrangements); close('decorDesigner'); }} initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null} />}
-          {showAdmin && <AdminPanel onClose={() => { close('admin'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
+          {showAdmin && <AdminPanel onClose={() => { close('admin'); window.location.hash = '#/dashboard'; setView('dashboard'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
           {showOverview && (
             <EventOverview
               guests={layoutState.guests}
@@ -1199,7 +1248,12 @@ export default function AuthenticatedApp() {
               venue={layoutState.currentVenue}
               eventName={currentEventName}
               venueName={layoutState.currentVenue.name}
-              onOpenVendors={() => { close('overview'); open('vendors'); }}
+              onOpenVendors={() => {
+                close('overview');
+                window.location.hash = '#/dashboard';
+                setView('dashboard');
+                emit('spm_dashboard_open_section', 'vendors');
+              }}
               onOpenTemplates={() => { close('overview'); open('templates'); }}
               onClose={() => close('overview')}
             />
