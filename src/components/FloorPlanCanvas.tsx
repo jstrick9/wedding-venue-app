@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { Venue, PlacedTable, PlacedFixture, Guest, CeremonyChairRow, RectangularChairLayout, PlacedDecor, DecorArrangement } from '../types';
+import { Venue, PlacedTable, PlacedFixture, Guest, CeremonyChairRow, RectangularChairLayout, PlacedDecor, DecorArrangement, LayoutReviewPin } from '../types';
 import { getTableSpecs, getFixtureTypes, getLinenColors, getDecorArrangements, getDecorItems } from '../hooks/useLayoutState';
 import { getChairSpecs, getSpacingSettings } from '../data/venueData';
 import { getConfig } from '../config';
@@ -18,6 +18,8 @@ export interface FloorPlanCanvasProps {
   guests: Guest[];
   arrangements?: DecorArrangement[];
   ceremonyRows?: CeremonyChairRow[];
+  reviewPins?: LayoutReviewPin[];
+  onSelectReviewPin?: (pinId: string) => void;
   selectedId: string | null;
   zoom: number;
   showGrid: boolean;
@@ -52,6 +54,8 @@ export function FloorPlanCanvas({
   guests,
   arrangements: propArrangements,
   ceremonyRows = [],
+  reviewPins = [],
+  onSelectReviewPin,
   selectedId,
   zoom,
   showGrid,
@@ -1773,6 +1777,45 @@ export function FloorPlanCanvas({
             </g>
           );
         })}
+
+        {/* Layout Review Pins */}
+        {reviewPins.length > 0 && (
+          <g key="review-pins-group">
+            {reviewPins.map((pin, i) => {
+              const absX = venueX + (pin.x || 0) * scale;
+              const absY = venueY + (pin.y || 0) * scale;
+              return (
+                <g
+                  key={pin.id}
+                  transform={`translate(${absX}, ${absY})`}
+                  className="cursor-pointer"
+                  role="button"
+                  aria-label={`Review Pin ${i + 1}: ${pin.comment}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectReviewPin?.(pin.id);
+                  }}
+                >
+                  <circle
+                    r={14}
+                    fill="#E11D48"
+                    stroke="#FFFFFF"
+                    strokeWidth={2}
+                  />
+                  <text
+                    y={4}
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    fontSize={11}
+                    fontWeight="bold"
+                  >
+                    {i + 1}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
 
         {/* Capacity indicator */}
         <g transform={`translate(${canvasWidth - 160}, ${canvasHeight - 30})`}>

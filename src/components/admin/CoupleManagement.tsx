@@ -419,7 +419,40 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                             {sl.notes && <span className="text-gray-500 truncate">— {sl.notes}</span>}
                           </div>
                           {sl.layout && v && (
-                            <CoupleLayoutPreview venue={v} layout={sl.layout} guestCount={ev.guestCount} />
+                            <CoupleLayoutPreview
+                              venue={v}
+                              layout={sl.layout}
+                              guestCount={ev.guestCount}
+                              reviewPins={sl.reviewPins}
+                              onAddReviewPin={(position, comment) => {
+                                const newPin = {
+                                  id: `pin-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                                  x: position.x,
+                                  y: position.y,
+                                  comment,
+                                  createdAt: new Date().toISOString(),
+                                  authorName: user?.name || 'Venue Admin',
+                                };
+                                const nextPins = [...(sl.reviewPins || []), newPin];
+                                updateCoupleEvent(ev.id, {
+                                  spaceLayouts: {
+                                    ...ev.spaceLayouts,
+                                    [spaceId]: { ...sl, reviewPins: nextPins },
+                                  },
+                                });
+                                refresh();
+                              }}
+                              onRemoveReviewPin={(pinId) => {
+                                const nextPins = (sl.reviewPins || []).filter((p) => p.id !== pinId);
+                                updateCoupleEvent(ev.id, {
+                                  spaceLayouts: {
+                                    ...ev.spaceLayouts,
+                                    [spaceId]: { ...sl, reviewPins: nextPins },
+                                  },
+                                });
+                                refresh();
+                              }}
+                            />
                           )}
                         </div>
                       );

@@ -183,4 +183,60 @@ describe('PrintView (Print / Export Polish)', () => {
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('renders print sheet toggles checked by default and shows Linen Color Key & Setup Checklist', () => {
+    render(
+      <PrintView
+        venue={sampleVenue}
+        tables={sampleTables}
+        fixtures={sampleFixtures}
+        guests={sampleGuests}
+        layoutName="Evening Gala"
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText(/Dietary & Meal notes/i)).toBeChecked();
+    expect(screen.getByLabelText(/Linen color key/i)).toBeChecked();
+    expect(screen.getByLabelText(/Room setup checklist/i)).toBeChecked();
+
+    expect(screen.getByRole('heading', { name: /Linen Color Key/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Room Setup Checklist/i })).toBeInTheDocument();
+    expect(screen.getByText(/nut allergy/i)).toBeInTheDocument();
+  });
+
+  it('toggling checkboxes hides/shows dietary notes, Linen Color Key, and Room Setup Checklist', () => {
+    render(
+      <PrintView
+        venue={sampleVenue}
+        tables={sampleTables}
+        fixtures={sampleFixtures}
+        guests={sampleGuests}
+        layoutName="Evening Gala"
+        onClose={vi.fn()}
+      />,
+    );
+
+    const dietaryCheckbox = screen.getByLabelText(/Dietary & Meal notes/i);
+    const linenCheckbox = screen.getByLabelText(/Linen color key/i);
+    const checklistCheckbox = screen.getByLabelText(/Room setup checklist/i);
+
+    // Uncheck dietary notes
+    fireEvent.click(dietaryCheckbox);
+    expect(screen.queryByText(/nut allergy/i)).not.toBeInTheDocument();
+    // Guest name is still visible
+    expect(screen.getByText(/Alice Smith/i)).toBeInTheDocument();
+
+    // Uncheck linen key
+    fireEvent.click(linenCheckbox);
+    expect(screen.queryByRole('heading', { name: /Linen Color Key/i })).not.toBeInTheDocument();
+
+    // Uncheck setup checklist
+    fireEvent.click(checklistCheckbox);
+    expect(screen.queryByRole('heading', { name: /Room Setup Checklist/i })).not.toBeInTheDocument();
+
+    // Recheck setup checklist
+    fireEvent.click(checklistCheckbox);
+    expect(screen.getByRole('heading', { name: /Room Setup Checklist/i })).toBeInTheDocument();
+  });
 });

@@ -7,6 +7,13 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Design Studio: layout review & commenting pins + custom print/export legend toggles** —
+  added `LayoutReviewPin` type and canvas markers to `FloorPlanCanvas`, added
+  "📍 Add review pin" mode, coordinate popover comment input, and review pins list
+  to `CoupleLayoutPreview`, wired pin persistence in `CoupleManagement`; added
+  interactive checkbox toggles in `PrintView` to selectively show/hide dietary
+  notes, Linen Color Key, and Room Setup Checklist on printed floor plans.
+  Test count: **607 passing / 11 skipped**. Committed.
 - ✅ **Design Studio: print/export scope polish & empty Master Layout warning** —
   added scoped `@media print` rules (`.no-print`, `.spm-studio-chrome`, and
   `body:has(.spm-print-view)`) so printing from `PrintView` or directly from

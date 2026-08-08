@@ -969,6 +969,16 @@ export interface CoupleEventDay {
 
 export type CoupleLayoutStatus = 'none' | 'draft' | 'pending' | 'approved' | 'changes_requested' | 'rejected';
 
+export interface LayoutReviewPin {
+  id: string;
+  x: number;
+  y: number;
+  comment: string;
+  createdAt: string;
+  authorName?: string;
+  resolved?: boolean;
+}
+
 /** A layout the couple has drawn for one of their venue spaces (for venue approval). */
 export interface CoupleSpaceLayout {
   tables: PlacedTable[];
@@ -982,6 +992,7 @@ export interface CoupleSpaceLayoutRecord {
   status: 'draft' | 'designed' | 'submitted';
   notes?: string;
   layout?: CoupleSpaceLayout;
+  reviewPins?: LayoutReviewPin[];
 }
 
 export interface CoupleLayoutReview {
