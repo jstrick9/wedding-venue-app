@@ -908,16 +908,32 @@ export default function AuthenticatedApp() {
         canAdmin={canOpenAdminPanel}
         canOps={canOpenOperationsPanel}
         onOpenAdmin={() => { window.location.hash = '#/admin'; setView('admin'); closeAll(); }}
-        onOpenOperations={() => { setView('studio'); open('operations'); }}
-        onOpenVendors={() => { setView('studio'); open('vendors'); }}
-        onOpenTimeline={() => { setView('studio'); open('timeline'); }}
+        onOpenOperations={() => {
+          window.location.hash = '#/dashboard';
+          setView('dashboard');
+          emit('spm_dashboard_open_section', 'ops');
+        }}
+        onOpenVendors={() => {
+          window.location.hash = '#/dashboard';
+          setView('dashboard');
+          emit('spm_dashboard_open_section', 'vendors');
+        }}
+        onOpenTimeline={() => {
+          window.location.hash = '#/dashboard';
+          setView('dashboard');
+          emit('spm_dashboard_open_section', 'timeline');
+        }}
         onOpenStudio={() => { window.location.hash = '#/studio'; setView('studio'); }}
         onLogout={logout}
         opsNode={
           canOpenOperationsPanel ? (
             <StaffOperationsPanel
               inline
-              onClose={() => setView('studio')}
+              onClose={() => {
+                window.location.hash = '#/dashboard';
+                setView('dashboard');
+                emit('spm_dashboard_go_home');
+              }}
               currentUser={user}
               isAdmin={isAdmin}
               venueId={layoutState.currentVenue.id}
@@ -927,8 +943,26 @@ export default function AuthenticatedApp() {
             />
           ) : undefined
         }
-        vendorsNode={<VendorPanel inline onClose={() => setView('studio')} />}
-        timelineNode={<TimelinePanel inline onClose={() => setView('studio')} />}
+        vendorsNode={
+          <VendorPanel
+            inline
+            onClose={() => {
+              window.location.hash = '#/dashboard';
+              setView('dashboard');
+              emit('spm_dashboard_go_home');
+            }}
+          />
+        }
+        timelineNode={
+          <TimelinePanel
+            inline
+            onClose={() => {
+              window.location.hash = '#/dashboard';
+              setView('dashboard');
+              emit('spm_dashboard_go_home');
+            }}
+          />
+        }
       />
     );
   }

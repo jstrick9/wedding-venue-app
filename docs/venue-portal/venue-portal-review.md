@@ -7,6 +7,15 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue Portal navigation & dashboard UX enhancement pass** —
+  fixed inline panel exit bug where closing Vendors, Timeline, or Operations on
+  Venue Dashboard warped to `#studio` (now returns to Dashboard `'home'` section);
+  added Vendor Showcase and Timeline Studio buttons to Dashboard quick actions; added
+  live Unread Couple Messages alert banner on Dashboard; made onboarding category links
+  open Admin directly to `venues` or `packages` tab; added "← Dashboard" button to AdminPanel;
+  filtered studio-specific canvas commands from Header menu on non-studio pages; added
+  instant text search to StudioLayoutsHome template gallery.
+  Test count: **632 passing / 11 skipped**. Committed.
 - ✅ **Venue Portal Timeline <-> Couples Portal integration & Day of Coordination gating** —
   added dedicated **"📅 Timeline"** tab to Couples Portal (`CoupleTimelineTab.tsx`) so
   couples and hired planners can build and manage wedding timelines; updated Venue Portal

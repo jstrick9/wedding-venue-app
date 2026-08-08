@@ -88,6 +88,11 @@ export function Header({
   const canOpenOperations = canAccessOperationsPanel(currentUser);
   const canPrint = canPrintLayouts(currentUser);
 
+  const isStudioPage =
+    window.location.hash.startsWith('#/studio') ||
+    window.location.hash.startsWith('#/venuemap') ||
+    window.location.hash === '';
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -484,19 +489,22 @@ export function Header({
                   className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl py-1 min-w-[200px]"
                   style={{ zIndex: 99999 }}
                 >
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onShowTemplates();
-                      setShowMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                  >
-                    📋 Templates
-                  </button>
-
-                  <hr className="my-1" />
+                  {isStudioPage && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onShowTemplates();
+                          setShowMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        📋 Templates
+                      </button>
+                      <hr className="my-1" />
+                    </>
+                  )}
 				  
 				    <button
 					  onClick={() => emit('spm_open_vendors')}
@@ -514,57 +522,62 @@ export function Header({
 				      📅 Timeline
 				    </button>
 				  
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setShowSaveModal(true);
-                      setShowMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                  >
-                    💾 Save Layout
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setShowLoadModal(true);
-                      setShowMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                  >
-                    📂 Load Layout
-                  </button>
-
-                  {isAdmin && onSaveMasterLayout && (
+                  {isStudioPage && (
                     <>
                       <hr className="my-1" />
                       <button
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
-                          onSaveMasterLayout();
+                          setShowSaveModal(true);
                           setShowMenu(false);
                         }}
-                        className="w-full text-left px-4 py-2 text-green-700 hover:bg-green-50 flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
-                        👑 Save as Master Layout
+                        💾 Save Layout
                       </button>
 
-                      {currentVenue.masterLayout && onClearMasterLayout && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setShowMenu(false);
-                            setConfirmClearMaster(true);
-                          }}
-                          className="w-full text-left px-4 py-2 text-red-700 hover:bg-red-50 flex items-center gap-2"
-                        >
-                          🗑️ Clear Master Layout
-                        </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowLoadModal(true);
+                          setShowMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        📂 Load Layout
+                      </button>
+
+                      {isAdmin && onSaveMasterLayout && (
+                        <>
+                          <hr className="my-1" />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              onSaveMasterLayout();
+                              setShowMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-green-700 hover:bg-green-50 flex items-center gap-2"
+                          >
+                            👑 Save as Master Layout
+                          </button>
+
+                          {currentVenue.masterLayout && onClearMasterLayout && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setShowMenu(false);
+                                setConfirmClearMaster(true);
+                              }}
+                              className="w-full text-left px-4 py-2 text-red-700 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              🗑️ Clear Master Layout
+                            </button>
+                          )}
+                        </>
                       )}
                     </>
                   )}
@@ -746,17 +759,19 @@ export function Header({
               )}
 
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onShowTemplates();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
-                >
-                  📋 Templates
-                </button>
+                {isStudioPage && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onShowTemplates();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
+                  >
+                    📋 Templates
+                  </button>
+                )}
 
                 {onShowWorkspaceHelp && (
                   <button
@@ -772,32 +787,36 @@ export function Header({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setShowSaveModal(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
-                >
-                  💾 Save
-                </button>
+                {isStudioPage && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowSaveModal(true);
+                        setMobileMenuOpen(false);
+                      }}
+                      className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
+                    >
+                      💾 Save
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setShowLoadModal(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
-                >
-                  📂 Load
-                </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowLoadModal(true);
+                        setMobileMenuOpen(false);
+                      }}
+                      className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
+                    >
+                      📂 Load
+                    </button>
+                  </>
+                )}
               </div>
 
-              {isAdmin && onSaveMasterLayout && (
+              {isStudioPage && isAdmin && onSaveMasterLayout && (
                 <button
                   type="button"
                   onClick={(e) => {

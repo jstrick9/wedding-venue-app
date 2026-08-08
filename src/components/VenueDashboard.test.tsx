@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { emit } from '../utils/appEvents';
 
 vi.mock('../config', () => ({ getConfig: () => ({ venueName: 'Seven Paths Manor', primaryColor: '#4A1942', textColor: '#1f2937', backgroundColor: '#f3f4f6' }) }));
 vi.mock('../hooks/useLayoutState', () => ({ getVenues: () => [{ id: 'reception', name: 'Reception Hall', category: 'reception' }] }));
@@ -77,5 +78,66 @@ describe('VenueDashboard', () => {
     render(<VenueDashboard {...baseProps} />);
     await user.click(screen.getAllByRole('button', { name: /Design Studio/i })[0]);
     expect(baseProps.onOpenStudio).toHaveBeenCalled();
+  });
+
+  it('switches to vendors section and returns to home section when spm_dashboard_go_home is dispatched', () => {
+    render(
+      <VenueDashboard
+        {...baseProps}
+        vendorsNode={<div data-testid="test-vendors-panel">Vendors Content</div>}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /vendor showcase/i }));
+    expect(screen.getByTestId('test-vendors-panel')).toBeInTheDocument();
+
+    // Trigger return to home (as happens when closing inline Vendors/Ops/Timeline)
+    act(() => {
+      emit('spm_dashboard_go_home');
+    });
+    expect(screen.queryByTestId('test-vendors-panel')).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Welcome back/i).length).toBeGreaterThan(0);
+  });
+
+  it('switches to ops or timeline section when spm_dashboard_open_section is dispatched', () => {
+    render(
+      <VenueDashboard
+        {...baseProps}
+        opsNode={<div data-testid="test-ops-panel">Ops Content</div>}
+        timelineNode={<div data-testid="test-timeline-panel">Timeline Content</div>}
+      />,
+    );
+
+    act(() => {
+      emit('spm_dashboard_open_section', 'ops');
+    });
+    expect(screen.getByTestId('test-ops-panel')).toBeInTheDocument();
+
+    act(() => {
+      emit('spm_dashboard_open_section', 'timeline');
+    });
+    expect(screen.getByTestId('test-timeline-panel')).toBeInTheDocument();
+  });
+
+  it('renders Unread Couple Messages alert banner and allows clicking KPI card to switch to couples section', async () => {
+    const chatService = await import('../services/couples/coupleChatService');
+    const spy = vi
+      .spyOn(chatService, 'getUnreadCoupleMessageCounts')
+      .mockReturnValue({ c1: 2 });
+
+    render(<VenueDashboard {...baseProps} />);
+    expect(
+      screen.getByText(/2 Unread Messages from Couples/i),
+    ).toBeInTheDocument();
+
+    const unreadBtn = screen.getByRole('button', {
+      name: /2 unread couple messages/i,
+    });
+    fireEvent.click(unreadBtn);
+    expect(
+      screen.getByRole('heading', { name: /couples portal/i }),
+    ).toBeInTheDocument();
+
+    spy.mockRestore();
   });
 });

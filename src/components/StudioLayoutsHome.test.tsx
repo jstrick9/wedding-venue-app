@@ -183,4 +183,40 @@ describe('StudioLayoutsHome full-venue map shortcut', () => {
     );
     expect(screen.queryByRole('button', { name: /Design the full-venue map/ })).toBeNull();
   });
+
+  it('filters templates by search text matching name or description', () => {
+    const customTemplates = [
+      ...templates,
+      {
+        id: 't2',
+        name: 'Intimate Ceremony',
+        category: 'ceremony',
+        description: 'Cozy indoor setup',
+        tables: [],
+        fixtures: [],
+        venueId: 'v1',
+      },
+    ];
+    render(
+      <StudioLayoutsHome
+        venues={venues}
+        currentVenueId="v1"
+        templates={customTemplates as any}
+        layoutCategories={categories}
+        canEdit
+        onOpenVenue={vi.fn()}
+        onSelectTemplate={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Classic Round Setup')).toBeInTheDocument();
+    expect(screen.getByText('Intimate Ceremony')).toBeInTheDocument();
+
+    const searchInput = screen.getByPlaceholderText(/search templates by name or description/i);
+    fireEvent.change(searchInput, { target: { value: 'Intimate' } });
+
+    expect(screen.queryByText('Classic Round Setup')).not.toBeInTheDocument();
+    expect(screen.getByText('Intimate Ceremony')).toBeInTheDocument();
+  });
 });

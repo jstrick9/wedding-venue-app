@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { VenueCalendar } from './VenueCalendar';
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { getCoupleSetupTasks } from '../services/couples/coupleSetupService';
@@ -10,6 +10,7 @@ import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
 import { Card, Button, EmptyState } from './ui';
+import { on, emit } from '../utils/appEvents';
 
 type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'admin' | 'ops';
 
@@ -56,6 +57,17 @@ export function VenueDashboard(props: Props) {
   const [section, setSection] = useState<Section>('home');
   // Mobile drawer toggle for the left sidebar.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const offHome = on('spm_dashboard_go_home', () => setSection('home'));
+    const offSection = on('spm_dashboard_open_section', (detail) => {
+      if (detail) setSection(detail as Section);
+    });
+    return () => {
+      offHome();
+      offSection();
+    };
+  }, []);
   const venues = useMemo(() => getVenues(), []);
   const config = getConfig();
 
@@ -230,6 +242,30 @@ export function VenueDashboard(props: Props) {
               <p className="text-sm text-gray-500 mt-0.5">Here's what's happening at {config.venueName || 'your venue'}.</p>
             </div>
 
+            {/* Live Couple Messages Alert Banner */}
+            {stats.unread > 0 && (
+              <div className="rounded-xl border border-purple-300 bg-purple-50 p-4 mb-2 flex items-center justify-between gap-3 flex-wrap shadow-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden="true">💬</span>
+                  <div>
+                    <div className="text-sm font-bold text-purple-900">
+                      {stats.unread} Unread Message{stats.unread === 1 ? '' : 's'} from Couples
+                    </div>
+                    <p className="text-xs text-purple-700 mt-0.5">
+                      Couples have sent messages in the Couples Portal Chat requiring your review or response.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSection('couples')}
+                  className="text-xs font-bold text-white bg-[#4A1942] hover:bg-[#3b1435] px-3.5 py-2 rounded-lg transition-colors shrink-0 shadow-sm"
+                >
+                  View Couples &amp; Reply →
+                </button>
+              </div>
+            )}
+
             {/* KPI cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
               <Card className="p-4">
@@ -258,10 +294,16 @@ export function VenueDashboard(props: Props) {
                 <div className="text-2xl font-bold text-emerald-600">{calendarEvents.filter((e) => e.category === 'open-house').length}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Open houses</div>
               </Card>
-              <Card className="p-4">
+              <button
+                type="button"
+                onClick={() => setSection('couples')}
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
+                title="Open Couples Portal to view unread messages"
+                aria-label={`${stats.unread} unread couple messages`}
+              >
                 <div className={`text-2xl font-bold ${stats.unread > 0 ? 'text-rose-600' : 'text-gray-700'}`}>{stats.unread}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Unread couple msgs</div>
-              </Card>
+              </button>
               <button
                 type="button"
                 onClick={() => setSection('calendar')}
@@ -420,8 +462,14 @@ export function VenueDashboard(props: Props) {
                     <button type="button" onClick={() => setSection('calendar')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
                       <span>📅</span><span>Calendar</span>
                     </button>
-                    <button type="button" onClick={props.onOpenOperations} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
-                      <span>🛠️</span><span>Operations</span>
+                    <button type="button" onClick={() => setSection('ops')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                      <span>🛠️</span><span>Operations Studio</span>
+                    </button>
+                    <button type="button" onClick={() => setSection('vendors')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                      <span>🧰</span><span>Vendor Showcase</span>
+                    </button>
+                    <button type="button" onClick={() => setSection('timeline')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                      <span>⏱️</span><span>Timeline Studio</span>
                     </button>
                   </div>
                 </div>

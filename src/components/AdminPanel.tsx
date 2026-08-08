@@ -89,7 +89,7 @@ import { BackupManagement } from './admin/BackupManagement';
 import { InviteMembers } from './admin/InviteMembers';
 import { uploadImage } from '../services/storage/imageStorage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
-import { emitDataChanged } from '../utils/appEvents';
+import { emitDataChanged, on } from '../utils/appEvents';
 import type { AdminCommonProps, AdminDialogOptions, AdminTabDefinition } from './admin/AdminTabTypes';
 
 const chairLayoutOptions: { id: RectangularChairLayout; name: string; description: string }[] = [
@@ -163,6 +163,15 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
       }
     },
   );
+
+  useEffect(() => {
+    return on('spm_open_admin_tab', (detail) => {
+      if (detail) {
+        setActiveTab(detail);
+      }
+    });
+  }, []);
+
   const [tabSearch, setTabSearch] = useState('');
   const [venues, setVenuesState] = useState(() => getVenues());
   const [tableSpecs, setTableSpecsState] = useState(() => getTableSpecs());
@@ -1093,7 +1102,17 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
               <h2 className="text-xl font-bold" style={{ fontFamily: config.headingFontFamily }}>Admin &amp; System Settings</h2>
               <p className="text-sm opacity-90 mt-1">Manage venues &amp; inventory, layout content, couples, branding, and access.</p>
             </div>
-            <button type="button" onClick={onClose} className="text-2xl hover:opacity-80" aria-label="Close admin panel">✕</button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+              >
+                <span>←</span>
+                <span>Dashboard</span>
+              </button>
+              <button type="button" onClick={onClose} className="text-2xl hover:opacity-80" aria-label="Close admin panel">✕</button>
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mt-4 text-xs">
             <div className="rounded-lg bg-white/10 px-3 py-2">

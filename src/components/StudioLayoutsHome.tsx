@@ -41,10 +41,19 @@ export function StudioLayoutsHome({
   const coupleEvents = useMemo(() => getCoupleEvents(), []);
   const demandFor = (venueId: string) => coupleDemandForVenue(coupleEvents, venueId);
 
-  const filteredTemplates =
-    selectedCategory === 'all'
-      ? templates
-      : templates.filter((t) => t.category === selectedCategory);
+  const [templateSearch, setTemplateSearch] = useState('');
+
+  const filteredTemplates = templates.filter((t) => {
+    if (selectedCategory !== 'all' && t.category !== selectedCategory) return false;
+    if (
+      templateSearch.trim() &&
+      !t.name.toLowerCase().includes(templateSearch.toLowerCase()) &&
+      !t.description?.toLowerCase().includes(templateSearch.toLowerCase())
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const totalSeating = venues.reduce((sum, v) => sum + (v.capacity || 0), 0);
   const spacesWithMaster = venues.filter((v) => v.masterLayout).length;
@@ -224,6 +233,33 @@ export function StudioLayoutsHome({
                 </button>
               );
             })}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-200 flex-wrap">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <span className="text-gray-400">🔍</span>
+              <input
+                type="text"
+                value={templateSearch}
+                onChange={(e) => setTemplateSearch(e.target.value)}
+                placeholder="Search templates by name or description..."
+                aria-label="Search templates"
+                className="text-sm bg-transparent outline-none flex-1 text-gray-800"
+              />
+              {templateSearch && (
+                <button
+                  type="button"
+                  onClick={() => setTemplateSearch('')}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                  aria-label="Clear template search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <span className="text-xs text-gray-500 bg-white px-2.5 py-1 rounded-full border border-gray-200 font-medium">
+              {filteredTemplates.length} / {templates.length} templates
+            </span>
           </div>
 
           {filteredTemplates.length === 0 ? (

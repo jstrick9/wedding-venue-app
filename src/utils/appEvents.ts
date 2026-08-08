@@ -90,6 +90,12 @@ export interface AppEventMap {
    * corrupt JSON). Subscribers (e.g. a global toast) should surface it to the user.
    */
   spm_storage_error: StorageErrorDetail;
+  /** Navigate AdminPanel directly to a specific category tab. */
+  spm_open_admin_tab: string;
+  /** Navigate VenueDashboard directly to an inline section (ops, vendors, timeline, etc.). */
+  spm_dashboard_open_section: string;
+  /** Return VenueDashboard to the home section. */
+  spm_dashboard_go_home: void;
 }
 
 export type AppEventName = keyof AppEventMap;
