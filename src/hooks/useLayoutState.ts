@@ -44,7 +44,7 @@ import { parseGuestCsv } from '../utils/guestCsv';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../constants/storageVersions';
 import { saveVersionedStorage } from '../utils/storage';
-import { emitDataChanged, on } from '../utils/appEvents';
+import { emitDataChanged, on, emit } from '../utils/appEvents';
 import { validateLayout } from '../utils/collisionDetection';
 
 // Position type
@@ -465,6 +465,9 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
       setLayout(newLayout);
       setSelectedId(null);
       setWarnings([]);
+      // The working layout was replaced; clear undo history so Undo can't
+      // restore a different venue's layout.
+      emit('spm_clear_undo_history');
 
       if (venueChangeCallback.current) {
         setTimeout(() => {
@@ -918,6 +921,7 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
         createdAt: savedLayout.createdAt,
         updatedAt: new Date().toISOString(),
       });
+      emit('spm_clear_undo_history');
 
       setGuests(savedLayout.guests || []);
       setSelectedId(null);
@@ -960,6 +964,7 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+      emit('spm_clear_undo_history');
 
       setSelectedId(null);
 

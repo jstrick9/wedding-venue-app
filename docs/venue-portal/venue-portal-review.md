@@ -64,6 +64,10 @@ P1 = valuable, P2 = polish).*
   metadata edits (label/linen/chairs/applied design, coalesced per item) and
   dropping a decor design onto a table now push an undo snapshot, so every canvas
   edit is undoable. Test count: **592 passing / 11 skipped**. Committed.
+- ✅ **Design Studio: clear undo history when the layout is replaced** — the undo
+  stack now resets on venue switch / load-layout / load-template, so Undo can't
+  restore a different venue's layout (clearHistory was previously never called).
+  Test count: **593 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

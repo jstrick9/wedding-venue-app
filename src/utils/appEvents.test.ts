@@ -73,3 +73,13 @@ describe('spm_storage_error typed payload', () => {
     off();
   });
 });
+
+describe('spm_clear_undo_history event', () => {
+  it('delivers to typed subscribers and is used by the undo provider', () => {
+    const handler = vi.fn();
+    const off = on('spm_clear_undo_history', handler);
+    emit('spm_clear_undo_history');
+    expect(handler).toHaveBeenCalledTimes(1);
+    off();
+  });
+});

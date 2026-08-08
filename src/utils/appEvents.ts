@@ -82,6 +82,9 @@ export interface AppEventMap {
   spm_data_changed: { type: DataChangedType } | void;
   /** A new undo snapshot is available for the undo/redo stack. */
   spm_push_undo_snapshot: UndoSnapshot;
+  /** The working layout was replaced (venue switch / load-layout / load-template);
+   *  undo history must be cleared so Undo can't restore a different layout. */
+  spm_clear_undo_history: void;
   /**
    * The versioned storage layer hit a save/load error (e.g. quota exceeded,
    * corrupt JSON). Subscribers (e.g. a global toast) should surface it to the user.

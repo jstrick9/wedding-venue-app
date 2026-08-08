@@ -113,6 +113,12 @@ export function UndoRedoProvider({ children, onRestore }: UndoRedoProviderProps)
     });
   }, [pushSnapshot]);
 
+  // Clear undo/redo history when the working layout is replaced (venue switch,
+  // load-layout, load-template) so Undo can't restore a different layout.
+  useEffect(() => {
+    return on('spm_clear_undo_history', () => clearHistory());
+  }, [clearHistory]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
