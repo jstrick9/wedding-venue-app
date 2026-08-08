@@ -144,4 +144,13 @@ describe('CouplesPortal', () => {
     fireEvent.click(screen.getByText('Portal Settings'));
     expect(screen.getByText('💾 Save portal settings')).toBeTruthy();
   });
+
+  it('renders the Timeline tab in Couples Portal and allows couple/planner to view and manage timeline', () => {
+    setupSession('Owner & Couple');
+    render(<CouplesPortal onExitPortal={() => {}} />);
+    const timelineTab = screen.getByText('Timeline');
+    fireEvent.click(timelineTab);
+    expect(screen.getByText(/Self-Managed \/ Planner Timeline/i)).toBeInTheDocument();
+    expect(screen.getByText(/No events scheduled for Wedding Day/i)).toBeInTheDocument();
+  });
 });

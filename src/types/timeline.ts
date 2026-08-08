@@ -44,6 +44,8 @@ export interface WeddingTimeline {
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
+  /** Links this timeline to a booked CoupleEvent ID */
+  coupleId?: string;
 }
 
 export const TIMELINE_CATEGORIES: { id: TimelineCategory; label: string; icon: string; color: string }[] = [

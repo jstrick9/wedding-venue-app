@@ -1,7 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTimeline } from '../hooks/useTimeline';
 import { TimelineEvent, TIMELINE_CATEGORIES, TimelineCategory } from '../types/timeline';
 import { ConfirmDialog } from './ConfirmDialog';
+import {
+  getCoupleEvents,
+  updateCoupleEvent,
+  hasVenueCoordination,
+} from '../services/couples/coupleService';
+import { CoupleEvent } from '../types';
+import { on } from '../utils/appEvents';
+import { showToast } from './Toast';
 
 interface TimelinePanelProps {
   onClose: () => void;
@@ -16,6 +24,10 @@ function fmtDay(dateStr: string): string {
   return Number.isNaN(d.getTime()) ? dateStr : d.toLocaleDateString();
 }
 
+function portalUrl(token: string): string {
+  return `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
+}
+
 export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
   const {
     timelines,
@@ -23,6 +35,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
     activeTimelineId,
     setActiveTimelineId,
     createTimeline,
+    getTimelineForCouple,
     addDay,
     removeDay,
     addEvent,
@@ -36,6 +49,43 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newTimelineName, setNewTimelineName] = useState('');
   const [newTimelineDate, setNewTimelineDate] = useState('');
+  const [coupleEvents, setCoupleEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
+  const [selectedCoupleId, setSelectedCoupleId] = useState<string | null>(null);
+  const [showAddCoordinationConfirm, setShowAddCoordinationConfirm] = useState(false);
+
+  useEffect(() => {
+    return on('spm_data_changed', () => {
+      setCoupleEvents(getCoupleEvents());
+    });
+  }, []);
+
+  const selectedCouple = useMemo(() => {
+    return coupleEvents.find((c) => c.id === selectedCoupleId) || null;
+  }, [coupleEvents, selectedCoupleId]);
+
+  const isCoordinationBooked = selectedCouple ? hasVenueCoordination(selectedCouple) : false;
+  const canEdit = selectedCouple ? isCoordinationBooked : true;
+
+  const existingCoupleTimeline = useMemo(() => {
+    if (!selectedCouple) return null;
+    return getTimelineForCouple(selectedCouple.id);
+  }, [selectedCouple, getTimelineForCouple]);
+
+  useEffect(() => {
+    if (selectedCouple) {
+      if (existingCoupleTimeline) {
+        if (activeTimelineId !== existingCoupleTimeline.id) {
+          setActiveTimelineId(existingCoupleTimeline.id);
+        }
+      } else {
+        createTimeline(
+          `${selectedCouple.coupleName} Wedding Timeline`,
+          selectedCouple.eventDate || new Date().toISOString().split('T')[0],
+          selectedCouple.id,
+        );
+      }
+    }
+  }, [selectedCouple, existingCoupleTimeline, activeTimelineId, createTimeline, setActiveTimelineId]);
   const [showAddEvent, setShowAddEvent] = useState<string | null>(null);
   const [showAddDay, setShowAddDay] = useState(false);
   const [newDay, setNewDay] = useState({ date: '', label: '' });
@@ -92,7 +142,11 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
 
   const handleCreateTimeline = () => {
     if (!newTimelineName.trim() || !newTimelineDate) return;
-    createTimeline(newTimelineName.trim(), newTimelineDate);
+    createTimeline(
+      newTimelineName.trim(),
+      newTimelineDate,
+      selectedCoupleId || undefined,
+    );
     setNewTimelineName('');
     setNewTimelineDate('');
     setShowCreateModal(false);
@@ -153,7 +207,120 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
           </button>
         </div>
 
+        {/* Couple Event Selector / Filter Bar */}
+        <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <label
+              htmlFor="venue-timeline-couple-select"
+              className="text-xs font-bold text-gray-700 uppercase tracking-wider"
+            >
+              Couple Event:
+            </label>
+            <select
+              id="venue-timeline-couple-select"
+              value={selectedCoupleId || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedCoupleId(val || null);
+                if (!val) {
+                  setActiveTimelineId(null);
+                }
+              }}
+              aria-label="Select couple event timeline or venue templates"
+              className="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 bg-white font-medium text-gray-800 min-w-[240px]"
+            >
+              <option value="">📁 General / Venue Template Timelines ({timelines.filter(t => !t.coupleId).length})</option>
+              <optgroup label="★ Day of Coordination Booked (Venue Managed)">
+                {coupleEvents
+                  .filter((c) => hasVenueCoordination(c))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      ★ {c.coupleName} ({c.eventDate || 'No date'})
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label="🔒 Planner / Self-Managed (Read-Only to Venue)">
+                {coupleEvents
+                  .filter((c) => !hasVenueCoordination(c))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      🔒 {c.coupleName} ({c.eventDate || 'No date'})
+                    </option>
+                  ))}
+              </optgroup>
+            </select>
+          </div>
+          {selectedCouple && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">
+                Token: <code className="bg-gray-200 px-1 rounded">{selectedCouple.inviteToken}</code>
+              </span>
+            </div>
+          )}
+        </div>
+
         <div className="flex-1 overflow-auto p-4">
+          {selectedCouple && isCoordinationBooked && (
+            <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 mb-6 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl" aria-hidden="true">💒</span>
+                <div>
+                  <div className="font-bold text-sm text-purple-900">
+                    ★ Venue Coordination Service Booked — {selectedCouple.coupleName}
+                  </div>
+                  <p className="text-xs text-purple-700 mt-0.5">
+                    The couple has booked Seven Paths Manor's Day of Coordination service ($1,000). You have full permission to create, edit, and manage this wedding timeline. Changes sync instantly with the Couples Portal.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.open(portalUrl(selectedCouple.inviteToken), '_blank')}
+                className="text-xs font-bold text-purple-800 bg-purple-200 hover:bg-purple-300 px-3 py-1.5 rounded-lg transition-colors shrink-0"
+              >
+                Open Couples Portal →
+              </button>
+            </div>
+          )}
+
+          {selectedCouple && !isCoordinationBooked && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-5 mb-6 space-y-3">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl mt-0.5" aria-hidden="true">🔒</span>
+                  <div>
+                    <div className="font-bold text-sm text-amber-900">
+                      Day of Coordination Not Booked — {selectedCouple.coupleName}
+                    </div>
+                    <p className="text-xs text-amber-800 mt-1 max-w-2xl">
+                      This couple has not booked Seven Paths Manor's Day of Coordination service. By venue policy, the couple and their hired planner / day-of coordinator vendor create and manage this timeline in the Couples Portal.
+                    </p>
+                    <p className="text-xs text-amber-700 mt-1 font-medium">
+                      You are viewing a <strong>read-only preview</strong> of the couple's schedule for venue operational prep.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCoordinationConfirm(true)}
+                    className="px-3.5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5"
+                  >
+                    <span aria-hidden="true">＋</span>
+                    <span>Add Day of Coordination ($1,000)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.open(portalUrl(selectedCouple.inviteToken), '_blank')}
+                    className="px-3 py-2 rounded-lg border border-amber-400 bg-white hover:bg-amber-100 text-amber-900 text-xs font-bold transition-colors"
+                  >
+                    Open Couples Portal →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* No timeline selected */}
           {!activeTimelineId && (
             <div className="text-center py-12">
@@ -207,12 +374,14 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowAddDay(true)}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
-                  >
-                    ➕ Add Day
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => setShowAddDay(true)}
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                    >
+                      ➕ Add Day
+                    </button>
+                  )}
                   <button
                     onClick={() => setActiveTimelineId(null)}
                     className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
@@ -232,22 +401,25 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                         {fmtDay(day.date)}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowAddEvent(day.id)}
-                        className="px-3 py-1.5 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#3b1435] transition-colors"
-                      >
-                        + Add Event
-                      </button>
-                      {activeTimeline.days.length > 1 && (
+                    {canEdit && (
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => activeTimelineId && removeDay(activeTimelineId, day.id)}
-                          className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-sm hover:bg-red-200 transition-colors"
+                          onClick={() => setShowAddEvent(day.id)}
+                          className="px-3 py-1.5 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#3b1435] transition-colors"
                         >
-                          🗑️
+                          + Add Event
                         </button>
-                      )}
-                    </div>
+                        {activeTimeline.days.length > 1 && (
+                          <button
+                            onClick={() => activeTimelineId && removeDay(activeTimelineId, day.id)}
+                            className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-sm hover:bg-red-200 transition-colors"
+                            title="Remove day"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Add event form */}
@@ -343,12 +515,13 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                             style={{ borderLeftColor: categoryInfo.color }}
                           >
                             <button
-                              onClick={() => activeTimelineId && toggleEventComplete(activeTimelineId, day.id, event.id)}
+                              onClick={() => canEdit && activeTimelineId && toggleEventComplete(activeTimelineId, day.id, event.id)}
+                              disabled={!canEdit}
                               className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
                                 event.isCompleted
                                   ? 'bg-green-500 border-green-500 text-white'
                                   : 'border-gray-300 hover:border-green-400'
-                              }`}
+                              } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                               {event.isCompleted && '✓'}
                             </button>
@@ -364,22 +537,24 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                                 {event.location && <span>📍 {event.location}</span>}
                               </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleStartEditEvent(day.id, event)}
-                                className="p-1.5 text-gray-400 hover:text-[#4A1942] hover:bg-gray-100 rounded transition-colors"
-                                title="Edit event"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                onClick={() => activeTimelineId && removeEvent(activeTimelineId, day.id, event.id)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                                title="Delete event"
-                              >
-                                🗑️
-                              </button>
-                            </div>
+                            {canEdit && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleStartEditEvent(day.id, event)}
+                                  className="p-1.5 text-gray-400 hover:text-[#4A1942] hover:bg-gray-100 rounded transition-colors"
+                                  title="Edit event"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => activeTimelineId && removeEvent(activeTimelineId, day.id, event.id)}
+                                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                  title="Delete event"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -389,14 +564,16 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
               ))}
 
               {/* Delete timeline */}
-              <div className="pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="text-sm text-red-600 hover:text-red-800"
-                >
-                  🗑️ Delete this timeline
-                </button>
-              </div>
+              {canEdit && (
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-sm text-red-600 hover:text-red-800"
+                  >
+                    🗑️ Delete this timeline
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -566,6 +743,27 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
             setActiveTimelineId(null);
           }}
           onCancel={() => setShowDeleteConfirm(false)}
+        />
+
+        <ConfirmDialog
+          open={showAddCoordinationConfirm}
+          title="Add Day of Coordination Service?"
+          message={`Add the Day of Coordination service ($1,000) to ${selectedCouple?.coupleName}'s booking? This will immediately unlock collaborative timeline editing for the venue team and sync with the Couples Portal.`}
+          confirmLabel="Add Coordination & Unlock"
+          tone="default"
+          onConfirm={() => {
+            if (!selectedCouple) return;
+            updateCoupleEvent(selectedCouple.id, {
+              venueCoordinationBooked: true,
+            });
+            setCoupleEvents(getCoupleEvents());
+            setShowAddCoordinationConfirm(false);
+            showToast(
+              `Day of Coordination service added for ${selectedCouple.coupleName}. Timeline editing unlocked.`,
+              'success',
+            );
+          }}
+          onCancel={() => setShowAddCoordinationConfirm(false)}
         />
       </div>
     </div>

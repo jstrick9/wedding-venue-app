@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { WeddingTimeline, TimelineDay, TimelineEvent, TimelineCategory } from '../types/timeline';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { emitDataChanged, on } from '../utils/appEvents';
 
 const STORAGE_KEY = STORAGE_KEYS.TIMELINES;
 
@@ -14,7 +15,11 @@ function loadTimelines(): WeddingTimeline[] {
 }
 
 function saveTimelines(timelines: WeddingTimeline[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(timelines));
+  const current = localStorage.getItem(STORAGE_KEY);
+  const next = JSON.stringify(timelines);
+  if (current === next) return;
+  localStorage.setItem(STORAGE_KEY, next);
+  emitDataChanged('all');
 }
 
 export function useTimeline() {
@@ -25,13 +30,20 @@ export function useTimeline() {
     saveTimelines(timelines);
   }, [timelines]);
 
+  useEffect(() => {
+    return on('spm_data_changed', () => {
+      setTimelines(loadTimelines());
+    });
+  }, []);
+
   const activeTimeline = timelines.find(t => t.id === activeTimelineId) || null;
 
-  const createTimeline = useCallback((name: string, weddingDate: string): WeddingTimeline => {
+  const createTimeline = useCallback((name: string, weddingDate: string, coupleId?: string): WeddingTimeline => {
     const newTimeline: WeddingTimeline = {
-      id: `timeline-${Date.now()}`,
+      id: coupleId ? `timeline-couple-${coupleId}` : `timeline-${Date.now()}`,
       name,
       weddingDate,
+      coupleId,
       days: [
         {
           id: `day-${Date.now()}`,
@@ -44,10 +56,17 @@ export function useTimeline() {
       updatedAt: new Date().toISOString(),
     };
 
-    setTimelines(prev => [...prev, newTimeline]);
+    setTimelines(prev => {
+      const filtered = prev.filter(t => t.id !== newTimeline.id);
+      return [...filtered, newTimeline];
+    });
     setActiveTimelineId(newTimeline.id);
     return newTimeline;
   }, []);
+
+  const getTimelineForCouple = useCallback((coupleId: string): WeddingTimeline | null => {
+    return timelines.find(t => t.coupleId === coupleId || t.id === `timeline-couple-${coupleId}`) || null;
+  }, [timelines]);
 
   const updateTimeline = useCallback((timelineId: string, updates: Partial<WeddingTimeline>) => {
     setTimelines(prev => prev.map(t => 
@@ -223,6 +242,7 @@ export function useTimeline() {
     activeTimelineId,
     setActiveTimelineId,
     createTimeline,
+    getTimelineForCouple,
     updateTimeline,
     deleteTimeline,
     addDay,

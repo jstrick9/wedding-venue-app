@@ -21,6 +21,8 @@ import { removeCoupleVendors } from './coupleVendorService';
 import { removeCoupleSetupTasks } from './coupleSetupService';
 import { removeCoupleGuestEvents } from './coupleGuestEventService';
 import { removeVenueCalendarEventsForCouple } from '../calendar/venueCalendarService';
+import { findPackageAddOn } from './coupleAddOnService';
+import { emitDataChanged } from '../../utils/appEvents';
 
 const COUPLE_EVENTS_KEY = STORAGE_KEYS.COUPLE_EVENTS;
 const COUPLE_EVENTS_VERSION = 1;
@@ -122,6 +124,7 @@ export function getCoupleEvents(): CoupleEvent[] {
 
 function saveCoupleEvents(events: CoupleEvent[]): void {
   saveVersionedStorage(COUPLE_EVENTS_KEY, COUPLE_EVENTS_VERSION, events);
+  emitDataChanged('all');
 }
 
 export function createCoupleEvent(input: {
@@ -388,4 +391,22 @@ export function resolveCoupleInviteToken(
     if (collab) return { event, collaborator: collab };
   }
   return null;
+}
+
+/**
+ * Checks whether a couple has booked Seven Paths Manor's Day of Coordination service.
+ * Used to gate venue-admin editing in the Timeline module.
+ */
+export function hasVenueCoordination(ev?: CoupleEvent | null): boolean {
+  if (!ev) return false;
+  if (ev.venueCoordinationBooked === true) return true;
+  if (ev.addOns && ev.addOns.some(a => {
+    if (/coordinat/i.test(a.addOnId || '')) return true;
+    if (/coordinat/i.test((a as any).name || '')) return true;
+    const item = findPackageAddOn(a.addOnId);
+    return item && (/coordinat/i.test(item.name) || /coordinat/i.test(item.category));
+  })) {
+    return true;
+  }
+  return false;
 }

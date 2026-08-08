@@ -1028,6 +1028,8 @@ export interface CoupleEvent {
   packageId?: string;
   /** Paid add-ons the couple has added after booking (lodging, activities, etc.). */
   addOns?: CoupleAddOn[];
+  /** Whether the couple has booked Seven Paths Manor's Day of Coordination service. */
+  venueCoordinationBooked?: boolean;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;

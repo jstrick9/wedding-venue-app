@@ -18,6 +18,7 @@ import {
   setSpaceLayout,
   saveCoupleSpaceLayout,
   acceptCoupleInvite,
+  hasVenueCoordination,
 } from './coupleService';
 import { addCoupleGuest, getCoupleGuests } from './coupleGuestService';
 import { getCoupleRsvpSubmissions, setCoupleRsvpSubmissions } from './coupleRsvpService';
@@ -205,5 +206,18 @@ describe('coupleService', () => {
     );
     expect(cats).toContain('cocktail');
     expect(cats).not.toContain('cocktail-hour');
+  });
+
+  it('detects whether a couple has booked Day of Coordination service', () => {
+    expect(hasVenueCoordination(null)).toBe(false);
+    expect(hasVenueCoordination({ addOns: [] } as any)).toBe(false);
+    expect(
+      hasVenueCoordination({
+        addOns: [{ id: 'a1', name: 'Day of Coordination', price: 1000 }],
+      } as any),
+    ).toBe(true);
+    expect(hasVenueCoordination({ venueCoordinationBooked: true } as any)).toBe(
+      true,
+    );
   });
 });

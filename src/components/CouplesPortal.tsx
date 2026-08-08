@@ -90,7 +90,9 @@ function safeDateTime(value?: string): string {
   return d.toLocaleString();
 }
 
-type TabId = 'overview' | 'package' | 'spaces' | 'questions' | 'design' | 'checklist' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
+import { CoupleTimelineTab } from './couple/CoupleTimelineTab';
+
+type TabId = 'overview' | 'package' | 'spaces' | 'questions' | 'design' | 'checklist' | 'timeline' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
 
 interface CouplesPortalProps {
   coupleToken?: string;
@@ -767,6 +769,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     { id: 'design', label: 'Design & Approval', icon: '🎨' },
     { id: 'package', label: 'Package', icon: '🎁' },
     { id: 'checklist', label: 'Checklist', icon: '✅' },
+    { id: 'timeline', label: 'Timeline', icon: '📅' },
     { id: 'vendors', label: 'Vendors', icon: '🧰' },
     { id: 'guests', label: 'Guests', icon: '👥' },
     { id: 'portal', label: 'Portal Settings', icon: '🎛️' },
@@ -1759,6 +1762,14 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === 'timeline' && (
+            <CoupleTimelineTab
+              event={event}
+              canEdit={canEditDesign}
+              onNavigateToPackage={() => setActiveTab('package')}
+            />
           )}
 
           {activeTab === 'vendors' && (

@@ -7,6 +7,15 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue Portal Timeline <-> Couples Portal integration & Day of Coordination gating** —
+  added dedicated **"📅 Timeline"** tab to Couples Portal (`CoupleTimelineTab.tsx`) so
+  couples and hired planners can build and manage wedding timelines; updated Venue Portal
+  Timeline module (`TimelinePanel.tsx`) with a Couple Event selector; when Day of Coordination
+  service ($1,000) is booked (`hasVenueCoordination`), venue admins have full collaborative
+  editing permission that syncs with Couples Portal; when Day of Coordination is not booked,
+  venue admins see a read-only preview of the couple/planner's schedule with a one-click
+  "+ Add Day of Coordination Service ($1,000)" button to unlock collaborative editing.
+  Test count: **625 passing / 11 skipped**. Committed.
 - ✅ **Operations Studio (`StaffOperationsPanel`): shift schedule conflict detection & bulk checklist reset** —
   added real-time detection of overlapping staff shifts (`isShiftConflicting`) with an
   amber alert banner and pulsing `⚠️` badges on conflicting shifts in Timeline and List
