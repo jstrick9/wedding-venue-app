@@ -7,6 +7,13 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Operations Studio (`StaffOperationsPanel`) comprehensive venue-admin pass** —
+  moved "🖨️ Print Sheet" button to header and implemented printable `.ops-print-report`
+  Daily Operations Report; fixed shift start/end time timezone off-by-one bug using
+  `toLocalDatetimeInput`; fixed timeline early-shift truncation; added task Search &
+  Staff filter bar; added Checklists "Show incomplete items only" toggle; added area
+  deletion cascade scrubbing of `task.assignedAreas`; added corrupt JSON storage backup.
+  Test count: **615 passing / 11 skipped**. Committed.
 - ✅ **Design Studio: layout review & commenting pins + custom print/export legend toggles** —
   added `LayoutReviewPin` type and canvas markers to `FloorPlanCanvas`, added
   "📍 Add review pin" mode, coordinate popover comment input, and review pins list

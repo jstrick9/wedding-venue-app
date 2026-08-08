@@ -10,6 +10,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
 import { showToast } from './Toast';
 import { ConfirmDialog } from './ConfirmDialog';
+import { toLocalDatetimeInput, fromLocalDatetimeInput } from '../utils/dateTime';
 
 interface Props {
   onClose: () => void;
@@ -26,6 +27,13 @@ interface Props {
 const PHASES: StaffTaskPhase[] = ['pre-event', 'during-event', 'post-event'];
 const STATUSES: StaffTaskStatus[] = ['not-started', 'in-progress', 'completed', 'blocked'];
 const PRIORITIES: StaffTaskPriority[] = ['low', 'medium', 'high', 'critical'];
+
+const normalizedPhase = (phase: string): StaffTaskPhase => {
+  if (phase === 'setup') return 'pre-event';
+  if (phase === 'teardown') return 'post-event';
+  if (PHASES.includes(phase as any)) return phase as StaffTaskPhase;
+  return 'pre-event';
+};
 
 const StaffOperationsPanel: React.FC<Props> = ({ 
   onClose, 
@@ -69,6 +77,9 @@ const StaffOperationsPanel: React.FC<Props> = ({
   
   // UI State
   const [taskView, setTaskView] = useState<'kanban' | 'list'>('kanban');
+  const [taskSearch, setTaskSearch] = useState('');
+  const [taskFilterStaff, setTaskFilterStaff] = useState<string>('all');
+  const [hideCompletedChecklist, setHideCompletedChecklist] = useState(false);
   const [selectedTaskId, setSelectedId] = useState<string | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
@@ -83,18 +94,21 @@ const StaffOperationsPanel: React.FC<Props> = ({
       const savedAreas = localStorage.getItem(STORAGE_KEYS.STAFF_AREAS);
       const savedShifts = localStorage.getItem(STORAGE_KEYS.STAFF_SHIFTS);
       // Parse defensively: corrupted/unexpected data must not crash the panel.
-      const safeParse = (raw: string | null) => {
+      const safeParse = (raw: string | null, key: string) => {
         if (!raw) return null;
         try {
           const v = JSON.parse(raw);
           return Array.isArray(v) ? v : null;
         } catch {
+          try {
+            localStorage.setItem(`${key}_backup_${Date.now()}`, raw);
+          } catch {}
           return null;
         }
       };
-      const t = safeParse(savedTasks);
-      const a = safeParse(savedAreas);
-      const s = safeParse(savedShifts);
+      const t = safeParse(savedTasks, STORAGE_KEYS.STAFF_TASKS);
+      const a = safeParse(savedAreas, STORAGE_KEYS.STAFF_AREAS);
+      const s = safeParse(savedShifts, STORAGE_KEYS.STAFF_SHIFTS);
       if (t) setTasks(t);
       if (a) setAreas(a);
       if (s) setShifts(s);
@@ -285,10 +299,21 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
   const renderTasks = () => {
     const selectedTask = tasks.find(t => t.id === selectedTaskId);
+    const filteredTasks = tasks.filter(t => {
+      if (taskFilterStaff !== 'all' && !t.assignedStaff.includes(taskFilterStaff)) return false;
+      if (
+        taskSearch.trim() &&
+        !t.title.toLowerCase().includes(taskSearch.toLowerCase()) &&
+        !t.description?.toLowerCase().includes(taskSearch.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
 
     return (
       <div className="h-full flex flex-col">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
           <div className="flex gap-2">
             <button onClick={() => setTaskView('kanban')} className={`px-4 py-2 rounded-lg text-sm font-medium ${taskView === 'kanban' ? 'bg-purple-600 text-white' : 'bg-white border text-gray-600'}`} style={taskView === 'kanban' ? { backgroundColor: config.primaryColor } : {}}>Kanban</button>
             <button onClick={() => setTaskView('list')} className={`px-4 py-2 rounded-lg text-sm font-medium ${taskView === 'list' ? 'bg-purple-600 text-white' : 'bg-white border text-gray-600'}`} style={taskView === 'list' ? { backgroundColor: config.primaryColor } : {}}>List</button>
@@ -304,6 +329,52 @@ const StaffOperationsPanel: React.FC<Props> = ({
 	  </button>
         </div>
 
+        <div className="flex items-center justify-between gap-3 mb-4 bg-white p-3 rounded-xl border border-gray-200 flex-wrap shadow-sm">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <span className="text-gray-400">🔍</span>
+            <input
+              type="text"
+              value={taskSearch}
+              onChange={(e) => setTaskSearch(e.target.value)}
+              placeholder="Search tasks..."
+              aria-label="Search tasks"
+              className="text-sm bg-transparent outline-none flex-1 text-gray-800"
+            />
+            {taskSearch && (
+              <button
+                type="button"
+                onClick={() => setTaskSearch('')}
+                className="text-xs text-gray-400 hover:text-gray-600"
+                aria-label="Clear task search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="task-staff-filter" className="text-xs font-semibold text-gray-500">
+              Staff:
+            </label>
+            <select
+              id="task-staff-filter"
+              value={taskFilterStaff}
+              onChange={(e) => setTaskFilterStaff(e.target.value)}
+              aria-label="Filter tasks by staff member"
+              className="text-xs border rounded-lg px-2 py-1 bg-white text-gray-700"
+            >
+              <option value="all">All staff</option>
+              {staffUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+              {filteredTasks.length} / {tasks.length}
+            </span>
+          </div>
+        </div>
+
         <div className="flex-1 min-h-0">
           {taskView === 'kanban' ? (
             <div className="grid grid-cols-3 gap-6 h-full overflow-hidden">
@@ -312,11 +383,11 @@ const StaffOperationsPanel: React.FC<Props> = ({
                   <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 flex justify-between">
                     {phase.replace('-', ' ')}
                     <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs font-normal">
-                      {tasks.filter(t => t.phase === phase).length}
+                      {filteredTasks.filter(t => normalizedPhase(t.phase) === phase).length}
                     </span>
                   </h3>
                   <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                    {tasks.filter(t => t.phase === phase).map(task => (
+                    {filteredTasks.filter(t => normalizedPhase(t.phase) === phase).map(task => (
                       <div 
                         key={task.id} 
                         onClick={() => setSelectedId(task.id)}
@@ -362,10 +433,10 @@ const StaffOperationsPanel: React.FC<Props> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {tasks.map(task => (
+                  {filteredTasks.map(task => (
                     <tr key={task.id} onClick={() => setSelectedId(task.id)} className="hover:bg-gray-50 cursor-pointer">
                       <td className="px-6 py-4 font-bold text-gray-900">{task.title}</td>
-                      <td className="px-6 py-4 capitalize text-gray-600">{task.phase.replace('-', ' ')}</td>
+                      <td className="px-6 py-4 capitalize text-gray-600">{normalizedPhase(task.phase).replace('-', ' ')}</td>
                       <td className="px-6 py-4"><PriorityBadge priority={task.priority} /></td>
                       <td className="px-6 py-4"><StatusBadge status={task.status} /></td>
                       <td className="px-6 py-4 text-gray-600">{task.assignedStaff.length} staff</td>
@@ -776,20 +847,22 @@ const StaffOperationsPanel: React.FC<Props> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Start Time</label>
+                    <label htmlFor="shift-start-time" className="block text-xs font-bold text-gray-500 uppercase mb-1">Start Time</label>
                     <input 
+                      id="shift-start-time"
                       type="datetime-local" 
-                      value={selectedShift.startTime.slice(0, 16)}
-                      onChange={e => handleUpdateShift(selectedShift.id, { startTime: new Date(e.target.value).toISOString() })}
+                      value={toLocalDatetimeInput(selectedShift.startTime)}
+                      onChange={e => handleUpdateShift(selectedShift.id, { startTime: fromLocalDatetimeInput(e.target.value) })}
                       className="w-full border rounded-lg p-2 text-sm text-gray-700 bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">End Time</label>
+                    <label htmlFor="shift-end-time" className="block text-xs font-bold text-gray-500 uppercase mb-1">End Time</label>
                     <input 
+                      id="shift-end-time"
                       type="datetime-local" 
-                      value={selectedShift.endTime.slice(0, 16)}
-                      onChange={e => handleUpdateShift(selectedShift.id, { endTime: new Date(e.target.value).toISOString() })}
+                      value={toLocalDatetimeInput(selectedShift.endTime)}
+                      onChange={e => handleUpdateShift(selectedShift.id, { endTime: fromLocalDatetimeInput(e.target.value) })}
                       className="w-full border rounded-lg p-2 text-sm text-gray-700 bg-white"
                     />
                   </div>
@@ -814,53 +887,94 @@ const StaffOperationsPanel: React.FC<Props> = ({
     );
   };
   
-  const renderChecklists = () => (
-    <div className="space-y-8">
-      {PHASES.map(phase => {
-        const phaseTasks = tasks.filter(t => t.phase === phase);
-        const allItems = phaseTasks.flatMap(t => t.checklist.map(item => ({ ...item, taskTitle: t.title, taskId: t.id })));
-        
-        if (allItems.length === 0) return null;
-
-        return (
-          <div key={phase}>
-            <h3 className="text-lg font-bold text-gray-900 mb-4 capitalize border-b pb-2 flex justify-between items-center">
-              {phase.replace('-', ' ')}
-              <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-50 px-2 py-1 rounded tracking-widest">{allItems.filter(i => i.completed).length}/{allItems.length} complete</span>
-            </h3>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y shadow-sm">
-              {allItems.map(item => (
-                <div key={item.id} className="flex items-center p-4 hover:bg-gray-50 transition-colors group">
-                  <input 
-                    type="checkbox" 
-                    checked={item.completed} 
-                    onChange={() => {
-                      const task = tasks.find(t => t.id === item.taskId);
-                      if (task) {
-                        const newChecklist = task.checklist.map(i => i.id === item.id ? { ...i, completed: !i.completed } : i);
-                        handleUpdateTask(task.id, { checklist: newChecklist });
-                      }
-                    }}
-                    className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 accent-purple-600 cursor-pointer"
-                  />
-                  <div className="flex-1 ml-4 min-w-0">
-                    <div className={`text-sm font-medium ${item.completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>{item.label}</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">Task: <span className="font-bold text-gray-500">{item.taskTitle}</span></div>
-                  </div>
-                  <button onClick={() => setSelectedId(item.taskId)} className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded border border-purple-100">View Task</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-      {tasks.flatMap(t => t.checklist).length === 0 && (
-        <div className="text-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 italic text-gray-500">
-          No checklist items found in any tasks.
+  const renderChecklists = () => {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-sm flex-wrap gap-2">
+          <h2 className="text-xl font-bold text-gray-900">Operational Checklists</h2>
+          <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
+            <input
+              type="checkbox"
+              checked={hideCompletedChecklist}
+              onChange={(e) => setHideCompletedChecklist(e.target.checked)}
+              className="w-4 h-4 rounded accent-purple-600 cursor-pointer"
+            />
+            <span>Show incomplete items only</span>
+          </label>
         </div>
-      )}
-    </div>
-  );
+
+        <div className="space-y-8">
+          {PHASES.map((phase) => {
+            const phaseTasks = tasks.filter((t) => normalizedPhase(t.phase) === phase);
+            const allItems = phaseTasks.flatMap((t) =>
+              t.checklist.map((item) => ({ ...item, taskTitle: t.title, taskId: t.id })),
+            );
+            const displayItems = hideCompletedChecklist
+              ? allItems.filter((i) => !i.completed)
+              : allItems;
+
+            if (displayItems.length === 0) return null;
+
+            return (
+              <div key={phase}>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 capitalize border-b pb-2 flex justify-between items-center">
+                  <span>{phase.replace('-', ' ')}</span>
+                  <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-50 px-2 py-1 rounded tracking-widest">
+                    {allItems.filter((i) => i.completed).length}/{allItems.length} complete
+                  </span>
+                </h3>
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y shadow-sm">
+                  {displayItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center p-4 hover:bg-gray-50 transition-colors group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={item.completed}
+                        onChange={() => {
+                          const task = tasks.find((t) => t.id === item.taskId);
+                          if (task) {
+                            const newChecklist = task.checklist.map((i) =>
+                              i.id === item.id ? { ...i, completed: !i.completed } : i,
+                            );
+                            handleUpdateTask(task.id, { checklist: newChecklist });
+                          }
+                        }}
+                        className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 accent-purple-600 cursor-pointer"
+                      />
+                      <div className="flex-1 ml-4 min-w-0">
+                        <div
+                          className={`text-sm font-medium ${item.completed ? 'line-through text-gray-400' : 'text-gray-900'}`}
+                        >
+                          {item.label}
+                        </div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">
+                          Task: <span className="font-bold text-gray-500">{item.taskTitle}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(item.taskId)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded border border-purple-100"
+                      >
+                        View Task
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {tasks.flatMap((t) => t.checklist).length === 0 && (
+            <div className="text-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 italic text-gray-500">
+              No checklist items found in any tasks.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderExport = () => {
     const handleExport = () => {
@@ -915,7 +1029,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
             </label>
           </div>
         </div>
-        <button onClick={() => window.print()} className="w-full py-4 border-2 border-gray-300 rounded-2xl text-gray-600 font-bold hover:bg-gray-50 flex items-center justify-center gap-2 transition-colors">
+        <button onClick={() => window.print()} className="no-print w-full py-4 border-2 border-gray-300 rounded-2xl text-gray-600 font-bold hover:bg-gray-50 flex items-center justify-center gap-2 transition-colors">
           <span>🖨️</span> Print Operations Summary
         </button>
       </div>
@@ -924,7 +1038,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
   return (
     <div className={inline ? "h-full flex flex-col bg-gray-100" : "fixed inset-0 z-[10000] bg-gray-100/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300"}>
-      <header className="h-16 px-6 flex items-center justify-between shadow-sm border-b" style={{ background: `linear-gradient(to right, ${config.primaryColor}, ${config.primaryDark})` }}>
+      <header className="no-print h-16 px-6 flex items-center justify-between shadow-sm border-b" style={{ background: `linear-gradient(to right, ${config.primaryColor}, ${config.primaryDark})` }}>
         <div className="flex items-center text-white">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3 text-xl shadow-inner">📋</div>
           <div>
@@ -932,11 +1046,21 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <p className="text-xs opacity-80 font-medium tracking-wide uppercase">{eventName || 'Event Operations'}</p>
           </div>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg text-white transition-colors text-xl font-bold">✕</button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.print()}
+            className="no-print bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition-colors"
+            type="button"
+          >
+            <span>🖨️</span>
+            <span>Print Sheet</span>
+          </button>
+          <button onClick={onClose} aria-label="Close Staff Operations" className="no-print p-2 hover:bg-white/10 rounded-lg text-white transition-colors text-xl font-bold">✕</button>
+        </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-[4px_0_15px_rgba(0,0,0,0.02)]">
+        <aside className="no-print w-64 bg-white border-r border-gray-200 flex flex-col shadow-[4px_0_15px_rgba(0,0,0,0.02)]">
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {[
               { id: 'overview', icon: '📊', label: 'Overview' },
@@ -979,7 +1103,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto bg-gray-50/30">
+        <main className="no-print print:hidden flex-1 overflow-auto bg-gray-50/30">
           <div className="max-w-6xl mx-auto p-8 h-full">
             {activeTab === 'overview' && renderOverview()}
             {activeTab === 'tasks' && renderTasks()}
@@ -989,6 +1113,143 @@ const StaffOperationsPanel: React.FC<Props> = ({
             {activeTab === 'export' && renderExport()}
           </div>
         </main>
+
+        {/* Printable Daily Operations Report — hidden in interactive app, shown when printing */}
+        <div className="hidden print:block p-8 bg-white text-gray-900 space-y-8 w-full ops-print-report">
+          <div className="border-b pb-4">
+            <h1 className="text-3xl font-bold text-gray-900">Daily Operations Report</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              {eventName || 'Event Operations'} • {getVenueName(venueId || '')} • Generated {new Date().toLocaleDateString()}
+            </p>
+          </div>
+
+          {/* Summary KPIs */}
+          <div className="grid grid-cols-4 gap-4 border-b pb-6">
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <div className="text-xl font-bold text-gray-900">{tasks.length}</div>
+              <div className="text-xs text-gray-500">Total Tasks</div>
+            </div>
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <div className="text-xl font-bold text-gray-900">{tasks.filter(t => t.status === 'completed').length}</div>
+              <div className="text-xs text-gray-500">Completed Tasks</div>
+            </div>
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <div className="text-xl font-bold text-gray-900">{shifts.length}</div>
+              <div className="text-xs text-gray-500">Scheduled Shifts</div>
+            </div>
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <div className="text-xl font-bold text-gray-900">{areas.length}</div>
+              <div className="text-xs text-gray-500">Operational Areas</div>
+            </div>
+          </div>
+
+          {/* Tasks by Phase */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900">Tasks by Event Phase</h2>
+            {PHASES.map((phase) => {
+              const phaseTasks = tasks.filter((t) => normalizedPhase(t.phase) === phase);
+              if (phaseTasks.length === 0) return null;
+              return (
+                <div key={phase} className="border rounded-xl p-4 space-y-2">
+                  <h3 className="font-bold text-sm uppercase tracking-wider text-gray-600 border-b pb-1">
+                    {phase.replace('-', ' ')} ({phaseTasks.length})
+                  </h3>
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-gray-50 text-gray-500 uppercase">
+                      <tr>
+                        <th className="py-2 px-3">Title</th>
+                        <th className="py-2 px-3">Priority</th>
+                        <th className="py-2 px-3">Status</th>
+                        <th className="py-2 px-3">Assignees</th>
+                        <th className="py-2 px-3">Checklist</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {phaseTasks.map((task) => (
+                        <tr key={task.id}>
+                          <td className="py-2 px-3 font-bold">{task.title}</td>
+                          <td className="py-2 px-3 uppercase">{task.priority}</td>
+                          <td className="py-2 px-3 capitalize">{task.status.replace('-', ' ')}</td>
+                          <td className="py-2 px-3">
+                            {task.assignedStaff.map((id) => getStaffName(id)).join(', ') || '—'}
+                          </td>
+                          <td className="py-2 px-3">
+                            {task.checklist.filter((i) => i.completed).length}/{task.checklist.length} done
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Shifts Schedule */}
+          <div className="space-y-4 page-break">
+            <h2 className="text-xl font-bold text-gray-900">Staff Shift Schedule</h2>
+            {shifts.length === 0 ? (
+              <p className="text-sm text-gray-500 italic">No shifts scheduled.</p>
+            ) : (
+              <table className="w-full text-xs text-left border rounded-xl overflow-hidden">
+                <thead className="bg-gray-50 text-gray-500 uppercase">
+                  <tr>
+                    <th className="py-2 px-3">Staff Member</th>
+                    <th className="py-2 px-3">Role</th>
+                    <th className="py-2 px-3">Start Time</th>
+                    <th className="py-2 px-3">End Time</th>
+                    <th className="py-2 px-3">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {shifts.map((shift) => (
+                    <tr key={shift.id}>
+                      <td className="py-2 px-3 font-bold">{getStaffName(shift.staffId)}</td>
+                      <td className="py-2 px-3 capitalize">{shift.role}</td>
+                      <td className="py-2 px-3">{new Date(shift.startTime).toLocaleString()}</td>
+                      <td className="py-2 px-3">{new Date(shift.endTime).toLocaleString()}</td>
+                      <td className="py-2 px-3">{shift.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Operational Checklists (with checkable boxes) */}
+          <div className="space-y-4 page-break">
+            <h2 className="text-xl font-bold text-gray-900">Event-Day Checklists</h2>
+            {tasks.flatMap((t) => t.checklist).length === 0 ? (
+              <p className="text-sm text-gray-500 italic">No checklist items configured.</p>
+            ) : (
+              <div className="space-y-4">
+                {PHASES.map((phase) => {
+                  const phaseTasks = tasks.filter((t) => normalizedPhase(t.phase) === phase);
+                  const allItems = phaseTasks.flatMap((t) =>
+                    t.checklist.map((item) => ({ ...item, taskTitle: t.title })),
+                  );
+                  if (allItems.length === 0) return null;
+                  return (
+                    <div key={phase} className="border rounded-xl p-4">
+                      <h3 className="font-bold text-sm uppercase tracking-wider text-gray-600 border-b pb-2 mb-3">
+                        {phase.replace('-', ' ')} Checklists
+                      </h3>
+                      <div className="space-y-2">
+                        {allItems.map((item) => (
+                          <div key={item.id} className="flex items-center gap-3 text-sm">
+                            <span className="w-4 h-4 border border-gray-400 inline-block shrink-0 rounded" />
+                            <span className="font-medium text-gray-800">{item.label}</span>
+                            <span className="text-xs text-gray-500">({item.taskTitle})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <ConfirmDialog
@@ -1004,6 +1265,12 @@ const StaffOperationsPanel: React.FC<Props> = ({
             setSelectedId(null);
           } else if (pendingDelete.kind === 'area') {
             saveAreas(areas.filter(a => a.id !== pendingDelete.id));
+            saveTasks(
+              tasks.map(t => ({
+                ...t,
+                assignedAreas: t.assignedAreas.filter(id => id !== pendingDelete.id),
+              })),
+            );
             setSelectedAreaId(null);
           } else if (pendingDelete.kind === 'shift') {
             saveShifts(shifts.filter(s => s.id !== pendingDelete.id));

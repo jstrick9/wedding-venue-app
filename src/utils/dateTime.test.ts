@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatDateShort, formatDayDate, formatTime, dateFromDayKey } from './dateTime';
+import { formatDate, formatDateShort, formatDayDate, formatTime, dateFromDayKey, toLocalDatetimeInput, fromLocalDatetimeInput } from './dateTime';
 
 describe('dateTime helpers', () => {
   it('formats dates and returns empty for invalid input', () => {
@@ -24,5 +24,18 @@ describe('dateTime helpers', () => {
     expect(d.getFullYear()).toBe(2026);
     expect(d.getMonth()).toBe(8); // September
     expect(d.getDate()).toBe(10);
+  });
+
+  it('converts to/from datetime-local input string without timezone shift', () => {
+    const date = new Date(2026, 7, 8, 14, 30); // 2026-08-08 14:30 local time
+    const input = toLocalDatetimeInput(date);
+    expect(input).toBe('2026-08-08T14:30');
+
+    const iso = fromLocalDatetimeInput('2026-08-08T14:30');
+    expect(new Date(iso).getHours()).toBe(14);
+    expect(new Date(iso).getMinutes()).toBe(30);
+
+    expect(toLocalDatetimeInput(null)).toBe('');
+    expect(fromLocalDatetimeInput('')).toBe('');
   });
 });
