@@ -319,7 +319,8 @@ a:not([class*="text-"]):not([class*="bg-"]) {
 
 /* Print styles */
 @media print {
-  .no-print {
+  .no-print,
+  .spm-studio-chrome {
     display: none !important;
   }
   
@@ -1072,13 +1073,40 @@ input[type="checkbox"] {
     color-adjust: exact !important;
   }
   
-  .no-print {
+  .no-print,
+  .spm-studio-chrome {
     display: none !important;
   }
   
   body {
     background: white !important;
     overflow: visible !important;
+  }
+
+  /* When the Print Preview modal is open, hide everything in #root except .spm-print-view */
+  body:has(.spm-print-view) #root *:not(.spm-print-view):not(.spm-print-view *):not(:has(.spm-print-view)),
+  body:has(.spm-print-view) .spm-hide-during-print-view {
+    display: none !important;
+  }
+
+  .spm-print-view {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    z-index: auto !important;
+  }
+
+  /* When printing directly from Studio canvas or VenueMap canvas, allow flex/overflow containers to expand */
+  .spm-print-canvas-container,
+  .spm-studio-root {
+    overflow: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
   
   .page-break {

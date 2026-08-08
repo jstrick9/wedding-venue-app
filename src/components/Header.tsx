@@ -186,7 +186,7 @@ export function Header({
   return (
     <>
       <header
-        className="text-white shadow-lg"
+        className="text-white shadow-lg no-print spm-studio-chrome"
         style={{
           zIndex: 100,
           position: 'relative',

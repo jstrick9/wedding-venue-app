@@ -7,6 +7,14 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Design Studio: print/export scope polish & empty Master Layout warning** —
+  added scoped `@media print` rules (`.no-print`, `.spm-studio-chrome`, and
+  `body:has(.spm-print-view)`) so printing from `PrintView` or directly from
+  the Design Studio (`#/studio`) or Full-Venue Map (`#/venuemap`) hides app
+  chrome and expands the canvas cleanly without cropping; added `🖨️ Print`
+  button to `VenueMapDesigner`; added confirmation warning dialog before saving
+  an empty working layout (`0` tables, `0` fixtures, `0` decor items) as a venue's
+  Master Layout. Test count: **602 passing / 11 skipped**. Committed.
 - ✅ **Venue Map admin fixes** — palette now drives point placement (was a dead
   control), the "Save point" unsaved-changes indicator is accurate, deleting a
   point drops now-empty walkways, a new **Map coverage** panel lists venues

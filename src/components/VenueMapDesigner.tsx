@@ -266,7 +266,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 no-print spm-studio-chrome">
         <span className="font-semibold text-gray-800">🗺️ Full-Venue Map Designer</span>
         <span className="text-xs text-gray-500">
           {summary.spaces} spaces · {summary.lodging} lodging · {summary.parking} parking · {summary.entries} entries
@@ -300,6 +300,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
           </button>
           <button type="button" onClick={() => void exportMap('png')} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">🖼️ PNG</button>
           <button type="button" onClick={() => void exportMap('pdf')} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">📄 PDF</button>
+          <button type="button" onClick={() => window.print()} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 no-print" title="Print Venue Map">🖨️ Print</button>
         </div>
       </div>
 
@@ -334,7 +335,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
         ) : (
         <>
         {/* Canvas */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 spm-print-canvas-container">
           <div className="relative">
             <VenueMapCanvas
               map={map}
@@ -360,7 +361,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
             )}
           </div>
           {/* Palette + route drawing */}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2 no-print spm-studio-chrome">
             <span className="text-xs text-gray-500 font-medium">Click canvas to place:</span>
             {KINDS.map((k) => (
               <button
@@ -373,7 +374,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
               </button>
             ))}
           </div>
-          <div className="mt-2 flex flex-wrap items-end gap-2">
+          <div className="mt-2 flex flex-wrap items-end gap-2 no-print spm-studio-chrome">
             <label className="flex flex-col text-xs text-gray-500">
               Route name
               <input type="text" value={routeName} onChange={(e) => setRouteName(e.target.value)} placeholder="Main Walkway" className="mt-1 px-2 py-1 border border-gray-300 rounded text-sm w-40" />
@@ -423,7 +424,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
         </div>
 
         {/* Side panel */}
-        <div className="space-y-3">
+        <div className="space-y-3 no-print spm-studio-chrome">
           {/* Map size */}
           <div className="rounded-xl border border-gray-200 p-3 space-y-2">
             <div className="flex items-center justify-between">

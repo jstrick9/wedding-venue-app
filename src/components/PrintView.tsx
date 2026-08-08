@@ -89,8 +89,8 @@ export function PrintView({
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] bg-white overflow-auto">
-      <div className="print:hidden sticky top-0 z-10 bg-white border-b px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-[10000] bg-white overflow-auto spm-print-view">
+      <div className="print:hidden no-print sticky top-0 z-10 bg-white border-b px-6 py-4 flex items-center justify-between">
         <div className="text-lg font-semibold text-gray-900">Print Preview</div>
         <div className="flex items-center gap-2 flex-wrap">
           <button

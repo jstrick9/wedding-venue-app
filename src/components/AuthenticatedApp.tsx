@@ -74,6 +74,8 @@ export default function AuthenticatedApp() {
   const [confirmVenueMapLeave, setConfirmVenueMapLeave] = useState(false);
   // Guard leaving the studio while the working layout has unsaved changes.
   const [pendingStudioLeave, setPendingStudioLeave] = useState<(() => void) | null>(null);
+  // Warn before saving an empty layout as a venue's master layout.
+  const [confirmEmptyMasterLayout, setConfirmEmptyMasterLayout] = useState(false);
 
   const leaveVenueMap = () => {
     if (venueMapDirty) { setConfirmVenueMapLeave(true); return; }
@@ -764,6 +766,14 @@ export default function AuthenticatedApp() {
   );
 
   const handleSaveMasterLayout = useCallback(() => {
+    const isLayoutEmpty =
+      layoutState.layout.tables.length === 0 &&
+      layoutState.layout.fixtures.length === 0 &&
+      (layoutState.layout.decor || []).length === 0;
+    if (isLayoutEmpty) {
+      setConfirmEmptyMasterLayout(true);
+      return;
+    }
     layoutState.saveMasterLayout();
     layoutState.markLayoutClean();
     showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success');
@@ -925,9 +935,9 @@ export default function AuthenticatedApp() {
 
   return (
     <UndoRedoProvider onRestore={handleRestoreSnapshot}>
-      <div className="h-screen flex flex-col overflow-hidden" style={{ fontFamily: brandingConfig.fontFamily, backgroundColor: brandingConfig.backgroundColor, color: brandingConfig.bodyTextColor }}>
+      <div className="h-screen flex flex-col overflow-hidden spm-studio-root" style={{ fontFamily: brandingConfig.fontFamily, backgroundColor: brandingConfig.backgroundColor, color: brandingConfig.bodyTextColor }}>
         {/* Layout Studio breadcrumb — gives the studio clear module identity */}
-        <div className="flex items-center gap-2 px-4 h-9 bg-white border-b border-gray-200 text-xs text-gray-500">
+        <div className="flex items-center gap-2 px-4 h-9 bg-white border-b border-gray-200 text-xs text-gray-500 no-print spm-studio-chrome">
           <span className="font-semibold text-gray-700">🎨 Layout Studio</span>
           <span className="text-gray-300">/</span>
           <span>{layoutState.currentVenue.name}</span>
@@ -966,11 +976,13 @@ export default function AuthenticatedApp() {
           onOpenOperations={canOpenOperationsPanel ? () => open('operations') : undefined} savedLayouts={savedLayouts} onLoadSavedLayout={handleLoadSavedLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
           mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
         />
-        <AppStatusBar items={statusItems} />
+        <div className="no-print spm-studio-chrome">
+          <AppStatusBar items={statusItems} />
+        </div>
         <div className="relative flex-1 flex overflow-hidden">
           {/* Sidebar overlays the canvas on small screens; returns to normal flex
               flow on md+ so the tools don't squeeze the canvas on mobile/tablet. */}
-          <div className={`${isMobile ? 'absolute top-0 bottom-0 left-0 z-30 flex' : ''} shrink-0`}>
+          <div className={`${isMobile ? 'absolute top-0 bottom-0 left-0 z-30 flex' : ''} shrink-0 no-print spm-studio-chrome`}>
             <Sidebar
               width={sidebarWidth} collapsed={sidebarCollapsed} onWidthChange={setSidebarWidth} onCollapsedChange={setSidebarCollapsed} zoom={zoom} onZoomChange={setZoom} showGrid={showGrid} onShowGridChange={setShowGrid} gridSize={gridSize} onGridSizeChange={setGridSize} gridContrast={gridContrast} onGridContrastChange={setGridContrast} snapToGrid={snapToGrid} onSnapToGridChange={setSnapToGrid}
               onDragStart={handleDragStart} onDragEnd={handleDragEnd} currentDragItem={dragItem} onClearLayout={handleClearLayout} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })}
@@ -978,12 +990,12 @@ export default function AuthenticatedApp() {
               onResetView={handleResetView} onResetToVenue={handleResetToVenue} onResetToCanvas={handleResetToCanvas} placedTables={layoutState.layout.tables} placedFixtures={layoutState.layout.fixtures} currentUser={user}
             />
           </div>
-          <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden">
+          <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden spm-print-canvas-container">
             <FloorPlanCanvas
               venue={layoutState.currentVenue} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} decor={layoutState.layout.decor} guests={layoutState.guests} selectedId={layoutState.selectedId} zoom={zoom} showGrid={showGrid} gridSize={gridSize} gridContrast={gridContrast}
               onSelect={handleSelectItem} onDoubleClick={handleDoubleClickItem} onMove={handleMoveItem} onDrop={handleDrop} onClickToPlace={handleDrop} onDragStart={pushUndoSnapshot} isDragging={!!dragItem} isDraggingExterior={dragItem?.isExterior || false} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })} panOffset={panOffset} onPanChange={setPanOffset} onZoomChange={setZoom} svgRef={floorPlanSvgRef}
             />
-            <div className="absolute bottom-4 left-4 flex items-center gap-2 flex-wrap">
+            <div className="absolute bottom-4 left-4 flex items-center gap-2 flex-wrap no-print spm-studio-chrome">
               <div className="bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-lg text-sm">
                 {(() => {
                   const placed = getTotalCapacity();
@@ -1059,14 +1071,14 @@ export default function AuthenticatedApp() {
               </div>
             )}
             {isMasterBasicUser && (
-              <div className="absolute bottom-4 left-44 z-20 flex gap-2">
+              <div className="absolute bottom-4 left-44 z-20 flex gap-2 no-print spm-studio-chrome">
                 <button onClick={() => open('messages')} className="bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium">💬 Messages</button>
                 <button onClick={() => open('submission')} className="bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium">📤 Submit</button>
                 <button onClick={() => open('eventQuestions')} className="bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium">📝 Questions</button>
               </div>
             )}
           </div>
-          <div className={`${isMobile ? 'absolute top-0 bottom-0 right-0 z-30 flex' : ''} shrink-0`}>
+          <div className={`${isMobile ? 'absolute top-0 bottom-0 right-0 z-30 flex' : ''} shrink-0 no-print spm-studio-chrome`}>
             <PropertiesPanel
               selectedId={layoutState.selectedId} tables={layoutState.layout.tables} fixtures={layoutState.layout.fixtures} onUpdateTable={handleUpdateTableSafe} onUpdateFixture={handleUpdateFixtureSafe}
               onRemoveItem={handleRemoveItem} onDuplicateItem={handleDuplicateItem} onClose={() => setShowProperties(false)}
@@ -1243,6 +1255,20 @@ export default function AuthenticatedApp() {
               action?.();
             }}
             onCancel={() => setPendingStudioLeave(null)}
+          />
+
+          <ConfirmDialog
+            open={confirmEmptyMasterLayout}
+            title="Save empty Master Layout?"
+            message={`The layout for "${layoutState.currentVenue.name}" has no tables, fixtures, or decor items. Saving this as the Master Layout will replace any existing master layout with an empty canvas. Are you sure?`}
+            confirmLabel="Save empty master"
+            onConfirm={() => {
+              setConfirmEmptyMasterLayout(false);
+              layoutState.saveMasterLayout();
+              layoutState.markLayoutClean();
+              showToast(`Saved as the master layout for ${layoutState.currentVenue.name}.`, 'success');
+            }}
+            onCancel={() => setConfirmEmptyMasterLayout(false)}
           />
         </Suspense>
       </div>
