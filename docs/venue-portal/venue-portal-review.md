@@ -68,6 +68,10 @@ P1 = valuable, P2 = polish).*
   stack now resets on venue switch / load-layout / load-template, so Undo can't
   restore a different venue's layout (clearHistory was previously never called).
   Test count: **593 passing / 11 skipped**. Committed.
+- ✅ **Design Studio: saved-layout list refreshes after saving** — the Header's
+  "Load Layout" list now updates in the same tab immediately after saving or
+  overwriting (previously stale until reload in local mode). Test count:
+  **593 passing / 11 skipped**. Committed.
 - ✅ **Interactive Full-Venue Map — dedicated Studio module (`#/venuemap`)** — the
   hybrid map designer (`VenueMapCanvas` shared renderer + `VenueMapDesigner`
   canvas-with-side-panel) now lives in its own module/route inside the **Design

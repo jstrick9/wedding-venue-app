@@ -741,11 +741,15 @@ export default function AuthenticatedApp() {
     (name: string) => {
       const id = layoutState.saveLayout(name);
       layoutState.markLayoutClean();
+      // Refresh the Header's saved-layout list in the same tab (in local mode the
+      // backend sync is a no-op and saving doesn't emit a data-changed event, so
+      // the new layout would otherwise not appear in "Load Layout" until reload).
+      refreshSavedLayouts();
       void layoutBackendSync.saveToBackend();
       showToast(`Layout "${name}" saved.`, 'success');
       return id;
     },
-    [layoutState, layoutBackendSync],
+    [layoutState, layoutBackendSync, refreshSavedLayouts],
   );
 
   // Load a saved layout, then treat the loaded content as the clean baseline.
@@ -769,11 +773,12 @@ export default function AuthenticatedApp() {
     (name: string) => {
       const id = layoutState.saveLayoutWithOverwrite(name);
       layoutState.markLayoutClean();
+      refreshSavedLayouts();
       void layoutBackendSync.saveToBackend();
       showToast(`Layout "${name}" saved.`, 'success');
       return id;
     },
-    [layoutState, layoutBackendSync],
+    [layoutState, layoutBackendSync, refreshSavedLayouts],
   );
 
   const handleDeleteSavedLayoutWithSync = useCallback(
