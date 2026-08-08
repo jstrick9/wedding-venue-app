@@ -279,4 +279,94 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     );
     expect(backupKeys.length).toBeGreaterThan(0);
   });
+
+  it('detects and flags overlapping staff shifts for the same staff member', () => {
+    const shift1 = {
+      id: 'shift-1',
+      staffId: adminUser.id,
+      role: 'coordinator' as const,
+      startTime: '2026-08-08T10:00:00.000Z',
+      endTime: '2026-08-08T14:00:00.000Z',
+      venueId: 'v1',
+      eventName: 'Wedding Reception',
+    };
+    const shift2 = {
+      id: 'shift-2',
+      staffId: adminUser.id,
+      role: 'setup' as const,
+      startTime: '2026-08-08T12:00:00.000Z',
+      endTime: '2026-08-08T16:00:00.000Z',
+      venueId: 'v1',
+      eventName: 'Wedding Reception',
+    };
+    localStorage.setItem(STORAGE_KEYS.STAFF_SHIFTS, JSON.stringify([shift1, shift2]));
+
+    render(
+      <StaffOperationsPanel
+        onClose={() => undefined}
+        currentUser={adminUser}
+        isAdmin={true}
+        venueId="v1"
+        eventName="Wedding Reception"
+        users={[adminUser, staffUser]}
+        venues={[{ id: 'v1', name: 'Grand Ballroom', width: 60, height: 40, capacity: 150, category: 'reception', color: '#fff' } as any]}
+      />,
+    );
+
+    // Switch to Shifts tab
+    fireEvent.click(screen.getByRole('button', { name: /shifts/i }));
+
+    expect(screen.getByText(/Schedule Conflict Detected:/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 shifts overlap/i)).toBeInTheDocument();
+
+    const warningBadges = screen.getAllByLabelText(/Schedule conflict warning/i);
+    expect(warningBadges.length).toBeGreaterThan(0);
+  });
+
+  it('resets all completed checklist items across tasks when "Reset for Next Event" is confirmed', () => {
+    const testTask = {
+      id: 'task-reset',
+      title: 'Setup Ballroom Table Linens',
+      phase: 'pre-event' as const,
+      status: 'completed' as const,
+      priority: 'high' as const,
+      assignedStaff: [adminUser.id],
+      assignedAreas: [],
+      checklist: [
+        { id: 'item-1', label: 'Place white tablecloths', completed: true, completedAt: '2026-08-08T10:00:00.000Z', completedBy: adminUser.id },
+        { id: 'item-2', label: 'Set napkins', completed: true, completedAt: '2026-08-08T10:05:00.000Z', completedBy: adminUser.id },
+      ],
+      createdAt: new Date().toISOString(),
+      createdBy: adminUser.id,
+    };
+    localStorage.setItem(STORAGE_KEYS.STAFF_TASKS, JSON.stringify([testTask]));
+
+    render(
+      <StaffOperationsPanel
+        onClose={() => undefined}
+        currentUser={adminUser}
+        isAdmin={true}
+        venueId="v1"
+        eventName="Wedding Reception"
+        users={[adminUser, staffUser]}
+        venues={[{ id: 'v1', name: 'Grand Ballroom', width: 60, height: 40, capacity: 150, category: 'reception', color: '#fff' } as any]}
+      />,
+    );
+
+    // Switch to Checklists tab
+    fireEvent.click(screen.getByRole('button', { name: /checklists/i }));
+
+    const resetBtn = screen.getByRole('button', { name: /reset for next event/i });
+    fireEvent.click(resetBtn);
+
+    expect(screen.getByRole('heading', { name: /reset checklists for next event\?/i })).toBeInTheDocument();
+    const confirmBtn = screen.getByRole('button', { name: /reset checklists/i });
+    fireEvent.click(confirmBtn);
+
+    const storedTasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.STAFF_TASKS) || '[]');
+    expect(storedTasks[0].status).toBe('not-started');
+    expect(storedTasks[0].checklist[0].completed).toBe(false);
+    expect(storedTasks[0].checklist[0].completedAt).toBeUndefined();
+    expect(storedTasks[0].checklist[1].completed).toBe(false);
+  });
 });

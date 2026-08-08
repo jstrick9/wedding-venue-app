@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   User, StaffTask, StaffArea, StaffShift, StaffTaskPhase, StaffTaskStatus, 
   StaffTaskPriority, ChecklistItem, OperationsExport, Venue
@@ -86,6 +86,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
   const [shiftView, setShiftView] = useState<'timeline' | 'list'>('timeline');
   const [pendingDelete, setPendingDelete] = useState<{ kind: 'task' | 'area' | 'shift'; id: string } | null>(null);
   const [pendingImport, setPendingImport] = useState<{ tasks: any[]; areas: any[]; shifts: any[] } | null>(null);
+  const [confirmResetChecklists, setConfirmResetChecklists] = useState(false);
   
   // Load Data
   useEffect(() => {
@@ -233,6 +234,20 @@ const StaffOperationsPanel: React.FC<Props> = ({
   const staffUsers = useMemo(() => users.filter(u => u.role === 'staff' || u.role === 'admin'), [users]);
   const getStaffName = (id: string) => users.find(u => u.id === id)?.name || 'Unknown';
   const getVenueName = (id: string) => venues.find(v => v.id === id)?.name || 'N/A';
+
+  const isShiftConflicting = useCallback(
+    (shift: StaffShift): boolean => {
+      return shifts.some((other) => {
+        if (other.id === shift.id || other.staffId !== shift.staffId) return false;
+        const startA = new Date(shift.startTime).getTime();
+        const endA = new Date(shift.endTime).getTime();
+        const startB = new Date(other.startTime).getTime();
+        const endB = new Date(other.endTime).getTime();
+        return startA < endB && startB < endA;
+      });
+    },
+    [shifts],
+  );
 
   // --- Render Tabs ---
   
@@ -710,7 +725,8 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
   const renderShifts = () => {
     const selectedShift = shifts.find(s => s.id === selectedShiftId);
-    const hours = Array.from({ length: 18 }, (_, i) => i + 6); // 6 AM to Midnight
+    const hours = Array.from({ length: 20 }, (_, i) => i + 5); // 5 AM to Midnight (20 hours)
+    const conflictingShiftsCount = shifts.filter(isShiftConflicting).length;
 
     return (
       <div className="h-full flex flex-col">
@@ -729,6 +745,17 @@ const StaffOperationsPanel: React.FC<Props> = ({
   	    + Add Shift
 	  </button>
         </div>
+
+        {conflictingShiftsCount > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 flex items-center justify-between text-xs text-amber-800 font-medium shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-base animate-pulse" aria-hidden="true">⚠️</span>
+              <span>
+                <strong>Schedule Conflict Detected:</strong> {conflictingShiftsCount} shift{conflictingShiftsCount === 1 ? '' : 's'} overlap in time for the same staff member.
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 min-h-0">
           {shiftView === 'timeline' ? (
@@ -758,10 +785,12 @@ const StaffOperationsPanel: React.FC<Props> = ({
                           const start = new Date(shift.startTime);
                           const end = new Date(shift.endTime);
                           const startHour = start.getHours() + start.getMinutes() / 60;
-                          if (startHour < 6) return null;
-                          const startPos = (startHour - 6) * 80;
-                          const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                          const width = duration * 80;
+                          const clampedHour = Math.max(5, Math.min(24, startHour));
+                          const startPos = Math.max(0, (clampedHour - 5) * 80);
+                          const rawDuration = Math.max(0.5, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+                          const duration = Number.isNaN(rawDuration) ? 1 : rawDuration;
+                          const width = Math.max(40, duration * 80);
+                          const isConflicting = isShiftConflicting(shift);
                           
                           return (
                             <div 
@@ -772,9 +801,18 @@ const StaffOperationsPanel: React.FC<Props> = ({
                                 shift.role === 'setup' ? 'bg-blue-500 text-white border-blue-600' :
                                 shift.role === 'cleaning' ? 'bg-green-500 text-white border-green-600' :
                                 'bg-orange-500 text-white border-orange-600'
-                              }`}
+                              } ${isConflicting ? 'ring-2 ring-amber-300 border-amber-300' : ''}`}
                               style={{ left: `${startPos}px`, width: `${width}px` }}
                             >
+                              {isConflicting && (
+                                <span
+                                  className="mr-1 inline-flex items-center justify-center rounded-full bg-amber-100 text-amber-800 text-[11px] font-extrabold px-1 animate-pulse shrink-0"
+                                  title="Schedule Conflict: Overlaps with another shift for this staff member"
+                                  aria-label="Schedule conflict warning"
+                                >
+                                  ⚠️
+                                </span>
+                              )}
                               <span className="truncate">{shift.role} • {shift.notes || 'No notes'}</span>
                             </div>
                           );
@@ -790,7 +828,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
               <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold">
                   <tr>
-                    <th className="px-6 py-3">Staff</th>
+                    <th className="px-6 py-3">Staff Member</th>
                     <th className="px-6 py-3">Role</th>
                     <th className="px-6 py-3">Start</th>
                     <th className="px-6 py-3">End</th>
@@ -800,7 +838,18 @@ const StaffOperationsPanel: React.FC<Props> = ({
                 <tbody className="divide-y divide-gray-100">
                   {shifts.map(shift => (
                     <tr key={shift.id} onClick={() => setSelectedShiftId(shift.id)} className="hover:bg-gray-50 cursor-pointer">
-                      <td className="px-6 py-4 font-bold text-gray-900">{getStaffName(shift.staffId)}</td>
+                      <td className="px-6 py-4 font-bold text-gray-900 flex items-center gap-1.5">
+                        {isShiftConflicting(shift) && (
+                          <span
+                            className="inline-flex items-center justify-center rounded-full bg-amber-100 text-amber-800 text-[11px] font-extrabold px-1 animate-pulse"
+                            title="Schedule Conflict: Overlaps with another shift for this staff member"
+                            aria-label="Schedule conflict warning"
+                          >
+                            ⚠️
+                          </span>
+                        )}
+                        <span>{getStaffName(shift.staffId)}</span>
+                      </td>
                       <td className="px-6 py-4 capitalize text-gray-600">{shift.role}</td>
                       <td className="px-6 py-4 text-xs text-gray-500">{new Date(shift.startTime).toLocaleString()}</td>
                       <td className="px-6 py-4 text-xs text-gray-500">{new Date(shift.endTime).toLocaleString()}</td>
@@ -890,17 +939,28 @@ const StaffOperationsPanel: React.FC<Props> = ({
   const renderChecklists = () => {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-sm flex-wrap gap-2">
+        <div className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-sm flex-wrap gap-3">
           <h2 className="text-xl font-bold text-gray-900">Operational Checklists</h2>
-          <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
-            <input
-              type="checkbox"
-              checked={hideCompletedChecklist}
-              onChange={(e) => setHideCompletedChecklist(e.target.checked)}
-              className="w-4 h-4 rounded accent-purple-600 cursor-pointer"
-            />
-            <span>Show incomplete items only</span>
-          </label>
+          <div className="flex items-center gap-4 flex-wrap">
+            <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
+              <input
+                type="checkbox"
+                checked={hideCompletedChecklist}
+                onChange={(e) => setHideCompletedChecklist(e.target.checked)}
+                className="w-4 h-4 rounded accent-purple-600 cursor-pointer"
+              />
+              <span>Show incomplete items only</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setConfirmResetChecklists(true)}
+              disabled={!canMutateOperations || tasks.flatMap(t => t.checklist).filter(i => i.completed).length === 0}
+              className="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              <span aria-hidden="true">🔄</span>
+              <span>Reset for Next Event</span>
+            </button>
+          </div>
         </div>
 
         <div className="space-y-8">
@@ -1295,6 +1355,30 @@ const StaffOperationsPanel: React.FC<Props> = ({
           showToast('Operations data imported successfully.', 'success');
         }}
         onCancel={() => setPendingImport(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmResetChecklists}
+        title="Reset Checklists for Next Event?"
+        message="This will uncheck all completed checklist items across every task so your operational checklists are ready for the next wedding. Continue?"
+        confirmLabel="Reset Checklists"
+        tone="danger"
+        onConfirm={() => {
+          setConfirmResetChecklists(false);
+          const nextTasks = tasks.map((t) => ({
+            ...t,
+            checklist: t.checklist.map((item) => ({
+              ...item,
+              completed: false,
+              completedAt: undefined,
+              completedBy: undefined,
+            })),
+            status: t.status === 'completed' ? ('not-started' as const) : t.status,
+          }));
+          saveTasks(nextTasks);
+          showToast('All operational checklists reset for next event.', 'success');
+        }}
+        onCancel={() => setConfirmResetChecklists(false)}
       />
     </div>
   );

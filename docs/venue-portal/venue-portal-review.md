@@ -7,6 +7,12 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Operations Studio (`StaffOperationsPanel`): shift schedule conflict detection & bulk checklist reset** —
+  added real-time detection of overlapping staff shifts (`isShiftConflicting`) with an
+  amber alert banner and pulsing `⚠️` badges on conflicting shifts in Timeline and List
+  views; added "🔄 Reset for Next Event" bulk action button in Checklists tab to reset all
+  checklist items across tasks to uncompleted for the next wedding.
+  Test count: **617 passing / 11 skipped**. Committed.
 - ✅ **Operations Studio (`StaffOperationsPanel`) comprehensive venue-admin pass** —
   moved "🖨️ Print Sheet" button to header and implemented printable `.ops-print-report`
   Daily Operations Report; fixed shift start/end time timezone off-by-one bug using
