@@ -7,6 +7,8 @@ import { CustomVenueBuilder } from '../CustomVenueBuilder';
 import { DirectMessagePanel } from '../DirectMessagePanel';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
+import { getCoupleEvents, updateCoupleEvent, hasVenueCoordination } from '../../services/couples/coupleService';
+import { emit, emitDataChanged } from '../../utils/appEvents';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
 import type { AdminCommonProps } from './AdminTabTypes';
 
@@ -286,6 +288,18 @@ export function UserManagement(props: AdminCommonProps) {
   const [userSearch, setUserSearch] = React.useState('');
   const [roleFilter, setRoleFilter] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('');
+  const [userMgmtTab, setUserMgmtTab] = React.useState<'internal' | 'couples-guests'>('internal');
+  const [coupleEventsList, setCoupleEventsList] = React.useState(() => getCoupleEvents());
+
+  const handleToggleCoordination = (coupleId: string) => {
+    const target = coupleEventsList.find((c) => c.id === coupleId);
+    if (!target) return;
+    const isBooked = hasVenueCoordination(target);
+    updateCoupleEvent(coupleId, { venueCoordinationBooked: !isBooked });
+    setCoupleEventsList(getCoupleEvents());
+    showSuccess('Updated Day of Coordination access for couple.');
+    emitDataChanged('couples');
+  };
 
   const filteredUsers = users.filter((u) => {
     const q = userSearch.trim().toLowerCase();
@@ -312,7 +326,145 @@ export function UserManagement(props: AdminCommonProps) {
                 config={config}
               />
 
-              {/* Quick Actions Bar */}
+              {/* User Management Account Type Tabs */}
+              <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+                <button
+                  type="button"
+                  onClick={() => setUserMgmtTab('internal')}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                    userMgmtTab === 'internal'
+                      ? 'text-white shadow-sm'
+                      : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                  style={userMgmtTab === 'internal' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
+                >
+                  👥 Internal Venue Staff &amp; Admins ({users.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserMgmtTab('couples-guests')}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                    userMgmtTab === 'couples-guests'
+                      ? 'text-white shadow-sm'
+                      : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                  style={userMgmtTab === 'couples-guests' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
+                >
+                  💍 Couples &amp; Guest Portal Accounts ({coupleEventsList.length})
+                </button>
+              </div>
+
+              {userMgmtTab === 'couples-guests' ? (
+                <div className="space-y-6">
+                  {/* Couples & Guest Portal Accounts Overview Banner */}
+                  <div className="rounded-xl border p-5 bg-purple-50/70 border-purple-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-base text-purple-900">
+                        💍 Couples &amp; Guest Portal Accounts Management
+                      </h3>
+                      <p className="text-xs text-purple-700 max-w-3xl">
+                        Manage all external client portal accounts linked to your venue&apos;s booked events. Control layout approval workflows, toggle Day of Coordination timeline permissions, copy invite links, and open direct messaging chats.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => emit('spm_open_chat')}
+                      className="px-4 py-2.5 rounded-xl text-white text-xs font-bold shadow-sm shrink-0 transition-colors"
+                      style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                    >
+                      💬 Open Portal Chat &amp; DMs
+                    </button>
+                  </div>
+
+                  {/* Couples List */}
+                  <div className="grid grid-cols-1 gap-4">
+                    {coupleEventsList.length === 0 ? (
+                      <div className="p-8 text-center bg-white rounded-xl border border-dashed border-gray-300 text-gray-500 text-sm">
+                        No couple events booked yet. Create a couple event in the Couples Portal or Admin Panel.
+                      </div>
+                    ) : (
+                      coupleEventsList.map((couple) => {
+                        const isCoordinationBooked = hasVenueCoordination(couple);
+                        const portalLink = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(couple.inviteToken)}`;
+                        return (
+                          <div
+                            key={couple.id}
+                            className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+                          >
+                            <div className="space-y-2 max-w-xl">
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="text-xl">💍</span>
+                                <h4 className="text-base font-bold text-gray-900">
+                                  {couple.coupleName}
+                                </h4>
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                    couple.layoutStatus === 'approved'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : couple.layoutStatus === 'pending' || couple.layoutStatus === 'changes_requested'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-gray-100 text-gray-700'
+                                  }`}
+                                >
+                                  {couple.layoutStatus}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-500 flex flex-wrap items-center gap-4">
+                                <span>📅 Date: {couple.eventDate ? new Date(couple.eventDate).toLocaleDateString() : 'Not set'}</span>
+                                <span>👥 Expected Guests: {couple.guestCount || 0}</span>
+                                <span>🔑 Token: <code>{couple.inviteToken}</code></span>
+                              </div>
+                              <div className="flex items-center gap-2 pt-1">
+                                <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={isCoordinationBooked}
+                                    onChange={() => handleToggleCoordination(couple.id)}
+                                    className="rounded border-gray-300 text-[#4A1942] focus:ring-[#4A1942]"
+                                  />
+                                  <span className={isCoordinationBooked ? 'text-purple-900 font-bold' : 'text-gray-600'}>
+                                    ★ Day of Coordination Booked ($1,000) — {isCoordinationBooked ? 'Full Collaborative Timeline' : 'Read-Only Venue Preview'}
+                                  </span>
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2.5 flex-wrap lg:justify-end shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => window.open(portalLink, '_blank')}
+                                className="px-3.5 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+                              >
+                                💍 Open Couples Portal ↗
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(portalLink);
+                                  showInfo('Copied Couples Portal link to clipboard');
+                                }}
+                                className="px-3.5 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+                              >
+                                📋 Copy Link
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => emit('spm_open_chat')}
+                                className="px-4 py-2 rounded-lg text-white text-xs font-bold shadow-sm transition-colors"
+                                style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                              >
+                                💬 Portal Chat
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Quick Actions Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl shadow-sm">
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -1237,6 +1389,8 @@ export function UserManagement(props: AdminCommonProps) {
                 </div>
                 )}
               </div>
+              </div>
+              )}
               
               {/* Create User Modal */}
 			  {showCreateUserModal && (

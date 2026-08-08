@@ -76,6 +76,8 @@ export interface AppEventMap {
   spm_open_timeline: void;
   /** Open the Operations Studio panel. */
   spm_open_ops: void;
+  /** Open the Portal Chat & Direct Messages panel. */
+  spm_open_chat: void;
   /** Open the Decor Designer; optionally preload an existing arrangement. */
   spm_open_decor_designer: { arrangementId?: string } | void;
   /** Open the workspace help / shortcuts modal. */

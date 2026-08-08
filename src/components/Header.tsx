@@ -540,6 +540,17 @@ export function Header({
 					    🛠️ Operations
 					  </button>
 					)}
+
+					<button
+					  onClick={() => {
+					    emit('spm_open_chat');
+					    setShowMenu(false);
+					  }}
+					  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+					  title="Portal Chat & Direct Messages"
+					>
+					  💬 Chat
+					</button>
 				  
                   {isStudioPage && (
                     <>
@@ -797,6 +808,19 @@ export function Header({
                   className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
                 >
                   📅 Timeline
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    emit('spm_open_chat');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center col-span-2"
+                >
+                  💬 Portal Chat &amp; DMs
                 </button>
               </div>
 

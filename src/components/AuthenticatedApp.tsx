@@ -539,6 +539,12 @@ export default function AuthenticatedApp() {
         setView('dashboard');
         emit('spm_dashboard_open_section', 'ops');
       }),
+      on('spm_open_chat', () => {
+        closeAll();
+        window.location.hash = '#/dashboard';
+        setView('dashboard');
+        emit('spm_dashboard_open_section', 'chat');
+      }),
       on('spm_open_decor_designer', (detail) => {
         if (detail?.arrangementId) setEditingArrangementId(detail.arrangementId);
         open('decorDesigner');
@@ -941,6 +947,7 @@ export default function AuthenticatedApp() {
         }}
         onOpenStudio={() => { window.location.hash = '#/studio'; setView('studio'); }}
         onLogout={logout}
+        users={allUsers}
         opsNode={
           canOpenOperationsPanel ? (
             <StaffOperationsPanel

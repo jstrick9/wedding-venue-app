@@ -27,7 +27,24 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
     copyPermissions,
   } = useRBAC();
 
-  const [activeTab, setActiveTab] = useState<'roles' | 'permissions' | 'audit'>('roles');
+  const [activeTab, setActiveTab] = useState<'roles' | 'permissions' | 'audit' | 'portal-access'>('roles');
+  const [portalAccessRules, setPortalAccessRules] = useState<Record<string, boolean>>({
+    'couples:spaces:edit': true,
+    'couples:layout:submit': true,
+    'couples:timeline:edit': true,
+    'couples:chat:send': true,
+    'couples:vendors:view': true,
+    'guests:rsvp:submit': true,
+    'guests:lodging:view': true,
+    'guests:portal:password_required': true,
+  });
+
+  const togglePortalAccessRule = (key: string) => {
+    setPortalAccessRules((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [showCreateRole, setShowCreateRole] = useState(false);
   const [viewMode, setViewMode] = useState<'matrix' | 'tree'>('tree');
@@ -107,6 +124,7 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
           { id: 'roles', label: '👥 Roles', count: roles.length },
           { id: 'permissions', label: '🔑 Permissions', count: PERMISSIONS.length },
           { id: 'audit', label: '📋 Audit Log', count: auditLog.length },
+          { id: 'portal-access', label: '💍 Couples & Guest Portal Access Rules', count: 8 },
         ].map(tab => (
           <button
             key={tab.id}
@@ -351,6 +369,111 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Couples & Guest Portal Access Rules Tab */}
+        {activeTab === 'portal-access' && (
+          <div className="p-6 space-y-6">
+            <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="font-bold text-base text-purple-900">
+                  💍 Couples &amp; Guest Portal Access Control Matrix
+                </h3>
+                <p className="text-xs text-purple-700 max-w-3xl">
+                  Configure external client portal access control rules and security gating for booked couples, wedding planners, and invited guests across Seven Paths Manor.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                {
+                  key: 'couples:spaces:edit',
+                  title: 'Couples: Floor Plan & Seating Layout Design',
+                  desc: 'Allows booked couples and planners to arrange tables, chairs, and decor on their assigned space canvas.',
+                  category: 'Couples Portal',
+                  icon: '🎨',
+                },
+                {
+                  key: 'couples:layout:submit',
+                  title: 'Couples: Layout Approval Submission Workflow',
+                  desc: 'Allows couples to submit finished layouts for official venue coordinator review and sign-off.',
+                  category: 'Couples Portal',
+                  icon: '👑',
+                },
+                {
+                  key: 'couples:timeline:edit',
+                  title: 'Couples: Collaborative Wedding Timeline Editing',
+                  desc: 'Enables collaborative timeline editing when Day of Coordination service ($1,000) is booked.',
+                  category: 'Couples Portal',
+                  icon: '⏱️',
+                },
+                {
+                  key: 'couples:chat:send',
+                  title: 'Couples: Portal-to-Portal Direct Messaging & Chat',
+                  desc: 'Allows couples to send real-time chat messages to the venue coordination team from their portal.',
+                  category: 'Couples Portal',
+                  icon: '💬',
+                },
+                {
+                  key: 'couples:vendors:view',
+                  title: 'Couples: Preferred Vendor Showcase Access',
+                  desc: 'Lets couples browse the venue curated preferred vendor directory by category.',
+                  category: 'Couples Portal',
+                  icon: '🧰',
+                },
+                {
+                  key: 'guests:rsvp:submit',
+                  title: 'Guests: RSVP & Meal Choice Submission',
+                  desc: 'Enables invited guests to submit RSVPs, attending days, and dietary/meal preferences.',
+                  category: 'Guest Portal',
+                  icon: '💌',
+                },
+                {
+                  key: 'guests:lodging:view',
+                  title: 'Guests: Lodging Room & Manor Map Viewing',
+                  desc: 'Allows invited guests to view their room assignment and interactive Seven Paths Manor map.',
+                  category: 'Guest Portal',
+                  icon: '🛏️',
+                },
+                {
+                  key: 'guests:portal:password_required',
+                  title: 'Guests: Portal Password Security Authentication',
+                  desc: 'Enforces password gating before external guests can view event details.',
+                  category: 'Guest Portal',
+                  icon: '🔒',
+                },
+              ].map((rule) => {
+                const enabled = portalAccessRules[rule.key];
+                return (
+                  <div
+                    key={rule.key}
+                    className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-start justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{rule.icon}</span>
+                        <h4 className="font-bold text-sm text-gray-900">{rule.title}</h4>
+                      </div>
+                      <p className="text-xs text-gray-500">{rule.desc}</p>
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800 mt-1">
+                        {rule.category}
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0 pt-1">
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={() => togglePortalAccessRule(rule.key)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#4A1942] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

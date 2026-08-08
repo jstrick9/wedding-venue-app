@@ -121,6 +121,55 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(window.location.hash).toBe('#/dashboard');
   });
 
+  it('keeps user on #dashboard when clicking Portal Chat & DMs and close returns to home', async () => {
+    window.location.hash = '#/dashboard';
+    render(<App />);
+
+    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+
+    const chatBtn = screen.getByRole('button', { name: /portal chat & dms/i });
+    fireEvent.click(chatBtn);
+
+    expect(
+      await screen.findByRole('heading', { name: /portal chat & direct messages/i })
+    ).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/dashboard');
+
+    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard home/i });
+    fireEvent.click(closeBtn);
+
+    expect(
+      screen.queryByRole('heading', { name: /portal chat & direct messages/i })
+    ).not.toBeInTheDocument();
+    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/dashboard');
+  });
+
+  it('emits spm_open_chat to navigate directly to #dashboard chat section', async () => {
+    window.location.hash = '#/dashboard';
+    render(<App />);
+
+    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+
+    act(() => {
+      emit('spm_open_chat');
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: /portal chat & direct messages/i })
+    ).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/dashboard');
+
+    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard home/i });
+    fireEvent.click(closeBtn);
+
+    expect(
+      screen.queryByRole('heading', { name: /portal chat & direct messages/i })
+    ).not.toBeInTheDocument();
+    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/dashboard');
+  });
+
   it('hides studio-specific menu items (Save Layout, Load Layout, Templates) from Header menu when on dashboard', async () => {
     window.location.hash = '#/dashboard';
     render(<App />);

@@ -98,11 +98,28 @@ export function getConfig(): Config {
   }
 }
 
+export function applyRootStyles(config: Partial<Config>): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  if (config.primaryColor) root.style.setProperty('--primary-color', config.primaryColor);
+  if (config.primaryDark) root.style.setProperty('--primary-dark', config.primaryDark);
+  if (config.primaryLight) root.style.setProperty('--primary-light', config.primaryLight);
+  if (config.accentColor) root.style.setProperty('--accent-color', config.accentColor);
+  if (config.backgroundColor) root.style.setProperty('--background-color', config.backgroundColor);
+  if (config.textColor) root.style.setProperty('--text-color', config.textColor);
+  if (config.fontFamily) root.style.setProperty('--font-family', config.fontFamily);
+  if (config.headingFontFamily) root.style.setProperty('--heading-font-family', config.headingFontFamily);
+  if (config.headerTextColor) root.style.setProperty('--header-text-color', config.headerTextColor);
+  if (config.bodyTextColor) root.style.setProperty('--body-text-color', config.bodyTextColor);
+  if (config.accentTextColor) root.style.setProperty('--accent-text-color', config.accentTextColor);
+}
+
 export function updateConfig(config: Partial<Config>): void {
   try {
     const current = getConfig();
     const updated = { ...current, ...config };
     saveVersionedStorage(CONFIG_STORAGE_KEY, CONFIG_STORAGE_VERSION, updated);
+    applyRootStyles(updated);
   } catch (e) {
     console.error('Failed to save config:', e);
   }
@@ -111,6 +128,7 @@ export function updateConfig(config: Partial<Config>): void {
 export function setConfig(config: Config): void {
   try {
     saveVersionedStorage(CONFIG_STORAGE_KEY, CONFIG_STORAGE_VERSION, config);
+    applyRootStyles(config);
   } catch (e) {
     console.error('Failed to save config:', e);
   }

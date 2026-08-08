@@ -11,8 +11,9 @@ import { getVenues } from '../hooks/useLayoutState';
 import { getConfig } from '../config';
 import { Card, Button, EmptyState } from './ui';
 import { on, emit } from '../utils/appEvents';
+import { VenueChatPanel } from './VenueChatPanel';
 
-type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'admin' | 'ops';
+type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'admin' | 'ops' | 'chat';
 
 type InlineNode = React.ReactNode | undefined;
 
@@ -24,6 +25,7 @@ interface Props {
   isStaff: boolean;
   canAdmin: boolean;
   canOps: boolean;
+  users?: any[];
   onOpenAdmin: () => void;
   onOpenOperations: () => void;
   onOpenVendors: () => void;
@@ -36,6 +38,8 @@ interface Props {
   vendorsNode?: ReactNodeish;
   /** Pre-rendered inline Timeline panel node. */
   timelineNode?: ReactNodeish;
+  /** Pre-rendered inline Chat panel node. */
+  chatNode?: ReactNodeish;
 }
 
 const openCouplePortal = (id: string) => {
@@ -146,6 +150,7 @@ export function VenueDashboard(props: Props) {
     { id: 'home', label: 'Home', icon: '🏠', action: () => setSection('home') },
     { id: 'calendar', label: 'Calendar', icon: '📅', action: () => setSection('calendar') },
     { id: 'couples', label: 'Couples Portal', icon: '💍', action: () => setSection('couples') },
+    { id: 'chat', label: 'Portal Chat', icon: '💬', action: () => setSection('chat'), badgeCount: stats.unread > 0 ? stats.unread : 0 },
     { id: 'vendors', label: 'Vendors', icon: '🧰', action: () => setSection('vendors') },
     { id: 'timeline', label: 'Timeline', icon: '⏱️', action: () => setSection('timeline') },
     { id: 'ops', label: 'Operations', icon: '🛠️', action: () => setSection('ops') },
@@ -205,13 +210,24 @@ export function VenueDashboard(props: Props) {
                 <button
                   type="button"
                   onClick={item.action}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                     active ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={active ? { backgroundColor: config.primaryColor } : undefined}
+                  style={active ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
                 >
-                  <span>{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="flex items-center gap-2">
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </span>
+                  {(item as any).badgeCount > 0 && (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                        active ? 'bg-white text-rose-600' : 'bg-rose-500 text-white'
+                      }`}
+                    >
+                      {(item as any).badgeCount}
+                    </span>
+                  )}
                 </button>
               </div>
             );
@@ -258,10 +274,10 @@ export function VenueDashboard(props: Props) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSection('couples')}
+                  onClick={() => setSection('chat')}
                   className="text-xs font-bold text-white bg-[#4A1942] hover:bg-[#3b1435] px-3.5 py-2 rounded-lg transition-colors shrink-0 shadow-sm"
                 >
-                  View Couples &amp; Reply →
+                  Open Portal Chat &amp; Reply →
                 </button>
               </div>
             )}
@@ -296,9 +312,9 @@ export function VenueDashboard(props: Props) {
               </Card>
               <button
                 type="button"
-                onClick={() => setSection('couples')}
+                onClick={() => setSection('chat')}
                 className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
-                title="Open Couples Portal to view unread messages"
+                title="Open Portal Chat to view unread messages"
                 aria-label={`${stats.unread} unread couple messages`}
               >
                 <div className={`text-2xl font-bold ${stats.unread > 0 ? 'text-rose-600' : 'text-gray-700'}`}>{stats.unread}</div>
@@ -471,6 +487,10 @@ export function VenueDashboard(props: Props) {
                     <button type="button" onClick={() => setSection('timeline')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
                       <span>⏱️</span><span>Timeline Studio</span>
                     </button>
+                    <button type="button" onClick={() => setSection('chat')} className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                      <span className="flex items-center gap-2"><span>💬</span><span>Portal Chat &amp; DMs</span></span>
+                      {stats.unread > 0 && <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black">{stats.unread}</span>}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -560,6 +580,20 @@ export function VenueDashboard(props: Props) {
         {section === 'timeline' && (
           <div className="h-[calc(100vh-2rem)] overflow-hidden">
             {props.timelineNode || <p className="text-sm text-gray-400">Timeline panel is not available.</p>}
+          </div>
+        )}
+
+        {section === 'chat' && (
+          <div className="h-[calc(100vh-2rem)] overflow-hidden">
+            {props.chatNode || (
+              <VenueChatPanel
+                user={props.user}
+                isAdmin={props.isAdmin}
+                inline
+                onClose={() => setSection('home')}
+                users={props.users}
+              />
+            )}
           </div>
         )}
 

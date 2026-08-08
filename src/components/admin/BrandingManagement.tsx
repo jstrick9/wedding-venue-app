@@ -8,6 +8,7 @@ import { DirectMessagePanel } from '../DirectMessagePanel';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
 import { deriveShades } from '../../utils/color';
+import { applyRootStyles } from '../../config';
 import type { AdminCommonProps } from './AdminTabTypes';
 
 const DEFAULT_LOADED_FONT_FAMILIES = new Set(['Inter', 'Playfair Display']);
@@ -271,7 +272,7 @@ export function BrandingManagement(props: AdminCommonProps) {
     roleName,
     exists,
     duplicate,
-    handleSaveConfig,
+    handleSaveConfig: originalSaveConfig,
     mapUserRoleToLegacyRole,
     validateUserForm,
     normalizedUsername,
@@ -306,6 +307,11 @@ export function BrandingManagement(props: AdminCommonProps) {
     tabs,
     AdminPanel
   } = props;
+
+  const handleSaveConfig = (updated: Config) => {
+    originalSaveConfig(updated);
+    applyRootStyles(updated);
+  };
 
   React.useEffect(() => {
     if (!expandedBrandingSections?.has('typography') && !expandedBrandingSections?.has('preview')) return;

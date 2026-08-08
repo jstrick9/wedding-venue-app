@@ -119,7 +119,7 @@ describe('VenueDashboard', () => {
     expect(screen.getByTestId('test-timeline-panel')).toBeInTheDocument();
   });
 
-  it('renders Unread Couple Messages alert banner and allows clicking KPI card to switch to couples section', async () => {
+  it('renders Unread Couple Messages alert banner and allows clicking KPI card to switch to chat section', async () => {
     const chatService = await import('../services/couples/coupleChatService');
     const spy = vi
       .spyOn(chatService, 'getUnreadCoupleMessageCounts')
@@ -135,7 +135,7 @@ describe('VenueDashboard', () => {
     });
     fireEvent.click(unreadBtn);
     expect(
-      screen.getByRole('heading', { name: /couples portal/i }),
+      screen.getByRole('heading', { name: /portal chat & direct messages/i }),
     ).toBeInTheDocument();
 
     spy.mockRestore();

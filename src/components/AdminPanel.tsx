@@ -64,7 +64,7 @@ import {
   setUsers,
   resetToDefaults,
 } from '../hooks/useLayoutState';
-import { getConfig, setConfig, Config } from '../config';
+import { getConfig, setConfig, applyRootStyles, Config } from '../config';
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { getWeddingPackages } from '../services/couples/couplePackageService';
 import { AdminDecorSection } from './AdminDecorSection';
@@ -414,7 +414,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const handleSaveTemplates = (updated: LayoutTemplate[]) => { setTemplates(updated); setTemplatesState(updated); showSuccess('Templates saved!'); };
   const handleSaveLinenColors = (updated: LinenColor[]) => { setLinenColors(updated); setLinenColorsState(updated); showSuccess('Linen colors saved!'); };
   const handleSaveWallStyles = (updated: WallStyle[]) => { setWallStyles(updated); setWallStylesState(updated); showSuccess('Wall styles saved!'); };
-  const handleSaveConfig = (updated: Config) => { setConfig(updated); setConfigState(updated); showSuccess('Branding saved!'); };
+  const handleSaveConfig = (updated: Config) => { setConfig(updated); setConfigState(updated); applyRootStyles(updated); showSuccess('Branding saved!'); };
   const handleSaveUsers = (updated: User[]) => { setUsers(updated); setUsersState(updated); showSuccess('Users saved!'); };
   const handleSaveSpacing = (updated: typeof spacingSettings) => { setSpacingSettings(updated); setSpacingSettingsState(updated); showSuccess('Spacing saved!'); };
 
@@ -1172,13 +1172,25 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                     onClick={() => { setTabSearch(''); setActiveTab(cat.tabs[0]?.id || activeTab); }}
                     className={`w-full text-left px-3 py-2.5 flex items-center justify-between gap-2 text-sm transition-colors ${
                       active
-                        ? 'bg-[#4A1942]/10 font-semibold text-[#4A1942] border-r-2 border-[#4A1942]'
+                        ? 'font-semibold border-r-2'
                         : 'text-gray-700 hover:bg-gray-50'
                     }`}
+                    style={
+                      active
+                        ? {
+                            backgroundColor: `${config.primaryColor || '#4A1942'}18`,
+                            color: config.primaryColor || '#4A1942',
+                            borderColor: config.primaryColor || '#4A1942',
+                          }
+                        : undefined
+                    }
                     aria-current={active ? 'page' : undefined}
                   >
                     <span className="flex items-center gap-2">{cat.icon} {cat.label}</span>
-                    <span className={`text-xs rounded-full px-1.5 py-0.5 ${active ? 'bg-[#4A1942] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    <span
+                      className={`text-xs rounded-full px-1.5 py-0.5 ${!active ? 'bg-gray-100 text-gray-500' : ''}`}
+                      style={active ? { backgroundColor: config.primaryColor || '#4A1942', color: '#FFFFFF' } : undefined}
+                    >
                       {cat.tabs.length}
                     </span>
                   </button>
@@ -1198,8 +1210,9 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
                     className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors ${
-                      active ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                      !active ? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50' : ''
                     }`}
+                    style={active ? { backgroundColor: config.primaryColor || '#4A1942', color: '#FFFFFF' } : undefined}
                     aria-current={active ? 'page' : undefined}
                   >
                     <span>{tab.icon}</span>
@@ -1222,7 +1235,10 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
               ) : (
                 <div className="space-y-4">
                   <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#4A1942]/10 px-3 py-1 text-[#4A1942] font-medium">
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-3 py-1 font-medium"
+                      style={{ backgroundColor: `${config.primaryColor || '#4A1942'}15`, color: config.primaryColor || '#4A1942' }}
+                    >
                       {activeTabConfig.icon} {activeTabConfig.label.replace(`${activeTabConfig.icon} `, '')}
                     </span>
                     {!searching && <span>{activeCategory}</span>}
