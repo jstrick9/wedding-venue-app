@@ -11,6 +11,10 @@ import { emitDataChanged, on } from '../utils/appEvents';
 import { showToast } from './Toast';
 import { ConfirmDialog } from './ConfirmDialog';
 import { toLocalDatetimeInput, fromLocalDatetimeInput } from '../utils/dateTime';
+import { getCoupleEvents } from '../services/couples/coupleService';
+import { findWeddingPackage } from '../services/couples/couplePackageService';
+import { useTimeline } from '../hooks/useTimeline';
+import { getOperationsChecklistDefaults, getOperationalZoneDefaults } from './admin/OperationsSettingsManagement';
 
 interface Props {
   onClose: () => void;
@@ -48,7 +52,9 @@ const StaffOperationsPanel: React.FC<Props> = ({
   const config = getConfig();
   const canAccessPanel = canAccessOperationsPanel(currentUser);
   const canMutateOperations = canManageOperationsData(currentUser);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'areas' | 'shifts' | 'checklists' | 'export'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'beo' | 'tasks' | 'areas' | 'shifts' | 'checklists' | 'export'>('overview');
+  const [beoCoupleId, setBeoCoupleId] = useState<string | null>(null);
+  const { getTimelineForCouple } = useTimeline();
 
   if (!canAccessPanel) {
     return (
@@ -136,6 +142,75 @@ const StaffOperationsPanel: React.FC<Props> = ({
     setShifts(newShifts);
     localStorage.setItem(STORAGE_KEYS.STAFF_SHIFTS, JSON.stringify(newShifts));
     emitDataChanged();
+  };
+
+  const handleLoadAdminDefaults = () => {
+    if (!canMutateOperations) return;
+    const adminChecklists = getOperationsChecklistDefaults();
+    const adminZones = getOperationalZoneDefaults();
+
+    // Ensure all admin operational zones exist in areas
+    const nextAreas = [...areas];
+    adminZones.forEach((z) => {
+      if (!nextAreas.some((a) => a.name.toLowerCase() === z.name.toLowerCase())) {
+        nextAreas.push({
+          id: z.id,
+          name: z.name,
+          description: z.description,
+          venueId: venueId || venues[0]?.id || '',
+          color: '#4A1942',
+          icon: '📍',
+          assignedStaff: [],
+        });
+      }
+    });
+
+    // Create or populate phase tasks with standard checklist items
+    const nextTasks = [...tasks];
+    adminChecklists.forEach((item) => {
+      let phaseKey: StaffTaskPhase = 'pre-event';
+      if (item.phase === 'setup' || item.phase === 'ceremony') phaseKey = 'during-event';
+      if (item.phase === 'reception' || item.phase === 'takedown') phaseKey = 'post-event';
+
+      const existingTask = nextTasks.find(
+        (t) => normalizedPhase(t.phase) === phaseKey && t.title.toLowerCase().includes(item.phase)
+      );
+
+      if (existingTask) {
+        if (!existingTask.checklist.some((ci) => ci.label === item.text)) {
+          existingTask.checklist.push({
+            id: `ci-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            label: item.text,
+            completed: false,
+          });
+        }
+      } else {
+        nextTasks.push({
+          id: `task-default-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          title: `${item.phase.toUpperCase()}: Operations Checklist`,
+          description: `Standard operational workflow for ${item.phase} phase.`,
+          phase: phaseKey,
+          priority: 'high',
+          status: 'not-started',
+          assignedStaff: [],
+          assignedAreas: nextAreas.length > 0 ? [nextAreas[0].id] : [],
+          tags: [],
+          checklist: [
+            {
+              id: `ci-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              label: item.text,
+              completed: false,
+            },
+          ],
+          createdAt: new Date().toISOString(),
+          createdBy: currentUser.id,
+        });
+      }
+    });
+
+    saveAreas(nextAreas);
+    saveTasks(nextTasks);
+    showToast('Loaded standard operational areas and phase checklists from Admin Settings.', 'success');
   };
 
   // --- Handlers ---
@@ -256,9 +331,76 @@ const StaffOperationsPanel: React.FC<Props> = ({
     const completed = tasks.filter(t => t.status === 'completed').length;
     const blocked = tasks.filter(t => t.status === 'blocked').length;
     const myTasks = tasks.filter(t => t.assignedStaff.includes(currentUser.id));
+    const conflictingShifts = shifts.filter((s) => isShiftConflicting(s));
 
     return (
       <div className="space-y-6">
+        {/* BEO & Conflict Quick Action Banners */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gradient-to-r from-[#4A1942] to-purple-800 text-white p-5 rounded-xl shadow-sm flex flex-col justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📜</span>
+                <h3 className="font-bold text-base">Master Banquet Event Order (BEO)</h3>
+              </div>
+              <p className="text-xs text-white/80 leading-relaxed">
+                Generate, view, and print the single sheet that drives your wedding day: timeline, room layout, headcount, catering/bar menu, staff schedule, and checklists.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('beo')}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-colors self-start"
+            >
+              📜 Open BEO Sheet →
+            </button>
+          </div>
+
+          {conflictingShifts.length > 0 ? (
+            <div className="bg-amber-50 border border-amber-300 p-5 rounded-xl shadow-sm flex flex-col justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">⚠️</span>
+                  <h3 className="font-bold text-base text-amber-900">
+                    Schedule Conflict Detected
+                  </h3>
+                </div>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  {conflictingShifts.length} staff shift(s) have overlapping hours or conflicting area assignments. Check the schedule to resolve double-bookings.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('shifts')}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors self-start"
+              >
+                🕒 View Shift Schedule →
+              </button>
+            </div>
+          ) : (
+            <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-xl shadow-sm flex flex-col justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">✅</span>
+                  <h3 className="font-bold text-base text-emerald-900">
+                    Staff Schedule Status: All Clear
+                  </h3>
+                </div>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  All {shifts.length} scheduled staff shifts are clear of overlapping hours across {areas.length} operational zones.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('shifts')}
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-colors self-start"
+              >
+                🕒 Manage Shifts →
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-gray-900">
           <StatCard label="Total Tasks" value={total} color="text-gray-900" />
           <StatCard label="Completed" value={completed} color="text-green-600" />
@@ -312,6 +454,351 @@ const StaffOperationsPanel: React.FC<Props> = ({
     );
   };
 
+  const renderBEOContent = (isPrintView: boolean) => {
+    const coupleEvents = getCoupleEvents();
+    const selectedCouple =
+      coupleEvents.find((c) => c.id === beoCoupleId) || coupleEvents[0] || null;
+
+    if (!selectedCouple) {
+      return (
+        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center text-gray-500 space-y-4">
+          <div className="text-5xl">📜</div>
+          <h3 className="text-lg font-bold text-gray-800">No Booked Couple Event Available</h3>
+          <p className="text-xs text-gray-500 max-w-md mx-auto">
+            Banquet Event Orders (BEOs) require an active couple booking. Create a couple event in the Couples Portal or Admin settings to generate a BEO sheet.
+          </p>
+        </div>
+      );
+    }
+
+    const pkg = findWeddingPackage(selectedCouple.packageId);
+    const timeline = getTimelineForCouple(selectedCouple.id);
+    const timelineEvents = timeline ? timeline.days.flatMap((d: any) => d.events) : [];
+    const conflictingShiftsCount = shifts.filter((s) => isShiftConflicting(s)).length;
+
+    const portalLink = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(selectedCouple.inviteToken)}`;
+
+    return (
+      <div className="space-y-6">
+        {!isPrintView && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              <label htmlFor="beo-couple-select" className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Select Couple Event:
+              </label>
+              <select
+                id="beo-couple-select"
+                value={selectedCouple.id}
+                onChange={(e) => setBeoCoupleId(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-900 bg-white min-w-[240px]"
+              >
+                {coupleEvents.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.coupleName} ({c.eventDate ? new Date(c.eventDate).toLocaleDateString() : 'No date'} • {c.guestCount || 0} guests)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => window.open(portalLink, '_blank')}
+                className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+              >
+                💍 Open Couples Portal ↗
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  showToast('Copied BEO page reference link to clipboard', 'success');
+                }}
+                className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+              >
+                📋 Copy BEO Link
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => { window.location.hash = '#/admin'; }}
+                  className="px-3 py-1.5 rounded-lg bg-[#4A1942] hover:bg-[#3b1435] text-white text-xs font-bold transition-colors shadow-sm"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                >
+                  ⚙️ Configure BEO Default Wording in Admin
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Master BEO Sheet Card */}
+        <div className="bg-white rounded-2xl border border-gray-300 shadow-lg p-8 space-y-8 text-gray-900">
+          {/* Header Banner */}
+          <div className="border-b-2 border-[#4A1942] pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ borderColor: config.primaryColor || '#4A1942' }}>
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest text-[#4A1942]" style={{ color: config.primaryColor || '#4A1942' }}>
+                {config.venueName || 'Seven Paths Manor'} • Master Operational Document
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mt-1">
+                BANQUET EVENT ORDER (BEO)
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                BEO Ref: <strong>BEO-2026-{selectedCouple.id.slice(0, 8).toUpperCase()}</strong> • Generated {new Date().toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex flex-col items-start md:items-end gap-1">
+              <span className="text-xs font-semibold text-gray-500">Layout Approval Status</span>
+              <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                selectedCouple.layoutStatus === 'approved'
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  : 'bg-amber-100 text-amber-800 border border-amber-300'
+              }`}>
+                {selectedCouple.layoutStatus}
+              </span>
+            </div>
+          </div>
+
+          {/* Section 1: Event & Client Summary */}
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-[#4A1942] border-b pb-2 mb-4 flex items-center gap-2" style={{ color: config.primaryColor || '#4A1942', borderColor: config.primaryColor || '#4A1942' }}>
+              <span>🏛️ Section 1: Event &amp; Client Summary</span>
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div className="text-gray-500 font-semibold">Couple / Client Name</div>
+                <div className="font-bold text-gray-900 text-sm mt-0.5">{selectedCouple.coupleName}</div>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div className="text-gray-500 font-semibold">Event Date</div>
+                <div className="font-bold text-gray-900 text-sm mt-0.5">
+                  {selectedCouple.eventDate ? new Date(selectedCouple.eventDate).toLocaleDateString() : 'Not set'}
+                </div>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div className="text-gray-500 font-semibold">Expected Guest Count</div>
+                <div className="font-bold text-gray-900 text-sm mt-0.5">{selectedCouple.guestCount || 0} Guests</div>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <div className="text-gray-500 font-semibold">Portal Reference Token</div>
+                <div className="font-mono font-bold text-gray-900 text-xs mt-0.5">{selectedCouple.inviteToken}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Room & Layout Setup */}
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-[#4A1942] border-b pb-2 mb-4 flex items-center gap-2" style={{ color: config.primaryColor || '#4A1942', borderColor: config.primaryColor || '#4A1942' }}>
+              <span>🪑 Section 2: Room, Layout &amp; Seating Setup</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div className="bg-gray-50 p-3.5 rounded-lg border border-gray-200">
+                <div className="text-gray-500 font-semibold">Configured Venue Spaces</div>
+                <div className="font-bold text-gray-900 text-sm mt-0.5">
+                  {selectedCouple.selectedSpaces && selectedCouple.selectedSpaces.length > 0
+                    ? selectedCouple.selectedSpaces.join(', ')
+                    : 'Main Manor & Great Hall, Ceremony Lawn'}
+                </div>
+              </div>
+              <div className="bg-gray-50 p-3.5 rounded-lg border border-gray-200">
+                <div className="text-gray-500 font-semibold">Placed Tables &amp; Seating Capacity</div>
+                <div className="font-bold text-gray-900 text-sm mt-0.5">
+                  Standard Banquet Seating per Approved Layout
+                </div>
+              </div>
+              <div className="bg-gray-50 p-3.5 rounded-lg border border-gray-200">
+                <div className="text-gray-500 font-semibold">Staging &amp; Special Fixtures</div>
+                <div className="font-bold text-gray-900 text-sm mt-0.5">
+                  DJ Table, Gift Table, Cake Foyer Stage
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Chronological Wedding Schedule */}
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-[#4A1942] border-b pb-2 mb-4 flex items-center justify-between" style={{ color: config.primaryColor || '#4A1942', borderColor: config.primaryColor || '#4A1942' }}>
+              <span>⏱️ Section 3: Chronological Wedding Day Schedule &amp; Milestones</span>
+              <span className="text-xs font-normal text-gray-500">
+                {timelineEvents.length} scheduled milestone(s)
+              </span>
+            </h3>
+            {timelineEvents.length === 0 ? (
+              <div className="p-6 text-center border border-dashed border-gray-300 rounded-xl text-gray-500 text-xs">
+                No timeline milestones configured yet for this couple. Create a timeline in the Timeline Studio.
+              </div>
+            ) : (
+              <div className="border rounded-xl overflow-hidden divide-y divide-gray-200 text-xs">
+                <div className="bg-gray-100 font-bold text-gray-700 grid grid-cols-12 px-4 py-2.5">
+                  <div className="col-span-3">Time Window</div>
+                  <div className="col-span-5">Event Milestone</div>
+                  <div className="col-span-4">Location / Zone</div>
+                </div>
+                {timelineEvents.map((ev: any) => (
+                  <div key={ev.id} className="grid grid-cols-12 px-4 py-3 items-center hover:bg-gray-50">
+                    <div className="col-span-3 font-mono font-bold text-gray-900">
+                      {ev.startTime} – {ev.endTime}
+                    </div>
+                    <div className="col-span-5 font-bold text-gray-900">
+                      {ev.title}
+                    </div>
+                    <div className="col-span-4 text-gray-600">
+                      {ev.location || 'Main Manor'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Catering, Bar & Dietary Notes */}
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-[#4A1942] border-b pb-2 mb-4 flex items-center gap-2" style={{ color: config.primaryColor || '#4A1942', borderColor: config.primaryColor || '#4A1942' }}>
+              <span>🍽️ Section 4: Catering, Bar Service &amp; Dietary Requirements</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2">
+                <div className="font-bold text-gray-900 text-sm">Selected Wedding Package</div>
+                <div className="text-gray-700">
+                  {pkg ? pkg.name : 'Standard Manor Weekend Package'} • {selectedCouple.guestCount || 0} Guests
+                </div>
+                <div className="text-gray-500 text-xs pt-1 border-t border-gray-200">
+                  Bar Service: Licensed bartending required; all ABC regulations and venue closing hours strictly enforced.
+                </div>
+              </div>
+              <div className="bg-amber-50 p-4 rounded-xl border border-amber-300 space-y-2">
+                <div className="font-bold text-amber-900 text-sm flex items-center gap-1.5">
+                  <span>⚠️</span> Dietary Notes &amp; Allergen Policy
+                </div>
+                <p className="text-amber-800 text-xs leading-relaxed">
+                  Catering staff must confirm vegetarian, vegan, and allergen meal accommodations during RSVP check-in. Kitchen prep must maintain separate staging for peanut, tree nut, and shellfish allergies.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Staff Shift Roster & Operational Zone Allocations */}
+          <div>
+            <div className="flex items-center justify-between border-b pb-2 mb-4" style={{ borderColor: config.primaryColor || '#4A1942' }}>
+              <h3 className="text-sm font-black uppercase tracking-wider text-[#4A1942] flex items-center gap-2" style={{ color: config.primaryColor || '#4A1942' }}>
+                <span>🕒 Section 5: Staff Shift Roster &amp; Operational Zone Allocations</span>
+              </h3>
+              {conflictingShiftsCount > 0 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">
+                  ⚠️ {conflictingShiftsCount} Shift Conflict(s)
+                </span>
+              )}
+            </div>
+            {shifts.length === 0 ? (
+              <div className="p-6 text-center border border-dashed border-gray-300 rounded-xl text-gray-500 text-xs">
+                No staff shifts scheduled yet. Add shifts in the Shifts tab.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                {shifts.map((shift) => {
+                  const u = users.find((usr) => usr.id === shift.staffId);
+                  const a = areas.find((ar) => ar.id === shift.areaId);
+                  const conflict = isShiftConflicting(shift);
+                  return (
+                    <div
+                      key={shift.id}
+                      className={`p-3 rounded-xl border flex items-center justify-between ${
+                        conflict
+                          ? 'bg-amber-50 border-amber-300'
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-bold text-gray-900">
+                          {u?.name || 'Unassigned Staff'} • <span className="uppercase text-[10px] text-purple-700">{shift.role}</span>
+                        </div>
+                        <div className="text-gray-500 mt-0.5">
+                          📍 {a?.name || 'General Venue Area'}
+                        </div>
+                      </div>
+                      <div className="text-right font-mono font-bold text-gray-700">
+                        {new Date(shift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {' – '}
+                        {new Date(shift.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Section 6: Event-Day Operational Checklists by Phase */}
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-wider text-[#4A1942] border-b pb-2 mb-4 flex items-center gap-2" style={{ color: config.primaryColor || '#4A1942', borderColor: config.primaryColor || '#4A1942' }}>
+              <span>📝 Section 6: Event-Day Operational Checklists by Phase</span>
+            </h3>
+            <div className="space-y-4 text-xs">
+              {PHASES.map((phase) => {
+                const phaseTasks = tasks.filter((t) => normalizedPhase(t.phase) === phase);
+                const items = phaseTasks.flatMap((t) => t.checklist);
+                if (items.length === 0) return null;
+                return (
+                  <div key={phase} className="border rounded-xl p-4 bg-gray-50/50 space-y-2">
+                    <h4 className="font-bold text-gray-800 uppercase tracking-wide">
+                      {phase.replace('-', ' ')} Phase Checklists ({items.filter((i) => i.completed).length}/{items.length} Complete)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {items.map((ci) => (
+                        <div key={ci.id} className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200">
+                          <span className={`w-4 h-4 rounded border flex items-center justify-center font-bold text-[10px] ${
+                            ci.completed ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-gray-300 text-transparent'
+                          }`}>
+                            ✓
+                          </span>
+                          <span className={`flex-1 ${ci.completed ? 'line-through text-gray-400' : 'text-gray-800 font-medium'}`}>
+                            {ci.label || (ci as any).text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 7: Formal Sign-Off & Authorization Block */}
+          <div className="pt-6 border-t-2 border-gray-300">
+            <h3 className="text-sm font-black uppercase tracking-wider text-gray-700 mb-6">
+              ✍️ Section 7: Formal BEO Sign-Off &amp; Operational Authorization
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs">
+              <div className="space-y-6">
+                <div className="border-b-2 border-gray-800 pb-1"></div>
+                <div className="flex justify-between items-center text-gray-600">
+                  <span className="font-bold">Venue Operations Manager Signature</span>
+                  <span>Date: _______________</span>
+                </div>
+                <div className="text-gray-400 text-[11px]">
+                  Seven Paths Manor — Wedding &amp; Event Operations Team
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="border-b-2 border-gray-800 pb-1"></div>
+                <div className="flex justify-between items-center text-gray-600">
+                  <span className="font-bold">Couple / Client Authorization Signature</span>
+                  <span>Date: _______________</span>
+                </div>
+                <div className="text-gray-400 text-[11px]">
+                  {selectedCouple.coupleName} • I confirm that all BEO details above are correct.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderBEO = () => renderBEOContent(false);
+
   const renderTasks = () => {
     const selectedTask = tasks.find(t => t.id === selectedTaskId);
     const filteredTasks = tasks.filter(t => {
@@ -333,15 +820,25 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <button onClick={() => setTaskView('kanban')} className={`px-4 py-2 rounded-lg text-sm font-medium ${taskView === 'kanban' ? 'bg-purple-600 text-white' : 'bg-white border text-gray-600'}`} style={taskView === 'kanban' ? { backgroundColor: config.primaryColor } : {}}>Kanban</button>
             <button onClick={() => setTaskView('list')} className={`px-4 py-2 rounded-lg text-sm font-medium ${taskView === 'list' ? 'bg-purple-600 text-white' : 'bg-white border text-gray-600'}`} style={taskView === 'list' ? { backgroundColor: config.primaryColor } : {}}>List</button>
           </div>
-          <button
-  	    type="button"
-  	    onClick={() => handleAddTask('pre-event')}
-  	    disabled={!canMutateOperations}
-  	    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-  	    style={{ backgroundColor: config.primaryColor }}
-	  >
-  	    + Add Task
-	  </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLoadAdminDefaults}
+              disabled={!canMutateOperations}
+              className="px-3.5 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-900 text-xs font-bold hover:bg-purple-100 transition-colors disabled:opacity-40"
+            >
+              ➕ Load Checklists from Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAddTask('pre-event')}
+              disabled={!canMutateOperations}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: config.primaryColor }}
+            >
+              + Add Task
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-3 mb-4 bg-white p-3 rounded-xl border border-gray-200 flex-wrap shadow-sm">
@@ -953,6 +1450,25 @@ const StaffOperationsPanel: React.FC<Props> = ({
             </label>
             <button
               type="button"
+              onClick={handleLoadAdminDefaults}
+              disabled={!canMutateOperations}
+              className="px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-900 text-xs font-bold hover:bg-purple-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              <span aria-hidden="true">➕</span>
+              <span>Load Checklists from Admin</span>
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => { window.location.hash = '#/admin'; }}
+                className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold transition-colors flex items-center gap-1"
+              >
+                <span>⚙️</span>
+                <span>Admin Operations Settings</span>
+              </button>
+            )}
+            <button
+              type="button"
               onClick={() => setConfirmResetChecklists(true)}
               disabled={!canMutateOperations || tasks.flatMap(t => t.checklist).filter(i => i.completed).length === 0}
               className="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
@@ -1113,7 +1629,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
             type="button"
           >
             <span>🖨️</span>
-            <span>Print Sheet</span>
+            <span>{activeTab === 'beo' ? 'Print BEO' : 'Print Sheet'}</span>
           </button>
           <button
             type="button"
@@ -1132,6 +1648,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {[
               { id: 'overview', icon: '📊', label: 'Overview' },
+              { id: 'beo', icon: '📜', label: 'BEO Sheet' },
               { id: 'tasks', icon: '✅', label: 'Tasks' },
               { id: 'areas', icon: '📍', label: 'Areas' },
               { id: 'shifts', icon: '🕒', label: 'Shifts' },
@@ -1174,6 +1691,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
         <main className="no-print print:hidden flex-1 overflow-auto bg-gray-50/30">
           <div className="max-w-6xl mx-auto p-8 h-full">
             {activeTab === 'overview' && renderOverview()}
+            {activeTab === 'beo' && renderBEO()}
             {activeTab === 'tasks' && renderTasks()}
             {activeTab === 'areas' && renderAreas()}
             {activeTab === 'shifts' && renderShifts()}
@@ -1182,8 +1700,13 @@ const StaffOperationsPanel: React.FC<Props> = ({
           </div>
         </main>
 
-        {/* Printable Daily Operations Report — hidden in interactive app, shown when printing */}
-        <div className="hidden print:block p-8 bg-white text-gray-900 space-y-8 w-full ops-print-report">
+        {/* Printable Section: When activeTab === 'beo', print the BEO Sheet; otherwise print the Daily Operations Report */}
+        {activeTab === 'beo' ? (
+          <div className="hidden print:block p-8 bg-white text-gray-900 space-y-8 w-full ops-print-beo">
+            {renderBEOContent(true)}
+          </div>
+        ) : (
+          <div className="hidden print:block p-8 bg-white text-gray-900 space-y-8 w-full ops-print-report">
           <div className="border-b pb-4">
             <h1 className="text-3xl font-bold text-gray-900">Daily Operations Report</h1>
             <p className="text-sm text-gray-600 mt-1">
@@ -1318,6 +1841,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
             )}
           </div>
         </div>
+        )}
       </div>
 
       <ConfirmDialog

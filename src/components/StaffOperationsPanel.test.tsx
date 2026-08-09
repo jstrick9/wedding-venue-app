@@ -30,7 +30,7 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     localStorage.clear();
   });
 
-  it('renders all 6 navigation tabs and Print Sheet header button for authorized admin', () => {
+  it('renders all 7 navigation tabs including BEO Sheet and Print Sheet header button for authorized admin', () => {
     render(
       <StaffOperationsPanel
         onClose={() => undefined}
@@ -44,9 +44,10 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     );
 
     expect(screen.getByRole('button', { name: /overview/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^📜\s*beo sheet$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /tasks/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /areas/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /shifts/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^🕒\s*shifts$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /checklists/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /export \/ import/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /print sheet/i })).toBeInTheDocument();
@@ -162,7 +163,7 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     );
 
     // Switch to Shifts tab
-    fireEvent.click(screen.getByRole('button', { name: /shifts/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^🕒\s*shifts$/i }));
     const addShiftBtn = screen.getByRole('button', { name: /\+ add shift/i });
     fireEvent.click(addShiftBtn);
 
@@ -368,5 +369,64 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     expect(storedTasks[0].checklist[0].completed).toBe(false);
     expect(storedTasks[0].checklist[0].completedAt).toBeUndefined();
     expect(storedTasks[0].checklist[1].completed).toBe(false);
+  });
+
+  it('switches to BEO Sheet tab and displays master Banquet Event Order with couple, layout, schedule, and print BEO button', () => {
+    const testCouple = {
+      id: 'cpl-beo-1',
+      coupleName: 'Elena & Marcus',
+      eventDate: '2026-11-20',
+      guestCount: 200,
+      inviteToken: 'token-beo-123',
+      layoutStatus: 'approved',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEYS.COUPLE_EVENTS, JSON.stringify([testCouple]));
+
+    render(
+      <StaffOperationsPanel
+        onClose={() => undefined}
+        currentUser={adminUser}
+        isAdmin={true}
+        venueId="v1"
+        eventName="Wedding Reception"
+        users={[adminUser, staffUser]}
+        venues={[{ id: 'v1', name: 'Grand Ballroom', width: 60, height: 40, capacity: 150, category: 'reception', color: '#fff' } as any]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^📜\s*beo sheet$/i }));
+
+    expect(screen.getAllByText('BANQUET EVENT ORDER (BEO)').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Elena & Marcus').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/200 guests/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/section 1: event & client summary/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: /print beo/i })).toBeInTheDocument();
+  });
+
+  it('loads default operational areas and phase checklists from Admin Settings when clicking Load Checklists from Admin', () => {
+    render(
+      <StaffOperationsPanel
+        onClose={() => undefined}
+        currentUser={adminUser}
+        isAdmin={true}
+        venueId="v1"
+        eventName="Wedding Reception"
+        users={[adminUser, staffUser]}
+        venues={[{ id: 'v1', name: 'Grand Ballroom', width: 60, height: 40, capacity: 150, category: 'reception', color: '#fff' } as any]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /checklists/i }));
+
+    const loadAdminBtn = screen.getByRole('button', { name: /load checklists from admin/i });
+    fireEvent.click(loadAdminBtn);
+
+    const storedAreas = JSON.parse(localStorage.getItem(STORAGE_KEYS.STAFF_AREAS) || '[]');
+    const storedTasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.STAFF_TASKS) || '[]');
+    expect(storedAreas.some((a: any) => a.name.includes('Main Manor'))).toBe(true);
+    expect(storedTasks.some((t: any) => t.checklist.some((ci: any) => ci.label.includes('Confirm floor plan approval')))).toBe(true);
   });
 });
