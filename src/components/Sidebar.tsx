@@ -21,7 +21,7 @@ import {
   getDecorItems,
 } from '../hooks/useLayoutState';
 import { getChairSpecs } from '../data/venueData';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import {
   canPlaceFixtureType,
   canSeeFixtureType,
@@ -122,7 +122,7 @@ export function Sidebar({
   const [catalogSearchOpen, setCatalogSearchOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const config = getConfig();
+  const config = useBrandingConfig();
   const normalizedCatalogSearch = catalogSearch.trim().toLowerCase();
 
   const matchesCatalogSearch = (value: string, extraValues: string[] = []) => {

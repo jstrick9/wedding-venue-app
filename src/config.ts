@@ -5,9 +5,11 @@
  * These values can be updated via the Admin Panel or directly here.
  */
 
+import { useState, useEffect } from 'react';
 import { STORAGE_KEYS } from './constants/storageKeys';
 import { STORAGE_VERSIONS } from './constants/storageVersions';
 import { loadVersionedStorage, saveVersionedStorage } from './utils/storage';
+import { on, emitDataChanged } from './utils/appEvents';
 import type { Config } from './types';
 
 const CONFIG_STORAGE_KEY = STORAGE_KEYS.CONFIG;
@@ -120,6 +122,7 @@ export function updateConfig(config: Partial<Config>): void {
     const updated = { ...current, ...config };
     saveVersionedStorage(CONFIG_STORAGE_KEY, CONFIG_STORAGE_VERSION, updated);
     applyRootStyles(updated);
+    emitDataChanged('all');
   } catch (e) {
     console.error('Failed to save config:', e);
   }
@@ -129,6 +132,7 @@ export function setConfig(config: Config): void {
   try {
     saveVersionedStorage(CONFIG_STORAGE_KEY, CONFIG_STORAGE_VERSION, config);
     applyRootStyles(config);
+    emitDataChanged('all');
   } catch (e) {
     console.error('Failed to save config:', e);
   }
@@ -136,6 +140,32 @@ export function setConfig(config: Config): void {
 
 export function resetConfig(): void {
   localStorage.removeItem(CONFIG_STORAGE_KEY);
+  applyRootStyles(getConfig());
+  emitDataChanged('all');
+}
+
+export function useBrandingConfig(): Config {
+  const [config, setConfigState] = useState<Config>(() => {
+    const initial = getConfig();
+    applyRootStyles(initial);
+    return initial;
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const next = getConfig();
+      setConfigState(next);
+      applyRootStyles(next);
+    };
+    const offDataChanged = on('spm_data_changed', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      offDataChanged();
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
+  return config;
 }
 
 const CONFIG = getConfig();

@@ -65,7 +65,7 @@ import { getVenues } from '../hooks/useLayoutState';
 import { getVenueVendors } from '../hooks/useVendors';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
@@ -107,7 +107,7 @@ interface CouplesPortalProps {
  * layout design/approval, and a per-couple guest portal are layered on next.
  */
 export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPortalProps) {
-  const config = getConfig();
+  const config = useBrandingConfig();
   const [session, setSession] = useState(() => loadCoupleSession());
   const [events, setEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
   const [activeTab, setActiveTab] = useState<TabId>('overview');

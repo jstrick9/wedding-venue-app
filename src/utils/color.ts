@@ -96,3 +96,20 @@ export function deriveShades(
   const light = hslToHex(h, s, Math.min(100, l + lightAmount * 100));
   return { dark, light };
 }
+
+export function getLuminance(hexColor: string): number {
+  const { r, g, b } = hexToRgb(hexColor);
+  const toLinear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+export function getContrastRatio(hex1: string, hex2: string): number {
+  const l1 = getLuminance(hex1);
+  const l2 = getLuminance(hex2);
+  const brightest = Math.max(l1, l2);
+  const darkest = Math.min(l1, l2);
+  return Number(((brightest + 0.05) / (darkest + 0.05)).toFixed(2));
+}

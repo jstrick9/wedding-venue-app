@@ -17,7 +17,7 @@ import AppStatusBar, { StatusBarItem } from './AppStatusBar';
 import { CenteredModal } from './CenteredModal';
 import { buildMessageThreadId } from '../models/DirectMessage';
 import { useSubmissionWorkflow } from '../hooks/useSubmissionWorkflow';
-import { getConfig } from '../config';
+import { getConfig, useBrandingConfig } from '../config';
 import { checkTableCollision, checkFixtureCollision } from '../utils/collisionDetection';
 import { subscribeToCollaborationEvents } from '../utils/collaborationChannel';
 import {
@@ -103,7 +103,7 @@ export default function AuthenticatedApp() {
   // undo history (updates to the same item within a short window share a step).
   const propertyEditUndoRef = useRef<{ id: string; at: number } | null>(null);
   const floorPlanSvgRef = useRef<SVGSVGElement>(null);
-  const [brandingConfig, setBrandingConfig] = useState(() => getConfig());
+  const brandingConfig = useBrandingConfig();
   const [projectHealth, setProjectHealth] = useState<ProjectHealthReport | null>(null);
   // Lets a user dismiss the layout-warning banner; it reappears if the set of
   // warnings changes (a fresh collision/overlap the user hasn't acknowledged).
@@ -1246,7 +1246,7 @@ export default function AuthenticatedApp() {
             </CenteredModal>
           )}
           {showDecorDesigner && <DecorDesigner onClose={() => close('decorDesigner')} onSave={(a) => { const currentArrangements = layoutState.getDecorArrangements(); const nextArrangements = currentArrangements.find(x => x.id === a.id) ? currentArrangements.map(x => x.id === a.id ? a : x) : [...currentArrangements, a]; layoutState.setDecorArrangements(nextArrangements); close('decorDesigner'); }} initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null} />}
-          {showAdmin && <AdminPanel onClose={() => { close('admin'); window.location.hash = '#/dashboard'; setView('dashboard'); layoutState.refreshVenues(); setBrandingConfig(getConfig()); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
+          {showAdmin && <AdminPanel onClose={() => { close('admin'); window.location.hash = '#/dashboard'; setView('dashboard'); layoutState.refreshVenues(); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
           {showOverview && (
             <EventOverview
               guests={layoutState.guests}

@@ -3,7 +3,10 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { emit } from '../utils/appEvents';
 
-vi.mock('../config', () => ({ getConfig: () => ({ venueName: 'Seven Paths Manor', primaryColor: '#4A1942', textColor: '#1f2937', backgroundColor: '#f3f4f6' }) }));
+vi.mock('../config', () => ({
+  getConfig: () => ({ venueName: 'Seven Paths Manor', primaryColor: '#4A1942', textColor: '#1f2937', backgroundColor: '#f3f4f6' }),
+  useBrandingConfig: () => ({ venueName: 'Seven Paths Manor', primaryColor: '#4A1942', textColor: '#1f2937', backgroundColor: '#f3f4f6' }),
+}));
 vi.mock('../hooks/useLayoutState', () => ({ getVenues: () => [{ id: 'reception', name: 'Reception Hall', category: 'reception' }] }));
 vi.mock('../services/couples/coupleService', () => ({
   getCoupleEvents: vi.fn(() => [

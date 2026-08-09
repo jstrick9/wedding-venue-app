@@ -3,7 +3,7 @@ import {
   User, StaffTask, StaffArea, StaffShift, StaffTaskPhase, StaffTaskStatus, 
   StaffTaskPriority, ChecklistItem, OperationsExport, Venue
 } from '../types';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import EmojiPicker from './EmojiPicker';
 import { canAccessOperationsPanel, canManageOperationsData } from '../utils/permissions';
 import { STORAGE_KEYS } from '../constants/storageKeys';
@@ -49,7 +49,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
   venues,
   inline = false,
 }) => {
-  const config = getConfig();
+  const config = useBrandingConfig();
   const canAccessPanel = canAccessOperationsPanel(currentUser);
   const canMutateOperations = canManageOperationsData(currentUser);
   const [activeTab, setActiveTab] = useState<'overview' | 'beo' | 'tasks' | 'areas' | 'shifts' | 'checklists' | 'export'>('overview');

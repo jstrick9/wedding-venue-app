@@ -64,7 +64,7 @@ import {
   setUsers,
   resetToDefaults,
 } from '../hooks/useLayoutState';
-import { getConfig, setConfig, applyRootStyles, Config } from '../config';
+import { setConfig, applyRootStyles, useBrandingConfig, Config } from '../config';
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { getWeddingPackages } from '../services/couples/couplePackageService';
 import { AdminDecorSection } from './AdminDecorSection';
@@ -182,7 +182,8 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const [guidelines, setGuidelinesState] = useState(() => getGuidelines());
   const [templates, setTemplatesState] = useState(() => getTemplates());
   const [linenColors, setLinenColorsState] = useState(() => getLinenColors());
-  const [config, setConfigState] = useState(() => getConfig());
+  const config = useBrandingConfig();
+  const setConfigState = () => {};
   const [users, setUsersState] = useState(() => getAllUsers());
   const [chairSpecs, setChairSpecsState] = useState(() => getChairSpecs());
   const [spacingSettings, setSpacingSettingsState] = useState(() => getSpacingSettings());
@@ -417,7 +418,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const handleSaveTemplates = (updated: LayoutTemplate[]) => { setTemplates(updated); setTemplatesState(updated); showSuccess('Templates saved!'); };
   const handleSaveLinenColors = (updated: LinenColor[]) => { setLinenColors(updated); setLinenColorsState(updated); showSuccess('Linen colors saved!'); };
   const handleSaveWallStyles = (updated: WallStyle[]) => { setWallStyles(updated); setWallStylesState(updated); showSuccess('Wall styles saved!'); };
-  const handleSaveConfig = (updated: Config) => { setConfig(updated); setConfigState(updated); applyRootStyles(updated); showSuccess('Branding saved!'); };
+  const handleSaveConfig = (updated: Config) => { setConfig(updated); applyRootStyles(updated); showSuccess('Branding saved!'); };
   const handleSaveUsers = (updated: User[]) => { setUsers(updated); setUsersState(updated); showSuccess('Users saved!'); };
   const handleSaveSpacing = (updated: typeof spacingSettings) => { setSpacingSettings(updated); setSpacingSettingsState(updated); showSuccess('Spacing saved!'); };
 

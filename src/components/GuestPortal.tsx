@@ -52,7 +52,7 @@ import {
   setPortalRSVPSubmissions,
 } from '../utils/guestPortal';
 import { verifySecret } from '../utils/auth';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import { deriveShades } from '../utils/color';
 import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
 import {
@@ -101,6 +101,7 @@ interface PortalData {
 
 const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, onExitPortal, preview = false }) => {
   const isPreview = preview;
+  const venueConfig = useBrandingConfig();
   const [config, setConfig] = useState<GuestPortalConfig | null>(null);
   const [portalData, setPortalData] = useState<PortalData>({
     venues: [],
@@ -279,7 +280,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   // hover/active states. Guards against invalid hex so a bad value never crashes.
   const accentColor = useMemo(() => {
     const theme = (config as any)?.themeColor?.trim();
-    const venue = getConfig().primaryColor || '#4A1942';
+    const venue = venueConfig.primaryColor || '#4A1942';
     const base = theme && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(theme) ? theme : venue;
     const shades = deriveShades(base, 0.18, 0.62);
     return { base, shades };
@@ -804,7 +805,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
 
         {/* Contact the venue */}
         {(() => {
-          const vc = getConfig();
+          const vc = venueConfig;
           const phone = vc.phone || (vc as any).contactPhoneNumber;
           const email = vc.supportEmail;
           const location = vc.location;

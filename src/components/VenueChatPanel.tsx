@@ -9,7 +9,7 @@ import {
 } from '../services/couples/coupleChatService';
 import { DirectMessagePanel } from './DirectMessagePanel';
 import { on, emitDataChanged } from '../utils/appEvents';
-import { getConfig } from '../config';
+import { getConfig, useBrandingConfig } from '../config';
 import { showToast } from './Toast';
 import type { CoupleEvent, User } from '../types';
 
@@ -47,7 +47,7 @@ export function VenueChatPanel({
   inline = false,
   users = [],
 }: VenueChatPanelProps) {
-  const config = getConfig();
+  const config = useBrandingConfig();
   const [coupleEvents, setCoupleEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
   const [activeTab, setActiveTab] = useState<'couples' | 'team'>('couples');
   const [selectedCoupleId, setSelectedCoupleId] = useState<string | null>(null);

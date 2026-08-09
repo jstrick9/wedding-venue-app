@@ -8,7 +8,7 @@ import { getVenueCalendarEvents, recurringDatesForEvent } from '../services/cale
 import { getUnreadCoupleMessageCounts } from '../services/couples/coupleChatService';
 import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { getVenues } from '../hooks/useLayoutState';
-import { getConfig } from '../config';
+import { getConfig, useBrandingConfig } from '../config';
 import { Card, Button, EmptyState } from './ui';
 import { on, emit } from '../utils/appEvents';
 import { VenueChatPanel } from './VenueChatPanel';
@@ -73,7 +73,7 @@ export function VenueDashboard(props: Props) {
     };
   }, []);
   const venues = useMemo(() => getVenues(), []);
-  const config = getConfig();
+  const config = useBrandingConfig();
 
   const coupleEvents = useMemo(() => getCoupleEvents(), []);
   const calendarEvents = useMemo(() => getVenueCalendarEvents(), []);

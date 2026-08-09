@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Venue, User } from '../types';
 import { SavedLayout } from '../hooks/useLayoutState';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import { layoutCategories } from '../data/venueData';
 import {
   canAccessAdminPanel,
@@ -82,7 +82,7 @@ export function Header({
   const venueDropdownRef = useRef<HTMLDivElement>(null);
   const venueFilterRef = useRef<HTMLDivElement>(null);
 
-  const config = getConfig();
+  const config = useBrandingConfig();
 
   const canOpenAdmin = canAccessAdminPanel(currentUser);
   const canOpenOperations = canAccessOperationsPanel(currentUser);

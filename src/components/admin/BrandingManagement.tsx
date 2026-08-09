@@ -7,7 +7,7 @@ import { CustomVenueBuilder } from '../CustomVenueBuilder';
 import { DirectMessagePanel } from '../DirectMessagePanel';
 import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
-import { deriveShades } from '../../utils/color';
+import { deriveShades, getContrastRatio } from '../../utils/color';
 import { applyRootStyles } from '../../config';
 import type { AdminCommonProps } from './AdminTabTypes';
 
@@ -313,6 +313,8 @@ export function BrandingManagement(props: AdminCommonProps) {
     applyRootStyles(updated);
   };
 
+  const [previewTab, setPreviewTab] = React.useState<'header' | 'dashboard' | 'chat'>('header');
+
   React.useEffect(() => {
     if (!expandedBrandingSections?.has('typography') && !expandedBrandingSections?.has('preview')) return;
     lazyLoadGoogleFont(config?.fontFamily);
@@ -362,15 +364,15 @@ export function BrandingManagement(props: AdminCommonProps) {
               {/* Expand/Collapse All */}
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-500">
-                  {expandedBrandingSections.size} of 6 sections expanded
+                  {expandedBrandingSections?.size || 0} of 6 sections expanded
                 </div>
                 <button
                   onClick={() => {
                     const allSections = ['logo', 'website', 'welcome', 'colors', 'typography', 'preview'];
-                    if (expandedBrandingSections.size === allSections.length) {
-                      setExpandedBrandingSections(new Set());
+                    if (expandedBrandingSections?.size === allSections.length) {
+                      setExpandedBrandingSections?.(new Set());
                     } else {
-                      setExpandedBrandingSections(new Set(allSections));
+                      setExpandedBrandingSections?.(new Set(allSections));
                     }
                   }}
                   className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] transition-colors text-sm font-medium shadow-sm"
@@ -966,40 +968,184 @@ export function BrandingManagement(props: AdminCommonProps) {
                       Derives the header-gradient (dark) and hover (light) shades from your
                       primary color so you don't have to tune them by hand.
                     </p>
+
+                    {/* WCAG Contrast & Accessibility Checker */}
+                    {(() => {
+                      const primaryHex = config.primaryColor || '#4A1942';
+                      const whiteContrast = getContrastRatio(primaryHex, '#FFFFFF');
+                      const isAccessible = whiteContrast >= 4.5;
+                      return (
+                        <div
+                          className="mt-4 p-3.5 rounded-xl border flex items-center justify-between gap-3 flex-wrap"
+                          style={{
+                            backgroundColor: isAccessible ? '#ecfdf5' : '#fffbeb',
+                            borderColor: isAccessible ? '#a7f3d0' : '#fde68a',
+                            color: isAccessible ? '#065f46' : '#92400e',
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{isAccessible ? '✅' : '⚠️'}</span>
+                            <div>
+                              <div className="font-bold text-sm">
+                                WCAG AA Text Contrast: {whiteContrast}:1 —{' '}
+                                {isAccessible ? 'Passes Accessibility Guidelines' : 'Low Contrast Warning'}
+                              </div>
+                              <p className="text-xs opacity-90 mt-0.5">
+                                {isAccessible
+                                  ? 'Your primary color has strong contrast against white buttons and header text.'
+                                  : 'Text on primary buttons or header banners may be difficult to read for visually impaired users.'}
+                              </p>
+                            </div>
+                          </div>
+                          {!isAccessible && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const shades = deriveShades(primaryHex, 0.25, 0.1);
+                                handleSaveConfig({
+                                  ...config,
+                                  primaryColor: shades.dark,
+                                });
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors shadow-sm shrink-0"
+                            >
+                              ✨ Auto-Fix Contrast
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   
-                  {/* Live Preview */}
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-3 block">Live Preview</label>
-                    <div 
-                      className="rounded-xl p-4 shadow-lg"
-                      style={{ 
-                        background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})` 
-                      }}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                          <span className="text-2xl">💒</span>
-                        </div>
-                        <div className="text-white">
-                          <div className="font-bold">Header Preview</div>
-                          <div className="text-sm opacity-80">How your header will look</div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button 
-                          className="px-4 py-2 rounded-lg text-sm font-medium"
-                          style={{ backgroundColor: config.accentColor || '#D4AF37', color: '#000' }}
-                        >
-                          Primary Button
-                        </button>
-                        <button 
-                          className="px-4 py-2 rounded-lg text-sm font-medium bg-white/20 text-white"
-                        >
-                          Secondary
-                        </button>
+                  {/* Live Portal Theme Preview Switcher */}
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                        Live Portal Theme Preview
+                      </label>
+                      <div className="flex items-center gap-1">
+                        {[
+                          { id: 'header', label: 'Header Banner' },
+                          { id: 'dashboard', label: 'Dashboard KPI' },
+                          { id: 'chat', label: 'Portal Chat' },
+                        ].map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setPreviewTab(t.id as any)}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                              previewTab === t.id
+                                ? 'bg-[#4A1942] text-white shadow-sm'
+                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                            }`}
+                            style={
+                              previewTab === t.id
+                                ? { backgroundColor: config.primaryColor || '#4A1942' }
+                                : undefined
+                            }
+                          >
+                            {t.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
+
+                    {previewTab === 'header' && (
+                      <div
+                        className="rounded-xl p-4 shadow-lg"
+                        style={{
+                          background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                        }}
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                            <span className="text-2xl">💒</span>
+                          </div>
+                          <div className="text-white">
+                            <div className="font-bold">Header Preview</div>
+                            <div className="text-sm opacity-80">
+                              {config.venueName || 'Seven Paths Manor'} • Admin &amp; Studio
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
+                            style={{
+                              backgroundColor: config.accentColor || '#D4AF37',
+                              color: '#000',
+                            }}
+                          >
+                            Primary CTA
+                          </button>
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-lg text-sm font-medium bg-white/20 text-white"
+                          >
+                            Secondary CTA
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {previewTab === 'dashboard' && (
+                      <div
+                        className="rounded-xl p-4 border border-gray-200 shadow-sm space-y-3"
+                        style={{ backgroundColor: config.backgroundColor || '#FFFFFF' }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold text-sm" style={{ color: config.textColor || '#1f2937' }}>
+                            Dashboard KPI Card Preview
+                          </div>
+                          <span
+                            className="px-2 py-0.5 rounded text-[10px] font-bold text-white"
+                            style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                          >
+                            Active Brand
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white p-3 rounded-lg border border-gray-200">
+                            <div className="text-xl font-bold" style={{ color: config.primaryColor || '#4A1942' }}>
+                              24
+                            </div>
+                            <div className="text-xs text-gray-500">Active Bookings</div>
+                          </div>
+                          <div className="bg-white p-3 rounded-lg border border-gray-200">
+                            <div className="text-xl font-bold" style={{ color: config.accentColor || '#D4AF37' }}>
+                              100%
+                            </div>
+                            <div className="text-xs text-gray-500">Brand Consistency</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {previewTab === 'chat' && (
+                      <div className="rounded-xl p-4 bg-white border border-gray-200 shadow-sm space-y-3">
+                        <div className="text-xs font-semibold text-gray-500">
+                          Couples Portal Chat Message Preview
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-1.5 mb-1 px-1">
+                            <span
+                              className="text-[11px] font-bold"
+                              style={{ color: config.primaryColor || '#4A1942' }}
+                            >
+                              Venue Coordinator
+                            </span>
+                            <span className="text-[10px] text-gray-400">Just now</span>
+                          </div>
+                          <div
+                            className="max-w-xs rounded-2xl rounded-br-none px-4 py-2.5 text-xs text-white shadow-sm"
+                            style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                          >
+                            Welcome to Seven Paths Manor! Your custom brand theme applies here too.
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 )}
