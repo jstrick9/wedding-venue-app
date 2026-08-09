@@ -74,6 +74,9 @@ export const STORAGE_KEYS = {
   WELCOME_HIDDEN: 'spm_welcome_hidden',
 
   LAYOUT_EDIT_SESSIONS: 'spm_layout_edit_sessions',
+  COMMUNICATION_TEMPLATES: 'spm_communication_templates',
+  OPERATIONS_SETTINGS: 'spm_operations_settings',
+  SECURITY_SETTINGS: 'spm_security_settings',
   BACKUP_ROLLBACK: 'spm_backup_rollback_latest',
   RECOVERY_SNAPSHOT: 'spm_recovery_emergency_snapshot',
 } as const;

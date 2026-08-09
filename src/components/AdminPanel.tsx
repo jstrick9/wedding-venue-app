@@ -87,6 +87,9 @@ import { VenueWayfindingManagement } from './admin/VenueWayfindingManagement';
 import { PackageManagement } from './admin/PackageManagement';
 import { BackupManagement } from './admin/BackupManagement';
 import { InviteMembers } from './admin/InviteMembers';
+import { CommunicationTemplatesManagement, getCommunicationTemplates } from './admin/CommunicationTemplatesManagement';
+import { OperationsSettingsManagement, getOperationsChecklistDefaults } from './admin/OperationsSettingsManagement';
+import { SecurityAuditManagement } from './admin/SecurityAuditManagement';
 import { uploadImage } from '../services/storage/imageStorage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
@@ -1059,8 +1062,11 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'System Brand & Access' },
     { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'System Brand & Access' },
     { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'System Brand & Access' },
+    { id: 'communication-templates', label: '💬 Communication Templates', icon: '💬', Component: CommunicationTemplatesManagement, props: commonProps, group: 'System Brand & Access' },
+    { id: 'operations-settings', label: '🛠️ Operations & Checklists', icon: '🛠️', Component: OperationsSettingsManagement, props: commonProps, group: 'System Brand & Access' },
 
     // System & Backup
+    { id: 'security-audit', label: '🛡️ Security & Audit', icon: '🛡️', Component: SecurityAuditManagement, props: commonProps, group: 'System & Backup' },
     {
       id: 'backup',
       label: '💾 Backup & Restore',
@@ -1139,6 +1145,45 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
               <div className="font-semibold text-base text-white">{users.length}</div>
               <div className="text-white/70">Users</div>
             </div>
+          </div>
+        </div>
+
+        {/* System Status & Quick Diagnostics Banner */}
+        <div className="bg-purple-50/80 border-b border-purple-200 px-4 py-2 flex items-center justify-between gap-3 text-xs text-purple-900 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="flex items-center gap-1.5 font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>System Status: Healthy</span>
+            </span>
+            <span className="text-purple-300">|</span>
+            <span>Brand Theme: <strong>{config.primaryColor || '#4A1942'}</strong></span>
+            <span className="text-purple-300">|</span>
+            <span>Storage: <strong>LocalStorage Active</strong></span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => { setTabSearch(''); setActiveTab('communication-templates'); }}
+              className="text-purple-700 hover:underline font-semibold"
+            >
+              💬 Templates ({getCommunicationTemplates().length})
+            </button>
+            <span className="text-purple-300">|</span>
+            <button
+              type="button"
+              onClick={() => { setTabSearch(''); setActiveTab('operations-settings'); }}
+              className="text-purple-700 hover:underline font-semibold"
+            >
+              🛠️ Checklists ({getOperationsChecklistDefaults().length})
+            </button>
+            <span className="text-purple-300">|</span>
+            <button
+              type="button"
+              onClick={() => { setTabSearch(''); setActiveTab('security-audit'); }}
+              className="text-purple-700 hover:underline font-semibold"
+            >
+              🛡️ Security &amp; Audit
+            </button>
           </div>
         </div>
 
