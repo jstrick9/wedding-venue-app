@@ -379,7 +379,8 @@ export function TemplateManagement(props: AdminCommonProps) {
                     </button>
                     <button
                       onClick={handleCreateTemplateFromLayout}
-                      className="px-4 py-2.5 bg-gradient-to-r from-[#4A1942] to-[#6b2d63] text-white rounded-lg hover:from-[#5c2a64] hover:to-[#7d3a75] transition-all font-medium shadow-lg flex items-center gap-2"
+                      className="btn-primary px-4 py-2.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg transition-all font-bold shadow-sm flex items-center gap-2"
+                      style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                     >
                       <span>🎨</span>
                       <span>+ From Current Layout</span>
@@ -705,7 +706,8 @@ export function TemplateManagement(props: AdminCommonProps) {
                               <div className="flex flex-wrap gap-2">
                                 <button
                                   onClick={() => handleLoadForEdit(template)}
-                                  className="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 rounded-lg text-sm font-medium shadow-sm flex items-center justify-center gap-2"
+                                  className="btn-primary flex-1 sm:flex-none px-4 py-2.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg text-sm font-bold shadow-sm flex items-center justify-center gap-2"
+                                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                                 >
                                   <span>📝</span> Load for Editing
                                 </button>

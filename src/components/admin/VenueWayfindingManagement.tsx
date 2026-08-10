@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { AdminCommonProps } from './AdminTabTypes';
+import { BrandedSectionHeader } from './shared/AdminSharedComponents';
+import { useBrandingConfig } from '../../config';
 import {
   VenueMapConfig,
   RainContingency,
@@ -37,6 +39,7 @@ interface Props {
  * that couple.
  */
 export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMap }: Props) {
+  const config = useBrandingConfig();
   const [map, setMap] = useState<VenueMapConfig | null>(() => getVenueMapConfig());
   const [rules, setRules] = useState<string[]>(() => getVenueRules().rules);
   const [newRule, setNewRule] = useState('');
@@ -138,13 +141,12 @@ export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMa
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 p-4 text-white">
-        <h2 className="text-base font-bold">🗺️ Venue Wayfinding &amp; Rules</h2>
-        <p className="text-xs text-white/80 mt-1">
-          Build the full property map (spaces, parking, entry), set rain-contingency
-          backups, and define venue rules. Couples see the subset relevant to their event.
-        </p>
-      </div>
+      <BrandedSectionHeader
+        icon="🗺️"
+        title="Venue Wayfinding & Rules"
+        description="Build the full property map (spaces, parking, entry), set rain-contingency backups, and define venue rules. Couples see the subset relevant to their event."
+        config={config}
+      />
 
       {/* Full-venue map overview — the interactive designer lives in the Layout Studio */}
       <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
@@ -154,7 +156,8 @@ export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMa
             <button
               type="button"
               onClick={onOpenVenueMap}
-              className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+              className="btn-primary px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               Open map designer →
             </button>
@@ -192,7 +195,8 @@ export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMa
           <button
             type="button"
             onClick={addContingency}
-            className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+            className="btn-primary px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
+            style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             disabled={outdoorVenues.length === 0 || indoorVenues.length === 0}
           >
             + Add backup
@@ -266,7 +270,7 @@ export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMa
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
             aria-label="Add rule"
           />
-          <button type="button" onClick={addRule} className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700">
+          <button type="button" onClick={addRule} className="btn-primary px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
             Add
           </button>
           <button type="button" onClick={saveRules} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
@@ -319,7 +323,8 @@ export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMa
                 setWeatherFetching(false);
               }
             }}
-            className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-50"
+            className="btn-primary px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435] disabled:opacity-50"
+            style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             disabled={weatherFetching}
           >
             {weatherFetching ? 'Fetching…' : 'Auto-fetch'}
@@ -372,7 +377,8 @@ export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMa
             <button
               type="button"
               onClick={addManualForecast}
-              className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700"
+              className="btn-primary px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               Add
             </button>

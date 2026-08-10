@@ -3,6 +3,8 @@
 // schedule items and wayfinding points (B-09 fix) and the grace-period
 // setting (B-06 fix). Persists via setGuestPortalConfig from guestPortal.ts.
 import { useState, useCallback } from 'react';
+import { useBrandingConfig } from '../../config';
+import { BrandedSectionHeader } from './shared/AdminSharedComponents';
 import {
   GuestPortalConfig,
   GuestPortalGuestRecord,
@@ -109,6 +111,7 @@ export function GuestPortalManagement({
 }: {
   onShowSuccess: (msg: string) => void;
 }) {
+  const config = useBrandingConfig();
   const [cfg, setCfg] = useState<GuestPortalConfig>(
     () => getGuestPortalConfig() ?? { ...EMPTY_CONFIG },
   );
@@ -290,42 +293,38 @@ export function GuestPortalManagement({
   const hasPassword = !!(cfg.portalPasswordHash || cfg.portalPassword);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-1 pb-24">
-      {/* ── Hero ── */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 text-white mb-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold">💍 Guest Portal Configuration</h2>
-            <p className="text-xs text-white/80 mt-1">
-              Configure what wedding guests see when they visit the Guest Portal — RSVP, schedule,
-              lodging, map, and wayfinding.
-            </p>
-          </div>
-          <div className="shrink-0 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => { window.location.hash = '#/guest-portal'; }}
-              className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 rounded-lg px-3 py-2 text-xs font-medium text-white transition-colors"
-              title="Open the guest portal in a new screen to preview it"
-            >
-              👁️ Preview Portal
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const url = `${window.location.origin}${window.location.pathname}#/guest-portal`;
-                void navigator.clipboard?.writeText(url).then(
-                  () => onShowSuccess('Guest portal link copied to clipboard.'),
-                  () => onShowSuccess('Copy failed — portal link: ' + url),
-                );
-              }}
-              className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 rounded-lg px-3 py-2 text-xs font-medium text-white transition-colors"
-              title="Copy the guest portal URL to share with guests"
-            >
-              🔗 Copy Portal Link
-            </button>
-          </div>
-        </div>
+    <div className="max-w-2xl mx-auto space-y-4 pb-24">
+      <BrandedSectionHeader
+        icon="💍"
+        title="Guest Portal Configuration"
+        description="Configure what wedding guests see when they visit the Guest Portal — RSVP, schedule, lodging, map, and wayfinding."
+        config={config}
+      />
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => { window.location.hash = '#/guest-portal'; }}
+          className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white transition-colors shadow-sm"
+          style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+          title="Open the guest portal in a new screen to preview it"
+        >
+          👁️ Preview Portal ↗
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const url = `${window.location.origin}${window.location.pathname}#/guest-portal`;
+            void navigator.clipboard?.writeText(url).then(
+              () => onShowSuccess('Guest portal link copied to clipboard.'),
+              () => onShowSuccess('Copy failed — portal link: ' + url),
+            );
+          }}
+          className="inline-flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg px-3.5 py-2 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+          title="Copy the guest portal URL to share with guests"
+        >
+          🔗 Copy Portal Link
+        </button>
       </div>
 
       {/* ── Event Details ── */}

@@ -701,7 +701,13 @@ export function SpacingManagement(props: AdminCommonProps) {
               </div>
 
               {/* Current Settings Summary */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-5 rounded-xl border border-blue-200">
+              <div
+                className="p-5 rounded-xl border"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 6%, transparent)`,
+                  borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 20%, transparent)`,
+                }}
+              >
                 <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                   📋 Current Settings Summary
                 </h4>
@@ -774,7 +780,8 @@ export function SpacingManagement(props: AdminCommonProps) {
               <div className="flex justify-end">
                 <button
                   onClick={() => showSuccess('Spacing settings saved successfully!')}
-                  className="px-8 py-3 bg-gradient-to-r from-[#4A1942] to-[#6B2C5F] text-white rounded-xl hover:opacity-90 transition-all font-semibold shadow-lg flex items-center gap-2"
+                  className="btn-primary px-8 py-3 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-xl transition-all font-bold shadow-lg flex items-center gap-2"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   ✓ Save Spacing Settings
                 </button>

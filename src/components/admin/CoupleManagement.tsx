@@ -25,7 +25,7 @@ import { getGuestPortalConfig } from '../../utils/guestPortal';
 import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeCoupleSetupTask } from '../../services/couples/coupleSetupService';
 import { getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
 import { findPackageAddOn } from '../../services/couples/coupleAddOnService';
-import { BrandedStatCard } from './shared/AdminSharedComponents';
+import { BrandedSectionHeader, BrandedStatCard } from './shared/AdminSharedComponents';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
@@ -279,11 +279,12 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                 key={m.id}
                 className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
                   m.senderSide === 'venue'
-                    ? 'ml-auto bg-rose-600 text-white'
+                    ? 'ml-auto bg-[#4A1942] text-white'
                     : 'bg-white border border-gray-200 text-gray-800'
                 }`}
+                style={m.senderSide === 'venue' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
               >
-                <div className={`text-[10px] font-semibold ${m.senderSide === 'venue' ? 'text-rose-100' : 'text-gray-400'}`}>
+                <div className={`text-[10px] font-semibold ${m.senderSide === 'venue' ? 'text-white/80' : 'text-gray-400'}`}>
                   {m.senderName} · {m.senderSide === 'venue' ? 'Venue' : 'Couple'}
                   {m.createdAt && <span className="font-normal"> · {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                 </div>
@@ -305,7 +306,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
           <button
             type="button"
             onClick={send}
-            className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700"
+            className="btn-primary px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
+            style={{ backgroundColor: config.primaryColor || '#4A1942' }}
           >
             Send
           </button>
@@ -319,14 +321,12 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 p-4 text-white">
-        <h2 className="text-base font-bold">💍 Couples Portal</h2>
-        <p className="text-xs text-white/80 mt-1">
-          Create booked couples' events, review their submitted layouts in the work queue,
-          and chat with each couple. Multi-day events (e.g. rehearsal dinner + ceremony)
-          are supported.
-        </p>
-      </div>
+      <BrandedSectionHeader
+        icon="💍"
+        title="Couples Portal"
+        description="Create booked couples' events, review their submitted layouts in the work queue, and chat with each couple. Multi-day events (e.g. rehearsal dinner + ceremony) are supported."
+        config={config}
+      />
 
       {/* Aggregate operational summary */}
       {(() => {
@@ -378,7 +378,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                   <button
                     type="button"
                     onClick={() => window.open(portalUrl(ev.inviteToken), '_blank')}
-                    className="text-xs text-rose-600 hover:underline"
+                    className="text-xs text-[#4A1942] hover:underline"
+                    style={{ color: config.primaryColor || '#4A1942' }}
                   >
                     Open couple portal
                   </button>
@@ -514,7 +515,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700"
+          className="btn-primary px-4 py-2 bg-[#4A1942] text-white rounded-lg text-sm font-medium hover:bg-[#3b1435]"
+          style={{ backgroundColor: config.primaryColor || '#4A1942' }}
         >
           + New Couple Event
         </button>
@@ -611,9 +613,10 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       onClick={() => toggleSpace(v.id)}
                       className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
                         selected
-                          ? 'border-rose-500 bg-rose-50 text-rose-700'
-                          : 'border-gray-300 bg-white text-gray-600 hover:border-rose-300'
+                          ? 'font-bold shadow-sm'
+                          : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
                       }`}
+                      style={selected ? { borderColor: config.primaryColor || '#4A1942', backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`, color: config.primaryColor || '#4A1942' } : undefined}
                     >
                       {v.name}
                     </button>
@@ -634,7 +637,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
             <button
               type="button"
               onClick={handleCreate}
-              className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium"
+              className="btn-primary px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               Create Event
             </button>
@@ -744,7 +748,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button type="button" onClick={() => handleCopy(ev.inviteToken)} className="text-xs text-rose-600 hover:underline">
+                    <button type="button" onClick={() => handleCopy(ev.inviteToken)} className="text-xs text-[#4A1942] hover:underline" style={{ color: config.primaryColor || '#4A1942' }}>
                       Copy invite
                     </button>
                     <button
@@ -952,7 +956,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                           () => {},
                                         );
                                       }}
-                                      className="text-xs text-rose-600 hover:underline"
+                                      className="text-xs text-[#4A1942] hover:underline"
+                                      style={{ color: config.primaryColor || '#4A1942' }}
                                       title="Copy guest invite link"
                                     >
                                       📋
@@ -1234,9 +1239,18 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                 onClick={() => toggleEditSpace(v.id)}
                                 className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
                                   sel
-                                    ? 'border-rose-500 bg-rose-50 text-rose-700'
+                                    ? 'font-bold shadow-sm'
                                     : 'border-gray-300 bg-white text-gray-600'
                                 }`}
+                                style={
+                                  sel
+                                    ? {
+                                        borderColor: config.primaryColor || '#4A1942',
+                                        backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`,
+                                        color: config.primaryColor || '#4A1942',
+                                      }
+                                    : undefined
+                                }
                               >
                                 {v.name}
                               </button>
@@ -1249,7 +1263,8 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                       <button
                         type="button"
                         onClick={handleSaveEdit}
-                        className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700"
+                        className="btn-primary px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
+                        style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                       >
                         Save
                       </button>

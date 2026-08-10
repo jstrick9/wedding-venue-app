@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useConfirm } from '../useConfirm';
+import { BrandedSectionHeader } from './shared/AdminSharedComponents';
+import { useBrandingConfig } from '../../config';
 import { getCoupleEvents } from '../../services/couples/coupleService';
 import {
   WeddingPackage,
@@ -32,6 +34,7 @@ interface Props {
 type Section = 'packages' | 'addons';
 
 export function PackageManagement({ onShowSuccess, venues }: Props) {
+  const config = useBrandingConfig();
   useEffect(() => {
     seedDefaultWeddingPackages();
     seedDefaultPackageAddOns();
@@ -179,14 +182,12 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-gradient-to-r from-[#4A1942] to-purple-600 p-4 text-white">
-        <h2 className="text-base font-bold">🎁 Wedding Packages & Add-ons</h2>
-        <p className="text-xs text-white/80 mt-1">
-          Configure the packages you sell (single-day, multi-day, full weekend) with season
-          pricing, guest/lodging limits, and included items. Couples can add paid add-ons
-          (lodging, activities, horse &amp; carriage, etc.) after booking.
-        </p>
-      </div>
+      <BrandedSectionHeader
+        icon="🎁"
+        title="Wedding Packages & Add-ons"
+        description="Configure the packages you sell (single-day, multi-day, full weekend) with season pricing, guest/lodging limits, and included items. Couples can add paid add-ons after booking."
+        config={config}
+      />
 
       <div className="flex gap-2">
         <button

@@ -944,15 +944,22 @@ export function TableManagement(props: AdminCommonProps) {
                         handleSaveTables([...tableSpecs, newSeating]);
                         setExpandedSeatingTypes(new Set([...expandedSeatingTypes, id]));
                       }}
-                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-[#3b1435] text-white rounded-lg text-sm hover:from-purple-700 hover:to-[#3b1435] transition-colors"
+                      className="btn-primary px-4 py-2 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg text-sm font-bold shadow-sm transition-colors"
+                      style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                     >
                       + Add Seating Type
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-purple-50/70 border border-purple-200 rounded-lg p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-purple-700 mb-2">Quick Seating Templates</div>
+                <div
+                  className="rounded-lg p-3 border"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 6%, transparent)`,
+                    borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 20%, transparent)`,
+                  }}
+                >
+                  <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: config.primaryDark || '#3d1a45' }}>Quick Seating Templates</div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {[
                       { name: 'Ceremony Row', style: 'straight-row', chairs: 12, rows: 4, spacing: 3 },

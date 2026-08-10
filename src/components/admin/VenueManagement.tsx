@@ -283,6 +283,7 @@ export function VenueManagement(props: AdminCommonProps) {
 
   // Local search for the venues list (many venues can be hard to scan).
   const [venueSearch, setVenueSearch] = React.useState('');
+  const expandedSet = expandedVenues || new Set<string>();
   const filteredVenues = venueSearch.trim()
     ? venues.filter(v => v.name.toLowerCase().includes(venueSearch.trim().toLowerCase()))
     : venues;
@@ -321,7 +322,7 @@ export function VenueManagement(props: AdminCommonProps) {
                         capacity: 150,
                         category: 'reception',
                         color: '#F5F0E8',
-                        borderColor: '#4A1942',
+                        borderColor: config.primaryColor || '#4A1942',
                         pattern: 'wood',
                         isMaster: true,
                         canvasWidth: 140,
@@ -332,7 +333,11 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-2.5 py-1 bg-white border border-purple-200 rounded-md text-xs font-medium hover:bg-purple-50 transition-colors"
+                    className="px-2.5 py-1 bg-white rounded-md text-xs font-bold transition-colors shadow-sm"
+                    style={{
+                      borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 30%, transparent)`,
+                      color: config.primaryColor || '#4A1942',
+                    }}
                   >
                     + 🎉 Reception
                   </button>
@@ -468,10 +473,10 @@ export function VenueManagement(props: AdminCommonProps) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => expandedVenues.size === venues.length ? collapseAllVenues() : expandAllVenues()}
+                    onClick={() => expandedSet.size === venues.length ? collapseAllVenues() : expandAllVenues()}
                     className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs text-gray-700 transition-colors font-medium"
                   >
-                    {expandedVenues.size === venues.length ? '▲ Collapse' : '▼ Expand'}
+                    {expandedSet.size === venues.length ? '▲ Collapse' : '▼ Expand'}
                   </button>
                   <span className="text-gray-300">|</span>
                   <span className="text-xs text-gray-600 font-medium">{venues.length} Venues configured</span>
@@ -489,7 +494,7 @@ export function VenueManagement(props: AdminCommonProps) {
                         capacity: 100,
                         category: 'reception',
                         color: '#FFFFFF',
-                        borderColor: '#4A1942',
+                        borderColor: config.primaryColor || '#4A1942',
                         pattern: 'wood',
                         isMaster: true,
                         exteriorPadding: { top: 30, right: 30, bottom: 30, left: 30 }
@@ -541,7 +546,7 @@ export function VenueManagement(props: AdminCommonProps) {
                       
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm">{expandedVenues.has(venue.id) ? '▼' : '▶'}</span>
+                          <span className="text-sm">{expandedSet.has(venue.id) ? '▼' : '▶'}</span>
                           <span className="font-semibold text-gray-800">{venue.name}</span>
                           {venue.isMaster && (
                             <span className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded font-medium">★</span>
@@ -604,7 +609,7 @@ export function VenueManagement(props: AdminCommonProps) {
                       </button>
                     </div>
                   </div>
-                  {expandedVenues.has(venue.id) && (
+                  {expandedSet.has(venue.id) && (
                   <div className="p-4 space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                       <div>
@@ -618,7 +623,13 @@ export function VenueManagement(props: AdminCommonProps) {
                       </div>
                       <div className="space-y-2 md:col-span-2">
                         <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Shape Builder</label>
-                        <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-3 space-y-3">
+                        <div
+                          className="rounded-xl border p-3 space-y-3"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 5%, transparent)`,
+                            borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 20%, transparent)`,
+                          }}
+                        >
                           <div className="flex flex-col sm:flex-row gap-2">
                             <select
                               value={venue.shape || 'rectangle'}
@@ -659,14 +670,20 @@ export function VenueManagement(props: AdminCommonProps) {
                             </select>
                             <button
                               onClick={() => setCustomShapeVenueId(venue.id)}
-                              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors font-medium shadow-sm whitespace-nowrap"
+                              className="btn-primary px-4 py-2 text-white rounded-lg transition-all font-bold shadow-sm whitespace-nowrap hover:shadow"
+                              style={{
+                                background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryLight || '#6b2c5c'})`,
+                              }}
                               title="Open venue shape builder"
                             >
                               ✏️ Shape Builder
                             </button>
                             <button
                               onClick={() => setLodgingVenueId(venue.id)}
-                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-[#3b1435] text-white rounded-lg hover:from-blue-700 hover:to-[#3b1435] transition-colors font-medium shadow-sm whitespace-nowrap"
+                              className="px-4 py-2 text-white rounded-lg transition-all font-bold shadow-sm whitespace-nowrap hover:shadow"
+                              style={{
+                                background: `linear-gradient(135deg, ${config.accentColor || '#059669'}, ${config.primaryDark || '#3d1a45'})`,
+                              }}
                               title="Open lodging builder (floors, rooms, furniture, guest assignments)"
                             >
                               🏨 Lodging
@@ -706,13 +723,22 @@ export function VenueManagement(props: AdminCommonProps) {
                                     return { ...v, shape: nextShape, isCustomShape: false };
                                   }));
                                 }}
-                                className={`px-2 py-2 rounded-lg border font-medium transition-colors ${(venue.shape || 'rectangle') === option.key ? 'bg-purple-100 border-purple-300 text-purple-800' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                                className={`px-2 py-2 rounded-lg border font-medium transition-colors ${(venue.shape || 'rectangle') === option.key ? 'font-bold shadow-sm' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                                style={
+                                  (venue.shape || 'rectangle') === option.key
+                                    ? {
+                                        backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`,
+                                        borderColor: config.primaryColor || '#4A1942',
+                                        color: config.primaryColor || '#4A1942',
+                                      }
+                                    : undefined
+                                }
                               >
                                 {option.label}
                               </button>
                             ))}
                           </div>
-                          <p className="text-xs text-purple-700">
+                          <p className="text-xs" style={{ color: config.primaryColor || '#4A1942' }}>
                             Use the shape builder for truly custom venues. It supports draggable points, starter templates, direct dimension editing, and live scaling to your venue width and height.
                           </p>
                         </div>
@@ -809,8 +835,14 @@ export function VenueManagement(props: AdminCommonProps) {
                     
 
                     {/* Border Settings */}
-                    <div className="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <h4 className="text-sm font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                    <div
+                      className="mt-4 p-3 rounded-lg border"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 6%, transparent)`,
+                        borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 20%, transparent)`,
+                      }}
+                    >
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: config.primaryDark || '#3d1a45' }}>
                         🔲 Venue Border Settings
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -820,7 +852,8 @@ export function VenueManagement(props: AdminCommonProps) {
                               type="checkbox"
                               checked={venue.showBorder !== false}
                               onChange={(e) => handleSaveVenues(venues.map(v => v.id === venue.id ? { ...v, showBorder: e.target.checked } : v))}
-                              className="w-5 h-5 accent-[#4A1942]"
+                              className="w-5 h-5"
+                              style={{ accentColor: config.primaryColor || '#4A1942' }}
                             />
                             <span className="text-sm font-medium text-gray-700">Show Border</span>
                           </label>
@@ -832,13 +865,13 @@ export function VenueManagement(props: AdminCommonProps) {
                               <div className="flex gap-2">
                                 <input
                                   type="color"
-                                  value={venue.borderColor || '#4A1942'}
+                                  value={venue.borderColor || config.primaryColor || '#4A1942'}
                                   onChange={(e) => handleSaveVenues(venues.map(v => v.id === venue.id ? { ...v, borderColor: e.target.value } : v))}
                                   className="w-10 h-9 border border-gray-300 rounded cursor-pointer"
                                 />
                                 <input
                                   type="text"
-                                  value={venue.borderColor || '#4A1942'}
+                                  value={venue.borderColor || config.primaryColor || '#4A1942'}
                                   onChange={(e) => handleSaveVenues(venues.map(v => v.id === venue.id ? { ...v, borderColor: e.target.value } : v))}
                                   className="flex-1 px-2 py-2 border border-gray-300 rounded-lg text-sm"
                                 />
@@ -850,7 +883,8 @@ export function VenueManagement(props: AdminCommonProps) {
                                 type="number"
                                 value={venue.borderWidth || 2}
                                 onChange={(e) => handleSaveVenues(venues.map(v => v.id === venue.id ? { ...v, borderWidth: parseInt(e.target.value) || 1 } : v))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                                style={{ borderColor: config.primaryColor || '#4A1942' }}
                                 min={1}
                                 max={10}
                               />
@@ -858,7 +892,7 @@ export function VenueManagement(props: AdminCommonProps) {
                           </>
                         )}
                       </div>
-                      <p className="text-xs text-purple-600 mt-2">
+                      <p className="text-xs mt-2" style={{ color: config.primaryColor || '#4A1942' }}>
                         💡 Configure the border around your venue layout. This helps define the venue boundaries.
                       </p>
                     </div>
@@ -982,12 +1016,16 @@ export function VenueManagement(props: AdminCommonProps) {
                             onChange={(e) => {
                               handleSaveVenues(venues.map(v => v.id === venue.id ? { ...v, isMaster: e.target.checked } : v));
                             }}
-                            className="w-5 h-5 accent-[#4A1942]"
+                            className="w-5 h-5"
+                            style={{ accentColor: config.primaryColor || '#4A1942' }}
                           />
                           <span className="text-sm font-medium text-gray-700">Master Venue</span>
                         </label>
                         {venue.isMaster && (
-                          <span className="text-xs bg-[#4A1942] text-white px-2 py-1 rounded">
+                          <span
+                            className="text-xs text-white px-2 py-1 rounded font-semibold"
+                            style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                          >
                             ★ Visible to Basic Users
                           </span>
                         )}

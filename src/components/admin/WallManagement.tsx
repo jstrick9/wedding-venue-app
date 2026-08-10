@@ -461,7 +461,8 @@ export function WallManagement(props: AdminCommonProps) {
                       handleSaveWallStyles([...wallStyles, newStyle]);
                       setExpandedWalls(prev => new Set([...prev, newStyle.id]));
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg hover:from-teal-600 hover:to-emerald-600 transition-all font-medium shadow-sm flex items-center gap-2"
+                    className="btn-primary px-4 py-2 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg transition-all font-bold shadow-sm flex items-center gap-2"
+                    style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                   >
                     <span>➕</span> Add Custom Wall Style
                   </button>
@@ -769,7 +770,8 @@ export function WallManagement(props: AdminCommonProps) {
                         handleSaveWallStyles([...wallStyles, newStyle]);
                         setExpandedWalls(prev => new Set([...prev, newStyle.id]));
                       }}
-                      className="px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-lg hover:from-teal-600 hover:to-emerald-600 font-medium"
+                      className="btn-primary px-4 py-2 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg font-bold shadow-sm"
+                      style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                     >
                       ➕ Create Wall Style
                     </button>

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Point, Venue } from '../types';
 import { useConfirm } from './useConfirm';
 import { showToast } from './Toast';
+import { useBrandingConfig } from '../config';
 
 interface NormalizedPoint {
   x: number; // 0..1
@@ -118,6 +119,7 @@ const shapeToAbsolute = (points: NormalizedPoint[], venue: Venue): Point[] =>
 
 export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, onSave, onClose }) => {
   const { confirm, confirmDialog } = useConfirm();
+  const config = useBrandingConfig();
   const [points, setPoints] = useState<NormalizedPoint[]>(normalizePoints(venue));
   // Reference to the shape as loaded, for the "unsaved changes" close guard.
   const initialPointsRef = useRef<NormalizedPoint[]>(normalizePoints(venue));
@@ -315,7 +317,12 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-2 sm:p-3">
       <div className="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-[99vw] h-[97vh] overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-gradient-to-r from-[#4A1942] to-[#2f1032] text-white">
+        <div
+          className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-white"
+          style={{
+            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+          }}
+        >
           <div>
             <h2 className="text-xl font-semibold">✏️ Venue Shape Builder</h2>
             <p className="text-sm text-white/85">Design a custom venue outline for {venue.name}. Your shape scales automatically with {venue.width}’ × {venue.height}’ dimensions.</p>
@@ -381,7 +388,7 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
             ) : (
               <>
             <div className="rounded-xl border border-purple-200 bg-white p-4 space-y-3">
-              <h3 className="font-semibold text-[#4A1942]">Builder Mode</h3>
+              <h3 className="font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Builder Mode</h3>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { id: 'select', label: 'Select', icon: '🎯' },
@@ -403,7 +410,7 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
             <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-[#4A1942]">Starter Templates</h3>
+                  <h3 className="font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Starter Templates</h3>
                   <p className="text-xs text-gray-500 mt-1">Pick a starting footprint, then fine-tune it by dragging points.</p>
                 </div>
                 <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">{points.length} points</span>
@@ -423,7 +430,7 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-              <h3 className="font-semibold text-[#4A1942]">Precision Controls</h3>
+              <h3 className="font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Precision Controls</h3>
               <label className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-gray-700">Show grid</span>
                 <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="w-4 h-4" />
@@ -474,7 +481,7 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
 
             <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold text-[#4A1942]">Point Controls</h3>
+                <h3 className="font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Point Controls</h3>
                 {selectedPointIndex !== null && (
                   <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">Point {selectedPointIndex + 1}</span>
                 )}
@@ -529,7 +536,7 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
-              <h3 className="font-semibold text-[#4A1942]">Tips</h3>
+              <h3 className="font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Tips</h3>
               <div className="text-sm text-gray-600 space-y-1">
                 <p>• Drag points directly to shape the venue.</p>
                 <p>• In Insert mode, click an edge to add a new point.</p>
@@ -623,8 +630,8 @@ export const CustomVenueBuilder: React.FC<CustomVenueBuilderProps> = ({ venue, o
 
                 {showMeasurements && (
                   <>
-                    <text x={VIEWBOX_WIDTH / 2} y={30} textAnchor="middle" fontSize={16} fill="#4A1942" fontWeight="600">Width: {venue.width} ft</text>
-                    <text x={26} y={VIEWBOX_HEIGHT / 2} textAnchor="middle" fontSize={16} fill="#4A1942" fontWeight="600" transform={`rotate(-90 26 ${VIEWBOX_HEIGHT / 2})`}>
+                    <text x={VIEWBOX_WIDTH / 2} y={30} textAnchor="middle" fontSize={16} fill={config.primaryColor || '#4A1942'} fontWeight="600">Width: {venue.width} ft</text>
+                    <text x={26} y={VIEWBOX_HEIGHT / 2} textAnchor="middle" fontSize={16} fill={config.primaryColor || '#4A1942'} fontWeight="600" transform={`rotate(-90 26 ${VIEWBOX_HEIGHT / 2})`}>
                       Height: {venue.height} ft
                     </text>
                   </>

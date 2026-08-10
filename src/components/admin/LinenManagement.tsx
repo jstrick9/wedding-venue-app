@@ -686,7 +686,8 @@ export function LinenManagement(props: AdminCommonProps) {
                         };
                         handleSaveLinenColors([...linenColors, newColor]);
                       }}
-                      className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all font-medium shadow-sm"
+                      className="btn-primary px-6 py-3 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg transition-all font-bold shadow-sm"
+                      style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                     >
                       ➕ Add Custom Color
                     </button>

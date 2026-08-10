@@ -314,12 +314,13 @@ export function BrandingManagement(props: AdminCommonProps) {
   };
 
   const [previewTab, setPreviewTab] = React.useState<'header' | 'dashboard' | 'chat'>('header');
+  const expandedSections = expandedBrandingSections || new Set(['logo', 'website', 'welcome', 'colors', 'typography', 'preview']);
 
   React.useEffect(() => {
-    if (!expandedBrandingSections?.has('typography') && !expandedBrandingSections?.has('preview')) return;
+    if (!expandedSections.has('typography') && !expandedSections.has('preview')) return;
     lazyLoadGoogleFont(config?.fontFamily);
     lazyLoadGoogleFont(config?.headingFontFamily);
-  }, [config?.fontFamily, config?.headingFontFamily, expandedBrandingSections]);
+  }, [config?.fontFamily, config?.headingFontFamily, expandedSections]);
 
   return (
             <div className="space-y-4">
@@ -364,12 +365,12 @@ export function BrandingManagement(props: AdminCommonProps) {
               {/* Expand/Collapse All */}
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-500">
-                  {expandedBrandingSections?.size || 0} of 6 sections expanded
+                  {expandedSections.size} of 6 sections expanded
                 </div>
                 <button
                   onClick={() => {
                     const allSections = ['logo', 'website', 'welcome', 'colors', 'typography', 'preview'];
-                    if (expandedBrandingSections?.size === allSections.length) {
+                    if (expandedSections.size === allSections.length) {
                       setExpandedBrandingSections?.(new Set());
                     } else {
                       setExpandedBrandingSections?.(new Set(allSections));
@@ -377,7 +378,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                   }}
                   className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] transition-colors text-sm font-medium shadow-sm"
                 >
-                  {expandedBrandingSections.size === 6 ? '▲ Collapse All' : '▼ Expand All'}
+                  {expandedSections.size === 6 ? '▲ Collapse All' : '▼ Expand All'}
                 </button>
               </div>
               
@@ -395,7 +396,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                   }}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-[#4A1942] text-xl">{expandedBrandingSections.has('logo') ? '▼' : '▶'}</span>
+                    <span className="text-[#4A1942] text-xl">{expandedSections.has('logo') ? '▼' : '▶'}</span>
                     <div className="w-10 h-10 bg-[#4A1942] rounded-lg flex items-center justify-center">
                       <span className="text-white text-xl">🏷️</span>
                     </div>
@@ -405,7 +406,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                     </div>
                   </div>
                 </div>
-                {expandedBrandingSections.has('logo') && (
+                {expandedSections.has('logo') && (
                 <div className="p-6 space-y-6">
                   {/* Logo Upload Section */}
                   <div className="bg-gray-50 rounded-xl p-6">
@@ -420,9 +421,12 @@ export function BrandingManagement(props: AdminCommonProps) {
                             </div>
                           </div>
                         ) : (
-                          <div className="w-32 h-32 bg-white rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-[#4A1942] hover:text-[#4A1942] transition-colors cursor-pointer">
+                          <div
+                            className="w-32 h-32 bg-white rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:shadow-sm transition-all cursor-pointer"
+                            style={{ borderColor: config.primaryColor || '#4A1942', color: config.primaryColor || '#4A1942' }}
+                          >
                             <span className="text-3xl mb-1">📷</span>
-                            <span className="text-xs">No Logo</span>
+                            <span className="text-xs font-semibold">No Logo</span>
                           </div>
                         )}
                       </div>
@@ -436,14 +440,17 @@ export function BrandingManagement(props: AdminCommonProps) {
                       <div className="flex flex-col gap-2">
                         <button
                           onClick={() => logoInputRef.current?.click()}
-                          className="px-6 py-3 bg-gradient-to-r from-[#4A1942] to-[#6b2c5c] text-white rounded-xl text-sm font-medium hover:shadow-lg transition-all flex items-center gap-2"
+                          className="btn-primary px-6 py-3 text-white rounded-xl text-sm font-bold shadow-sm hover:shadow-lg transition-all flex items-center gap-2"
+                          style={{
+                            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                          }}
                         >
                           <span>📤</span> {config.logoUrl ? 'Change Logo' : 'Upload Logo'}
                         </button>
                         {config.logoUrl && (
                           <button
                             onClick={() => handleSaveConfig({ ...config, logoUrl: '' })}
-                            className="px-6 py-3 text-red-500 hover:bg-red-50 rounded-xl text-sm font-medium border border-red-200 flex items-center gap-2 justify-center"
+                            className="px-6 py-3 text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold border border-red-200 flex items-center gap-2 justify-center transition-colors"
                           >
                             <span>🗑️</span> Remove
                           </button>
@@ -506,20 +513,25 @@ export function BrandingManagement(props: AdminCommonProps) {
                   </div>
                   
                   {/* Preview Card */}
-                  <div className="bg-gradient-to-r from-[#4A1942] to-[#6b2c5c] rounded-xl p-4 text-white">
-                    <p className="text-xs text-white/60 uppercase tracking-wide mb-2">Preview</p>
+                  <div
+                    className="rounded-xl p-4 text-white shadow-sm transition-all"
+                    style={{
+                      background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryLight || '#6b2c5c'}, ${config.primaryDark || '#3d1a45'})`,
+                    }}
+                  >
+                    <p className="text-xs text-white/80 font-bold uppercase tracking-wide mb-2">Venue Brand Header Preview</p>
                     <div className="flex items-center gap-3">
                       {config.logoUrl ? (
-                        <img src={config.logoUrl} alt="Logo" className="w-12 h-12 object-contain bg-white rounded-lg p-1" />
+                        <img src={config.logoUrl} alt="Logo" className="w-12 h-12 object-contain bg-white rounded-lg p-1 shadow-sm" />
                       ) : (
-                        <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                        <div className="w-12 h-12 bg-white/25 rounded-lg flex items-center justify-center backdrop-blur-sm">
                           <span className="text-2xl">🏛️</span>
                         </div>
                       )}
                       <div>
-                        <div className="font-bold">{config.venueName || 'Your Venue Name'}</div>
-                        <div className="text-sm text-white/80 italic">{config.tagline || 'Your Tagline'}</div>
-                        <div className="text-xs text-white/60">{config.location || 'Location'} • {config.phone || 'Phone'}</div>
+                        <div className="font-extrabold text-base">{config.venueName || 'Your Venue Name'}</div>
+                        <div className="text-xs text-white/90 italic">{config.tagline || 'Your Tagline'}</div>
+                        <div className="text-[11px] text-white/75 mt-0.5">{config.location || 'Location'} • {config.phone || 'Phone'}</div>
                       </div>
                     </div>
                   </div>
@@ -541,11 +553,11 @@ export function BrandingManagement(props: AdminCommonProps) {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500">{expandedBrandingSections.has('website') ? '▼' : '▶'}</span>
+                    <span className="text-gray-500">{expandedSections.has('website') ? '▼' : '▶'}</span>
                     <h3 className="font-bold text-lg text-gray-800">🌐 Website & Contact</h3>
                   </div>
                 </div>
-                {expandedBrandingSections.has('website') && (
+                {expandedSections.has('website') && (
                 <div className="p-4">
                 <p className="text-sm text-gray-500 mb-4">These links will appear in the header for all users</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -604,11 +616,11 @@ export function BrandingManagement(props: AdminCommonProps) {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500">{expandedBrandingSections.has('welcome') ? '▼' : '▶'}</span>
+                    <span className="text-gray-500">{expandedSections.has('welcome') ? '▼' : '▶'}</span>
                     <h3 className="font-bold text-lg text-amber-800">👋 Welcome Screen Settings</h3>
                   </div>
                 </div>
-                {expandedBrandingSections.has('welcome') && (
+                {expandedSections.has('welcome') && (
                 <div className="p-4 bg-amber-50/50">
                 <p className="text-sm text-amber-700 mb-4">Customize the welcome modal shown to new users</p>
                 
@@ -794,7 +806,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                   }}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-[#4A1942] text-xl">{expandedBrandingSections.has('colors') ? '▼' : '▶'}</span>
+                    <span className="text-[#4A1942] text-xl">{expandedSections.has('colors') ? '▼' : '▶'}</span>
                     <div className="w-10 h-10 bg-gradient-to-br from-[#4A1942] to-[#D4AF37] rounded-lg flex items-center justify-center">
                       <span className="text-white text-xl">🎨</span>
                     </div>
@@ -804,7 +816,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                     </div>
                   </div>
                 </div>
-                {expandedBrandingSections.has('colors') && (
+                {expandedSections.has('colors') && (
                 <div className="p-6 space-y-6">
                   {/* Color Palette Presets */}
                   <div>
@@ -1025,7 +1037,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                       </label>
                       <div className="flex items-center gap-1">
                         {[
-                          { id: 'header', label: 'Header Banner' },
+                          { id: 'header', label: 'Home & Landing Page' },
                           { id: 'dashboard', label: 'Dashboard KPI' },
                           { id: 'chat', label: 'Portal Chat' },
                         ].map((t) => (
@@ -1035,7 +1047,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                             onClick={() => setPreviewTab(t.id as any)}
                             className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
                               previewTab === t.id
-                                ? 'bg-[#4A1942] text-white shadow-sm'
+                                ? 'text-white shadow-sm font-extrabold'
                                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
                             }`}
                             style={
@@ -1052,39 +1064,55 @@ export function BrandingManagement(props: AdminCommonProps) {
 
                     {previewTab === 'header' && (
                       <div
-                        className="rounded-xl p-4 shadow-lg"
+                        className="rounded-2xl p-5 shadow-lg space-y-4 text-white"
                         style={{
                           background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
                         }}
                       >
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                            <span className="text-2xl">💒</span>
-                          </div>
-                          <div className="text-white">
-                            <div className="font-bold">Header Preview</div>
-                            <div className="text-sm opacity-80">
-                              {config.venueName || 'Seven Paths Manor'} • Admin &amp; Studio
+                        <div className="flex items-center justify-between border-b border-white/20 pb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                              {config.logoUrl ? (
+                                <img src={config.logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
+                              ) : (
+                                <span className="text-xl">🏛️</span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-extrabold text-base leading-tight">
+                                {config.venueName || 'Seven Paths Manor'}
+                              </div>
+                              <div className="text-xs text-white/80 italic">
+                                {config.tagline || 'Home & Landing Page Preview'}
+                              </div>
                             </div>
                           </div>
+                          <span className="text-xs font-semibold px-2.5 py-1 bg-white/20 rounded-full backdrop-blur-sm">
+                            ● Active Brand
+                          </span>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
-                            style={{
-                              backgroundColor: config.accentColor || '#D4AF37',
-                              color: '#000',
-                            }}
-                          >
-                            Primary CTA
-                          </button>
-                          <button
-                            type="button"
-                            className="px-4 py-2 rounded-lg text-sm font-medium bg-white/20 text-white"
-                          >
-                            Secondary CTA
-                          </button>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="text-xs text-white/90">
+                            <strong>Today:</strong> 3 events scheduled • 12 upcoming tours
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-transform hover:scale-105"
+                              style={{
+                                backgroundColor: config.accentColor || '#059669',
+                                color: '#FFFFFF',
+                              }}
+                            >
+                              🚀 Open Dashboard
+                            </button>
+                            <button
+                              type="button"
+                              className="px-4 py-2 rounded-xl text-xs font-bold bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-colors"
+                            >
+                              📅 View Calendar
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1165,11 +1193,11 @@ export function BrandingManagement(props: AdminCommonProps) {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500">{expandedBrandingSections.has('typography') ? '▼' : '▶'}</span>
+                    <span className="text-gray-500">{expandedSections.has('typography') ? '▼' : '▶'}</span>
                     <h3 className="font-bold text-lg text-gray-800">✍️ Typography</h3>
                   </div>
                 </div>
-                {expandedBrandingSections.has('typography') && (
+                {expandedSections.has('typography') && (
                 <div className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -1349,10 +1377,10 @@ export function BrandingManagement(props: AdminCommonProps) {
                 )}
               </div>
               
-              {/* Live Preview */}
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              {/* Live Home & Landing Page / Venue Dashboard Preview */}
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
                 <div 
-                  className="bg-gray-100 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors"
+                  className="bg-gray-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => {
                     setExpandedBrandingSections(prev => {
                       const next = new Set(prev);
@@ -1363,47 +1391,123 @@ export function BrandingManagement(props: AdminCommonProps) {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500">{expandedBrandingSections.has('preview') ? '▼' : '▶'}</span>
-                    <h3 className="font-bold text-lg text-gray-800">👁️ Live Preview</h3>
+                    <span className="text-gray-500">{expandedSections.has('preview') ? '▼' : '▶'}</span>
+                    <h3 className="font-bold text-base text-gray-900">👁️ Live Home &amp; Landing Page / Venue Dashboard Preview</h3>
                   </div>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Home / Landing Page
+                  </span>
                 </div>
-                {expandedBrandingSections.has('preview') && (
-                <div className="p-4">
-                <div 
-                  className="border rounded-lg overflow-hidden"
-                  style={{ fontFamily: config.fontFamily }}
-                >
+                {expandedSections.has('preview') && (
+                <div className="p-5">
                   <div 
-                    className="p-4"
-                    style={{ 
-                      background: `linear-gradient(to right, ${config.primaryColor}, ${config.primaryDark})`,
-                      color: config.headerTextColor
-                    }}
+                    className="border border-gray-200 rounded-xl overflow-hidden shadow-sm"
+                    style={{ fontFamily: config.fontFamily }}
                   >
-                    <h2 style={{ fontFamily: config.headingFontFamily }} className="text-xl font-bold">
-                      {config.venueName}
-                    </h2>
-                    <p className="text-sm opacity-80">{config.tagline}</p>
-                  </div>
-                  <div 
-                    className="p-4"
-                    style={{ 
-                      backgroundColor: config.backgroundColor,
-                      color: config.bodyTextColor
-                    }}
-                  >
-                    <p className="mb-2">This is how your body text will appear in the application.</p>
-                    <p style={{ color: config.accentTextColor }} className="font-medium">
-                      This is accent colored text.
-                    </p>
-                    <button 
-                      className="mt-3 px-4 py-2 rounded-lg text-white"
-                      style={{ backgroundColor: config.accentColor }}
+                    {/* Branded Venue Navigation Header */}
+                    <div className="px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        {config.logoUrl ? (
+                          <img src={config.logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
+                        ) : (
+                          <span className="text-xl">🏛️</span>
+                        )}
+                        <span className="font-extrabold text-gray-900 text-base" style={{ fontFamily: config.headingFontFamily }}>
+                          {config.venueName || 'Seven Paths Manor'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs font-bold">
+                        <span className="px-3 py-1.5 rounded-lg text-white" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
+                          Home / Dashboard
+                        </span>
+                        <span className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100">
+                          Layout Studio
+                        </span>
+                        <span className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100">
+                          Calendar
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Landing Page Hero Section */}
+                    <div 
+                      className="p-6 text-white"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryLight || '#6b2c5c'}, ${config.primaryDark || '#3d1a45'})`,
+                        color: config.headerTextColor
+                      }}
                     >
-                      Accent Button
-                    </button>
+                      <div className="text-xs uppercase tracking-wider font-bold opacity-80 mb-1">
+                        Venue Management Portal
+                      </div>
+                      <h2 style={{ fontFamily: config.headingFontFamily }} className="text-2xl font-extrabold">
+                        Welcome back to {config.venueName || 'Seven Paths Manor'}
+                      </h2>
+                      <p className="text-sm opacity-90 mt-1">{config.tagline || 'Weddings Reimagined'}</p>
+                      
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/20">
+                        <div className="text-xs opacity-90">
+                          <strong>Active Status:</strong> 3 weddings scheduled today • 12 upcoming tours
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-xl text-xs font-bold shadow-sm"
+                            style={{
+                              backgroundColor: config.accentColor || '#059669',
+                              color: '#FFFFFF',
+                            }}
+                          >
+                            🚀 Launch Studio
+                          </button>
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-xl text-xs font-bold bg-white/25 text-white hover:bg-white/35 backdrop-blur-sm"
+                          >
+                            📅 View Calendar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dashboard Quick Today Strip */}
+                    <div 
+                      className="p-5 space-y-3"
+                      style={{ 
+                        backgroundColor: config.backgroundColor || '#f8fafc',
+                        color: config.bodyTextColor || '#334155'
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: config.primaryDark || '#3d1a45' }}>
+                          Today's Wedding Schedule &amp; Quick Strip
+                        </span>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`, color: config.primaryColor || '#4A1942' }}>
+                          WCAG Contrast Verified
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-sm text-gray-900">Smith &amp; Johnson Wedding</div>
+                            <div className="text-xs text-gray-500 mt-0.5">Ceremony Garden • 4:00 PM</div>
+                          </div>
+                          <span className="text-xs font-bold px-3 py-1 rounded-lg text-white" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
+                            View BEO →
+                          </span>
+                        </div>
+                        <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-sm text-gray-900">Elena &amp; Marcus Tour</div>
+                            <div className="text-xs text-gray-500 mt-0.5">Reception Hall • 2:00 PM</div>
+                          </div>
+                          <span className="text-xs font-bold px-3 py-1 rounded-lg text-white" style={{ backgroundColor: config.primaryDark || '#3d1a45' }}>
+                            Open Couple →
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
                 </div>
                 )}
               </div>

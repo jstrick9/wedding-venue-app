@@ -489,7 +489,10 @@ export function FixtureManagement(props: AdminCommonProps) {
                   <button
                     type="button"
                     onClick={() => setShowDrawingTool(true)}
-                    className="px-3 py-1.5 bg-gradient-to-r from-[#4A1942] via-purple-600 to-cyan-600 text-white rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm flex items-center gap-1"
+                    className="btn-primary px-3 py-1.5 text-white rounded-lg text-xs font-bold transition-opacity shadow-sm flex items-center gap-1"
+                    style={{
+                      background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                    }}
                   >
                     <span>🎨</span>
                     <span>Draw Custom</span>
@@ -498,15 +501,20 @@ export function FixtureManagement(props: AdminCommonProps) {
               </div>
 
               {/* Venue Fixtures */}
-              <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-3 flex items-center justify-between cursor-pointer"
-                  onClick={() => setShowVenueFixturesSection(v => !v)}>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div
+                  className="px-4 py-3 flex items-center justify-between cursor-pointer text-white shadow-sm transition-all"
+                  style={{
+                    background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                  }}
+                  onClick={() => setShowVenueFixturesSection(v => !v)}
+                >
                   <div className="flex items-center gap-3 text-white">
                     <span className="text-lg">{showVenueFixturesSection ? '▼' : '▶'}</span>
                     <span className="text-2xl">🏛️</span>
                     <div>
                       <h4 className="font-bold">Venue Fixtures</h4>
-                      <p className="text-xs text-purple-100">Interior items for your venue layout</p>
+                      <p className="text-xs text-white/80">Interior items for your venue layout</p>
                     </div>
                     <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
                       {fixtureTypes.filter(f => f.category !== 'exterior' && f.category !== 'lodging').length} items
@@ -857,15 +865,20 @@ export function FixtureManagement(props: AdminCommonProps) {
               </div>
 
               {/* Lodging/Utilities Fixtures */}
-              <div className="bg-white rounded-xl shadow-sm border border-cyan-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-cyan-500 to-sky-600 px-4 py-3 flex items-center justify-between cursor-pointer"
-                  onClick={() => setShowLodgingFixturesSection(v => !v)}>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div
+                  className="px-4 py-3 flex items-center justify-between cursor-pointer text-white shadow-sm transition-all"
+                  style={{
+                    background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                  }}
+                  onClick={() => setShowLodgingFixturesSection(v => !v)}
+                >
                   <div className="flex items-center gap-3 text-white">
                     <span className="text-lg">{showLodgingFixturesSection ? '▼' : '▶'}</span>
                     <span className="text-2xl">🛏️</span>
                     <div>
                       <h4 className="font-bold">Lodging/Utilities Fixtures</h4>
-                      <p className="text-xs text-cyan-100">Rooms, furniture, appliances, and utilities for lodging venues (Admin Only)</p>
+                      <p className="text-xs text-white/80">Rooms and lodging furniture</p>
                     </div>
                     <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
                       {fixtureTypes.filter(f => f.category === 'lodging').length} items
@@ -1104,15 +1117,20 @@ export function FixtureManagement(props: AdminCommonProps) {
               </div>
               
               {/* Exterior Fixtures */}
-              <div className="bg-white rounded-xl shadow-sm border border-green-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-3 flex items-center justify-between cursor-pointer"
-                  onClick={() => setShowExteriorFixturesSection(v => !v)}>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div
+                  className="px-4 py-3 flex items-center justify-between cursor-pointer text-white shadow-sm transition-all"
+                  style={{
+                    background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                  }}
+                  onClick={() => setShowExteriorFixturesSection(v => !v)}
+                >
                   <div className="flex items-center gap-3 text-white">
                     <span className="text-lg">{showExteriorFixturesSection ? '▼' : '▶'}</span>
                     <span className="text-2xl">🌳</span>
                     <div>
                       <h4 className="font-bold">Architectural/Landscape Features</h4>
-                      <p className="text-xs text-green-100">Exterior features (Admin Only)</p>
+                      <p className="text-xs text-white/80">Exterior features (Admin Only)</p>
                     </div>
                     <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
                       {fixtureTypes.filter(f => f.category === 'exterior').length} items

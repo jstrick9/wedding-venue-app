@@ -425,7 +425,8 @@ export function GuidelineManagement(props: AdminCommonProps) {
                     handleSaveGuidelines([...guidelines, newGuideline]);
                     setExpandedGuidelines(prev => new Set([...prev, newGuideline.id]));
                   }}
-                  className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center gap-2"
+                  className="btn-primary px-4 py-2.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg hover:shadow-lg transition-all font-bold flex items-center gap-2 shadow-sm"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   <span className="text-lg">➕</span> Add Custom Guideline
                 </button>

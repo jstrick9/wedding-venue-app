@@ -779,7 +779,8 @@ export function ChairManagement(props: AdminCommonProps) {
                       <div className="flex gap-2">
                         <button
                           onClick={() => showSuccess('Chair saved!')}
-                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all font-medium shadow-sm"
+                          className="btn-primary flex-1 px-4 py-2.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg transition-all font-bold shadow-sm"
+                          style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                         >
                           ✓ Save Chair
                         </button>
@@ -828,7 +829,8 @@ export function ChairManagement(props: AdminCommonProps) {
                         setChairSpecsState(updated);
                         setExpandedChairs(new Set([newChair.id]));
                       }}
-                      className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all font-medium shadow-sm"
+                      className="btn-primary px-5 py-2.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg transition-all font-bold shadow-sm"
+                      style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                     >
                       ➕ Add Chair Type
                     </button>
