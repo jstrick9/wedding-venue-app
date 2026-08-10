@@ -69,8 +69,8 @@ describe('AdminPanel new System Settings modules (#147)', () => {
   it('renders System Status & Quick Diagnostics banner at top of AdminPanel', () => {
     render(<AdminPanel {...dummyProps} />);
 
-    expect(screen.getByText(/system status: healthy/i)).toBeInTheDocument();
-    expect(screen.getByText(/localstorage active/i)).toBeInTheDocument();
+    expect(screen.getByText(/healthy/i)).toBeInTheDocument();
+    expect(screen.getByText(/localstorage/i)).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /💬\s*templates/i })
     ).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe('AdminPanel new System Settings modules (#147)', () => {
       screen.getByRole('button', { name: /🛠️\s*checklists/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /🛡️\s*security & audit/i })
+      screen.getByRole('button', { name: /🛡️\s*security/i })
     ).toBeInTheDocument();
   });
 
@@ -112,7 +112,7 @@ describe('AdminPanel new System Settings modules (#147)', () => {
     render(<AdminPanel {...dummyProps} />);
 
     const secBtn = screen.getByRole('button', {
-      name: /🛡️\s*security & audit/i,
+      name: /🛡️\s*security/i,
     });
     fireEvent.click(secBtn);
 

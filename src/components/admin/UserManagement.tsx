@@ -449,6 +449,19 @@ export function UserManagement(props: AdminCommonProps) {
                               </button>
                               <button
                                 type="button"
+                                onClick={() => {
+                                  const subject = `Your Wedding Planning Portal — ${couple.coupleName}`;
+                                  const body = `Hi ${couple.coupleName},\n\nWe're so excited to work with you on your wedding!\n\nHere is your private link to access your Couples Portal, where you can design your floor layouts, manage your guest list & RSVPs, view wedding packages, and chat directly with our venue team:\n\n${portalLink}\n\nWarm regards,\nThe Seven Paths Manor Team`;
+                                  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                                  showInfo(`Opening email draft for ${couple.coupleName}`);
+                                }}
+                                className="px-3.5 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+                                title="Open default email client with pre-drafted Couples Portal invite link"
+                              >
+                                ✉️ Email Invite
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => emit('spm_open_chat')}
                                 className="px-4 py-2 rounded-lg text-white text-xs font-bold shadow-sm transition-colors"
                                 style={{ backgroundColor: config.primaryColor || '#4A1942' }}

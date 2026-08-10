@@ -519,6 +519,30 @@ const StaffOperationsPanel: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => {
+                  navigator.clipboard.writeText(portalLink);
+                  showToast('Couples Portal invitation link copied to clipboard', 'success');
+                }}
+                className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+                title="Copy direct Couples Portal invite link"
+              >
+                📋 Copy Portal Link
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const subject = `Your Wedding Planning Portal — ${selectedCouple.coupleName}`;
+                  const body = `Hi ${selectedCouple.coupleName},\n\nWe're so excited to work with you on your wedding!\n\nHere is your private link to access your Couples Portal, where you can design your floor layouts, manage your guest list & RSVPs, view wedding packages, and chat directly with our venue team:\n\n${portalLink}\n\nWarm regards,\nThe Seven Paths Manor Team`;
+                  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                  showToast('Opening default email app with couple invite', 'info');
+                }}
+                className="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 transition-colors shadow-sm"
+                title="Open default email client with pre-drafted Couples Portal invite link"
+              >
+                ✉️ Email Invite
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   navigator.clipboard.writeText(window.location.href);
                   showToast('Copied BEO page reference link to clipboard', 'success');
                 }}

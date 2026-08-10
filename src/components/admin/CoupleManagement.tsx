@@ -749,6 +749,20 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     </button>
                     <button
                       type="button"
+                      onClick={() => {
+                        const url = portalUrl(ev.inviteToken);
+                        const subject = `Your Wedding Planning Portal — ${ev.coupleName}`;
+                        const body = `Hi ${ev.coupleName},\n\nWe're so excited to work with you on your wedding!\n\nHere is your private link to access your Couples Portal, where you can design your floor layouts, manage your guest list & RSVPs, view wedding packages, and chat directly with our venue team:\n\n${url}\n\nWarm regards,\nThe Seven Paths Manor Team`;
+                        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        onShowSuccess(`Opened your email app with ${ev.coupleName}'s invite.`);
+                      }}
+                      className="text-xs text-gray-600 hover:underline"
+                      title="Open default email app with pre-drafted Couples Portal invite link"
+                    >
+                      ✉️ Email invite
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => window.open(portalUrl(ev.inviteToken), '_blank')}
                       className="text-xs text-gray-600 hover:underline"
                     >
