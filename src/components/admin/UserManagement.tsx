@@ -301,6 +301,34 @@ export function UserManagement(props: AdminCommonProps) {
     emitDataChanged('couples');
   };
 
+  const [showStaffEventMatrixModal, setShowStaffEventMatrixModal] = React.useState(false);
+  const [selectedEventRoleMap, setSelectedEventRoleMap] = React.useState<Record<string, string>>({});
+
+  const handleToggleStaffEventAssignment = (staffUser: User, eventId: string, roleTitle: string = 'Day-of Staff') => {
+    const currentIds = staffUser.assignedEventIds || [];
+    const isAssigned = currentIds.includes(eventId);
+    const nextIds = isAssigned
+      ? currentIds.filter((id) => id !== eventId)
+      : [...currentIds, eventId];
+    const currentRoles = { ...(staffUser.assignedEventRoles || {}) };
+    if (isAssigned) {
+      delete currentRoles[eventId];
+    } else {
+      currentRoles[eventId] = roleTitle;
+    }
+    const updatedUsers = users.map((u) =>
+      u.id === staffUser.id
+        ? { ...u, assignedEventIds: nextIds, assignedEventRoles: currentRoles, updatedAt: new Date().toISOString() }
+        : u
+    );
+    handleSaveUsers(updatedUsers);
+    showSuccess(
+      isAssigned
+        ? `Removed ${staffUser.name} from event assignment.`
+        : `Assigned ${staffUser.name} as ${roleTitle} to event.`
+    );
+  };
+
   const filteredUsers = users.filter((u) => {
     const q = userSearch.trim().toLowerCase();
     const matchesSearch =
@@ -488,6 +516,14 @@ export function UserManagement(props: AdminCommonProps) {
                     className="px-4 py-2.5 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center gap-2"
                   >
                     <span className="text-lg">➕</span> Add User
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowStaffEventMatrixModal(true)}
+                    className="px-4 py-2.5 bg-white border border-purple-200 text-[#4A1942] hover:bg-purple-50 rounded-lg hover:shadow transition-all font-bold text-sm flex items-center gap-2"
+                    style={{ borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 30%, transparent)`, color: config.primaryColor || '#4A1942' }}
+                  >
+                    <span>🗓️</span> Assign Staff to Events
                   </button>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -738,7 +774,8 @@ export function UserManagement(props: AdminCommonProps) {
                     const isExpanded = expandedUsers.has(u.id);
                     const lastLoginDate = u.lastLogin ? new Date(u.lastLogin) : null;
                     const isOnline = lastLoginDate && (Date.now() - lastLoginDate.getTime()) < 86400000; // Within 24h
-                    const editUserFieldErrors = getUserFieldErrors({
+                    const validator = getUserFieldErrors || (() => ({}));
+                    const editUserFieldErrors = validator({
                       username: u.username,
                       name: u.name,
                       email: u.email,
@@ -1043,6 +1080,102 @@ export function UserManagement(props: AdminCommonProps) {
 								</div>
 							  </div>
 							</div>
+
+                            {/* Staff Event Staffing & Shift Assignments */}
+                            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 space-y-4">
+                              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                                <div>
+                                  <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    <span>🗓️</span> Booked Wedding Event Assignments
+                                  </h4>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    Assign this internal staff member to work booked wedding events across Seventh Paths Manor.
+                                  </p>
+                                </div>
+                                <span className="text-xs font-bold px-3 py-1 bg-purple-100 text-purple-900 rounded-full border border-purple-200">
+                                  {u.assignedEventIds?.length || 0} Event(s) Assigned
+                                </span>
+                              </div>
+
+                              {coupleEventsList.length === 0 ? (
+                                <p className="text-xs text-gray-500 italic py-4 text-center">
+                                  No booked couple events exist yet. Create one in Admin → Couples or the Couples Portal first.
+                                </p>
+                              ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {coupleEventsList.map((ev) => {
+                                    const isAssigned = u.assignedEventIds?.includes(ev.id);
+                                    const assignedRole = u.assignedEventRoles?.[ev.id] || 'Day-of Staff';
+                                    const draftRole = selectedEventRoleMap[`${u.id}-${ev.id}`] || assignedRole;
+
+                                    return (
+                                      <div
+                                        key={ev.id}
+                                        className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-all ${
+                                          isAssigned
+                                            ? 'bg-emerald-50/60 border-emerald-300 shadow-sm'
+                                            : 'bg-gray-50/60 border-gray-200 hover:border-gray-300'
+                                        }`}
+                                      >
+                                        <div>
+                                          <div className="flex items-center justify-between gap-2 border-b border-gray-200/80 pb-2">
+                                            <span className="font-bold text-sm text-gray-900 truncate">{ev.coupleName}</span>
+                                            <span
+                                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                isAssigned ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                                              }`}
+                                            >
+                                              {isAssigned ? '✓ Assigned' : 'Unassigned'}
+                                            </span>
+                                          </div>
+                                          <div className="text-xs text-gray-500 mt-2 space-y-1">
+                                            <div>📅 {ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'Date TBD'}</div>
+                                            <div>👥 {ev.guestCount || 0} Expected Guests</div>
+                                          </div>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-gray-200/80 space-y-2">
+                                          <div>
+                                            <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Staffing Role</label>
+                                            <select
+                                              value={draftRole}
+                                              onChange={(e) =>
+                                                setSelectedEventRoleMap((prev) => ({
+                                                  ...prev,
+                                                  [`${u.id}-${ev.id}`]: e.target.value,
+                                                }))
+                                              }
+                                              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold bg-white"
+                                              aria-label={`Role for ${ev.coupleName}`}
+                                            >
+                                              <option value="Lead Coordinator">Lead Coordinator</option>
+                                              <option value="Setup Captain">Setup Captain</option>
+                                              <option value="Day-of Staff">Day-of Staff</option>
+                                              <option value="Banquet Captain">Banquet Captain</option>
+                                              <option value="Audio/Visual Specialist">Audio/Visual Specialist</option>
+                                              <option value="Security Lead">Security Lead</option>
+                                            </select>
+                                          </div>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleStaffEventAssignment(u, ev.id, draftRole)}
+                                            className={`w-full py-2 rounded-lg text-xs font-bold transition-colors shadow-sm ${
+                                              isAssigned
+                                                ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                                                : 'text-white'
+                                            }`}
+                                            style={!isAssigned ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
+                                          >
+                                            {isAssigned ? '✕ Remove Assignment' : '+ Assign to Event →'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                             
                             {/* Account Settings */}
 							<div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -1514,6 +1647,159 @@ export function UserManagement(props: AdminCommonProps) {
 				  </div>
 			    </div>
 			  )}
+
+              {/* Staff-to-Event Assignment Command Matrix Modal */}
+              {showStaffEventMatrixModal && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[11000] p-4">
+                  <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+                    <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] flex items-center justify-between text-white">
+                      <div>
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                          <span>🗓️</span> Staff-to-Event Assignment Command Matrix
+                        </h3>
+                        <p className="text-xs text-white/80 mt-0.5">
+                          Easily assign Admins, Managers, and Staff across all booked wedding events.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowStaffEventMatrixModal(false)}
+                        className="p-2 hover:bg-white/20 rounded-lg text-white font-bold transition-colors"
+                        aria-label="Close staffing matrix"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                      {coupleEventsList.length === 0 ? (
+                        <div className="p-12 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                          <div className="text-4xl mb-2">🗓️</div>
+                          <h4 className="text-base font-bold text-gray-800">No Booked Events Found</h4>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Create couple events in Admin → Couples or the Couples Portal to begin assigning staff.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {coupleEventsList.map((ev) => (
+                            <div key={ev.id} className="rounded-xl border border-gray-200 p-5 bg-white shadow-sm space-y-4">
+                              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                                <div>
+                                  <h4 className="font-bold text-base text-gray-900">{ev.coupleName}</h4>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    📅 {ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'Date TBD'} • 👥 {ev.guestCount || 0} Guests
+                                  </p>
+                                </div>
+                                <span className="text-xs font-bold px-3 py-1 bg-purple-100 text-purple-900 rounded-full">
+                                  {users.filter((u) => u.assignedEventIds?.includes(ev.id)).length} Staff Assigned
+                                </span>
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                  Assigned Venue Staff ({users.filter((u) => u.assignedEventIds?.includes(ev.id)).length})
+                                </label>
+                                {users.filter((u) => u.assignedEventIds?.includes(ev.id)).length === 0 ? (
+                                  <p className="text-xs text-gray-400 italic py-2">No venue staff assigned yet.</p>
+                                ) : (
+                                  <div className="space-y-1.5">
+                                    {users
+                                      .filter((u) => u.assignedEventIds?.includes(ev.id))
+                                      .map((u) => (
+                                        <div key={u.id} className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200 text-xs">
+                                          <div>
+                                            <span className="font-bold text-gray-900">{u.name}</span>
+                                            <span className="text-gray-500 ml-1">
+                                              ({u.assignedEventRoles?.[ev.id] || 'Day-of Staff'})
+                                            </span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleToggleStaffEventAssignment(u, ev.id)}
+                                            className="text-red-600 font-bold hover:underline"
+                                            aria-label={`Remove ${u.name} from ${ev.coupleName}`}
+                                          >
+                                            Remove ✕
+                                          </button>
+                                        </div>
+                                      ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="pt-2 border-t border-gray-100 space-y-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                  + Quick Assign Staff Member
+                                </label>
+                                <div className="flex gap-2">
+                                  <select
+                                    id={`assign-staff-${ev.id}`}
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold bg-white"
+                                    aria-label={`Select staff member for ${ev.coupleName}`}
+                                    defaultValue=""
+                                  >
+                                    <option value="" disabled>-- Select Staff Member --</option>
+                                    {users
+                                      .filter((u) => !u.assignedEventIds?.includes(ev.id) && u.isActive !== false)
+                                      .map((u) => (
+                                        <option key={u.id} value={u.id}>
+                                          {u.name} ({u.jobTitle || u.role})
+                                        </option>
+                                      ))}
+                                  </select>
+                                  <select
+                                    id={`assign-role-${ev.id}`}
+                                    className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold bg-white"
+                                    aria-label={`Select role for ${ev.coupleName}`}
+                                    defaultValue="Lead Coordinator"
+                                  >
+                                    <option value="Lead Coordinator">Lead Coordinator</option>
+                                    <option value="Setup Captain">Setup Captain</option>
+                                    <option value="Day-of Staff">Day-of Staff</option>
+                                    <option value="Banquet Captain">Banquet Captain</option>
+                                    <option value="Audio/Visual Specialist">Audio/Visual Specialist</option>
+                                    <option value="Security Lead">Security Lead</option>
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const staffSelect = document.getElementById(`assign-staff-${ev.id}`) as HTMLSelectElement;
+                                      const roleSelect = document.getElementById(`assign-role-${ev.id}`) as HTMLSelectElement;
+                                      if (!staffSelect || !staffSelect.value) {
+                                        showInfo('Please select a staff member to assign.', '', 'warning');
+                                        return;
+                                      }
+                                      const targetUser = users.find((u) => u.id === staffSelect.value);
+                                      if (targetUser) {
+                                        handleToggleStaffEventAssignment(targetUser, ev.id, roleSelect.value);
+                                        staffSelect.value = '';
+                                      }
+                                    }}
+                                    className="px-4 py-2 bg-[#4A1942] text-white rounded-lg text-xs font-bold hover:bg-[#5c2a64] transition-colors shrink-0"
+                                  >
+                                    Assign →
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowStaffEventMatrixModal(false)}
+                        className="px-6 py-2.5 bg-gray-800 text-white rounded-xl text-xs font-bold hover:bg-gray-900 transition-colors"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               </div>
     </div>
   );

@@ -290,6 +290,8 @@ export interface User {
   imageUrl?: string;
   jobTitle?: string;
   department?: string;
+  assignedEventIds?: string[];
+  assignedEventRoles?: Record<string, string>;
   notes?: string;
   isActive: boolean;
   requiresPasswordChange?: boolean;

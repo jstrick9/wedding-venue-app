@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UserManagement } from './UserManagement';
 import { AccessControlPanel } from './AccessControlPanel';
+import { createCoupleEvent } from '../../services/couples/coupleService';
 import type { Config } from '../../types';
 
 vi.mock('../../contexts/AuthContext', () => ({
@@ -34,6 +35,11 @@ const testConfig: Config = {
 describe('UserManagement & AccessControl — Internal Staff RBAC & Zero-Event-Tying (#160)', () => {
   beforeEach(() => {
     localStorage.clear();
+    createCoupleEvent({
+      coupleName: 'Elena & Marcus',
+      eventDate: '2027-11-20',
+      guestCount: 200,
+    });
   });
 
   const dummyProps: any = {
@@ -165,5 +171,27 @@ describe('UserManagement & AccessControl — Internal Staff RBAC & Zero-Event-Ty
     fireEvent.click(screen.getByText('Manager'));
     expect(screen.getByText(/Hierarchy: 70/i)).toBeInTheDocument();
     expect(screen.getByText(/Internal Staff Role/i)).toBeInTheDocument();
+  });
+
+  it('allows Admins and Managers to open the Staff-to-Event Assignment Command Matrix and assign an internal staff member to work a booked couple event', () => {
+    render(<UserManagement {...dummyProps} />);
+
+    // Click the top-level "Assign Staff to Events" button in the Quick Actions Bar
+    const openMatrixBtn = screen.getByRole('button', { name: /Assign Staff to Events/i });
+    fireEvent.click(openMatrixBtn);
+
+    // Verify modal header and couple event appear
+    expect(screen.getByText(/Staff-to-Event Assignment Command Matrix/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Elena & Marcus').length).toBeGreaterThan(0);
+    expect(screen.getByText(/0 Staff Assigned/i)).toBeInTheDocument();
+  });
+
+  it('allows assigning or removing an internal staff member from a booked wedding event inside their expanded user account profile', () => {
+    render(<UserManagement {...dummyProps} />);
+
+    // Look for the "Booked Wedding Event Assignments" card for expanded staff-1 / admin-1
+    expect(screen.getAllByText(/Booked Wedding Event Assignments/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Elena & Marcus').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Unassigned').length).toBeGreaterThan(0);
   });
 });

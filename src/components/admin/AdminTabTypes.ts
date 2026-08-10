@@ -258,6 +258,7 @@ export interface AdminCommonProps {
   handleCreateUser: () => Promise<void>;
   newUser: Record<string, unknown>;
   setNewUser: Dispatch<SetStateAction<any>>;
+  getUserFieldErrors?: (u: any, requireAuthFields?: boolean) => Record<string, string>;
   createUserFieldErrors: Record<string, string>;
   setCreateUserFieldErrors: Dispatch<SetStateAction<Record<string, string>>>;
   editingTemplateId: string | null;

@@ -1000,6 +1000,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     handleCreateUser,
     newUser,
     setNewUser,
+    getUserFieldErrors,
     createUserFieldErrors,
     setCreateUserFieldErrors,
     editingTemplateId,
