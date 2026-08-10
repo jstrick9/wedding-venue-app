@@ -24,7 +24,7 @@ export const ModalDialog: React.FC<ModalDialogProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-3 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-2 sm:p-4 overflow-hidden"
       onClick={onClose}
     >
       <div
@@ -34,10 +34,10 @@ export const ModalDialog: React.FC<ModalDialogProps> = ({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`my-auto max-h-[90vh] w-full max-w-3xl flex flex-col rounded-xl bg-white shadow-xl ${className}`}
+        className={`w-full max-w-4xl max-h-[94vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 shrink-0 bg-white rounded-t-xl z-10">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 shrink-0 bg-white z-20">
           <div>
             <h2 id={titleId} className="text-lg font-bold text-gray-900">
               {title}
@@ -53,13 +53,13 @@ export const ModalDialog: React.FC<ModalDialogProps> = ({
             type="button"
             onClick={onClose}
             aria-label={`Close ${title}`}
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors text-lg font-bold"
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors text-lg font-bold shrink-0 ml-4"
           >
             ✕
           </button>
         </div>
 
-        <div className="px-5 py-4 overflow-y-auto flex-1">{children}</div>
+        <div className="p-5 overflow-y-auto flex-1 min-h-0">{children}</div>
       </div>
     </div>
   );

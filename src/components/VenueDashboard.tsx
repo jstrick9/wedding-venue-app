@@ -264,10 +264,10 @@ export function VenueDashboard(props: Props) {
         {section === 'home' && (
           <div className="space-y-5">
             <header
-              className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
+              className="no-print px-6 py-5 flex items-center justify-between shadow-md rounded-2xl mb-5 text-white shrink-0"
               style={{
                 background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
-                borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
+                borderLeft: `6px solid color-mix(in srgb, ${config.primaryLight || '#6b2c5c'} 80%, white)`,
               }}
             >
               <div>
@@ -705,10 +705,10 @@ export function VenueDashboard(props: Props) {
         {section === 'calendar' && (
           <div className="space-y-5">
             <header
-              className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
+              className="no-print px-6 py-5 flex items-center justify-between shadow-md rounded-2xl mb-5 text-white shrink-0"
               style={{
                 background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
-                borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
+                borderLeft: `6px solid color-mix(in srgb, ${config.primaryLight || '#6b2c5c'} 80%, white)`,
               }}
             >
               <div>
@@ -728,10 +728,10 @@ export function VenueDashboard(props: Props) {
         {section === 'couples' && (
           <div className="space-y-5">
             <header
-              className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
+              className="no-print px-6 py-5 flex items-center justify-between shadow-md rounded-2xl mb-5 text-white shrink-0"
               style={{
                 background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
-                borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
+                borderLeft: `6px solid color-mix(in srgb, ${config.primaryLight || '#6b2c5c'} 80%, white)`,
               }}
             >
               <div>

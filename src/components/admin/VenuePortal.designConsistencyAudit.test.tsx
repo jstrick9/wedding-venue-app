@@ -223,4 +223,47 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     expect(screen.getByText('Spaces with a master layout')).toBeInTheDocument();
     expect(screen.getByText('Open now')).toBeInTheDocument();
   });
+
+  it('renders ModalDialog with max-h-[94vh] flex-col container and always-visible header close button preventing top cutoff', () => {
+    render(
+      <StudioLayoutsHome
+        venues={[testVenue]}
+        currentVenueId="venue-1"
+        templates={[]}
+        layoutCategories={[{ id: 'reception', name: 'Reception', color: '#FFF', icon: '🎉', description: 'Reception space' }]}
+        canEdit={true}
+        onOpenVenue={vi.fn()}
+        onSelectTemplate={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toContain('max-h-[94vh]');
+    expect(dialog.className).toContain('rounded-2xl');
+
+    const closeBtn = screen.getByRole('button', { name: /close spaces & layouts/i });
+    expect(closeBtn).toBeInTheDocument();
+  });
+
+  it('renders all main page headers in VenueDashboard with rounded corners (rounded-2xl)', () => {
+    const props: any = {
+      user: testUser,
+      isAdmin: true,
+      isStaff: true,
+      canAdmin: true,
+      canOps: true,
+      onOpenAdmin: vi.fn(),
+      onOpenOperations: vi.fn(),
+      onOpenVendorPanel: vi.fn(),
+      onOpenTimelinePanel: vi.fn(),
+      onLogout: vi.fn(),
+    };
+
+    render(<VenueDashboard {...props} />);
+
+    const homeTitle = screen.getByText('Welcome back to Seven Paths Manor');
+    const headerEl = homeTitle.closest('header');
+    expect(headerEl?.className).toContain('rounded-2xl');
+  });
 });

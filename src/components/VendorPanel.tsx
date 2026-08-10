@@ -119,12 +119,12 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
       <div className={inline ? "w-full h-full flex flex-col" : "w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
         {/* Header */}
         <div
-          className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
+          className="no-print px-6 py-5 flex items-center justify-between shadow-md rounded-2xl mb-5 text-white shrink-0"
           style={{
             background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${
               config.primaryDark || config.primaryColor || '#6b2c5c'
             })`,
-            borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
+            borderLeft: `6px solid color-mix(in srgb, ${config.primaryLight || '#6b2c5c'} 80%, white)`,
           }}
         >
           <div>

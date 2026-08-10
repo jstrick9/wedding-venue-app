@@ -1697,10 +1697,10 @@ const StaffOperationsPanel: React.FC<Props> = ({
   return (
     <div className={inline ? "h-full flex flex-col bg-gray-100" : "fixed inset-0 z-[10000] bg-gray-100/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300"}>
       <header
-        className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
+        className="no-print px-6 py-5 flex items-center justify-between shadow-md rounded-2xl mb-5 text-white shrink-0"
         style={{
           background: `linear-gradient(135deg, ${config.primaryColor}, ${config.primaryDark})`,
-          borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
+          borderLeft: `6px solid color-mix(in srgb, ${config.primaryLight || '#6b2c5c'} 80%, white)`,
         }}
       >
         <div>
