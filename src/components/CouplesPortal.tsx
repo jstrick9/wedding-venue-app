@@ -18,6 +18,7 @@ import {
   saveCoupleSession,
   loadCoupleSession,
   clearCoupleSession,
+  getCoupleTokenFromLocation,
   addCoupleCollaborator,
   removeCoupleCollaborator,
   updateCoupleEvent,
@@ -112,6 +113,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [events, setEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [invalidInvite, setInvalidInvite] = useState(false);
+  const [manualToken, setManualToken] = useState('');
+  const [demoSelectToken, setDemoSelectToken] = useState('');
 
   const event = useMemo(
     () => events.find((e) => e.id === session?.eventId) || null,
@@ -137,20 +140,64 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const canManagePortal = !isComplete && myRole === 'couple';
   const canManageCollaborators = !isComplete && myRole === 'couple';
 
-  // Token-based entry: if we have a token and no session, resolve it and sign in.
+  // Token-based entry: whenever coupleToken is provided (or in window.location),
+  // resolve it and sign in. Importantly, if there is an existing session from a
+  // different couple or old test event, we must override it with the newly requested
+  // token so the user can switch directly to their newly created test wedding event.
   useEffect(() => {
-    if (session) return;
-    if (!coupleToken) return;
-    const resolved = resolveCoupleInviteToken(coupleToken);
+    const tokenToResolve = coupleToken || getCoupleTokenFromLocation(window.location);
+    if (!tokenToResolve) return;
+    // Refresh events from storage so any newly created couple event is available
+    const latestEvents = getCoupleEvents();
+    setEvents(latestEvents);
+
+    const resolved = resolveCoupleInviteToken(tokenToResolve);
     if (!resolved) {
       setInvalidInvite(true);
       return;
     }
+    // If our active session is already for this exact couple and collaborator, nothing to do.
+    if (
+      session &&
+      session.eventId === resolved.event.id &&
+      session.collaboratorId === resolved.collaborator.id
+    ) {
+      return;
+    }
+    setInvalidInvite(false);
+    saveCoupleSession(resolved.event.id, resolved.collaborator.id);
+    acceptCoupleInvite(resolved.event.id, resolved.collaborator.id);
+    const newSession = loadCoupleSession();
+    setSession(newSession);
+    setEvents(getCoupleEvents());
+  }, [coupleToken, session]);
+
+  const handleManualLaunch = (tokenInput: string) => {
+    const token = tokenInput.trim();
+    if (!token) {
+      showToast('Please enter or select an invitation token.', 'warning');
+      return;
+    }
+    const latestEvents = getCoupleEvents();
+    setEvents(latestEvents);
+    const resolved = resolveCoupleInviteToken(token);
+    if (!resolved) {
+      setInvalidInvite(true);
+      showToast('No couple event found matching that token.', 'error');
+      return;
+    }
+    setInvalidInvite(false);
     saveCoupleSession(resolved.event.id, resolved.collaborator.id);
     acceptCoupleInvite(resolved.event.id, resolved.collaborator.id);
     setSession(loadCoupleSession());
     setEvents(getCoupleEvents());
-  }, [coupleToken, session]);
+    try {
+      window.location.hash = `#/couples-portal?token=${encodeURIComponent(token)}`;
+    } catch {
+      // ignore
+    }
+    showToast(`Welcome to the Couples Portal, ${resolved.event.coupleName}!`, 'success');
+  };
 
   const venues = useMemo(() => getVenues(), []);
 
@@ -719,44 +766,92 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   };
 
   // ── Render states ──────────────────────────────────────────────────────────
-  if (invalidInvite) {
+  if (invalidInvite || !session || !event || !me) {
+    const allEvents = events.length > 0 ? events : getCoupleEvents();
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
-        <div className="bg-white rounded-xl shadow p-6 max-w-sm w-full text-center space-y-3">
-          <div className="text-3xl">💌</div>
-          <p className="text-base font-semibold text-gray-800">Invitation not found</p>
-          <p className="text-sm text-gray-600">
-            This invitation link isn't valid. Please check the link, or contact the venue
-            coordinator for a new one.
-          </p>
-          <button
-            type="button"
-            onClick={onExitPortal}
-            className="mt-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
-          >
-            Return to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full space-y-4">
+          <div className="text-center space-y-2">
+            <div className="text-4xl">{invalidInvite ? '💌' : '💍'}</div>
+            <h1 className="text-lg font-bold text-gray-900">
+              {invalidInvite ? 'Invitation not found' : 'Couples Portal Access'}
+            </h1>
+            <p className="text-xs text-gray-600">
+              {invalidInvite
+                ? "This invitation link isn't valid. Try selecting your event below or paste your invitation token."
+                : 'Sign in with your invitation link or select your booked wedding event below to plan your wedding.'}
+            </p>
+          </div>
 
-  if (!session || !event || !me) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
-        <div className="bg-white rounded-xl shadow p-6 max-w-sm w-full text-center space-y-3">
-          <div className="text-3xl">💍</div>
-          <p className="text-base font-semibold text-gray-800">Couples Portal</p>
-          <p className="text-sm text-gray-600">
-            Sign in with the invitation link you received to view and plan your event.
-          </p>
-          <button
-            type="button"
-            onClick={onExitPortal}
-            className="mt-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
-          >
-            Return to Login
-          </button>
+          {/* Quick-Select Booked Couple (Local Test / Demo Mode) */}
+          <div className="rounded-lg bg-purple-50 border border-purple-200 p-3 space-y-2">
+            <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider">
+              ⚡ Quick-Select Booked Couple (Test Mode)
+            </label>
+            {allEvents.length === 0 ? (
+              <p className="text-xs text-gray-500 italic">No couple events exist yet. Create one in Admin → Couples first.</p>
+            ) : (
+              <div className="flex gap-2">
+                <select
+                  value={demoSelectToken}
+                  onChange={(e) => setDemoSelectToken(e.target.value)}
+                  className="flex-1 px-3 py-1.5 bg-white border border-purple-300 rounded-lg text-xs font-medium text-gray-800"
+                  aria-label="Quick select couple event"
+                >
+                  <option value="">-- Select a booked couple --</option>
+                  {allEvents.map((ev) => (
+                    <option key={ev.id} value={ev.inviteToken}>
+                      {ev.coupleName} ({ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'No date'} • Token: {ev.inviteToken})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => handleManualLaunch(demoSelectToken)}
+                  disabled={!demoSelectToken}
+                  className="px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-xs font-bold hover:bg-[#3d1435] disabled:opacity-50 transition-colors shrink-0"
+                >
+                  Launch ↗
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Enter Invitation Token Manually */}
+          <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+              🔑 Enter Invitation Token
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={manualToken}
+                onChange={(e) => setManualToken(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleManualLaunch(manualToken)}
+                placeholder="e.g. cp-a1b2c3d4..."
+                className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-mono"
+                aria-label="Invitation token"
+              />
+              <button
+                type="button"
+                onClick={() => handleManualLaunch(manualToken)}
+                disabled={!manualToken.trim()}
+                className="px-3 py-1.5 rounded-lg bg-gray-800 text-white text-xs font-bold hover:bg-gray-900 disabled:opacity-50 transition-colors shrink-0"
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100 flex justify-center">
+            <button
+              type="button"
+              onClick={onExitPortal}
+              className="text-xs text-gray-500 hover:text-gray-800 hover:underline"
+            >
+              ← Return to Venue Login
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -794,13 +889,23 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
           ← Back to Login
         </button>
         <h1 className="text-sm font-semibold text-gray-800">💍 Couples Portal</h1>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#4A1942] hover:underline"
+            title="Switch to another couple event or test token"
+          >
+            🔄 Switch Couple
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-6">

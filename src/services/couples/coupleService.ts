@@ -29,23 +29,13 @@ const COUPLE_EVENTS_VERSION = 1;
 const SESSION_KEY = STORAGE_KEYS.COUPLE_SESSION;
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
-/** Extract the couple token from the URL (?token= in the hash) and clear it. */
+/** Extract the couple token from the URL (?token= in the hash). */
 export function getCoupleTokenFromLocation(location: Location = window.location): string | undefined {
   const hash = location.hash || '';
   const queryIndex = hash.indexOf('?');
   if (queryIndex >= 0) {
     const params = new URLSearchParams(hash.slice(queryIndex + 1));
-    const token = params.get('token') || undefined;
-    // Clear the token from the URL so it isn't left in browser history.
-    if (token) {
-      const base = hash.slice(0, queryIndex);
-      try {
-        window.history.replaceState(null, '', `${base}`);
-      } catch {
-        // ignore
-      }
-    }
-    return token;
+    return params.get('token') || undefined;
   }
   return undefined;
 }
