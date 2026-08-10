@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Role, PermissionDefinition } from '../../types/rbac';
 import { PERMISSIONS, getChildPermissions } from '../../constants/permissions';
 import ModalDialog from '../ModalDialog';
+import { useBrandingConfig } from '../../config';
 
 interface AccessControlPanelProps {
   onClose: () => void;
@@ -14,6 +15,7 @@ interface AccessControlPanelProps {
 
 export function AccessControlPanel({ onClose, inline = false }: AccessControlPanelProps) {
   const { user } = useAuth();
+  const config = useBrandingConfig();
   const {
     roles,
     groups,
@@ -108,7 +110,12 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
   const content = (
     <div className={inline ? "w-full" : "w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#4A1942] to-[#3d1a45] text-white p-4 flex items-center justify-between">
+      <div
+        className="text-white p-4 flex items-center justify-between shadow-sm"
+        style={{
+          background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+        }}
+      >
         <div>
           <h2 className="text-xl font-bold">🔐 Access Control</h2>
           <p className="text-sm text-white/70">Manage roles, permissions, and user access</p>
@@ -129,11 +136,12 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 py-3 text-sm font-bold transition-colors ${
               activeTab === tab.id
-                ? 'border-b-2 border-[#4A1942] text-[#4A1942]'
+                ? 'border-b-2 font-extrabold'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
+            style={activeTab === tab.id ? { borderColor: config.primaryColor || '#4A1942', color: config.primaryColor || '#4A1942' } : undefined}
           >
             {tab.label} ({tab.count})
           </button>
@@ -150,7 +158,8 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
               <div className="p-3 border-b border-gray-200">
                 <button
                   onClick={() => setShowCreateRole(true)}
-                  className="w-full py-2 bg-[#4A1942] text-white rounded-lg text-sm font-medium hover:bg-[#3b1435] transition-colors"
+                  className="btn-primary w-full py-2 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   ➕ Create Role
                 </button>
@@ -162,9 +171,17 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                     onClick={() => setSelectedRoleId(role.id)}
                     className={`w-full p-3 text-left border-b border-gray-100 transition-colors ${
                       selectedRoleId === role.id
-                        ? 'bg-purple-50 border-l-4 border-l-[#4A1942]'
+                        ? 'border-l-4 font-bold'
                         : 'hover:bg-gray-50'
                     }`}
+                    style={
+                      selectedRoleId === role.id
+                        ? {
+                            borderLeftColor: config.primaryColor || '#4A1942',
+                            backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 6%, transparent)`,
+                          }
+                        : undefined
+                    }
                   >
                     <div className="flex items-center justify-between">
                       <div>
@@ -221,13 +238,15 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                   <div className="flex gap-2 mb-4">
                     <button
                       onClick={() => setViewMode('tree')}
-                      className={`px-3 py-1.5 rounded-lg text-sm ${viewMode === 'tree' ? 'bg-[#4A1942] text-white' : 'bg-gray-100'}`}
+                      className={`px-3.5 py-1.5 rounded-lg text-sm font-bold transition-colors ${viewMode === 'tree' ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                      style={viewMode === 'tree' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
                     >
                       🌳 Tree View
                     </button>
                     <button
                       onClick={() => setViewMode('matrix')}
-                      className={`px-3 py-1.5 rounded-lg text-sm ${viewMode === 'matrix' ? 'bg-[#4A1942] text-white' : 'bg-gray-100'}`}
+                      className={`px-3.5 py-1.5 rounded-lg text-sm font-bold transition-colors ${viewMode === 'matrix' ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                      style={viewMode === 'matrix' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
                     >
                       📊 Matrix View
                     </button>
@@ -388,12 +407,24 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
         {/* Couples & Guest Portal Access Rules Tab */}
         {activeTab === 'portal-access' && (
           <div className="p-6 space-y-6">
-            <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div
+              className="rounded-xl border p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              style={{
+                backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 6%, transparent)`,
+                borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 25%, transparent)`,
+              }}
+            >
               <div className="space-y-1">
-                <h3 className="font-bold text-base text-purple-900">
+                <h3
+                  className="font-bold text-base"
+                  style={{ color: config.primaryDark || '#3d1a45' }}
+                >
                   💍 Couples &amp; Guest Portal Access Control Matrix
                 </h3>
-                <p className="text-xs text-purple-700 max-w-3xl">
+                <p
+                  className="text-xs max-w-3xl"
+                  style={{ color: config.primaryColor || '#4A1942' }}
+                >
                   Configure external client portal access control rules and security gating for booked couples, wedding planners, and invited guests across Seven Paths Manor.
                 </p>
               </div>
@@ -497,8 +528,14 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             {/* Create role form (original logic) */}
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowCreateRole(false)} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
-              <button onClick={handleCreateRole} className="flex-1 px-4 py-2 bg-[#4A1942] text-white rounded-lg">Create Role</button>
+              <button onClick={() => setShowCreateRole(false)} className="flex-1 px-4 py-2 border rounded-lg font-semibold hover:bg-gray-50">Cancel</button>
+              <button
+                onClick={handleCreateRole}
+                className="btn-primary flex-1 px-4 py-2 text-white rounded-lg font-bold shadow-sm transition-colors"
+                style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+              >
+                Create Role
+              </button>
             </div>
           </div>
         </div>

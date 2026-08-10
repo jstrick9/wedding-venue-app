@@ -513,7 +513,10 @@ export function UserManagement(props: AdminCommonProps) {
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setShowCreateUserModal(true)}
-                    className="px-4 py-2.5 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center gap-2"
+                    className="btn-primary px-4 py-2.5 text-white rounded-lg hover:shadow-lg transition-all font-bold flex items-center gap-2"
+                    style={{
+                      background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                    }}
                   >
                     <span className="text-lg">➕</span> Add User
                   </button>
@@ -526,15 +529,15 @@ export function UserManagement(props: AdminCommonProps) {
                     <span>🗓️</span> Assign Staff to Events
                   </button>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 bg-purple-500 rounded-full"></span> Admin
+                <div className="flex items-center gap-3 text-xs font-bold text-gray-600">
+                  <span className="flex items-center gap-1.5 bg-purple-50 text-purple-900 px-2.5 py-1 rounded-full border border-purple-200">
+                    <span className="w-2.5 h-2.5 bg-purple-600 rounded-full"></span> 👑 Administrator (Full System Access)
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 bg-blue-500 rounded-full"></span> Basic
+                  <span className="flex items-center gap-1.5 bg-blue-50 text-blue-900 px-2.5 py-1 rounded-full border border-blue-200">
+                    <span className="w-2.5 h-2.5 bg-blue-600 rounded-full"></span> 🛡️ Manager/Staff (Operations Access)
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-3 h-3 bg-gray-300 rounded-full"></span> Inactive
+                  <span className="flex items-center gap-1.5 bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full border border-gray-200">
+                    <span className="w-2.5 h-2.5 bg-gray-400 rounded-full"></span> ⏸️ Inactive
                   </span>
                 </div>
               </div>
@@ -757,7 +760,10 @@ export function UserManagement(props: AdminCommonProps) {
                   <p className="text-gray-500 mb-4">Get started by creating your first user account</p>
                   <button
                     onClick={() => setShowCreateUserModal(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] text-white rounded-lg hover:shadow-lg transition-all font-medium"
+                    className="btn-primary px-6 py-3 text-white rounded-lg hover:shadow-lg transition-all font-bold"
+                    style={{
+                      background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                    }}
                   >
                     ➕ Create First User
                   </button>
@@ -1306,7 +1312,7 @@ export function UserManagement(props: AdminCommonProps) {
                               />
                             </div>
                             
-                            {/* Permissions (for Basic Users) */}
+                            {/* Permissions (for Internal Staff / Shared Users) */}
                             {(u.userRole || (u.role === 'admin' ? 'admin' : 'shared')) !== 'admin' && (
                               <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
                                 <h4 className="text-sm font-semibold text-blue-700 flex items-center gap-2 mb-4">
@@ -1447,7 +1453,12 @@ export function UserManagement(props: AdminCommonProps) {
 			  {showCreateUserModal && (
 			    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4">
 				  <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-				    <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#4A1942] to-[#6b2a64]">
+				    <div
+                      className="p-6 border-b border-gray-200 text-white"
+                      style={{
+                        background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                      }}
+                    >
 					  <h3 className="text-xl font-bold text-white flex items-center gap-2">
 					    ➕ Create New User
 					  </h3>
@@ -1639,7 +1650,8 @@ export function UserManagement(props: AdminCommonProps) {
 					  </button>
 					  <button
 					    onClick={handleCreateUser}
-					    className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] transition-colors font-medium"
+					    className="btn-primary px-4 py-2 text-white rounded-lg transition-colors font-bold shadow-sm"
+                        style={{ backgroundColor: config.primaryColor || '#4A1942' }}
 					  >
 					    Create User
 					  </button>
@@ -1652,7 +1664,12 @@ export function UserManagement(props: AdminCommonProps) {
               {showStaffEventMatrixModal && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[11000] p-4">
                   <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-                    <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-[#4A1942] to-[#6b2a64] flex items-center justify-between text-white">
+                    <div
+                      className="p-5 border-b border-gray-200 text-white flex items-center justify-between"
+                      style={{
+                        background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                      }}
+                    >
                       <div>
                         <h3 className="text-xl font-bold flex items-center gap-2">
                           <span>🗓️</span> Staff-to-Event Assignment Command Matrix
@@ -1776,7 +1793,8 @@ export function UserManagement(props: AdminCommonProps) {
                                         staffSelect.value = '';
                                       }
                                     }}
-                                    className="px-4 py-2 bg-[#4A1942] text-white rounded-lg text-xs font-bold hover:bg-[#5c2a64] transition-colors shrink-0"
+                                    className="btn-primary px-4 py-2 text-white rounded-lg text-xs font-bold transition-colors shrink-0 shadow-sm"
+                                    style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                                   >
                                     Assign →
                                   </button>
