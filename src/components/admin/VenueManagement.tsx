@@ -309,7 +309,7 @@ export function VenueManagement(props: AdminCommonProps) {
 
               {/* Compact 1-Row Quick Add Venue Presets */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="font-semibold text-gray-500">✨ Quick Presets:</span>
+                <span className="font-semibold text-gray-500">⚡ Quick Presets:</span>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
@@ -333,8 +333,9 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-2.5 py-1 bg-white rounded-md text-xs font-bold transition-colors shadow-sm"
+                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors border"
                     style={{
+                      backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 10%, transparent)`,
                       borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 30%, transparent)`,
                       color: config.primaryColor || '#4A1942',
                     }}
@@ -363,7 +364,7 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-2.5 py-1 bg-white border border-amber-200 rounded-md text-xs font-medium hover:bg-amber-50 transition-colors"
+                    className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs font-medium hover:bg-amber-100 transition-colors"
                   >
                     + 🍸 Cocktail
                   </button>
@@ -389,7 +390,7 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-2.5 py-1 bg-white border border-green-200 rounded-md text-xs font-medium hover:bg-green-50 transition-colors"
+                    className="px-2.5 py-1 bg-green-50 border border-green-200 text-green-800 rounded-md text-xs font-medium hover:bg-green-100 transition-colors"
                   >
                     + 💒 Ceremony
                   </button>
@@ -424,7 +425,12 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-2.5 py-1 bg-white border border-[#4A1942]/30 rounded-md text-xs font-medium hover:bg-[#4A1942]/10 transition-colors"
+                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors border"
+                    style={{
+                      backgroundColor: `color-mix(in srgb, ${config.accentColor || '#8B5A8B'} 12%, transparent)`,
+                      borderColor: `color-mix(in srgb, ${config.accentColor || '#8B5A8B'} 35%, transparent)`,
+                      color: config.accentColor || '#8B5A8B',
+                    }}
                   >
                     + 🏨 Lodging
                   </button>
@@ -450,7 +456,7 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-2.5 py-1 bg-white border border-rose-200 rounded-md text-xs font-medium hover:bg-rose-50 transition-colors"
+                    className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-800 rounded-md text-xs font-medium hover:bg-rose-100 transition-colors"
                   >
                     + 🍽️ Rehearsal
                   </button>

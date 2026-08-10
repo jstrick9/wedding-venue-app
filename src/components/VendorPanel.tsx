@@ -140,15 +140,17 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
               <span>🖨️</span>
               <span>Print Directory</span>
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-            >
-              <span>←</span>
-              <span>Dashboard</span>
-            </button>
-            <button type="button" onClick={onClose} className="no-print text-white text-xl hover:opacity-80 p-1" aria-label="Close">✕</button>
+            {!inline && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+              >
+                <span>←</span>
+                <span>Dashboard</span>
+              </button>
+            )}
+            <button type="button" onClick={onClose} className="no-print text-white text-xl hover:opacity-80 p-1" aria-label="Close Vendor Panel">✕</button>
           </div>
         </div>
 

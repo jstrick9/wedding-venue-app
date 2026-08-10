@@ -1018,7 +1018,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { label: 'Venues & Inventory', icon: '🏛️' },
     { label: 'Layout Content', icon: '🎨' },
     { label: 'Couples Portal', icon: '💍' },
-    { label: 'System Brand & Access', icon: '⚙️' },
+    { label: 'Branding, Access, & Configuration', icon: '⚙️' },
     { label: 'System & Backup', icon: '💾' },
   ];
 
@@ -1059,13 +1059,13 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'wayfinding', label: '🗺️ Wayfinding & Rules', icon: '🗺️', Component: VenueWayfindingManagement, props: { config, venues, onShowSuccess: showSuccess, onOpenVenueMap }, group: 'Couples Portal' },
     { id: 'event-questions', label: '❓ Event Questions', icon: '❓', Component: EventQuestionsManagement, props: commonProps, group: 'Couples Portal' },
 
-    // System Brand & Access
-    { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps, group: 'System Brand & Access' },
-    { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'System Brand & Access' },
-    { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'System Brand & Access' },
-    { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'System Brand & Access' },
-    { id: 'communication-templates', label: '💬 Communication Templates', icon: '💬', Component: CommunicationTemplatesManagement, props: commonProps, group: 'System Brand & Access' },
-    { id: 'operations-settings', label: '🛠️ Operations & Checklists', icon: '🛠️', Component: OperationsSettingsManagement, props: commonProps, group: 'System Brand & Access' },
+    // Branding, Access, & Configuration
+    { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
+    { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
+    { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'Branding, Access, & Configuration' },
+    { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'Branding, Access, & Configuration' },
+    { id: 'communication-templates', label: '💬 Communication Templates', icon: '💬', Component: CommunicationTemplatesManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
+    { id: 'operations-settings', label: '🛠️ Operations & Checklists', icon: '🛠️', Component: OperationsSettingsManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
 
     // System & Backup
     { id: 'security-audit', label: '🛡️ Security & Audit', icon: '🛡️', Component: SecurityAuditManagement, props: commonProps, group: 'System & Backup' },

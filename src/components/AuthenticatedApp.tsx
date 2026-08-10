@@ -849,18 +849,7 @@ export default function AuthenticatedApp() {
 
   if (view === 'admin') {
     return (
-      <div className="h-screen flex flex-col" style={{ backgroundColor: '#f3f4f6' }}>
-        <header className="h-14 px-4 flex items-center justify-between bg-white border-b border-gray-200">
-          <button
-            type="button"
-            onClick={() => { window.location.hash = '#/dashboard'; setView('dashboard'); closeAll(); }}
-            className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-          >
-            ← Dashboard
-          </button>
-          <span className="text-sm font-semibold text-gray-700">Admin</span>
-          <div className="w-24" />
-        </header>
+      <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#f3f4f6' }}>
         <div className="flex-1 overflow-hidden">
           {canOpenAdminPanel ? (
             <AdminPanel

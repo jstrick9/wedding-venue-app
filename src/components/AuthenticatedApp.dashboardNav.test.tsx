@@ -51,7 +51,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(window.location.hash).toBe('#/dashboard');
 
     // Click close button in Vendors header
-    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard/i });
+    const closeBtn = screen.getByRole('button', { name: /close vendor panel/i });
     fireEvent.click(closeBtn);
 
     // Verify user is back on dashboard home and did not jump to #/studio
@@ -72,7 +72,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(await screen.findByRole('heading', { name: /wedding timeline/i })).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard/i });
+    const closeBtn = screen.getByRole('button', { name: /close timeline panel/i });
     fireEvent.click(closeBtn);
 
     expect(screen.queryByRole('heading', { name: /wedding timeline/i })).not.toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(await screen.findByRole('heading', { name: /staff & operations/i })).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard/i });
+    const closeBtn = screen.getByRole('button', { name: /close staff operations/i });
     fireEvent.click(closeBtn);
 
     expect(screen.queryByRole('heading', { name: /staff & operations/i })).not.toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(await screen.findByRole('heading', { name: /wedding timeline/i })).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard/i });
+    const closeBtn = screen.getByRole('button', { name: /close timeline panel/i });
     fireEvent.click(closeBtn);
 
     expect(screen.queryByRole('heading', { name: /wedding timeline/i })).not.toBeInTheDocument();
@@ -135,7 +135,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     ).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard home/i });
+    const closeBtn = screen.getByRole('button', { name: /close chat panel/i });
     fireEvent.click(closeBtn);
 
     expect(
@@ -160,7 +160,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     ).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /←\s*dashboard home/i });
+    const closeBtn = screen.getByRole('button', { name: /close chat panel/i });
     fireEvent.click(closeBtn);
 
     expect(

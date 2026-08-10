@@ -223,14 +223,16 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                 <span>Print</span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-            >
-              <span>←</span>
-              <span>Dashboard</span>
-            </button>
+            {!inline && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+              >
+                <span>←</span>
+                <span>Dashboard</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}

@@ -1713,14 +1713,16 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <span>🖨️</span>
             <span>{activeTab === 'beo' ? 'Print BEO' : 'Print Sheet'}</span>
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-          >
-            <span>←</span>
-            <span>Dashboard</span>
-          </button>
+          {!inline && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+            >
+              <span>←</span>
+              <span>Dashboard</span>
+            </button>
+          )}
           <button onClick={onClose} aria-label="Close Staff Operations" className="no-print p-2 hover:bg-white/10 rounded-lg text-white transition-colors text-xl font-bold">✕</button>
         </div>
       </header>

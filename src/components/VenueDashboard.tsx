@@ -263,21 +263,58 @@ export function VenueDashboard(props: Props) {
       <main className="flex-1 overflow-y-auto p-5 lg:pl-5 pl-16">
         {section === 'home' && (
           <div className="space-y-5">
-            <div>
-              <h1 className="text-2xl font-bold" style={{ color: config.textColor }}>Welcome back</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Here's what's happening at {config.venueName || 'your venue'}.</p>
-            </div>
+            <header
+              className="p-6 flex items-center justify-between border-b shadow-sm mb-5 rounded-2xl"
+              style={{
+                background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+              }}
+            >
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <span>🏠</span>
+                  <span>Welcome back to {config.venueName || 'Seven Paths Manor'}</span>
+                </h1>
+                <p className="text-sm text-white/80 mt-1">
+                  Here's what's happening at your venue today and upcoming events.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {stats.unread > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSection('chat')}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-900 shadow-sm hover:bg-white/90 transition-all flex items-center gap-1.5"
+                  >
+                    <span>💬</span>
+                    <span>{stats.unread} Unread Message{stats.unread === 1 ? '' : 's'}</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => props.onOpenAdmin()}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-colors"
+                >
+                  ⚙️ System Settings
+                </button>
+              </div>
+            </header>
 
             {/* Live Couple Messages Alert Banner */}
             {stats.unread > 0 && (
-              <div className="rounded-xl border border-purple-300 bg-purple-50 p-4 mb-2 flex items-center justify-between gap-3 flex-wrap shadow-sm">
+              <div
+                className="rounded-xl border p-4 mb-2 flex items-center justify-between gap-3 flex-wrap shadow-sm"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 8%, transparent)`,
+                  borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 30%, transparent)`,
+                }}
+              >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl" aria-hidden="true">💬</span>
                   <div>
-                    <div className="text-sm font-bold text-purple-900">
+                    <div className="text-sm font-bold" style={{ color: config.primaryColor || '#4A1942' }}>
                       {stats.unread} Unread Message{stats.unread === 1 ? '' : 's'} from Couples
                     </div>
-                    <p className="text-xs text-purple-700 mt-0.5">
+                    <p className="text-xs mt-0.5 opacity-80">
                       Couples have sent messages in the Couples Portal Chat requiring your review or response.
                     </p>
                   </div>
@@ -285,7 +322,7 @@ export function VenueDashboard(props: Props) {
                 <button
                   type="button"
                   onClick={() => setSection('chat')}
-                  className="btn-primary text-xs font-bold text-white bg-[#4A1942] hover:bg-[#3b1435] px-3.5 py-2 rounded-lg transition-colors shrink-0 shadow-sm"
+                  className="btn-primary text-xs font-bold text-white px-3.5 py-2 rounded-lg transition-colors shrink-0 shadow-sm"
                   style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   Open Portal Chat &amp; Reply →
@@ -665,44 +702,57 @@ export function VenueDashboard(props: Props) {
         )}
 
         {section === 'calendar' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 flex-wrap bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSection('home')}
-                  className="inline-flex items-center gap-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-                >
-                  <span>←</span>
-                  <span>Dashboard Home</span>
-                </button>
-                <h1 className="text-xl font-bold text-gray-800">📅 Venue Calendar</h1>
+          <div className="space-y-5">
+            <header
+              className="p-6 flex items-center justify-between border-b shadow-sm mb-5 rounded-2xl"
+              style={{
+                background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+              }}
+            >
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <span>📅</span>
+                  <span>Venue Calendar</span>
+                </h1>
+                <p className="text-sm text-white/80 mt-1">
+                  Comprehensive event schedule, bookings, tours, and day-of operations for {config.venueName || 'your venue'}
+                </p>
               </div>
-            </div>
+            </header>
             <VenueCalendar venues={venues} onOpenCouple={(id) => openCouplePortal(id)} />
           </div>
         )}
 
         {section === 'couples' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSection('home')}
-                  className="inline-flex items-center gap-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-                >
-                  <span>←</span>
-                  <span>Dashboard Home</span>
-                </button>
-                <h1 className="text-2xl font-bold">💍 Couples Portal</h1>
+          <div className="space-y-5">
+            <header
+              className="p-6 flex items-center justify-between border-b shadow-sm mb-5 rounded-2xl"
+              style={{
+                background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+              }}
+            >
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <span>💍</span>
+                  <span>Couples Portal</span>
+                </h1>
+                <p className="text-sm text-white/80 mt-1">
+                  Manage booked weddings, layout approvals, guest lists, and interactive couple experiences
+                </p>
               </div>
-              {coupleEvents.some((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
-                <Button tone="primary" size="sm" onClick={() => props.onOpenAdmin('couples')}>
-                  Review &amp; approve layouts in Admin
-                </Button>
-              )}
-            </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {coupleEvents.some((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
+                  <button
+                    type="button"
+                    onClick={() => props.onOpenAdmin('couples')}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-900 shadow-sm hover:bg-white/90 transition-all flex items-center gap-1.5"
+                  >
+                    <span>⚡</span>
+                    <span>Review &amp; approve layouts in Admin</span>
+                  </button>
+                )}
+              </div>
+            </header>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {coupleEvents.length === 0 && <p className="text-sm text-gray-400">No couple events yet.</p>}
               {coupleEvents.map((e) => (

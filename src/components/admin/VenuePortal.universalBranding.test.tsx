@@ -156,10 +156,10 @@ describe('Venue Portal (#/admin) — Exhaustive Universal Branding Integration (
   it('applies configured branding to AccessControlPanel header gradient and + Create Role button', () => {
     render(<AccessControlPanel onClose={() => {}} inline={true} />);
 
-    // 1. Verify header has inline gradient matching primaryColor (#10b981) and primaryDark (#047857)
-    const titleEl = screen.getByText('🔐 Access Control');
-    const headerEl = titleEl.parentElement?.parentElement;
-    expect(headerEl?.getAttribute('style')).toContain('linear-gradient(135deg, rgb(16, 185, 129), rgb(4, 120, 87))');
+    // 1. Verify header has inline border-left matching primaryColor (#10b981)
+    const titleEl = screen.getByText('Access Control');
+    const headerEl = titleEl.closest('[style*="border-left"]');
+    expect(headerEl?.getAttribute('style')).toContain('border-left: 4px solid rgb(16, 185, 129)');
 
     // 2. Verify + Create Role button uses inline background-color matching primaryColor
     const createRoleBtn = screen.getByRole('button', { name: /Create Role/i });

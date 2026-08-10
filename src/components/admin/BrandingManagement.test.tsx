@@ -47,7 +47,7 @@ describe('BrandingManagement UI/UX & Live Branding Theme Engine (#149)', () => {
     expect(screen.getByText(/wcag aa text contrast/i)).toBeInTheDocument();
 
     expect(
-      screen.getByRole('button', { name: /header banner/i })
+      screen.getByRole('button', { name: /home & landing page/i })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /dashboard kpi/i })
@@ -61,7 +61,7 @@ describe('BrandingManagement UI/UX & Live Branding Theme Engine (#149)', () => {
     render(<BrandingManagement {...dummyProps} />);
 
     // Initially Header Banner preview is visible
-    expect(screen.getByText('Header Preview')).toBeInTheDocument();
+    expect(screen.getByText('● Active Brand')).toBeInTheDocument();
 
     // Click Dashboard KPI tab
     const dashTab = screen.getByRole('button', { name: /dashboard kpi/i });

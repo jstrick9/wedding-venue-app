@@ -7,6 +7,7 @@ import { Role, PermissionDefinition } from '../../types/rbac';
 import { PERMISSIONS, getChildPermissions } from '../../constants/permissions';
 import ModalDialog from '../ModalDialog';
 import { useBrandingConfig } from '../../config';
+import { BrandedSectionHeader } from './shared/AdminSharedComponents';
 
 interface AccessControlPanelProps {
   onClose: () => void;
@@ -108,20 +109,17 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
 
   // Main content (extracted so we can conditionally wrap it)
   const content = (
-    <div className={inline ? "w-full" : "w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
-      {/* Header */}
-      <div
-        className="text-white p-4 flex items-center justify-between shadow-sm"
-        style={{
-          background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
-        }}
-      >
-        <div>
-          <h2 className="text-xl font-bold">🔐 Access Control</h2>
-          <p className="text-sm text-white/70">Manage roles, permissions, and user access</p>
-        </div>
+    <div className={inline ? "w-full space-y-4" : "w-full max-w-6xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
+      {/* Executive Branded Section Header */}
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <BrandedSectionHeader
+          icon="🔐"
+          title="Access Control"
+          description="Manage roles, permissions, and user access across the venue platform"
+          config={config}
+        />
         {!inline && (
-          <button onClick={onClose} aria-label="Close access control" className="p-2 hover:bg-white/20 rounded-lg transition-colors">✕</button>
+          <button onClick={onClose} aria-label="Close access control" className="p-2 text-gray-400 hover:text-gray-700 rounded-lg transition-colors text-lg font-bold">✕</button>
         )}
       </div>
 
@@ -209,10 +207,24 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                       <h3 className="text-lg font-semibold">{selectedRole.name}</h3>
                       <p className="text-sm text-gray-500">{selectedRole.description}</p>
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                        <span
+                          className="text-xs font-semibold px-2.5 py-0.5 rounded-full border"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`,
+                            borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 30%, transparent)`,
+                            color: config.primaryColor || '#4A1942',
+                          }}
+                        >
                           Hierarchy: {selectedRole.hierarchy}
                         </span>
-                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                        <span
+                          className="text-xs font-semibold px-2.5 py-0.5 rounded-full border"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, ${config.accentColor || '#8B5A8B'} 12%, transparent)`,
+                            borderColor: `color-mix(in srgb, ${config.accentColor || '#8B5A8B'} 30%, transparent)`,
+                            color: config.accentColor || '#8B5A8B',
+                          }}
+                        >
                           {selectedRole.hierarchy >= 90 ? '👑 Administrator Role' : selectedRole.hierarchy >= 40 ? '🛡️ Internal Staff Role' : '💍 External Portal Role'}
                         </span>
                         {selectedRole.isImmutable && (
@@ -501,7 +513,14 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                         <h4 className="font-bold text-sm text-gray-900">{rule.title}</h4>
                       </div>
                       <p className="text-xs text-gray-500">{rule.desc}</p>
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800 mt-1">
+                      <span
+                        className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold mt-1 border"
+                        style={{
+                          backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 10%, transparent)`,
+                          borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 25%, transparent)`,
+                          color: config.primaryColor || '#4A1942',
+                        }}
+                      >
                         {rule.category}
                       </span>
                     </div>

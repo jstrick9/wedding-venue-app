@@ -302,7 +302,7 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <BrandedSectionHeader 
         icon="🎀" 
         title="Decor & Design Management" 
@@ -310,11 +310,79 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
         config={config}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <BrandedStatCard icon="🎀" label="Catalog Items" value={stats.totalItems} config={config} />
         <BrandedStatCard icon="📁" label="Categories" value={stats.totalCategories} config={config} variant="accent" />
         <BrandedStatCard icon="📦" label="Total Stock" value={stats.totalStock} config={config} variant="success" />
         <BrandedStatCard icon="✨" label="Design Packages" value={stats.totalPackages} config={config} variant="secondary" />
+      </div>
+
+      {/* Compact 1-Row Quick Add Decor Presets */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-semibold text-gray-500">⚡ Quick Presets:</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              const presets = [
+                { id: `decor-${Date.now()}-1`, name: 'Ceremony Arch / Arbor', categoryId: 'ceremony-florals', width: 6, height: 2, widthInches: 0, heightInches: 0, icon: '🌸', inventoryCount: 2, defaultColor: '#FFFFFF', createdAt: new Date().toISOString() },
+                { id: `decor-${Date.now()}-2`, name: 'Aisle Floral Marker', categoryId: 'ceremony-florals', width: 1, height: 1, widthInches: 0, heightInches: 0, icon: '🌷', inventoryCount: 16, defaultColor: '#FFFFFF', createdAt: new Date().toISOString() },
+              ];
+              setDecorItems([...decorItems, ...presets]);
+              onShowSuccess('Added Ceremony Florals presets!');
+            }}
+            className="px-2.5 py-1 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-medium hover:bg-pink-100 transition-colors"
+          >
+            + 🌸 Ceremony Florals
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const presets = [
+                { id: `decor-${Date.now()}-1`, name: 'Pillar Candle Trio', categoryId: 'table-centerpieces', width: 1, height: 1, widthInches: 0, heightInches: 0, icon: '🕯️', inventoryCount: 40, defaultColor: '#FFF8DC', createdAt: new Date().toISOString() },
+                { id: `decor-${Date.now()}-2`, name: 'Eucalyptus Table Garland', categoryId: 'table-centerpieces', width: 6, height: 1, widthInches: 0, heightInches: 0, icon: '🌿', inventoryCount: 25, defaultColor: '#2E8B57', createdAt: new Date().toISOString() },
+              ];
+              setDecorItems([...decorItems, ...presets]);
+              onShowSuccess('Added Table Centerpieces presets!');
+            }}
+            className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs font-medium hover:bg-amber-100 transition-colors"
+          >
+            + 🕯️ Centerpieces
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const presets = [
+                { id: `decor-${Date.now()}-1`, name: 'Crystal Chandelier', categoryId: 'lighting-drapery', width: 3, height: 3, widthInches: 0, heightInches: 0, icon: '✨', inventoryCount: 4, defaultColor: '#FFD700', createdAt: new Date().toISOString() },
+                { id: `decor-${Date.now()}-2`, name: 'Ceiling Drapery Swag (20ft)', categoryId: 'lighting-drapery', width: 20, height: 2, widthInches: 0, heightInches: 0, icon: '🎀', inventoryCount: 8, defaultColor: '#FFFFFF', createdAt: new Date().toISOString() },
+              ];
+              setDecorItems([...decorItems, ...presets]);
+              onShowSuccess('Added Lighting & Drapery presets!');
+            }}
+            className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors"
+          >
+            + ✨ Lighting &amp; Drapery
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const presets = [
+                { id: `decor-${Date.now()}-1`, name: 'Welcome Mirror Sign', categoryId: 'signage-accents', width: 2.5, height: 1, widthInches: 0, heightInches: 0, icon: '🪞', inventoryCount: 2, defaultColor: '#C0C0C0', createdAt: new Date().toISOString() },
+                { id: `decor-${Date.now()}-2`, name: 'Lounge Sofa Seating Group', categoryId: 'signage-accents', width: 7, height: 4, widthInches: 0, heightInches: 0, icon: '🛋️', inventoryCount: 3, defaultColor: '#F5F5DC', createdAt: new Date().toISOString() },
+              ];
+              setDecorItems([...decorItems, ...presets]);
+              onShowSuccess('Added Lounge & Bar Decor presets!');
+            }}
+            className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors border"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 10%, transparent)`,
+              borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 30%, transparent)`,
+              color: config.primaryColor || '#4A1942',
+            }}
+          >
+            + 🥂 Lounge &amp; Signage
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -323,9 +391,10 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
           onClick={() => setActiveTab('catalog')}
           className={`px-4 py-2.5 font-medium text-sm transition-colors ${
             activeTab === 'catalog' 
-              ? 'border-b-2 border-[#4A1942] text-[#4A1942]' 
+              ? 'border-b-2 font-bold' 
               : 'text-gray-500 hover:text-gray-700'
           }`}
+          style={activeTab === 'catalog' ? { borderColor: config.primaryColor || '#4A1942', color: config.primaryColor || '#4A1942' } : undefined}
         >
           🗂️ Catalog Items
         </button>
@@ -333,19 +402,21 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
           onClick={() => setActiveTab('categories')}
           className={`px-4 py-2.5 font-medium text-sm transition-colors ${
             activeTab === 'categories' 
-              ? 'border-b-2 border-[#4A1942] text-[#4A1942]' 
+              ? 'border-b-2 font-bold' 
               : 'text-gray-500 hover:text-gray-700'
           }`}
+          style={activeTab === 'categories' ? { borderColor: config.primaryColor || '#4A1942', color: config.primaryColor || '#4A1942' } : undefined}
         >
           📁 Categories
         </button>
         <button
           onClick={() => setActiveTab('packages')}
-          className={`px-6 py-3 font-medium text-sm transition-colors whitespace-nowrap ${
+          className={`px-4 py-2.5 font-medium text-sm transition-colors whitespace-nowrap ${
             activeTab === 'packages' 
-              ? 'border-b-2 border-[#4A1942] text-[#4A1942]' 
+              ? 'border-b-2 font-bold' 
               : 'text-gray-500 hover:text-gray-700'
           }`}
+          style={activeTab === 'packages' ? { borderColor: config.primaryColor || '#4A1942', color: config.primaryColor || '#4A1942' } : undefined}
         >
           🎁 Packages & Styles
         </button>
@@ -355,7 +426,8 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
         <div className="px-4 py-2 flex justify-start">
           <button 
             onClick={handleLoadDefaultCategories}
-            className="text-xs text-purple-600 font-bold hover:underline flex items-center gap-1"
+            className="text-xs font-bold hover:underline flex items-center gap-1"
+            style={{ color: config.primaryColor || '#4A1942' }}
           >
             ✨ Load Wedding Standard Categories
           </button>
@@ -366,34 +438,44 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
       <div className="bg-white p-4 rounded-b-xl shadow-sm border border-t-0 border-gray-200 min-h-[400px]">
         {activeTab === 'catalog' && (
           <div className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                <input 
-                  type="text"
-                  placeholder="Search catalog..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                />
+            {/* Integrated Decor Search & Action Bar */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-xs">🔍</span>
+                  <input
+                    type="search"
+                    placeholder="Search catalog..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-48 pl-8 pr-3 py-1.5 rounded-lg border border-gray-300 text-xs focus:outline-none focus:ring-2"
+                    aria-label="Search decor items"
+                  />
+                </div>
+                <select 
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                  className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2"
+                  aria-label="Filter by category"
+                >
+                  <option value="all">All Categories</option>
+                  {decorCategories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                <span className="text-gray-300">|</span>
+                <span className="text-xs text-gray-600 font-medium">{filteredItems.length} Decor items</span>
               </div>
-              <select 
-                value={selectedCategoryId}
-                onChange={(e) => setSelectedCategoryId(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-              >
-                <option value="all">All Categories</option>
-                {decorCategories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-              <button 
-                onClick={handleAddDecorItem}
-                className="px-6 py-2 text-white font-medium rounded-lg hover:opacity-90 transition-all active:scale-95"
-                style={{ backgroundColor: config.primaryColor }}
-              >
-                + Add Decor Item
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={handleAddDecorItem}
+                  className="px-3 py-1.5 text-white font-semibold rounded-lg hover:opacity-90 transition-all shadow-sm flex items-center gap-1"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                >
+                  <span>+</span>
+                  <span>Add Decor Item</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -451,7 +533,7 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
                             type="text"
                             value={item.name}
                             onChange={(e) => handleUpdateDecorItem(item.id, { name: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 outline-none"
                           />
                         </div>
                         <div>
@@ -459,7 +541,7 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
                           <select 
                             value={item.categoryId}
                             onChange={(e) => handleUpdateDecorItem(item.id, { categoryId: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 outline-none"
                           >
                             <option value="uncategorized">Uncategorized</option>
                             {decorCategories.map(cat => (
@@ -528,7 +610,12 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
                           <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Custom Drawing</label>
                           <button 
                             onClick={() => { setActiveCustomItemId(item.id); setShowDrawingTool(true); }}
-                            className="w-full px-4 py-2 border border-purple-200 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
+                            className="w-full px-4 py-2 border rounded-lg transition-colors font-medium"
+                            style={{
+                              borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 30%, transparent)`,
+                              backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 8%, transparent)`,
+                              color: config.primaryColor || '#4A1942',
+                            }}
                           >
                             🎨 Draw Vector Shape
                           </button>
@@ -577,7 +664,8 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
                       type="text"
                       value={cat.name}
                       onChange={(e) => handleUpdateCategory(cat.id, { name: e.target.value })}
-                      className="w-full bg-transparent font-semibold text-gray-900 border-b border-transparent focus:border-purple-500 outline-none"
+                      className="w-full bg-transparent font-semibold text-gray-900 border-b border-transparent outline-none focus:border-b-2"
+                      style={{ borderColor: undefined }}
                     />
                     <div className="flex items-center gap-2 mt-1">
                       <input 
@@ -637,7 +725,7 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
                         type="text" 
                         value={pkg.name}
                         onChange={(e) => setDecorPackages(decorPackages.map(p => p.id === pkg.id ? { ...p, name: e.target.value } : p))}
-                        className="text-lg font-bold bg-transparent border-b border-transparent focus:border-purple-500 outline-none w-full"
+                        className="text-lg font-bold bg-transparent border-b border-transparent outline-none w-full focus:border-b-2"
                       />
                       <select 
                         value={pkg.style}
@@ -670,7 +758,7 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
                     ) : (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {pkg.arrangements.map((item, idx) => (
-                          <div key={idx} className="p-2 border border-purple-100 rounded-lg bg-purple-50/30 flex items-center justify-between">
+                          <div key={idx} className="p-2 border border-gray-200 rounded-lg bg-gray-50/60 flex items-center justify-between">
                             <span className="text-xs truncate">
                               {decorArrangements.find(a => a.id === item.arrangementId)?.name || 'Unknown Design'}
                             </span>
@@ -693,7 +781,7 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
                       <label className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Add Existing Design</label>
                       <div className="flex gap-2">
                         <select 
-                          className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
+                          className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2"
                           onChange={(e) => {
                             if (!e.target.value) return;
                             const arrId = e.target.value;

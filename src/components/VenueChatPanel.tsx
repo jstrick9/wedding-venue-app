@@ -181,14 +181,16 @@ export function VenueChatPanel({
           <div className="flex items-center gap-2">
             {onClose && (
               <>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-                >
-                  <span>←</span>
-                  <span>Dashboard Home</span>
-                </button>
+                {!inline && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                  >
+                    <span>←</span>
+                    <span>Dashboard Home</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onClose}
