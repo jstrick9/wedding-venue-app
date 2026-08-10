@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Comprehensive Platform-Wide Universal Branding Audit & Completion (#151)** —
+  audited and upgraded the remaining home page Quick Action buttons (`VenueDashboard.tsx`), Upcoming events chips (`catChipStyle`), Sign Out links (`Header.tsx` desktop menu and mobile drawer, `VenueDashboard.tsx` sidebar), and Login Page selection board / input focus styling (`LoginScreen.tsx` focus handlers, `src/index.css` universal CSS overrides for `input:focus`, `.form-input:focus`, `*:focus-visible`, `::selection`); removed hardcoded child text classes from Open Wedding Guest Portal button.
+  Test count: **659 passing / 11 skipped** (152 test files). Committed.
 - ✅ **Comprehensive Platform-Wide Universal Branding Review: Login, Design Studio, Dashboard, and Live Google Typography Engine (#150)** —
   audited and upgraded the entire platform so the Login page (`LoginScreen.tsx`), buttons in the Design Studio (`Header.tsx`, `Sidebar.tsx`, `StudioLayoutsHome.tsx`, `PropertiesPanel.tsx`, `DecorDesigner.tsx`, `FloorPlanCanvas.tsx`), home page (`VenueDashboard.tsx`, `VenueCalendar.tsx`), and text/fonts dynamically bind to `useBrandingConfig()` and `config.primaryColor`; built `loadGoogleFont` in `src/config.ts` wired into `applyRootStyles(config)` so custom Google fonts (`fontFamily`, `headingFontFamily`) are dynamically loaded in `<head>` and applied across `body`, `#root`, `.spm-studio-root`, `#spm-layout-tool`, and all heading tags on every screen.
   Test count: **659 passing / 11 skipped** (152 test files). Committed.

@@ -172,8 +172,18 @@ export function VenueDashboard(props: Props) {
     }));
 
   const catChip = (cat: string) => {
-    const map = { couple: 'bg-[#4A1942]/10 text-[#4A1942]', 'open-house': 'bg-emerald-100 text-emerald-700', staffing: 'bg-amber-100 text-amber-700', blocked: 'bg-red-100 text-red-700', other: 'bg-slate-100 text-slate-700' };
-    return map[cat] || 'bg-gray-100 text-gray-600';
+    const map: Record<string, string> = { couple: 'font-semibold', 'open-house': 'bg-emerald-100 text-emerald-700 font-semibold', staffing: 'bg-amber-100 text-amber-700 font-semibold', blocked: 'bg-red-100 text-red-700 font-semibold', other: 'bg-slate-100 text-slate-700 font-semibold' };
+    return map[cat] || 'bg-gray-100 text-gray-600 font-semibold';
+  };
+
+  const catChipStyle = (cat: string) => {
+    if (cat === 'couple') {
+      return {
+        backgroundColor: `${config.primaryColor || '#4A1942'}20`,
+        color: config.primaryColor || '#4A1942',
+      };
+    }
+    return undefined;
   };
 
   return (
@@ -235,7 +245,7 @@ export function VenueDashboard(props: Props) {
         </nav>
         <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-500">
           <div className="truncate">{user?.name || user?.username}</div>
-          <button type="button" onClick={props.onLogout} className="mt-1 text-[#4A1942] hover:underline">Sign out</button>
+          <button type="button" onClick={props.onLogout} className="mt-1 hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Sign out</button>
         </div>
       </aside>
 
@@ -460,7 +470,12 @@ export function VenueDashboard(props: Props) {
                     const later = upcoming.filter((e) => e.date > weekEnd);
                     const row = (e: any, i: number) => (
                       <div key={`${e.id}-${i}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${catChip(e.category)}`}>{e.category === 'couple' ? '💍' : e.category === 'open-house' ? '🏠' : e.category === 'staffing' ? '🛠️' : '📌'}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${catChip(e.category)}`}
+                          style={catChipStyle(e.category)}
+                        >
+                          {e.category === 'couple' ? '💍' : e.category === 'open-house' ? '🏠' : e.category === 'staffing' ? '🛠️' : '📌'}
+                        </span>
                         <span className="text-gray-500 w-24">{new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                         <span className="flex-1 font-medium text-gray-800 truncate">{e.title}</span>
                         {e.id.startsWith('couple-') || e.category === 'couple' ? (
@@ -531,22 +546,76 @@ export function VenueDashboard(props: Props) {
                     <button type="button" onClick={props.onOpenAdmin} className="btn-primary w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
                       <span>🔐</span><span>Admin &amp; System Settings</span>
                     </button>
-                    <button type="button" onClick={props.onOpenStudio} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={props.onOpenStudio}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors hover:shadow-sm"
+                      style={{
+                        borderColor: `${config.primaryColor || '#4A1942'}40`,
+                        backgroundColor: `${config.primaryColor || '#4A1942'}0D`,
+                        color: config.primaryColor || '#4A1942',
+                      }}
+                    >
                       <span>🎨</span><span>Design Studio</span>
                     </button>
-                    <button type="button" onClick={() => setSection('calendar')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => setSection('calendar')}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors hover:shadow-sm"
+                      style={{
+                        borderColor: `${config.primaryColor || '#4A1942'}40`,
+                        backgroundColor: `${config.primaryColor || '#4A1942'}0D`,
+                        color: config.primaryColor || '#4A1942',
+                      }}
+                    >
                       <span>📅</span><span>Calendar</span>
                     </button>
-                    <button type="button" onClick={() => setSection('ops')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => setSection('ops')}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors hover:shadow-sm"
+                      style={{
+                        borderColor: `${config.primaryColor || '#4A1942'}40`,
+                        backgroundColor: `${config.primaryColor || '#4A1942'}0D`,
+                        color: config.primaryColor || '#4A1942',
+                      }}
+                    >
                       <span>🛠️</span><span>Operations Studio</span>
                     </button>
-                    <button type="button" onClick={() => setSection('vendors')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => setSection('vendors')}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors hover:shadow-sm"
+                      style={{
+                        borderColor: `${config.primaryColor || '#4A1942'}40`,
+                        backgroundColor: `${config.primaryColor || '#4A1942'}0D`,
+                        color: config.primaryColor || '#4A1942',
+                      }}
+                    >
                       <span>🧰</span><span>Vendor Showcase</span>
                     </button>
-                    <button type="button" onClick={() => setSection('timeline')} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => setSection('timeline')}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors hover:shadow-sm"
+                      style={{
+                        borderColor: `${config.primaryColor || '#4A1942'}40`,
+                        backgroundColor: `${config.primaryColor || '#4A1942'}0D`,
+                        color: config.primaryColor || '#4A1942',
+                      }}
+                    >
                       <span>⏱️</span><span>Timeline Studio</span>
                     </button>
-                    <button type="button" onClick={() => setSection('chat')} className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => setSection('chat')}
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors hover:shadow-sm"
+                      style={{
+                        borderColor: `${config.primaryColor || '#4A1942'}40`,
+                        backgroundColor: `${config.primaryColor || '#4A1942'}0D`,
+                        color: config.primaryColor || '#4A1942',
+                      }}
+                    >
                       <span className="flex items-center gap-2"><span>💬</span><span>Portal Chat &amp; DMs</span></span>
                       {stats.unread > 0 && <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black">{stats.unread}</span>}
                     </button>

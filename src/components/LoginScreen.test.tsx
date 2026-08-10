@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -156,5 +156,17 @@ describe('LoginScreen', () => {
     await user.click(screen.getByRole('button', { name: /open wedding guest portal/i }));
 
     expect(window.location.hash).toBe('#/guest-portal');
+  });
+
+  it('styles username/password inputs on focus and Open Guest Portal button with brand primary color', async () => {
+    render(<LoginScreen />);
+
+    const usernameInput = screen.getByPlaceholderText('Enter username') as HTMLInputElement;
+    fireEvent.focus(usernameInput);
+    expect(usernameInput.style.borderColor).toBe('rgb(74, 25, 66)');
+    expect(usernameInput.style.boxShadow).toContain('0 0 0 3px');
+
+    const guestPortalBtn = screen.getByRole('button', { name: /open wedding guest portal/i });
+    expect(guestPortalBtn.style.color).toBe('rgb(74, 25, 66)');
   });
 });

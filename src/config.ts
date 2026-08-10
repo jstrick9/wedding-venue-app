@@ -123,9 +123,26 @@ function loadGoogleFont(fontStack?: string): void {
 export function applyRootStyles(config: Partial<Config>): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  if (config.primaryColor) root.style.setProperty('--primary-color', config.primaryColor);
-  if (config.primaryDark) root.style.setProperty('--primary-dark', config.primaryDark);
-  if (config.primaryLight) root.style.setProperty('--primary-light', config.primaryLight);
+  const primary = config.primaryColor || '#4A1942';
+  const dark = config.primaryDark || '#3d1a45';
+  const light = config.primaryLight || '#6b2c5c';
+
+  root.style.setProperty('--primary-color', primary);
+  root.style.setProperty('--primary-dark', dark);
+  root.style.setProperty('--primary-light', light);
+
+  // Map legacy --color-plum-* variables to the active brand theme
+  root.style.setProperty('--color-plum-900', dark);
+  root.style.setProperty('--color-plum-800', dark);
+  root.style.setProperty('--color-plum-700', primary);
+  root.style.setProperty('--color-plum-600', light);
+  root.style.setProperty('--color-plum-500', light);
+  root.style.setProperty('--color-plum-400', primary);
+  root.style.setProperty('--color-plum-300', light);
+  root.style.setProperty('--color-plum-200', `color-mix(in srgb, ${primary} 25%, transparent)`);
+  root.style.setProperty('--color-plum-100', `color-mix(in srgb, ${primary} 12%, transparent)`);
+  root.style.setProperty('--color-plum-50', `color-mix(in srgb, ${primary} 6%, transparent)`);
+
   if (config.accentColor) root.style.setProperty('--accent-color', config.accentColor);
   if (config.backgroundColor) root.style.setProperty('--background-color', config.backgroundColor);
   if (config.textColor) root.style.setProperty('--text-color', config.textColor);

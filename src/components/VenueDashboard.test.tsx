@@ -143,4 +143,14 @@ describe('VenueDashboard', () => {
 
     spy.mockRestore();
   });
+
+  it('applies brand primary color to Sign Out link, Quick actions buttons, and Upcoming events chips', () => {
+    render(<VenueDashboard {...baseProps} />);
+
+    const signOutBtn = screen.getByRole('button', { name: /sign out/i });
+    expect(signOutBtn.style.color).toBe('rgb(74, 25, 66)');
+
+    const studioQuickBtns = screen.getAllByRole('button', { name: /design studio/i });
+    expect(studioQuickBtns[1].style.color).toBe('rgb(74, 25, 66)');
+  });
 });

@@ -44,6 +44,17 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
   const hasLocalAccounts = getUsers().length > 0;
   const showNoLocalAccountsHint = !usingSupabaseAuth && !hasLocalAccounts;
 
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    const color = config.primaryColor || '#4A1942';
+    e.currentTarget.style.borderColor = color;
+    e.currentTarget.style.boxShadow = `0 0 0 3px ${color}33`;
+  };
+
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = '';
+    e.currentTarget.style.boxShadow = '';
+  };
+
   // ─── On mount: pre-fill remembered username & check persisted lockout ─────
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -287,10 +298,12 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 value={username}
                 onChange={handleUsernameChange}
                 onKeyDown={handleKeyDown}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
                 placeholder="Enter username"
                 autoComplete="username"
                 disabled={isLockedOut}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942] disabled:bg-gray-100"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none transition-shadow disabled:bg-gray-100"
                 required
               />
             </div>
@@ -309,10 +322,12 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={handleInputFocus}
+                  onBlur={handleInputBlur}
                   placeholder="Enter password"
                   autoComplete="current-password"
                   disabled={isLockedOut}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942] disabled:bg-gray-100"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-11 text-sm focus:outline-none transition-shadow disabled:bg-gray-100"
                   required
                 />
                 <button
@@ -481,14 +496,15 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
             <button
               type="button"
               onClick={handleOpenGuestPortal}
-              className="w-full rounded-xl border border-[#4A1942]/40 bg-[#4A1942]/10 px-4 py-3 text-left hover:bg-[#4A1942]/10 transition-colors"
+              className="w-full rounded-xl border px-4 py-3 text-left transition-colors hover:shadow-sm"
               style={{
-                borderColor: config.primaryColor || '#4A1942',
+                borderColor: `${config.primaryColor || '#4A1942'}66`,
+                backgroundColor: `${config.primaryColor || '#4A1942'}15`,
                 color: config.primaryColor || '#4A1942',
               }}
             >
-              <span className="block text-sm font-semibold text-[#4A1942]">💍 Open Wedding Guest Portal</span>
-              <span className="mt-1 block text-xs text-[#4A1942]/80">
+              <span className="block text-sm font-semibold">💍 Open Wedding Guest Portal</span>
+              <span className="mt-1 block text-xs opacity-80">
                 RSVP, view the event schedule, check lodging, and get directions.
               </span>
             </button>

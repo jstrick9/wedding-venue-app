@@ -650,7 +650,8 @@ export function Header({
                       onLogout();
                       setShowMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 font-semibold transition-colors"
+                    style={{ color: config.primaryColor || '#4A1942' }}
                   >
                     🚪 Sign Out
                   </button>
@@ -930,7 +931,8 @@ export function Header({
                     onLogout();
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full py-3 px-4 bg-red-500/80 hover:bg-red-500 rounded-lg text-center"
+                  className="w-full py-3 px-4 rounded-lg text-center font-bold text-white shadow-sm transition-all"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   🚪 Sign Out
                 </button>
