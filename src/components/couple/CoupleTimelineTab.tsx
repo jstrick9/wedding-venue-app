@@ -173,14 +173,26 @@ export const CoupleTimelineTab: React.FC<Props> = ({
 
       {/* Coordination Service / Planner Banner */}
       {coordinationBooked ? (
-        <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div
+          className="rounded-xl border p-4 flex items-center justify-between gap-3 flex-wrap"
+          style={{
+            backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 6%, transparent)`,
+            borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 20%, transparent)`,
+          }}
+        >
           <div className="flex items-center gap-3">
             <span className="text-2xl" aria-hidden="true">💒</span>
             <div>
-              <div className="text-sm font-bold text-purple-900">
+              <div
+                className="text-sm font-bold"
+                style={{ color: config.primaryDark || '#3d1a45' }}
+              >
                 ★ Venue Coordinated Event
               </div>
-              <p className="text-xs text-purple-700 mt-0.5">
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: config.primaryColor || '#4A1942' }}
+              >
                 You have booked Seven Paths Manor's Day of Coordination service ($1,000). Your venue coordination team is actively collaborating with you on this timeline.
               </p>
             </div>

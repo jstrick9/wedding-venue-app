@@ -166,6 +166,86 @@ a:not([class*="text-"]):not([class*="bg-"]) {
   border-color: var(--primary-color) !important;
 }
 
+/* Universal Branding Override Engine — dynamically map all brand purple and #4A1942
+   opacity slashes, gradients, and card accents to var(--primary-color), var(--primary-dark),
+   and var(--primary-light) so any custom venue branding applies 100% cleanly. */
+
+/* Background colors with opacity slashes */
+[class*="bg-[#4A1942]/5"], [class*="from-[#4A1942]/5"] {
+  background-color: color-mix(in srgb, var(--primary-color) 5%, transparent) !important;
+}
+[class*="bg-[#4A1942]/10"] {
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent) !important;
+}
+[class*="bg-[#4A1942]/15"] {
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent) !important;
+}
+[class*="bg-[#4A1942]/20"] {
+  background-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
+}
+[class*="bg-[#4A1942]/30"] {
+  background-color: color-mix(in srgb, var(--primary-color) 30%, transparent) !important;
+}
+[class*="bg-[#4A1942]/40"] {
+  background-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important;
+}
+
+/* Border colors with opacity slashes */
+[class*="border-[#4A1942]/10"] {
+  border-color: color-mix(in srgb, var(--primary-color) 10%, transparent) !important;
+}
+[class*="border-[#4A1942]/20"] {
+  border-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
+}
+[class*="border-[#4A1942]/30"] {
+  border-color: color-mix(in srgb, var(--primary-color) 30%, transparent) !important;
+}
+[class*="border-[#4A1942]/40"], [class*="hover:border-[#4A1942]/40"]:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important;
+}
+
+/* Text colors with opacity slashes */
+[class*="text-[#4A1942]/60"] {
+  color: color-mix(in srgb, var(--primary-color) 60%, transparent) !important;
+}
+[class*="text-[#4A1942]/70"] {
+  color: color-mix(in srgb, var(--primary-color) 70%, transparent) !important;
+}
+[class*="text-[#4A1942]/80"] {
+  color: color-mix(in srgb, var(--primary-color) 80%, transparent) !important;
+}
+
+/* Gradient stops */
+[class*="from-[#4A1942]"] {
+  --tw-gradient-from: var(--primary-color) !important;
+}
+[class*="via-[#612357]"], [class*="via-purple-"] {
+  --tw-gradient-via: var(--primary-light) !important;
+}
+[class*="to-purple-600"], [class*="to-purple-700"], [class*="to-purple-800"], [class*="to-[#6b235f]"], [class*="to-[#3b1435]"] {
+  --tw-gradient-to: var(--primary-dark) !important;
+}
+
+/* Purple backgrounds & borders in cards (e.g. booked package, add-ons, pricing tiers) */
+[class*="bg-purple-50"]:not([class*="/"]) {
+  background-color: color-mix(in srgb, var(--primary-color) 6%, transparent) !important;
+}
+[class*="bg-purple-50/"] {
+  background-color: color-mix(in srgb, var(--primary-color) 5%, transparent) !important;
+}
+[class*="bg-purple-100"] {
+  background-color: color-mix(in srgb, var(--primary-color) 12%, transparent) !important;
+}
+[class*="border-purple-200"], [class*="border-purple-300"] {
+  border-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
+}
+[class*="text-purple-700"], [class*="text-purple-800"], [class*="text-purple-900"], [class*="text-purple-950"] {
+  color: var(--primary-dark) !important;
+}
+[class*="text-purple-200"], [class*="text-purple-100"] {
+  color: color-mix(in srgb, white 85%, var(--primary-light)) !important;
+}
+
 .font-serif {
   font-family: 'Playfair Display', Georgia, serif;
 }

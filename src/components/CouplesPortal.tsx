@@ -784,8 +784,17 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
           </div>
 
           {/* Quick-Select Booked Couple (Local Test / Demo Mode) */}
-          <div className="rounded-lg bg-purple-50 border border-purple-200 p-3 space-y-2">
-            <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider">
+          <div
+            className="rounded-lg p-3 space-y-2 border"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 6%, transparent)`,
+              borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 25%, transparent)`,
+            }}
+          >
+            <label
+              className="block text-xs font-bold uppercase tracking-wider"
+              style={{ color: config.primaryDark || '#3d1a45' }}
+            >
               ⚡ Quick-Select Booked Couple (Test Mode)
             </label>
             {allEvents.length === 0 ? (
@@ -795,7 +804,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 <select
                   value={demoSelectToken}
                   onChange={(e) => setDemoSelectToken(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-white border border-purple-300 rounded-lg text-xs font-medium text-gray-800"
+                  className="flex-1 px-3 py-1.5 bg-white border rounded-lg text-xs font-medium text-gray-800"
+                  style={{ borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 35%, transparent)` }}
                   aria-label="Quick select couple event"
                 >
                   <option value="">-- Select a booked couple --</option>
@@ -809,7 +819,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   type="button"
                   onClick={() => handleManualLaunch(demoSelectToken)}
                   disabled={!demoSelectToken}
-                  className="px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-xs font-bold hover:bg-[#3d1435] disabled:opacity-50 transition-colors shrink-0"
+                  className="px-3 py-1.5 rounded-lg text-white text-xs font-bold disabled:opacity-50 transition-colors shrink-0"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   Launch ↗
                 </button>
@@ -878,22 +889,44 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const eligibleSpaces = venues.filter((v) => event.availableSpaces.includes(v.id));
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#4A1942]/5 to-slate-100 flex flex-col overflow-y-auto">
-      <header className="px-4 pt-4 pb-2 flex items-center justify-between bg-white/70 backdrop-blur-sm border-b border-[#4A1942]/10">
+    <div
+      className="min-h-screen w-full flex flex-col overflow-y-auto"
+      style={{
+        background: `linear-gradient(180deg, color-mix(in srgb, ${config.primaryColor || '#4A1942'} 5%, transparent), #f8fafc)`,
+      }}
+    >
+      <header
+        className="px-4 pt-4 pb-2.5 flex items-center justify-between bg-white/85 backdrop-blur-md border-b shadow-sm"
+        style={{
+          borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 15%, transparent)`,
+        }}
+      >
         <button
           type="button"
           onClick={onExitPortal}
-          className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2 transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900 underline underline-offset-2 transition-colors"
           aria-label="Return to login screen"
         >
           ← Back to Login
         </button>
-        <h1 className="text-sm font-semibold text-gray-800">💍 Couples Portal</h1>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-gray-900">💍 {config.venueName || 'Wedding Venue'}</span>
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`,
+              color: config.primaryColor || '#4A1942',
+            }}
+          >
+            Couples Portal
+          </span>
+        </div>
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[#4A1942] hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-bold hover:underline transition-colors"
+            style={{ color: config.primaryColor || '#4A1942' }}
             title="Switch to another couple event or test token"
           >
             🔄 Switch Couple
@@ -901,7 +934,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-900"
           >
             Sign out
           </button>
@@ -910,36 +943,41 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Full-Width Executive Hero Header Card */}
-        <div className="rounded-2xl bg-gradient-to-r from-[#4A1942] via-[#612357] to-purple-600 text-white p-6 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div
+          className="rounded-2xl text-white p-6 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all"
+          style={{
+            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryLight || '#6b2c5c'}, ${config.primaryDark || '#3d1a45'})`,
+          }}
+        >
           <div className="space-y-1">
-            <div className="text-xs uppercase tracking-wider text-white/70 font-semibold">Your Wedding Event</div>
-            <h2 className="text-2xl sm:text-3xl font-bold">{event.coupleName}</h2>
+            <div className="text-xs uppercase tracking-wider text-white/80 font-bold">Your Wedding Event</div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold">{event.coupleName}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               {event.eventDate && (
-                <span className="rounded-full bg-white/20 px-3 py-1 font-medium">
+                <span className="rounded-full bg-white/20 px-3 py-1 font-semibold backdrop-blur-sm">
                   📅 {new Date(event.eventDate).toLocaleDateString()}
                 </span>
               )}
               {event.guestCount && (
-                <span className="rounded-full bg-white/20 px-3 py-1 font-medium">👥 {event.guestCount} guests</span>
+                <span className="rounded-full bg-white/20 px-3 py-1 font-semibold backdrop-blur-sm">👥 {event.guestCount} guests</span>
               )}
               <span
-                className={`rounded-full px-3 py-1 font-semibold ${
+                className={`rounded-full px-3 py-1 font-bold backdrop-blur-sm ${
                   event.status === 'active'
-                    ? 'bg-green-500/80'
+                    ? 'bg-emerald-500/90'
                     : event.status === 'completed'
-                      ? 'bg-sky-500/80'
-                      : 'bg-white/20'
+                      ? 'bg-sky-500/90'
+                      : 'bg-white/25'
                 }`}
               >
                 {event.status === 'active'
-                  ? '● Active'
+                  ? '● Active Event'
                   : event.status === 'completed'
                     ? '✓ Completed'
                     : '● Invited'}
               </span>
               {event.packageId && bookedPackage && (
-                <span className="rounded-full bg-white/20 px-3 py-1 font-medium">
+                <span className="rounded-full bg-white/20 px-3 py-1 font-semibold backdrop-blur-sm">
                   🎁 {bookedPackage.name}
                 </span>
               )}
@@ -947,7 +985,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div className="flex items-center gap-1.5 bg-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold backdrop-blur-sm">
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3.5 py-2 text-xs font-bold backdrop-blur-sm">
               <span>🏛️ {event.selectedSpaces.length} spaces</span>
               <span>•</span>
               <span>👥 {event.collaborators.length} team</span>
@@ -955,7 +993,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
             <button
               type="button"
               onClick={() => handleCopyInviteLink(event.inviteToken)}
-              className="px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-sm transition-colors shadow-sm flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold backdrop-blur-sm transition-colors shadow-sm flex items-center gap-1.5"
               title="Copy your private Couples Portal invitation link"
             >
               <span>📋</span> Copy Portal Link
@@ -969,7 +1007,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                 showToast('Opening default email client with your invitation link.', 'info');
               }}
-              className="px-3.5 py-2 rounded-xl bg-white text-[#4A1942] hover:bg-gray-100 text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-white text-xs font-extrabold transition-colors shadow-sm flex items-center gap-1.5 hover:bg-gray-100"
+              style={{ color: config.primaryColor || '#4A1942' }}
               title="Email your invitation link via default email client"
             >
               <span>✉️</span> Email Invite
@@ -998,6 +1037,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   ? 'btn-primary bg-[#4A1942] text-white shadow'
                   : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
               }`}
+              style={activeTab === t.id ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
             >
               <span className="mr-1.5 text-sm">{t.icon}</span> {t.label}
               {t.id === 'chat' && unreadVenueChat > 0 && (
@@ -1122,16 +1162,22 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       );
                     }
                     return (
-                      <div className="rounded-2xl bg-gradient-to-r from-[#4A1942] to-[#6b235f] text-white p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div
+                        className="rounded-2xl text-white p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all"
+                        style={{
+                          background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                        }}
+                      >
                         <div className="space-y-1">
-                          <div className="text-[11px] uppercase tracking-wider font-bold text-purple-200">Recommended Next Step</div>
+                          <div className="text-[11px] uppercase tracking-wider font-bold text-white/80">Recommended Next Step</div>
                           <h3 className="text-lg font-bold">👉 {next.label}</h3>
-                          <p className="text-xs text-white/80">{next.hint}</p>
+                          <p className="text-xs text-white/90">{next.hint}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setActiveTab(next.tab)}
-                          className="px-5 py-2.5 bg-white text-[#4A1942] hover:bg-purple-50 font-bold text-xs rounded-xl shadow transition-colors shrink-0"
+                          className="px-5 py-2.5 bg-white font-bold text-xs rounded-xl shadow transition-colors shrink-0 hover:bg-gray-100"
+                          style={{ color: config.primaryColor || '#4A1942' }}
                         >
                           Start This Step →
                         </button>
@@ -1143,7 +1189,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                   <div className="rounded-2xl bg-white border border-gray-200 p-5 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-bold text-sm text-gray-900">Your Planning Progress Board</h3>
-                      <span className="text-xs font-semibold text-[#4A1942] bg-[#4A1942]/10 px-3 py-1 rounded-full">
+                      <span
+                        className="text-xs font-semibold px-3 py-1 rounded-full"
+                        style={{
+                          backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`,
+                          color: config.primaryColor || '#4A1942',
+                        }}
+                      >
                         {[
                           coupleAnswers.length > 0,
                           event.selectedSpaces.length > 0,
@@ -1225,7 +1277,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       <button
                         type="button"
                         onClick={() => setActiveTab('package')}
-                        className="text-xs text-[#4A1942] font-semibold hover:underline"
+                        className="text-xs font-semibold hover:underline"
+                        style={{ color: config.primaryColor || '#4A1942' }}
                       >
                         Details →
                       </button>
@@ -1233,10 +1286,24 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                     {!bookedPackage ? (
                       <p className="text-xs text-gray-500 italic">No package assigned yet. The venue will configure your package soon.</p>
                     ) : (
-                      <div className="rounded-xl bg-purple-50/70 border border-purple-200 p-3.5 space-y-2">
+                      <div
+                        className="rounded-xl p-3.5 space-y-2 border"
+                        style={{
+                          backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 6%, transparent)`,
+                          borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 20%, transparent)`,
+                        }}
+                      >
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-purple-950">{bookedPackage.name}</span>
-                          <span className="text-[11px] bg-[#4A1942] text-white px-2 py-0.5 rounded-full font-semibold">
+                          <span
+                            className="text-sm font-bold"
+                            style={{ color: config.primaryDark || '#3d1a45' }}
+                          >
+                            {bookedPackage.name}
+                          </span>
+                          <span
+                            className="text-[11px] text-white px-2.5 py-0.5 rounded-full font-bold"
+                            style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                          >
                             {PACKAGE_DURATIONS.find((d) => d.id === bookedPackage.durationType)?.label}
                           </span>
                         </div>
@@ -1244,7 +1311,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           {bookedPackage.maxGuests} included guests • {bookedPackage.lodgingIncluded ? '🛏️ Lodging included' : 'No lodging'}
                         </div>
                         {(event.addOns?.length || 0) > 0 && (
-                          <div className="text-xs font-semibold text-purple-900 pt-1 border-t border-purple-200/60">
+                          <div
+                            className="text-xs font-semibold pt-1 border-t"
+                            style={{
+                              color: config.primaryDark || '#3d1a45',
+                              borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 20%, transparent)`,
+                            }}
+                          >
                             + {event.addOns!.length} active add-on(s) configured
                           </div>
                         )}
@@ -1259,7 +1332,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       <button
                         type="button"
                         onClick={() => setActiveTab('collaborators')}
-                        className="text-xs text-[#4A1942] font-semibold hover:underline"
+                        className="text-xs font-semibold hover:underline"
+                        style={{ color: config.primaryColor || '#4A1942' }}
                       >
                         + Invite Someone
                       </button>
@@ -1295,7 +1369,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             () => showToast('Could not copy — copy the link below.', 'warning'),
                           );
                         }}
-                        className="w-full px-3.5 py-2 rounded-xl bg-[#4A1942] text-white text-xs font-bold hover:bg-[#3b1435] transition-colors shadow-sm"
+                        className="w-full px-3.5 py-2 rounded-xl text-white text-xs font-bold hover:opacity-90 transition-opacity shadow-sm"
+                        style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                       >
                         📋 Copy Guest Portal Link
                       </button>
@@ -1575,7 +1650,12 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         })()}
                         {selected && (
                           <div className="mt-4 pt-3 border-t border-gray-200/60 flex items-center justify-between">
-                            <span className="text-xs font-bold text-[#4A1942]">✓ Selected for event</span>
+                            <span
+                              className="text-xs font-bold"
+                              style={{ color: config.primaryColor || '#4A1942' }}
+                            >
+                              ✓ Selected for event
+                            </span>
                             <span
                               role="button"
                               tabIndex={0}
@@ -1583,7 +1663,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 e.stopPropagation();
                                 setLayoutEditorSpace(space.id);
                               }}
-                              className="px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-xs font-bold hover:bg-[#3b1435] transition-colors shadow-sm inline-flex items-center gap-1 cursor-pointer"
+                              className="px-3 py-1.5 rounded-lg text-white text-xs font-bold transition-colors shadow-sm inline-flex items-center gap-1 cursor-pointer hover:opacity-90"
+                              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                             >
                               <span>🎨</span> Design Floor Plan →
                             </span>
@@ -1709,7 +1790,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           <button
                             type="button"
                             onClick={() => handleCopyInviteLink(c.inviteToken)}
-                            className="text-xs font-bold text-[#4A1942] hover:underline"
+                            className="text-xs font-bold hover:underline"
+                            style={{ color: config.primaryColor || '#4A1942' }}
                             title="Copy collaborator invite link"
                           >
                             📋 Copy Link
@@ -1719,7 +1801,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           <button
                             type="button"
                             onClick={() => handleEmailCollaborator(c.email, c.name, c.inviteToken)}
-                            className="text-xs font-bold text-[#4A1942] hover:underline"
+                            className="text-xs font-bold hover:underline"
+                            style={{ color: config.primaryColor || '#4A1942' }}
                             title="Send email invite via mailto"
                           >
                             ✉️ Email

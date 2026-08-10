@@ -13,6 +13,7 @@ import {
   PlacedDecor,
   CoupleSpaceLayout,
 } from '../types';
+import { useBrandingConfig } from '../config';
 
 interface Props {
   venue: Venue;
@@ -39,6 +40,7 @@ const uid = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slic
  * later shown to the venue for approval.
  */
 export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose }: Props) {
+  const config = useBrandingConfig();
   const [tables, setTables] = useState<PlacedTable[]>(initial?.tables || []);
   const [fixtures, setFixtures] = useState<PlacedFixture[]>(initial?.fixtures || []);
   const [decor, setDecor] = useState<PlacedDecor[]>(initial?.decor || []);
@@ -153,7 +155,12 @@ export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[11000] p-2 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 bg-[#4A1942] text-white flex items-center justify-between">
+        <div
+          className="px-4 py-3 text-white flex items-center justify-between"
+          style={{
+            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+          }}
+        >
           <div>
             <h3 className="font-semibold">Layout editor — {venue.name}</h3>
             <p className="text-xs text-white/80 mt-0.5">Pick an item, click the canvas to place it, drag to move.</p>
@@ -175,7 +182,8 @@ export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose
             <button
               type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 rounded-lg bg-white text-[#4A1942] text-sm font-medium hover:bg-[#4A1942]/10"
+              className="px-3.5 py-1.5 rounded-lg bg-white text-xs font-bold shadow hover:bg-gray-100 transition-colors"
+              style={{ color: config.primaryColor || '#4A1942' }}
             >
               💾 Save layout
             </button>
@@ -194,7 +202,8 @@ export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose
           <button
             type="button"
             onClick={() => setShowGrid((v) => !v)}
-            className={`px-2 py-1 rounded border ${showGrid ? 'bg-[#4A1942]/10 text-[#4A1942] border-[#4A1942]/20' : 'bg-white text-gray-600 border-gray-300'}`}
+            className={`px-2 py-1 rounded border font-semibold ${showGrid ? 'shadow-sm' : 'bg-white text-gray-600 border-gray-300'}`}
+            style={showGrid ? { color: config.primaryColor || '#4A1942', borderColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 30%, transparent)`, backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 10%, transparent)` } : undefined}
           >
             Grid
           </button>
@@ -203,10 +212,10 @@ export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose
           <button type="button" onClick={() => setZoom((z) => Math.min(2, z + 0.1))} className="px-2 py-1 rounded border border-gray-300 text-gray-600">+</button>
           <span className="mx-1" />
           {selectedId && (
-            <button type="button" onClick={removeSelected} className="px-2 py-1 rounded bg-red-600 text-white">🗑 Delete selected</button>
+            <button type="button" onClick={removeSelected} className="px-2 py-1 rounded bg-red-600 text-white font-bold">🗑 Delete selected</button>
           )}
           {pending && (
-            <span className="px-2 py-1 rounded bg-amber-100 text-amber-800">Click the canvas to place the selected item</span>
+            <span className="px-2 py-1 rounded bg-amber-100 text-amber-800 font-medium">Click the canvas to place the selected item</span>
           )}
         </div>
 
@@ -222,7 +231,8 @@ export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose
                     key={s.id}
                     type="button"
                     onClick={() => setPending(pending?.specId === s.id ? null : { kind: 'table', specId: s.id })}
-                    className={`w-full text-left px-2 py-1 rounded text-xs ${pending?.specId === s.id && pending.kind === 'table' ? 'bg-[#4A1942] text-white' : 'bg-gray-50 text-gray-700 hover:bg-[#4A1942]/10'}`}
+                    className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${pending?.specId === s.id && pending.kind === 'table' ? 'text-white font-bold shadow-sm' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
+                    style={pending?.specId === s.id && pending.kind === 'table' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
                   >
                     {s.name} <span className="opacity-60">({s.width}×{s.height})</span>
                   </button>
@@ -240,7 +250,8 @@ export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose
                       key={f.id}
                       type="button"
                       onClick={() => setPending(pending?.specId === f.id ? null : { kind: 'fixture', specId: f.id })}
-                      className={`w-full text-left px-2 py-1 rounded text-xs ${pending?.specId === f.id && pending.kind === 'fixture' ? 'bg-[#4A1942] text-white' : 'bg-gray-50 text-gray-700 hover:bg-[#4A1942]/10'}`}
+                      className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${pending?.specId === f.id && pending.kind === 'fixture' ? 'text-white font-bold shadow-sm' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
+                      style={pending?.specId === f.id && pending.kind === 'fixture' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
                     >
                       {f.name}
                     </button>
@@ -256,7 +267,8 @@ export function CoupleLayoutEditor({ venue, initial, guestCount, onSave, onClose
                     key={d.id}
                     type="button"
                     onClick={() => setPending(pending?.specId === d.id ? null : { kind: 'decor', specId: d.id })}
-                    className={`w-full text-left px-2 py-1 rounded text-xs ${pending?.specId === d.id && pending.kind === 'decor' ? 'bg-[#4A1942] text-white' : 'bg-gray-50 text-gray-700 hover:bg-[#4A1942]/10'}`}
+                    className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${pending?.specId === d.id && pending.kind === 'decor' ? 'text-white font-bold shadow-sm' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
+                    style={pending?.specId === d.id && pending.kind === 'decor' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
                   >
                     {d.icon} {d.name}
                   </button>

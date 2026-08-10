@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Guest, Venue } from '../types';
+import { useBrandingConfig } from '../config';
 
 export interface LodgingAssignmentsModalProps {
   venue: Venue;
@@ -30,6 +31,7 @@ export function LodgingAssignmentsModal({
   onUnassign,
   onClose,
 }: LodgingAssignmentsModalProps) {
+  const config = useBrandingConfig();
   const [assignGuestId, setAssignGuestId] = useState('');
   const [assignRoom, setAssignRoom] = useState('');
   const [otherRoom, setOtherRoom] = useState('');
@@ -169,7 +171,8 @@ export function LodgingAssignmentsModal({
             <button
               type="button"
               onClick={handleAssign}
-              className="w-full px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]"
+              className="btn-primary w-full px-3 py-1.5 rounded-lg text-white text-sm font-medium shadow-sm transition-colors"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               Assign to room
             </button>

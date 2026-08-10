@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { EventAnswer, EventQuestion, EventQuestionGroup } from '../types';
+import { useBrandingConfig } from '../config';
 
 type VenueCategory =
   | 'reception'
@@ -44,6 +45,7 @@ export function EventQuestionsWizard({
   onComplete,
   readOnly = false,
 }: EventQuestionsWizardProps) {
+  const config = useBrandingConfig();
   const [activeStep, setActiveStep] = useState(0);
   const [showAllLayouts, setShowAllLayouts] = useState(true);
   const [errors, setErrors] = useState<ErrorMap>({});
@@ -184,7 +186,8 @@ export function EventQuestionsWizard({
                 setShowAllLayouts(checked);
                 onVenueFilterChange(checked ? [] : deriveVenueCategories(answers));
               }}
-              className="h-4 w-4 rounded border-gray-300 text-[#4A1942] focus:ring-[#4A1942]"
+              className="h-4 w-4 rounded border-gray-300"
+              style={{ accentColor: config.primaryColor || '#4A1942' }}
             />
             Show all layouts
           </label>
@@ -196,7 +199,8 @@ export function EventQuestionsWizard({
               key={group}
               type="button"
               onClick={() => setActiveStep(idx)}
-              className={`rounded-lg border px-3 py-2 text-left text-sm ${activeStep === idx ? 'border-[#4A1942] bg-[#4A1942] text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+              className={`rounded-lg border px-3 py-2 text-left text-sm transition-all ${activeStep === idx ? 'text-white shadow-sm font-bold' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+              style={activeStep === idx ? { backgroundColor: config.primaryColor || '#4A1942', borderColor: config.primaryColor || '#4A1942' } : undefined}
             >
               <div className="text-xs opacity-80">Step {idx + 1}</div>
               <div className="font-medium">{group}</div>
@@ -282,7 +286,8 @@ export function EventQuestionsWizard({
                   setActiveStep((s) => s + 1);
                 }
               }}
-              className="rounded-md bg-[#4A1942] px-4 py-2 text-sm font-medium text-white hover:bg-[#3b1435]"
+              className="btn-primary rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               {activeStep >= GROUPS.length - 1 ? 'Save & Finish' : 'Save & Continue'}
             </button>
