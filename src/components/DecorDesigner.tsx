@@ -15,7 +15,7 @@ import {
   getDecorCategories,
   setDecorArrangements as persistDecorArrangements
 } from '../hooks/useLayoutState';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { showToast } from './Toast';
 import { on } from '../utils/appEvents';
@@ -28,7 +28,7 @@ interface DecorDesignerProps {
 }
 
 export const DecorDesigner: React.FC<DecorDesignerProps> = ({ onClose, onSave, initialArrangement }) => {
-  const config = getConfig();
+  const config = useBrandingConfig();
   const { user } = useAuth();
   
   // -- State --

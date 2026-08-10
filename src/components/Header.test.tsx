@@ -13,6 +13,15 @@ vi.mock('../config', () => ({
     primaryDark: '#3d1a45',
     headerTextColor: '#FFFFFF',
   }),
+  useBrandingConfig: () => ({
+    venueName: 'Seven Paths Manor',
+    websiteUrl: '',
+    supportEmail: '',
+    logoUrl: '',
+    primaryColor: '#4A1942',
+    primaryDark: '#3d1a45',
+    headerTextColor: '#FFFFFF',
+  }),
 }));
 
 const venues = [

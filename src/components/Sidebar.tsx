@@ -686,6 +686,7 @@ export function Sidebar({
                   ? 'bg-[#4A1942] text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              style={active ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
               aria-pressed={active}
               title={section.label}
               type="button"
@@ -801,7 +802,8 @@ export function Sidebar({
                   onClick={() =>
                     emit('spm_open_decor_designer')
                   }
-                  className="text-[10px] bg-[#4A1942] text-white px-3 py-1.5 rounded-lg font-bold hover:bg-[#3b1435] transition-all active:scale-95 shadow-sm flex items-center gap-1"
+                  className="btn-primary text-[10px] bg-[#4A1942] text-white px-3 py-1.5 rounded-lg font-bold hover:bg-[#3b1435] transition-all active:scale-95 shadow-sm flex items-center gap-1"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                   type="button"
                 >
                   <span>✨</span>

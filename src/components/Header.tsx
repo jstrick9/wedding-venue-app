@@ -386,6 +386,15 @@ export function Header({
                               ? 'border-[#4A1942] bg-[#4A1942]/10 text-[#4A1942]'
                               : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
                           }`}
+                          style={
+                            active
+                              ? {
+                                  borderColor: config.primaryColor || '#4A1942',
+                                  backgroundColor: `${config.primaryColor || '#4A1942'}18`,
+                                  color: config.primaryColor || '#4A1942',
+                                }
+                              : undefined
+                          }
                         >
                           <div className="font-medium text-sm flex items-center gap-1">
                             <span>{category.icon}</span>
@@ -970,6 +979,10 @@ export function Header({
                     onClick={handleSave}
                     disabled={!layoutName.trim()}
                     className="px-4 py-2 border border-[#4A1942] text-[#4A1942] rounded-lg hover:bg-[#4A1942]/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      borderColor: config.primaryColor || '#4A1942',
+                      color: config.primaryColor || '#4A1942',
+                    }}
                     title="Create a new, separate saved layout with this name"
                   >
                     Save as new copy
@@ -977,7 +990,8 @@ export function Header({
                   <button
                     type="button"
                     onClick={handleSaveOverwrite}
-                    className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64]"
+                    className="btn-primary px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64]"
+                    style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                     title="Update the existing saved layout with this name"
                   >
                     Overwrite existing
@@ -988,7 +1002,8 @@ export function Header({
                   type="button"
                   onClick={handleSave}
                   disabled={!layoutName.trim()}
-                  className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   Save Layout
                 </button>
@@ -1063,7 +1078,8 @@ export function Header({
                           onLoadSavedLayout(layout.id);
                           setShowLoadModal(false);
                         }}
-                        className="px-3 py-1 bg-[#4A1942] text-white rounded text-sm hover:bg-[#5c2a64]"
+                        className="btn-primary px-3 py-1 bg-[#4A1942] text-white rounded text-sm hover:bg-[#5c2a64]"
+                        style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                       >
                         Load
                       </button>

@@ -32,6 +32,25 @@ vi.mock('../config', () => ({
     bodyTextColor: '#374151',
     accentTextColor: '#4A1942',
   }),
+  useBrandingConfig: () => ({
+    venueName: 'Seven Paths Manor',
+    tagline: 'Where Your Love Story Unfolds',
+    location: 'Spring Hope, NC',
+    websiteUrl: 'https://www.sevenpathsmanor.com',
+    supportEmail: 'events@sevenpathsmanor.com',
+    logoUrl: '',
+    primaryColor: '#4A1942',
+    primaryDark: '#3d1a45',
+    primaryLight: '#6b2c5c',
+    accentColor: '#8B5A8B',
+    backgroundColor: '#f3f4f6',
+    textColor: '#1f2937',
+    fontFamily: 'Inter, system-ui, sans-serif',
+    headingFontFamily: 'Inter, system-ui, sans-serif',
+    headerTextColor: '#FFFFFF',
+    bodyTextColor: '#374151',
+    accentTextColor: '#4A1942',
+  }),
 }));
 
 vi.mock('./PasswordReset', () => ({

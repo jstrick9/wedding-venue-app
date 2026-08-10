@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Comprehensive Platform-Wide Universal Branding Review: Login, Design Studio, Dashboard, and Live Google Typography Engine (#150)** —
+  audited and upgraded the entire platform so the Login page (`LoginScreen.tsx`), buttons in the Design Studio (`Header.tsx`, `Sidebar.tsx`, `StudioLayoutsHome.tsx`, `PropertiesPanel.tsx`, `DecorDesigner.tsx`, `FloorPlanCanvas.tsx`), home page (`VenueDashboard.tsx`, `VenueCalendar.tsx`), and text/fonts dynamically bind to `useBrandingConfig()` and `config.primaryColor`; built `loadGoogleFont` in `src/config.ts` wired into `applyRootStyles(config)` so custom Google fonts (`fontFamily`, `headingFontFamily`) are dynamically loaded in `<head>` and applied across `body`, `#root`, `.spm-studio-root`, `#spm-layout-tool`, and all heading tags on every screen.
+  Test count: **659 passing / 11 skipped** (152 test files). Committed.
 - ✅ **Universal Branding Theme Engine, Live Portal Theme Switcher, and WCAG AA Contrast Checker (#149)** —
   created Universal Branding Theme Engine with live React state subscription hook `useBrandingConfig()` (`src/config.ts`) wired across all 10 portal surfaces (`AuthenticatedApp`, `VenueDashboard`, `Header`, `Sidebar`, `AdminPanel`, `StaffOperationsPanel`, `VenueChatPanel`, `VenueCalendar`, `CouplesPortal`, `GuestPortal`) and 14 comprehensive CSS override rules in `src/index.css` mapping solid fills, text, hover states, borders, rings, gradients, SVG fill/stroke, and translucent tints (`color-mix(in srgb, var(--primary-color) ...%)`) to dynamic CSS variables; enhanced `BrandingManagement.tsx` with automated **✨ WCAG AA Text Contrast & Accessibility Checker** and **🎨 Live Portal Theme Preview Switcher** (Header Banner, Dashboard KPI, and Portal Chat tabs).
   Test count: **659 passing / 11 skipped** (152 test files). Committed.

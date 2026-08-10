@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { isUserLocked, MAX_FAILED_LOGINS } from '../utils/auth';
 import { getUsers } from '../hooks/useLayoutState';
@@ -39,7 +39,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
   const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
 
   const usernameInputRef = useRef<HTMLInputElement>(null);
-  const config = getConfig();
+  const config = useBrandingConfig();
   const usingSupabaseAuth = shouldUseSupabaseAuth();
   const hasLocalAccounts = getUsers().length > 0;
   const showNoLocalAccountsHint = !usingSupabaseAuth && !hasLocalAccounts;
@@ -204,13 +204,29 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8f5f7] to-[#efe7ee] flex px-4 py-8 overflow-y-auto">
+    <div
+      className="min-h-screen flex px-4 py-8 overflow-y-auto"
+      style={{
+        backgroundColor: config.backgroundColor || '#f3f4f6',
+        color: config.bodyTextColor || '#374151',
+        fontFamily: config.fontFamily || 'Inter, system-ui, sans-serif',
+      }}
+    >
       <div className="m-auto flex w-full max-w-md flex-col rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden max-h-screen">
-        <div className="bg-[#4A1942] px-6 py-8 text-white text-center shrink-0">
+        <div
+          className="px-6 py-8 text-white text-center shrink-0"
+          style={{
+            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+            color: config.headerTextColor || '#FFFFFF',
+          }}
+        >
           <div className="mx-auto mb-4 flex justify-center">
             <Logo url={config.logoUrl} size="lg" />
           </div>
-          <h1 className="text-2xl font-semibold">
+          <h1
+            className="text-2xl font-semibold"
+            style={{ fontFamily: config.headingFontFamily || 'Inter, system-ui, sans-serif' }}
+          >
             {config.venueName || 'Seven Paths Manor'}
           </h1>
           <p className="mt-2 text-sm text-white/85">
@@ -329,6 +345,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 onClick={() => setShowPasswordReset(true)}
                 disabled={showNoLocalAccountsHint}
                 className="text-sm text-[#4A1942] hover:underline disabled:text-gray-400 disabled:no-underline"
+                style={{ color: config.primaryColor || '#4A1942' }}
               >
                 Forgot password?
               </button>
@@ -370,7 +387,8 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
             <button
               type="submit"
               disabled={isLoading || isLockedOut || showNoLocalAccountsHint}
-              className="w-full rounded-lg bg-[#4A1942] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full rounded-lg bg-[#4A1942] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               {isLoading ? 'Signing in…' : 'Sign In'}
             </button>
@@ -422,7 +440,8 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
               <button
                 type="submit"
                 disabled={isSigningUp}
-                className="w-full rounded-lg bg-[#4A1942] px-4 py-2 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50"
+                className="btn-primary w-full rounded-lg bg-[#4A1942] px-4 py-2 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50"
+                style={{ backgroundColor: config.primaryColor || '#4A1942' }}
               >
                 {isSigningUp ? 'Creating account…' : 'Create Account'}
               </button>
@@ -442,6 +461,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 type="button"
                 onClick={() => setShowSignUp((v) => !v)}
                 className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-[#4A1942] hover:bg-gray-50 transition-colors"
+                style={{ color: config.primaryColor || '#4A1942' }}
               >
                 {showSignUp ? 'Cancel account creation' : 'Create a new account'}
               </button>
@@ -462,6 +482,10 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
               type="button"
               onClick={handleOpenGuestPortal}
               className="w-full rounded-xl border border-[#4A1942]/40 bg-[#4A1942]/10 px-4 py-3 text-left hover:bg-[#4A1942]/10 transition-colors"
+              style={{
+                borderColor: config.primaryColor || '#4A1942',
+                color: config.primaryColor || '#4A1942',
+              }}
             >
               <span className="block text-sm font-semibold text-[#4A1942]">💍 Open Wedding Guest Portal</span>
               <span className="mt-1 block text-xs text-[#4A1942]/80">

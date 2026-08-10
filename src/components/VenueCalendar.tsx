@@ -23,6 +23,7 @@ import { syncShiftsForCalendarEvent, getShiftsForCalendarEvent } from '../servic
 import { Button, Badge, EmptyState } from './ui';
 import { useConfirm } from './useConfirm';
 import { findBlockedBookedConflicts } from '../utils/calendarConflicts';
+import { useBrandingConfig } from '../config';
 
 type View = 'month' | 'week' | 'day' | 'agenda';
 
@@ -65,6 +66,7 @@ export function VenueCalendar({
   venues: Venue[];
   onOpenCouple?: (coupleId: string) => void;
 }) {
+  const config = useBrandingConfig();
   const [view, setView] = useState<View>('month');
   const [cursor, setCursor] = useState<Date>(() => {
     const d = new Date();
@@ -488,7 +490,7 @@ export function VenueCalendar({
                   <button type="button" onClick={() => { setEditEv(detail.venue!); setDetail(null); }} className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600">Edit</button>
                 </>
               )}
-              <button type="button" onClick={() => setDetail(null)} className="px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-sm">Close</button>
+              <button type="button" onClick={() => setDetail(null)} className="btn-primary px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-sm" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>Close</button>
             </div>
           </div>
         </div>
@@ -640,7 +642,8 @@ function CalendarEventForm({
                     key={u.id}
                     type="button"
                     onClick={() => toggleAssignee(u.id)}
-                    className={`text-xs px-2 py-1 rounded-full border ${on ? 'bg-[#4A1942] text-white border-[#4A1942]' : 'bg-white text-gray-600 border-gray-300'}`}
+                    className={`text-xs px-2 py-1 rounded-full border ${on ? 'btn-primary bg-[#4A1942] text-white border-[#4A1942]' : 'bg-white text-gray-600 border-gray-300'}`}
+                    style={on ? { backgroundColor: config.primaryColor || '#4A1942', borderColor: config.primaryColor || '#4A1942' } : undefined}
                   >
                     {on ? '✓ ' : ''}{u.name || u.username}
                   </button>
@@ -659,7 +662,8 @@ function CalendarEventForm({
           <button
             type="button"
             onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium"
+            className="btn-primary px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium"
+            style={{ backgroundColor: config.primaryColor || '#4A1942' }}
           >
             Save
           </button>

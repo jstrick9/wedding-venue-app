@@ -1,7 +1,7 @@
 import { PlacedTable, PlacedFixture, ChairType } from '../types';
 import { getTableSpecs, getFixtureTypes, getLinenColors } from '../hooks/useLayoutState';
 import { getChairSpecs } from '../data/venueData';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import SafeImage from './SafeImage';
 import { emit } from '../utils/appEvents';
 
@@ -34,7 +34,7 @@ export function PropertiesPanel({
   onToggleVisibility,
   arrangements = [],
 }: PropertiesPanelProps) {
-  const config = getConfig();
+  const config = useBrandingConfig();
   const tableSpecs = getTableSpecs();
   const fixtureTypes = getFixtureTypes();
   const linenColors = getLinenColors().filter((c) => c.enabled);

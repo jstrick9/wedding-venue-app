@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Venue, LayoutTemplate, LayoutCategoryInfo } from '../types';
 import { Badge, Card, EmptyState } from './ui';
 import ModalDialog from './ModalDialog';
+import { useBrandingConfig } from '../config';
 import { formatDate, formatTime } from '../utils/dateTime';
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { coupleDemandForVenue } from '../utils/spaceSeating';
@@ -34,6 +35,7 @@ export function StudioLayoutsHome({
   onOpenVenueMap,
   onClose,
 }: StudioLayoutsHomeProps) {
+  const config = useBrandingConfig();
   const [selectedCategory, setSelectedCategory] = useState<'all' | string>('all');
 
   // Couple demand per space (guest management lives in the couples portal; the
@@ -181,7 +183,8 @@ export function StudioLayoutsHome({
                       type="button"
                       disabled={!canEdit && !isCurrent}
                       onClick={() => onOpenVenue(v.id)}
-                      className="mt-3 w-full rounded-lg bg-[#4A1942] px-3 py-2 text-sm font-medium text-white hover:bg-[#3b1435] disabled:opacity-40"
+                      className="btn-primary mt-3 w-full rounded-lg bg-[#4A1942] px-3 py-2 text-sm font-medium text-white hover:bg-[#3b1435] disabled:opacity-40"
+                      style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                     >
                       {isCurrent ? 'Edit this space' : 'Open in editor'}
                     </button>
@@ -210,6 +213,11 @@ export function StudioLayoutsHome({
                   ? 'bg-[#4A1942] text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
+              style={
+                selectedCategory === 'all'
+                  ? { backgroundColor: config.primaryColor || '#4A1942' }
+                  : undefined
+              }
             >
               All ({templates.length})
             </button>
@@ -228,6 +236,11 @@ export function StudioLayoutsHome({
                       ? 'bg-[#4A1942] text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
+                  style={
+                    selectedCategory === cat.id
+                      ? { backgroundColor: config.primaryColor || '#4A1942' }
+                      : undefined
+                  }
                 >
                   {cat.icon} {cat.name} ({count})
                 </button>

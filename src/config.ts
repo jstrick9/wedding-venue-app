@@ -100,6 +100,26 @@ export function getConfig(): Config {
   }
 }
 
+const LOADED_FONT_FAMILIES = new Set(['Inter', 'Playfair Display']);
+
+function loadGoogleFont(fontStack?: string): void {
+  if (typeof document === 'undefined' || !fontStack) return;
+  const match = fontStack.match(/^['"]?([^'",]+)['"]?/);
+  if (!match) return;
+  const family = match[1].trim();
+  if (!family || LOADED_FONT_FAMILIES.has(family)) return;
+  const systemFonts = ['system-ui', 'sans-serif', 'serif', 'monospace', 'Arial', 'Georgia'];
+  if (systemFonts.includes(family)) return;
+  LOADED_FONT_FAMILIES.add(family);
+  const id = `spm-google-font-${family.toLowerCase().replace(/\s+/g, '-')}`;
+  if (document.getElementById(id)) return;
+  const link = document.createElement('link');
+  link.id = id;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@400;500;600;700&display=swap`;
+  document.head.appendChild(link);
+}
+
 export function applyRootStyles(config: Partial<Config>): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
@@ -109,8 +129,14 @@ export function applyRootStyles(config: Partial<Config>): void {
   if (config.accentColor) root.style.setProperty('--accent-color', config.accentColor);
   if (config.backgroundColor) root.style.setProperty('--background-color', config.backgroundColor);
   if (config.textColor) root.style.setProperty('--text-color', config.textColor);
-  if (config.fontFamily) root.style.setProperty('--font-family', config.fontFamily);
-  if (config.headingFontFamily) root.style.setProperty('--heading-font-family', config.headingFontFamily);
+  if (config.fontFamily) {
+    loadGoogleFont(config.fontFamily);
+    root.style.setProperty('--font-family', config.fontFamily);
+  }
+  if (config.headingFontFamily) {
+    loadGoogleFont(config.headingFontFamily);
+    root.style.setProperty('--heading-font-family', config.headingFontFamily);
+  }
   if (config.headerTextColor) root.style.setProperty('--header-text-color', config.headerTextColor);
   if (config.bodyTextColor) root.style.setProperty('--body-text-color', config.bodyTextColor);
   if (config.accentTextColor) root.style.setProperty('--accent-text-color', config.accentTextColor);

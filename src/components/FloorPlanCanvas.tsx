@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { Venue, PlacedTable, PlacedFixture, Guest, CeremonyChairRow, RectangularChairLayout, PlacedDecor, DecorArrangement, LayoutReviewPin } from '../types';
 import { getTableSpecs, getFixtureTypes, getLinenColors, getDecorArrangements, getDecorItems } from '../hooks/useLayoutState';
 import { getChairSpecs, getSpacingSettings } from '../data/venueData';
-import { getConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import { on } from '../utils/appEvents';
 
 interface Position {
@@ -103,7 +103,7 @@ export function FloorPlanCanvas({
   const fixtureTypes = getFixtureTypes();
   const linenColors = getLinenColors();
   const arrangements = propArrangements || getDecorArrangements();
-  const config = getConfig();
+  const config = useBrandingConfig();
 
   const scale = 8; // pixels per foot
   
@@ -226,7 +226,7 @@ export function FloorPlanCanvas({
           {spec.imageUrl || (spec.images && spec.images.length > 0) ? (
             <image href={spec.imageUrl || spec.images?.[0]?.url} x={ix} y={iy} width={w} height={h} />
           ) : (
-            <rect x={ix} y={iy} width={w} height={h} fill={spec.color || '#ddd'} stroke="#4A1942" strokeWidth="0.5" rx="1" />
+            <rect x={ix} y={iy} width={w} height={h} fill={spec.color || '#ddd'} stroke={config.primaryColor || '#4A1942'} strokeWidth="0.5" rx="1" />
           )}
         </g>
       );
@@ -274,7 +274,7 @@ export function FloorPlanCanvas({
               width={w}
               height={h}
               fill={spec.color || '#E5E7EB'}
-              stroke="#4A1942"
+              stroke={config.primaryColor || '#4A1942'}
               strokeWidth={1}
               rx={2}
             />
@@ -715,7 +715,7 @@ export function FloorPlanCanvas({
     const baseColor = chairSpec?.color || '#F5F5DC';
     // Occupied chairs have a different visual treatment
     const color = isOccupied ? baseColor : baseColor;
-    const occupiedIndicatorColor = '#4A1942'; // Deep plum for occupied
+    const occupiedIndicatorColor = config.primaryColor || '#4A1942'; // Brand color for occupied
     
     return (
       <g transform={`rotate(${rotation}, ${x + size/2}, ${y + size/2})`}>
@@ -1710,7 +1710,7 @@ export function FloorPlanCanvas({
               })}
               
               {/* Table surface (hidden for seating-only types) */}
-              {!isSeatingOnly && renderShape(spec.shape, x, y, w, h, tableColor, '#4A1942', 2)}
+              {!isSeatingOnly && renderShape(spec.shape, x, y, w, h, tableColor, config.primaryColor || '#4A1942', 2)}
               
               {/* Surface Sparkle Overlay for active design */}
               {table.appliedArrangementId && !isSeatingOnly && (
