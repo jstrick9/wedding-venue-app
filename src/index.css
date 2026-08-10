@@ -33,6 +33,9 @@ html, body {
   --primary-dark: #3d1a45;
   --primary-light: #6b2c5c;
   --accent-color: #8B5A8B;
+  --accent: var(--primary-color);
+  --accent-dark: var(--primary-dark);
+  --accent-light: color-mix(in srgb, var(--primary-color) 12%, transparent);
   --background-color: #f3f4f6;
   --text-color: #1f2937;
   --font-family: 'Inter', system-ui, sans-serif;

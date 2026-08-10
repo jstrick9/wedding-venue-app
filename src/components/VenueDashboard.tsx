@@ -26,7 +26,7 @@ interface Props {
   canAdmin: boolean;
   canOps: boolean;
   users?: any[];
-  onOpenAdmin: () => void;
+  onOpenAdmin: (tab?: string) => void;
   onOpenOperations: () => void;
   onOpenVendors: () => void;
   onOpenTimeline: () => void;
@@ -295,10 +295,16 @@ export function VenueDashboard(props: Props) {
 
             {/* KPI cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-              <Card className="p-4">
+              <button
+                type="button"
+                onClick={() => setSection('couples')}
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
+                title="Open Couples Portal overview"
+                aria-label={`${stats.active} active couples`}
+              >
                 <div className="text-2xl font-bold">{stats.active}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Active couples</div>
-              </Card>
+              </button>
               <button
                 type="button"
                 onClick={() => setSection('couples')}
@@ -309,18 +315,36 @@ export function VenueDashboard(props: Props) {
                 <div className={`text-2xl font-bold ${stats.pending > 0 ? 'text-amber-600' : ''}`}>{stats.pending}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Awaiting layout review</div>
               </button>
-              <Card className="p-4">
+              <button
+                type="button"
+                onClick={() => setSection('ops')}
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
+                title="Open Operations Studio to review setup checklists"
+                aria-label={`Setup ${stats.setupDone} of ${stats.setupTotal} complete`}
+              >
                 <div className="text-2xl font-bold text-sky-700">{stats.setupTotal > 0 ? `${Math.round((stats.setupDone / stats.setupTotal) * 100)}%` : '—'}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Setup ({stats.setupDone}/{stats.setupTotal})</div>
-              </Card>
-              <Card className="p-4">
+              </button>
+              <button
+                type="button"
+                onClick={() => setSection('couples')}
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
+                title="Open Couples Portal to review lodging assignments"
+                aria-label={`${stats.overnightTotal} overnight guests assigned`}
+              >
                 <div className={`text-2xl font-bold ${stats.overnightTotal > stats.overnightCap ? 'text-red-600' : ''}`} style={stats.overnightTotal > stats.overnightCap ? undefined : { color: config.primaryColor || '#4A1942' }}>{stats.overnightTotal}<span className="text-sm text-gray-400">/{stats.overnightCap}</span></div>
                 <div className="text-xs text-gray-500 mt-0.5">Overnight guests</div>
-              </Card>
-              <Card className="p-4">
+              </button>
+              <button
+                type="button"
+                onClick={() => setSection('calendar')}
+                className="rounded-xl bg-white border border-gray-200 shadow-sm p-4 text-left hover:border-[#4A1942] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4A1942]"
+                title="Open Calendar to view open houses"
+                aria-label={`${calendarEvents.filter((e) => e.category === 'open-house').length} open houses scheduled`}
+              >
                 <div className="text-2xl font-bold text-emerald-600">{calendarEvents.filter((e) => e.category === 'open-house').length}</div>
                 <div className="text-xs text-gray-500 mt-0.5">Open houses</div>
-              </Card>
+              </button>
               <button
                 type="button"
                 onClick={() => setSection('chat')}
@@ -367,7 +391,7 @@ export function VenueDashboard(props: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   <button
                     type="button"
-                    onClick={props.onOpenAdmin}
+                    onClick={() => props.onOpenAdmin('venues')}
                     className="rounded-xl bg-white border p-4 text-left transition-colors hover:shadow-sm"
                     style={{ borderColor: `${config.primaryColor || '#4A1942'}33` }}
                   >
@@ -377,7 +401,7 @@ export function VenueDashboard(props: Props) {
                   </button>
                   <button
                     type="button"
-                    onClick={props.onOpenAdmin}
+                    onClick={() => props.onOpenAdmin('packages')}
                     className="rounded-xl bg-white border p-4 text-left transition-colors hover:shadow-sm"
                     style={{ borderColor: `${config.primaryColor || '#4A1942'}33` }}
                   >
@@ -660,7 +684,7 @@ export function VenueDashboard(props: Props) {
                 <h1 className="text-2xl font-bold">💍 Couples Portal</h1>
               </div>
               {coupleEvents.some((e) => e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
-                <Button tone="primary" size="sm" onClick={props.onOpenAdmin}>
+                <Button tone="primary" size="sm" onClick={() => props.onOpenAdmin('couples')}>
                   Review &amp; approve layouts in Admin
                 </Button>
               )}
@@ -691,7 +715,7 @@ export function VenueDashboard(props: Props) {
                       Open couple portal →
                     </button>
                     {(e.layoutStatus === 'pending' || e.layoutStatus === 'changes_requested') && (
-                      <button type="button" onClick={props.onOpenAdmin} className="text-xs text-amber-700 hover:underline">Review →</button>
+                      <button type="button" onClick={() => props.onOpenAdmin('couples')} className="text-xs text-amber-700 hover:underline">Review →</button>
                     )}
                   </div>
                 </div>

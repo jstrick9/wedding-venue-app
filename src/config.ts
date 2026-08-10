@@ -143,6 +143,11 @@ export function applyRootStyles(config: Partial<Config>): void {
   root.style.setProperty('--color-plum-100', `color-mix(in srgb, ${primary} 12%, transparent)`);
   root.style.setProperty('--color-plum-50', `color-mix(in srgb, ${primary} 6%, transparent)`);
 
+  // Support Guest Portal and secondary accent aliases
+  root.style.setProperty('--accent', primary);
+  root.style.setProperty('--accent-dark', dark);
+  root.style.setProperty('--accent-light', `color-mix(in srgb, ${primary} 12%, transparent)`);
+
   if (config.accentColor) root.style.setProperty('--accent-color', config.accentColor);
   if (config.backgroundColor) root.style.setProperty('--background-color', config.backgroundColor);
   if (config.textColor) root.style.setProperty('--text-color', config.textColor);

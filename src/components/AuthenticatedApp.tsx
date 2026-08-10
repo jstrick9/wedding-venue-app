@@ -929,7 +929,14 @@ export default function AuthenticatedApp() {
         isStaff={isStaff}
         canAdmin={canOpenAdminPanel}
         canOps={canOpenOperationsPanel}
-        onOpenAdmin={() => { window.location.hash = '#/admin'; setView('admin'); closeAll(); }}
+        onOpenAdmin={(tab?: string) => {
+          window.location.hash = '#/admin';
+          setView('admin');
+          closeAll();
+          if (tab) {
+            setTimeout(() => emit('spm_open_admin_tab', tab), 20);
+          }
+        }}
         onOpenOperations={() => {
           window.location.hash = '#/dashboard';
           setView('dashboard');

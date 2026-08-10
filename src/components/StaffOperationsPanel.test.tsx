@@ -45,7 +45,7 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
 
     expect(screen.getByRole('button', { name: /overview/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^📜\s*beo sheet$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /tasks/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /tasks$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /areas/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^🕒\s*shifts$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /checklists/i })).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     );
 
     // Switch to Tasks tab
-    fireEvent.click(screen.getByRole('button', { name: /tasks/i }));
+    fireEvent.click(screen.getByRole('button', { name: /tasks$/i }));
 
     const addTaskBtn = screen.getByRole('button', { name: /\+ add task/i });
     fireEvent.click(addTaskBtn);

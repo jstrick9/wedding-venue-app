@@ -409,10 +409,10 @@ const StaffOperationsPanel: React.FC<Props> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-gray-900">
-          <StatCard label="Total Tasks" value={total} color="text-gray-900" />
-          <StatCard label="Completed" value={completed} color="text-green-600" />
-          <StatCard label="Blocked" value={blocked} color="text-red-600" />
-          <StatCard label="My Tasks" value={myTasks.length} color="text-purple-600" />
+          <StatCard label="Total Tasks" value={total} color="text-gray-900" onClick={() => setActiveTab('tasks')} />
+          <StatCard label="Completed" value={completed} color="text-green-600" onClick={() => setActiveTab('tasks')} />
+          <StatCard label="Blocked" value={blocked} color="text-red-600" onClick={() => setActiveTab('tasks')} />
+          <StatCard label="My Tasks" value={myTasks.length} color="text-purple-600" onClick={() => setActiveTab('tasks')} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1682,13 +1682,13 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <div className="flex items-center p-3 rounded-xl bg-white border border-gray-100 shadow-sm">
               <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold mr-3 border-2 border-white shadow-sm overflow-hidden" style={{ color: config.primaryColor, backgroundColor: `${config.primaryColor}20` }}>
                 {currentUser.imageUrl ? (
-                  <img src={currentUser.imageUrl} alt={currentUser.name} className="w-full h-full object-cover" />
+                  <img src={currentUser.imageUrl} alt={currentUser.name || 'User'} className="w-full h-full object-cover" />
                 ) : (
-                  currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()
+                  (currentUser.name || currentUser.username || 'U').split(' ').map(n => n[0]).join('').toUpperCase()
                 )}
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-bold text-gray-900 truncate tracking-tight">{currentUser.name}</div>
+                <div className="text-sm font-bold text-gray-900 truncate tracking-tight">{currentUser.name || currentUser.username || 'Staff User'}</div>
                 <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mt-1">{currentUser.role}</div>
               </div>
             </div>
@@ -1925,11 +1925,16 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
 // --- Sub-components ---
 
-const StatCard = ({ label, value, color }: { label: string, value: number, color: string }) => (
-  <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm transition-transform hover:-translate-y-1 duration-200">
+const StatCard = ({ label, value, color, onClick }: { label: string, value: number, color: string, onClick?: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md duration-200 text-left w-full focus:outline-none focus:ring-2"
+    title={`Click to view ${label.toLowerCase()}`}
+  >
     <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest">{label}</div>
     <div className={`text-3xl font-black mt-1 ${color}`}>{value}</div>
-  </div>
+  </button>
 );
 
 const PriorityDot = ({ priority }: { priority: StaffTaskPriority }) => (
