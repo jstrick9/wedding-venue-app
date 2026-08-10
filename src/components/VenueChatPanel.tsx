@@ -164,19 +164,20 @@ export function VenueChatPanel({
       >
         {/* Top Header */}
         <header
-          className="px-5 py-4 flex items-center justify-between text-white shadow-sm shrink-0"
+          className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
           style={{
-            background: `linear-gradient(to right, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+            borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
           }}
         >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl" aria-hidden="true">💬</span>
-            <div>
-              <h1 className="text-lg font-bold">Portal Chat &amp; Direct Messages</h1>
-              <p className="text-xs text-white/80">
-                Centralized communication tied to each couple, event, and internal venue staff
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span>💬</span>
+              <span>Portal Chat &amp; Direct Messages</span>
+            </h1>
+            <p className="text-sm text-white/80 mt-1">
+              Centralized communication tied to each couple, event, and internal venue staff
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {onClose && (

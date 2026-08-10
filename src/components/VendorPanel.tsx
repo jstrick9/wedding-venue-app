@@ -119,16 +119,20 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
       <div className={inline ? "w-full h-full flex flex-col" : "w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
         {/* Header */}
         <div
-          className="px-5 py-4 border-b flex items-center justify-between text-white"
+          className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
           style={{
-            background: `linear-gradient(to right, ${config.primaryColor || '#4A1942'}, ${
+            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${
               config.primaryDark || config.primaryColor || '#6b2c5c'
             })`,
+            borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
           }}
         >
           <div>
-            <h1 className="text-lg font-bold">🧰 Preferred Vendors</h1>
-            <p className="text-xs opacity-80">Curate the vendors you recommend to your couples, organized by category.</p>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span>🧰</span>
+              <span>Preferred Vendors</span>
+            </h1>
+            <p className="text-sm text-white/80 mt-1">Curate the vendors you recommend to your couples, organized by category.</p>
           </div>
           <div className="flex items-center gap-2">
             <button

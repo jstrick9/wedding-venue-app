@@ -385,45 +385,48 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-0">
+      {/* Pill Tabs */}
+      <div className="flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={() => setActiveTab('catalog')}
-          className={`px-4 py-2.5 font-medium text-sm transition-colors ${
-            activeTab === 'catalog' 
-              ? 'border-b-2 font-bold' 
-              : 'text-gray-500 hover:text-gray-700'
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            activeTab === 'catalog'
+              ? 'btn-primary text-white shadow-sm'
+              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
           }`}
-          style={activeTab === 'catalog' ? { borderColor: config.primaryColor || '#4A1942', color: config.primaryColor || '#4A1942' } : undefined}
+          style={activeTab === 'catalog' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
         >
           🗂️ Catalog Items
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2.5 font-medium text-sm transition-colors ${
-            activeTab === 'categories' 
-              ? 'border-b-2 font-bold' 
-              : 'text-gray-500 hover:text-gray-700'
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            activeTab === 'categories'
+              ? 'btn-primary text-white shadow-sm'
+              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
           }`}
-          style={activeTab === 'categories' ? { borderColor: config.primaryColor || '#4A1942', color: config.primaryColor || '#4A1942' } : undefined}
+          style={activeTab === 'categories' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
         >
           📁 Categories
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('packages')}
-          className={`px-4 py-2.5 font-medium text-sm transition-colors whitespace-nowrap ${
-            activeTab === 'packages' 
-              ? 'border-b-2 font-bold' 
-              : 'text-gray-500 hover:text-gray-700'
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+            activeTab === 'packages'
+              ? 'btn-primary text-white shadow-sm'
+              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
           }`}
-          style={activeTab === 'packages' ? { borderColor: config.primaryColor || '#4A1942', color: config.primaryColor || '#4A1942' } : undefined}
+          style={activeTab === 'packages' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
         >
-          🎁 Packages & Styles
+          🎁 Packages &amp; Styles
         </button>
       </div>
 
       {activeTab === 'categories' && (
-        <div className="px-4 py-2 flex justify-start">
+        <div className="px-1 py-1 flex justify-start">
           <button 
             onClick={handleLoadDefaultCategories}
             className="text-xs font-bold hover:underline flex items-center gap-1"
@@ -435,7 +438,7 @@ export const AdminDecorSection: React.FC<AdminDecorSectionProps> = ({
       )}
 
       {/* Tab Content */}
-      <div className="bg-white p-4 rounded-b-xl shadow-sm border border-t-0 border-gray-200 min-h-[400px]">
+      <div className="space-y-4">
         {activeTab === 'catalog' && (
           <div className="space-y-4">
             {/* Integrated Decor Search & Action Bar */}

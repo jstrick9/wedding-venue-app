@@ -1023,10 +1023,13 @@ export default function AuthenticatedApp() {
             <button
               type="button"
               onClick={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })}
-              className="hover:underline font-semibold"
-              style={{ color: brandingConfig.primaryColor || '#4A1942' }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 transition-all shadow-sm"
+              aria-label="Close Design Studio and return to Dashboard"
+              title="Close and return to Dashboard"
             >
-              ← Dashboard
+              <span>←</span>
+              <span>Dashboard</span>
+              <span className="text-gray-400 font-normal ml-0.5">✕</span>
             </button>
           </span>
         </div>

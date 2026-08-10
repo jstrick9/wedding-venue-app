@@ -1696,13 +1696,19 @@ const StaffOperationsPanel: React.FC<Props> = ({
 
   return (
     <div className={inline ? "h-full flex flex-col bg-gray-100" : "fixed inset-0 z-[10000] bg-gray-100/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300"}>
-      <header className="no-print h-16 px-6 flex items-center justify-between shadow-sm border-b" style={{ background: `linear-gradient(to right, ${config.primaryColor}, ${config.primaryDark})` }}>
-        <div className="flex items-center text-white">
-          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3 text-xl shadow-inner">📋</div>
-          <div>
-            <h1 className="text-lg font-bold leading-tight tracking-tight">Staff & Operations</h1>
-            <p className="text-xs opacity-80 font-medium tracking-wide uppercase">{eventName || 'Event Operations'}</p>
-          </div>
+      <header
+        className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
+        style={{
+          background: `linear-gradient(135deg, ${config.primaryColor}, ${config.primaryDark})`,
+          borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
+        }}
+      >
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <span>📋</span>
+            <span>Staff &amp; Operations</span>
+          </h1>
+          <p className="text-sm text-white/80 mt-1">{eventName || 'Event Operations & Shift Roster'}</p>
         </div>
         <div className="flex items-center gap-2">
           <button

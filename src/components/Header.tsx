@@ -428,11 +428,14 @@ export function Header({
                   e.preventDefault();
                   onShowDashboard();
                 }}
-                className="hidden md:flex items-center gap-1 px-2 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-bold transition-colors whitespace-nowrap text-white"
+                aria-label="Close Design Studio and return to Dashboard"
+                title="Close and return to Dashboard"
               >
-                <span>🏠</span>
+                <span>←</span>
                 <span className="hidden lg:inline">Dashboard</span>
                 <span className="lg:hidden">Home</span>
+                <span className="text-white/60 font-normal ml-0.5">✕</span>
               </button>
             )}
             {canOpenOperations && onOpenOperations && (

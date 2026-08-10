@@ -197,17 +197,21 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
     <div className={inline ? "w-full h-full bg-white flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-4"} style={inline ? undefined : { zIndex: 10000 }}>
       <div className={inline ? "w-full h-full flex flex-col" : "w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
         {/* Header */}
-        <div
-          className="text-white p-4 flex items-center justify-between"
+        <header
+          className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
           style={{
-            background: `linear-gradient(to right, ${config.primaryColor || '#4A1942'}, ${
+            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${
               config.primaryDark || config.primaryColor || '#3d1a45'
             })`,
+            borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
           }}
         >
           <div>
-            <h2 className="text-xl font-bold">📅 Wedding Timeline</h2>
-            <p className="text-sm text-white/70">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span>📅</span>
+              <span>Wedding Timeline</span>
+            </h1>
+            <p className="text-sm text-white/80 mt-1">
               {activeTimeline ? activeTimeline.name : 'Plan your wedding day schedule'}
             </p>
           </div>
@@ -242,7 +246,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
               ✕
             </button>
           </div>
-        </div>
+        </header>
 
         {/* Couple Event Selector / Filter Bar */}
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">

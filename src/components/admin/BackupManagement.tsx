@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { User } from '../../types';
-import { getConfig } from '../../config';
+import { useBrandingConfig } from '../../config';
 import { downloadBackupBundle } from '../../utils/backupExport';
 import {
   applyBackupPayload,
@@ -11,6 +11,7 @@ import {
 } from '../../utils/backupImport';
 import type { BackupImportReport, BackupBundle } from '../../utils/backupTypes';
 import { showToast } from '../Toast';
+import { BrandedSectionHeader } from './shared/AdminSharedComponents';
 
 interface BackupManagementProps {
   user: User | null;
@@ -24,7 +25,7 @@ interface BackupManagementProps {
  * last rollback if an import went wrong.
  */
 export function BackupManagement({ user, onDataRestored }: BackupManagementProps) {
-  const config = getConfig();
+  const config = useBrandingConfig();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -100,18 +101,13 @@ export function BackupManagement({ user, onDataRestored }: BackupManagementProps
   };
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-2xl">💾</span>
-          <h3 className="font-semibold text-gray-800">Backup &amp; Restore</h3>
-        </div>
-        <p className="text-sm text-gray-500">
-          Download a full backup of this workspace (venues, tables, guests, layouts, decor,
-          messages, portal, staff, settings) as a single JSON file, or restore from one. A
-          rollback snapshot is kept automatically before each restore.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <BrandedSectionHeader
+        icon="💾"
+        title="Backup &amp; Restore"
+        description="Download a full backup of this workspace (venues, tables, guests, layouts, decor, messages, portal, staff, settings) as a single JSON file, or restore from one. A rollback snapshot is kept automatically before each restore."
+        config={config}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-col gap-3">

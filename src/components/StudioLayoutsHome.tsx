@@ -6,6 +6,7 @@ import { useBrandingConfig } from '../config';
 import { formatDate, formatTime } from '../utils/dateTime';
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { coupleDemandForVenue } from '../utils/spaceSeating';
+import { BrandedStatCard } from './admin/shared/AdminSharedComponents';
 
 export interface StudioLayoutsHomeProps {
   venues: Venue[];
@@ -90,23 +91,9 @@ export function StudioLayoutsHome({
 
         {/* Summary strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Card className="p-4">
-            <div className="text-xs text-gray-500 font-medium">Venue spaces</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1">{venues.length}</div>
-          </Card>
-          <Card className="p-4">
-            <div className="text-xs text-gray-500 font-medium">Total seating capacity</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1">
-              {totalSeating.toLocaleString()}
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="text-xs text-gray-500 font-medium">Spaces with a master layout</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1">
-              {spacesWithMaster}
-              <span className="text-sm text-gray-400 font-normal"> / {venues.length}</span>
-            </div>
-          </Card>
+          <BrandedStatCard icon="🏛️" label="Venue spaces" value={venues.length} config={config} variant="primary" />
+          <BrandedStatCard icon="👥" label="Total seating capacity" value={totalSeating.toLocaleString()} config={config} variant="accent" />
+          <BrandedStatCard icon="✓" label="Spaces with a master layout" value={`${spacesWithMaster} / ${venues.length}`} config={config} variant="success" />
         </div>
 
         {/* Venue spaces / space picker */}
@@ -127,7 +114,23 @@ export function StudioLayoutsHome({
                 const masterTables = master?.tables?.length ?? 0;
                 const demand = demandFor(v.id);
                 return (
-                  <Card key={v.id} className={`p-4 ${isCurrent ? 'ring-2 ring-[#4A1942]' : ''}`}>
+                  <Card
+                    key={v.id}
+                    className={`p-4 border transition-all ${
+                      isCurrent
+                        ? 'shadow-md border-l-4 font-semibold'
+                        : 'hover:shadow-sm border-gray-200'
+                    }`}
+                    style={
+                      isCurrent
+                        ? {
+                            borderColor: config.primaryColor || '#4A1942',
+                            borderLeftColor: config.primaryColor || '#4A1942',
+                            backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 4%, transparent)`,
+                          }
+                        : undefined
+                    }
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="text-2xl">{cat?.icon || '🏛️'}</div>
                       <div className="flex flex-wrap gap-1 justify-end">
@@ -290,7 +293,8 @@ export function StudioLayoutsHome({
                     key={t.id}
                     type="button"
                     onClick={() => onSelectTemplate(t)}
-                    className="text-left rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-[#4A1942]/40 transition"
+                    className="text-left rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition"
+                    style={{ borderColor: undefined }}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="text-2xl">{cat?.icon || '📋'}</div>

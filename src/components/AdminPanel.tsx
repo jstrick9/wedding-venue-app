@@ -1148,13 +1148,14 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
             <button
               type="button"
               onClick={onClose}
-              className="btn-primary inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors shadow-sm"
-              style={{ backgroundColor: config.primaryColor }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-800"
+              aria-label="Close admin panel"
+              title="Close and return to Dashboard"
             >
               <span>←</span>
               <span>Dashboard</span>
+              <span className="text-gray-400 font-normal ml-0.5">✕</span>
             </button>
-            <button type="button" onClick={onClose} className="text-lg text-gray-400 hover:text-gray-700 font-bold p-1 leading-none" aria-label="Close admin panel">✕</button>
           </div>
         </div>
 

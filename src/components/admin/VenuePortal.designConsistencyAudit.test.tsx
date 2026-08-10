@@ -4,6 +4,8 @@ import { AdminPanel } from '../AdminPanel';
 import { VenueManagement } from './VenueManagement';
 import { AdminDecorSection } from '../AdminDecorSection';
 import { AccessControlPanel } from './AccessControlPanel';
+import { BackupManagement } from './BackupManagement';
+import { StudioLayoutsHome } from '../StudioLayoutsHome';
 import { VenueDashboard } from '../VenueDashboard';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import type { Config, Venue, User } from '../../types';
@@ -92,7 +94,7 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     onClose: vi.fn(),
     onShowSuccess: vi.fn(),
     confirmAction: vi.fn(),
-    layoutCategories: [{ id: 'reception', name: 'Reception', color: '#FFF', icon: '🎉' }],
+    layoutCategories: [{ id: 'reception', name: 'Reception', color: '#FFF', icon: '🎉', description: 'Reception space' }],
     patternOptions: ['wood', 'grass', 'concrete', 'carpet'],
   };
 
@@ -191,5 +193,34 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     fireEvent.click(couplesBtn);
     expect(screen.getByRole('heading', { name: /Couples Portal/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /←\s*dashboard home/i })).not.toBeInTheDocument();
+  });
+
+  it('renders BackupManagement with BrandedSectionHeader matching Security & Audit style', () => {
+    render(<BackupManagement user={testUser} onDataRestored={vi.fn()} />);
+
+    expect(screen.getByText('Backup & Restore')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Download a full backup of this workspace/i)
+    ).toBeInTheDocument();
+  });
+
+  it('renders StudioLayoutsHome with BrandedStatCard metrics and branded active space card', () => {
+    render(
+      <StudioLayoutsHome
+        venues={[testVenue]}
+        currentVenueId="venue-1"
+        templates={[]}
+        layoutCategories={[{ id: 'reception', name: 'Reception', color: '#FFF', icon: '🎉', description: 'Reception space' }]}
+        canEdit={true}
+        onOpenVenue={vi.fn()}
+        onSelectTemplate={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Venue spaces')).toBeInTheDocument();
+    expect(screen.getByText('Total seating capacity')).toBeInTheDocument();
+    expect(screen.getByText('Spaces with a master layout')).toBeInTheDocument();
+    expect(screen.getByText('Open now')).toBeInTheDocument();
   });
 });

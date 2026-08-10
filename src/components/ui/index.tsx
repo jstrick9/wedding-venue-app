@@ -40,9 +40,9 @@ export function Button({
   );
 }
 
-export function Card({ className = '', children }: { className?: string; children: React.ReactNode }) {
+export function Card({ className = '', style, children }: { className?: string; style?: React.CSSProperties; children: React.ReactNode }) {
   return (
-    <div className={`rounded-xl bg-white border border-gray-200 shadow-sm ${className}`}>{children}</div>
+    <div className={`rounded-xl bg-white border border-gray-200 shadow-sm ${className}`} style={style}>{children}</div>
   );
 }
 

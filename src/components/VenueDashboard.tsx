@@ -264,9 +264,10 @@ export function VenueDashboard(props: Props) {
         {section === 'home' && (
           <div className="space-y-5">
             <header
-              className="p-6 flex items-center justify-between border-b shadow-sm mb-5 rounded-2xl"
+              className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
               style={{
                 background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
               }}
             >
               <div>
@@ -704,9 +705,10 @@ export function VenueDashboard(props: Props) {
         {section === 'calendar' && (
           <div className="space-y-5">
             <header
-              className="p-6 flex items-center justify-between border-b shadow-sm mb-5 rounded-2xl"
+              className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
               style={{
                 background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
               }}
             >
               <div>
@@ -726,9 +728,10 @@ export function VenueDashboard(props: Props) {
         {section === 'couples' && (
           <div className="space-y-5">
             <header
-              className="p-6 flex items-center justify-between border-b shadow-sm mb-5 rounded-2xl"
+              className="no-print px-6 py-4 flex items-center justify-between border-b shadow-sm shrink-0 text-white"
               style={{
                 background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                borderColor: `color-mix(in srgb, ${config.primaryDark || '#3d1a45'} 40%, transparent)`,
               }}
             >
               <div>
