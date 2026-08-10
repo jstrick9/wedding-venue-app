@@ -102,19 +102,30 @@ html, body {
   box-sizing: border-box;
 }
 
-html, body, #root {
-  height: 100%;
+html, body {
+  min-height: 100%;
   margin: 0;
   padding: 0;
 }
 
-body, #root, .spm-studio-root {
+#root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body, #root {
   font-family: var(--font-family) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background-color: var(--background-color);
   color: var(--body-text-color);
+}
+
+.spm-studio-root {
+  overflow: hidden;
 }
 
 /* Headings use the heading font family */
