@@ -321,11 +321,12 @@ export function GuidelineManagement(props: AdminCommonProps) {
                 />
               </div>
 
-              {/* Quick Presets */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">🚀 Quick Add Preset Guidelines</h3>
-                <div className="flex flex-wrap gap-2">
+              {/* Compact 1-Row Guideline Quick Presets */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-semibold text-gray-500">✨ Quick Presets:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: Guideline[] = [
                         { id: `guideline-${Date.now()}-1`, title: 'Table Spacing', description: 'Maintain 3-4 feet between tables for server access and guest movement.', enabled: true, category: 'spacing' as const, icon: '📏' },
@@ -334,11 +335,12 @@ export function GuidelineManagement(props: AdminCommonProps) {
                       ];
                       handleSaveGuidelines([...guidelines, ...presets]);
                     }}
-                    className="px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium"
+                    className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs font-medium hover:bg-amber-100 transition-colors"
                   >
-                    ✨ Add Spacing & Safety
+                    + ✨ Spacing &amp; Safety
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: Guideline[] = [
                         { id: `guideline-${Date.now()}-4`, title: 'Head Table Placement', description: 'Position the head table in a prominent location visible to all guests.', enabled: true, category: 'tips' as const, icon: '👑' },
@@ -347,11 +349,12 @@ export function GuidelineManagement(props: AdminCommonProps) {
                       ];
                       handleSaveGuidelines([...guidelines, ...presets]);
                     }}
-                    className="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+                    className="px-2.5 py-1 bg-purple-50 border border-purple-200 text-purple-700 rounded-md text-xs font-medium hover:bg-purple-100 transition-colors"
                   >
-                    💒 Add Wedding Tips
+                    + 💒 Wedding Tips
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: Guideline[] = [
                         { id: `guideline-${Date.now()}-7`, title: 'ADA Accessibility', description: 'Ensure 36-inch minimum aisle width for wheelchair access.', enabled: true, category: 'important' as const, icon: '♿' },
@@ -359,11 +362,12 @@ export function GuidelineManagement(props: AdminCommonProps) {
                       ];
                       handleSaveGuidelines([...guidelines, ...presets]);
                     }}
-                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                    className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-800 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors"
                   >
-                    ♿ Add Accessibility
+                    + ♿ Accessibility
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: Guideline[] = [
                         { id: `guideline-${Date.now()}-9`, title: 'Buffet Flow', description: 'Create a one-way traffic flow around buffet tables to prevent congestion.', enabled: true, category: 'tips' as const, icon: '🍽️' },
@@ -372,9 +376,9 @@ export function GuidelineManagement(props: AdminCommonProps) {
                       ];
                       handleSaveGuidelines([...guidelines, ...presets]);
                     }}
-                    className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
+                    className="px-2.5 py-1 bg-green-50 border border-green-200 text-green-800 rounded-md text-xs font-medium hover:bg-green-100 transition-colors"
                   >
-                    🍽️ Add Food & Beverage
+                    + 🍽️ Food &amp; Bar
                   </button>
                 </div>
               </div>

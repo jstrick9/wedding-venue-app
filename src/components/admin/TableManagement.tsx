@@ -290,8 +290,7 @@ export function TableManagement(props: AdminCommonProps) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-4">
-              {/* Header Section */}
+      {/* Header Section */}
               <BrandedSectionHeader 
                 icon="🪑" 
                 title="Tables/Seating" 
@@ -299,43 +298,20 @@ export function TableManagement(props: AdminCommonProps) {
                 config={config}
               />
 
-              {/* Quick Statistics */}
+              {/* Compact 4-Column Table KPI Strip */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-blue-600">{tableTypes.length}</div>
-                  <div className="text-xs text-blue-700 font-medium">🪑 Table Types</div>
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {tableTypes.reduce((sum, t) => sum + (t.inventoryCount || 0), 0) || '∞'}
-                  </div>
-                  <div className="text-xs text-green-700 font-medium">📦 Total Inventory</div>
-                </div>
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {tableSpecs.reduce((sum, t) => sum + t.capacity, 0)}
-                  </div>
-                  <div className="text-xs text-purple-700 font-medium">👥 Total Capacity</div>
-                </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-                  <div className="flex justify-center gap-1 mb-1">
-                    {tableTypes.slice(0, 5).map(t => (
-                      <div key={t.id} className="w-5 h-5 rounded border border-gray-300" style={{ backgroundColor: t.color || '#F5F5DC' }} title={t.name} />
-                    ))}
-                  </div>
-                  <div className="text-xs text-amber-700 font-medium">🎨 Color Preview</div>
-                </div>
+                <BrandedStatCard icon="🪑" label="Table Types" value={tableTypes.length} config={config} variant="primary" />
+                <BrandedStatCard icon="📦" label="Total Inventory" value={tableTypes.reduce((sum, t) => sum + (t.inventoryCount || 0), 0) || '∞'} config={config} variant="success" />
+                <BrandedStatCard icon="👥" label="Total Capacity" value={tableSpecs.reduce((sum, t) => sum + t.capacity, 0)} config={config} variant="accent" />
+                <BrandedStatCard icon="🎨" label="Categories" value={new Set(tableTypes.map(t => t.shape)).size} config={config} variant="warning" />
               </div>
 
-              {/* Quick Add Presets */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-700 flex items-center gap-2">
-                    <span>⚡</span> Quick Add Table Presets
-                  </h4>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {/* Compact 1-Row Table Quick Presets */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-semibold text-gray-500">⚡ Quick Presets:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: TableSpec[] = [
                         { id: `table-${Date.now()}-1`, name: '60" Round (8)', shape: 'circle', width: 5, height: 5, capacity: 8, color: '#FFFFFF', allowAsDecorBase: true },
@@ -343,11 +319,12 @@ export function TableManagement(props: AdminCommonProps) {
                       ];
                       handleSaveTables([...tableSpecs, ...presets]);
                     }}
-                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                    className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors"
                   >
-                    ⭕ Round Tables
+                    + ⭕ Rounds
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: TableSpec[] = [
                         { id: `table-${Date.now()}-1`, name: '6ft Banquet', shape: 'rectangle', width: 6, height: 2.5, capacity: 6, color: '#FFFFFF', allowAsDecorBase: true },
@@ -356,11 +333,12 @@ export function TableManagement(props: AdminCommonProps) {
                       ];
                       handleSaveTables([...tableSpecs, ...presets]);
                     }}
-                    className="px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                    className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-xs font-medium hover:bg-amber-100 transition-colors"
                   >
-                    ▬ Rectangular
+                    + ▬ Banquets
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: TableSpec[] = [
                         { id: `table-${Date.now()}-1`, name: 'Sweetheart Table', shape: 'semicircle', width: 5, height: 2.5, capacity: 2, color: '#FFF0F5', allowAsDecorBase: true },
@@ -369,11 +347,12 @@ export function TableManagement(props: AdminCommonProps) {
                       ];
                       handleSaveTables([...tableSpecs, ...presets]);
                     }}
-                    className="px-3 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                    className="px-2.5 py-1 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-medium hover:bg-pink-100 transition-colors"
                   >
-                    👑 Wedding Party
+                    + 👑 Wedding Party
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: TableSpec[] = [
                         { id: `table-${Date.now()}-1`, name: 'Cocktail High', shape: 'circle', width: 2.5, height: 2.5, capacity: 4, color: '#F5F5DC', allowAsDecorBase: true },
@@ -382,11 +361,12 @@ export function TableManagement(props: AdminCommonProps) {
                       ];
                       handleSaveTables([...tableSpecs, ...presets]);
                     }}
-                    className="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                    className="px-2.5 py-1 bg-purple-50 border border-purple-200 text-purple-700 rounded-md text-xs font-medium hover:bg-purple-100 transition-colors"
                   >
-                    🍸 Cocktail
+                    + 🍸 Cocktails
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: TableSpec[] = [
                         { id: `table-${Date.now()}-1`, name: 'Kids Table', shape: 'rectangle', width: 6, height: 2.5, capacity: 8, color: '#E0F7FA', allowAsDecorBase: true },
@@ -394,60 +374,41 @@ export function TableManagement(props: AdminCommonProps) {
                       ];
                       handleSaveTables([...tableSpecs, ...presets]);
                     }}
-                    className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                    className="px-2.5 py-1 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs font-medium hover:bg-green-100 transition-colors"
                   >
-                    🧒 Kids Tables
+                    + 🧒 Kids Tables
                   </button>
                 </div>
               </div>
 
-              {/* Table Types Section Header */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
-                <div>
-                  <div className="font-semibold text-blue-800 flex items-center gap-2">🪑 Table Types</div>
-                  <div className="text-xs text-blue-600 mt-0.5">Dining and service table definitions for reception and event layouts</div>
-                </div>
-                <button
-                  onClick={() => setShowTableTypesSection(!showTableTypesSection)}
-                  className="px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-lg text-sm hover:bg-blue-100 transition-colors"
-                >
-                  {showTableTypesSection ? '▲ Collapse' : '▼ Expand'}
-                </button>
-              </div>
-
-              {showTableTypesSection && (
-              <>
-              {/* Action Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center gap-2">
-                  <div className="flex">
-                    {tableTypes.slice(0, 4).map(t => (
-                      <div key={t.id} className="w-8 h-8 -ml-1 first:ml-0 rounded-full border-2 border-white flex items-center justify-center text-xs" style={{ backgroundColor: t.color || '#F5F5DC' }} title={t.name}>
-                        {t.shape === 'circle' ? '⭕' : t.shape === 'rectangle' ? '▬' : '◯'}
-                      </div>
-                    ))}
+              {/* Integrated Table Search & Action Bar */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-xs">🔍</span>
+                    <input
+                      type="search"
+                      value={tableSearch}
+                      onChange={(e) => setTableSearch(e.target.value)}
+                      placeholder="Search table types..."
+                      className="w-48 pl-8 pr-3 py-1.5 rounded-lg border border-gray-300 text-xs focus:outline-none focus:ring-2"
+                      aria-label="Search table types"
+                    />
                   </div>
-                  <span className="text-sm text-gray-600 font-medium">{tableTypes.length} table types</span>
+                  <button
+                    type="button"
+                    onClick={() => expandedTables.size === tableTypes.length ? collapseAllTables() : expandAllTables()}
+                    className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs text-gray-700 transition-colors font-medium"
+                  >
+                    {expandedTables.size === tableTypes.length ? '▲ Collapse' : '▼ Expand'}
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-xs text-gray-600 font-medium">{tableTypes.length} Table types</span>
                 </div>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                  <input
-                    type="search"
-                    value={tableSearch}
-                    onChange={(e) => setTableSearch(e.target.value)}
-                    placeholder="Search table types..."
-                    className="w-56 pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
-                    aria-label="Search table types"
-                  />
-                </div>
+                
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => expandedTables.size === tableTypes.length ? collapseAllTables() : expandAllTables()}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
-                  >
-                    {expandedTables.size === tableTypes.length ? '▲ Collapse All' : '▼ Expand All'}
-                  </button>
-                  <button
+                    type="button"
                     onClick={() => {
                       const id = `table-${Date.now()}`;
                       const newTable: TableSpec = {
@@ -463,21 +424,13 @@ export function TableManagement(props: AdminCommonProps) {
                       handleSaveTables([...tableSpecs, newTable]);
                       setExpandedTables(new Set([...expandedTables, id]));
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-[#3b1435] text-white rounded-lg hover:from-blue-700 hover:to-[#3b1435] transition-colors font-medium shadow-sm flex items-center gap-1"
+                    className="btn-primary px-3.5 py-1.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
+                    style={{ backgroundColor: config.primaryColor }}
                   >
-                    <span>+</span> Add Table Type
+                    <span>➕</span>
+                    <span>Add Table Type</span>
                   </button>
                 </div>
-              </div>
-
-              {/* Shape Legend */}
-              <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                <span className="flex items-center gap-1"><span className="w-4 h-4 bg-blue-100 rounded-full border"></span> Round</span>
-                <span className="flex items-center gap-1"><span className="w-4 h-3 bg-amber-100 rounded border"></span> Rectangle</span>
-                <span className="flex items-center gap-1"><span className="w-4 h-3 bg-pink-100 rounded-full border"></span> Oval</span>
-                <span className="flex items-center gap-1"><span className="w-4 h-3 bg-purple-100 border" style={{borderRadius:'50% 50% 0 0'}}></span> Semicircle</span>
-                <span className="flex items-center gap-1"><span className="text-green-600">📦</span> Inventory</span>
-                <span className="flex items-center gap-1"><span className="text-blue-600">🪑</span> Capacity</span>
               </div>
               
               {/* Table Cards */}
@@ -925,8 +878,6 @@ export function TableManagement(props: AdminCommonProps) {
                   { icon: '📏', title: 'Spacing', description: 'Allow 2-3 feet between tables for comfortable movement' }
                 ]}
               />
-              </>
-              )}
 
               {/* Seating Types Section */}
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
@@ -1198,7 +1149,6 @@ export function TableManagement(props: AdminCommonProps) {
                   ]}
                 />
               )}
-            </div>
     </div>
   );
 }

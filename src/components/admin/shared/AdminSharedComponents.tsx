@@ -15,19 +15,23 @@ export function BrandedSectionHeader({ icon, title, description, config, variant
                   variant === 'secondary' ? config.primaryDark : config.accentColor;
   
   return (
-    <div className="p-4 rounded-t-xl" style={{ 
-      background: `linear-gradient(135deg, ${bgColor} 0%, ${config.primaryDark} 100%)`,
+    <div className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm flex flex-wrap items-center justify-between gap-2" style={{
+      borderLeft: `4px solid ${bgColor || '#4A1942'}`,
       fontFamily: config.headingFontFamily 
     }}>
-      <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: config.headerTextColor }}>
-        <span className="text-xl">{icon}</span>
-        {title}
-      </h3>
-      {description && (
-        <p className="text-sm mt-1 opacity-90" style={{ color: config.headerTextColor }}>
-          {description}
-        </p>
-      )}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className="text-lg shrink-0">{icon}</span>
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-gray-900 leading-tight truncate">
+            {title}
+          </h3>
+          {description && (
+            <p className="text-xs text-gray-500 leading-tight truncate mt-0.5">
+              {description}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -38,25 +42,36 @@ interface BrandedStatCardProps {
   value: string | number;
   config: Config;
   variant?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning';
+  onClick?: () => void;
 }
 
-export function BrandedStatCard({ icon, label, value, config, variant = 'primary' }: BrandedStatCardProps) {
-  const bgColor = variant === 'primary' ? `${config.primaryColor}15` :
-                  variant === 'secondary' ? `${config.primaryDark}15` :
-                  variant === 'accent' ? `${config.accentColor}15` :
+export function BrandedStatCard({ icon, label, value, config, variant = 'primary', onClick }: BrandedStatCardProps) {
+  const bgColor = variant === 'primary' ? `${config.primaryColor || '#4A1942'}15` :
+                  variant === 'secondary' ? `${config.primaryDark || '#3d1a45'}15` :
+                  variant === 'accent' ? `${config.accentColor || '#8B5A8B'}15` :
                   variant === 'success' ? '#10b98115' : '#f59e0b15';
   
-  const textColor = variant === 'primary' ? config.primaryColor :
-                    variant === 'secondary' ? config.primaryDark :
-                    variant === 'accent' ? config.accentColor :
+  const textColor = variant === 'primary' ? config.primaryColor || '#4A1942' :
+                    variant === 'secondary' ? config.primaryDark || '#3d1a45' :
+                    variant === 'accent' ? config.accentColor || '#8B5A8B' :
                     variant === 'success' ? '#059669' : '#d97706';
 
+  const Comp = onClick ? 'button' : 'div';
+
   return (
-    <div className="p-3 rounded-xl text-center border" style={{ backgroundColor: bgColor, borderColor: `${textColor}30` }}>
-      <div className="text-2xl mb-1">{icon}</div>
-      <div className="text-xl font-bold" style={{ color: textColor }}>{value}</div>
-      <div className="text-xs text-gray-600">{label}</div>
-    </div>
+    <Comp
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className="px-3 py-2 rounded-xl border flex items-center justify-between gap-2 transition-all hover:shadow-sm text-left"
+      style={{ backgroundColor: bgColor, borderColor: `${textColor}30` }}
+      title={onClick ? `Click to filter by ${label.toLowerCase()}` : undefined}
+    >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="text-base shrink-0">{icon}</span>
+        <span className="text-xs font-medium text-gray-700 truncate">{label}</span>
+      </div>
+      <span className="text-sm font-bold shrink-0" style={{ color: textColor }}>{value}</span>
+    </Comp>
   );
 }
 
@@ -80,7 +95,7 @@ export function BrandedTips({ title, tips, config, defaultOpen = false }: Brande
     <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: `${config.primaryColor}08`, borderColor: `${config.primaryColor}30` }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 flex items-center justify-between cursor-pointer hover:opacity-90"
+        className="w-full px-3.5 py-2 flex items-center justify-between cursor-pointer hover:opacity-90 text-xs font-semibold"
         style={{ backgroundColor: `${config.primaryColor}15` }}
       >
         <h4 className="font-semibold flex items-center gap-2" style={{ color: config.primaryColor }}>

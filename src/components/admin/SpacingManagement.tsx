@@ -291,13 +291,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                 config={config}
               />
 
-              {/* Quick Presets */}
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                <h4 className="font-bold text-lg text-gray-800 mb-3 flex items-center gap-2">
-                  ⚡ Quick Presets
-                </h4>
-                <p className="text-sm text-gray-500 mb-4">Apply recommended spacing settings for common event types</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Compact 1-Row Spacing Quick Presets */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-semibold text-gray-500">⚡ Spacing Presets:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
                   {[
                     { name: 'Intimate', icon: '💕', table: 2.5, wall: 1.5, fixture: 3, item: 2, desc: 'Cozy seating, close tables' },
                     { name: 'Standard', icon: '🎉', table: 3.5, wall: 2, fixture: 4, item: 2.5, desc: 'Balanced spacing for most events' },
@@ -306,6 +303,7 @@ export function SpacingManagement(props: AdminCommonProps) {
                   ].map(preset => (
                     <button
                       key={preset.name}
+                      type="button"
                       onClick={() => {
                         const updated = { 
                           ...spacingSettings, 
@@ -319,11 +317,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                         setSpacingSettingsState(updated);
                         showSuccess(`Applied "${preset.name}" spacing preset!`);
                       }}
-                      className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl hover:border-[#4A1942] hover:shadow-md transition-all text-left group"
+                      className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-800 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors"
+                      title={preset.desc}
                     >
-                      <div className="text-2xl mb-2">{preset.icon}</div>
-                      <div className="font-semibold text-gray-800 group-hover:text-[#4A1942]">{preset.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">{preset.desc}</div>
+                      {preset.icon} {preset.name}
                     </button>
                   ))}
                 </div>

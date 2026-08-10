@@ -298,32 +298,20 @@ export function VenueManagement(props: AdminCommonProps) {
                 config={config}
               />
 
-              {/* Quick Statistics */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {/* Compact 4-Column KPI Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <BrandedStatCard icon="🏛️" label="Total Venues" value={venues.length} config={config} variant="primary" />
-                <BrandedStatCard icon="★" label="Master" value={venues.filter(v => v.isMaster).length} config={config} variant="warning" />
+                <BrandedStatCard icon="★" label="Master Venues" value={venues.filter(v => v.isMaster).length} config={config} variant="warning" />
                 <BrandedStatCard icon="📐" label="With Layouts" value={venues.filter(v => v.masterLayout).length} config={config} variant="success" />
                 <BrandedStatCard icon="👥" label="Total Capacity" value={venues.reduce((sum, v) => sum + (v.capacity || 0), 0)} config={config} variant="accent" />
-                <div 
-                  className="p-3 rounded-xl text-center border"
-                  style={{ backgroundColor: `${config.primaryLight}15`, borderColor: `${config.primaryLight}30` }}
-                >
-                  <div className="flex justify-center gap-1 mb-1">
-                    {layoutCategories.slice(0, 4).map(cat => (
-                      <span key={cat.id} title={cat.name} className="text-lg">{cat.icon}</span>
-                    ))}
-                  </div>
-                  <div className="text-xs" style={{ color: config.primaryColor }}>Categories</div>
-                </div>
               </div>
 
-              {/* Quick Add Venue Presets */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
-                <h4 className="font-semibold text-purple-800 text-sm mb-3 flex items-center gap-2">
-                  ✨ Quick Add Venue Presets
-                </h4>
-                <div className="flex flex-wrap gap-2">
+              {/* Compact 1-Row Quick Add Venue Presets */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-semibold text-gray-500">✨ Quick Presets:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => {
                       const preset: Venue = {
                         id: `venue-${Date.now()}`,
@@ -344,11 +332,12 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-3 py-2 bg-white border border-purple-300 rounded-lg text-sm hover:bg-purple-50 hover:border-purple-400 transition-all flex items-center gap-2 shadow-sm"
+                    className="px-2.5 py-1 bg-white border border-purple-200 rounded-md text-xs font-medium hover:bg-purple-50 transition-colors"
                   >
-                    🎉 Reception
+                    + 🎉 Reception
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const preset: Venue = {
                         id: `venue-${Date.now()}`,
@@ -369,11 +358,12 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm hover:bg-amber-50 hover:border-amber-400 transition-all flex items-center gap-2 shadow-sm"
+                    className="px-2.5 py-1 bg-white border border-amber-200 rounded-md text-xs font-medium hover:bg-amber-50 transition-colors"
                   >
-                    🍸 Cocktail Hour
+                    + 🍸 Cocktail
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const preset: Venue = {
                         id: `venue-${Date.now()}`,
@@ -394,11 +384,12 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-3 py-2 bg-white border border-green-300 rounded-lg text-sm hover:bg-green-50 hover:border-green-400 transition-all flex items-center gap-2 shadow-sm"
+                    className="px-2.5 py-1 bg-white border border-green-200 rounded-md text-xs font-medium hover:bg-green-50 transition-colors"
                   >
-                    💒 Ceremony
+                    + 💒 Ceremony
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const preset: Venue = {
                         id: `venue-${Date.now()}`,
@@ -428,11 +419,12 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-3 py-2 bg-white border border-[#4A1942]/40 rounded-lg text-sm hover:bg-[#4A1942]/10 hover:border-[#4A1942] transition-all flex items-center gap-2 shadow-sm"
+                    className="px-2.5 py-1 bg-white border border-[#4A1942]/30 rounded-md text-xs font-medium hover:bg-[#4A1942]/10 transition-colors"
                   >
-                    🏨 Lodging
+                    + 🏨 Lodging
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const preset: Venue = {
                         id: `venue-${Date.now()}`,
@@ -453,53 +445,41 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, preset]);
                     }}
-                    className="px-3 py-2 bg-white border border-rose-300 rounded-lg text-sm hover:bg-rose-50 hover:border-rose-400 transition-all flex items-center gap-2 shadow-sm"
+                    className="px-2.5 py-1 bg-white border border-rose-200 rounded-md text-xs font-medium hover:bg-rose-50 transition-colors"
                   >
-                    🍽️ Rehearsal Dinner
+                    + 🍽️ Rehearsal
                   </button>
                 </div>
               </div>
 
-              {/* Action Bar */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {venues.slice(0, 4).map((v, i) => (
-                      <div 
-                        key={i} 
-                        className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                        style={{ backgroundColor: v.borderColor || '#4A1942' }}
-                      >
-                        {v.name.charAt(0)}
-                      </div>
-                    ))}
-                    {venues.length > 4 && (
-                      <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-400 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                        +{venues.length - 4}
-                      </div>
-                    )}
+              {/* Integrated Venue Search & Action Bar */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-xs">🔍</span>
+                    <input
+                      type="search"
+                      value={venueSearch}
+                      onChange={(e) => setVenueSearch(e.target.value)}
+                      placeholder="Search venues..."
+                      className="w-48 pl-8 pr-3 py-1.5 rounded-lg border border-gray-300 text-xs focus:outline-none focus:ring-2"
+                      aria-label="Search venues"
+                    />
                   </div>
-                  <span className="text-sm text-gray-600 font-medium">{venues.length} Venues</span>
-                </div>
-                <div className="relative">
-                  <input
-                    type="search"
-                    value={venueSearch}
-                    onChange={(e) => setVenueSearch(e.target.value)}
-                    placeholder="Search venues..."
-                    className="w-56 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
-                    aria-label="Search venues"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => expandedVenues.size === venues.length ? collapseAllVenues() : expandAllVenues()}
+                    className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs text-gray-700 transition-colors font-medium"
+                  >
+                    {expandedVenues.size === venues.length ? '▲ Collapse' : '▼ Expand'}
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-xs text-gray-600 font-medium">{venues.length} Venues configured</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => expandedVenues.size === venues.length ? collapseAllVenues() : expandAllVenues()}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
-                  >
-                    {expandedVenues.size === venues.length ? '▲ Collapse All' : '▼ Expand All'}
-                  </button>
-                  <button
+                    type="button"
                     onClick={() => {
                       const newVenue: Venue = {
                         id: `venue-${Date.now()}`,
@@ -516,20 +496,13 @@ export function VenueManagement(props: AdminCommonProps) {
                       };
                       handleSaveVenues([...venues, newVenue]);
                     }}
-                    className="px-4 py-1.5 bg-gradient-to-r from-[#4A1942] to-[#6d2c5a] text-white rounded-lg hover:from-[#5c2a64] hover:to-[#7d3c6a] transition-all font-medium shadow-sm flex items-center gap-1"
+                    className="btn-primary px-3.5 py-1.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
+                    style={{ backgroundColor: config.primaryColor }}
                   >
-                    <span className="text-lg">+</span> Add Venue
+                    <span>➕</span>
+                    <span>Add Custom Venue</span>
                   </button>
                 </div>
-              </div>
-
-              {/* Category Legend */}
-              <div className="flex flex-wrap gap-2 text-xs">
-                {layoutCategories.map(cat => (
-                  <span key={cat.id} className="px-2 py-1 bg-gray-100 rounded-full flex items-center gap-1 text-gray-600">
-                    {cat.icon} {cat.name} ({venues.filter(v => v.category === cat.id).length})
-                  </span>
-                ))}
               </div>
 
               {/* Venues List */}

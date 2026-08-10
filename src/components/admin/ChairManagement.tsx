@@ -291,126 +291,180 @@ export function ChairManagement(props: AdminCommonProps) {
                 config={config}
               />
 
-              {/* Quick Statistics */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
-                  <div className="text-3xl mb-1">🪑</div>
-                  <div className="text-2xl font-bold text-amber-600">{chairSpecs.filter(c => c.id !== 'none').length}</div>
-                  <div className="text-xs text-gray-500">Chair Types</div>
-                </div>
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
-                  <div className="text-3xl mb-1">📦</div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {chairSpecs.filter(c => c.inventoryCount !== undefined && c.inventoryCount > 0).reduce((sum, c) => sum + (c.inventoryCount || 0), 0)}
-                  </div>
-                  <div className="text-xs text-gray-500">Total Inventory</div>
-                </div>
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
-                  <div className="text-3xl mb-1">📐</div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {chairSpecs.length > 0 ? (chairSpecs.filter(c => c.id !== 'none').reduce((sum, c) => sum + (c.width || 1.5), 0) / Math.max(1, chairSpecs.filter(c => c.id !== 'none').length)).toFixed(1) : 0}ft
-                  </div>
-                  <div className="text-xs text-gray-500">Avg. Width</div>
-                </div>
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                  <div className="text-xs text-gray-500 mb-2">Color Palette</div>
-                  <div className="flex flex-wrap gap-1">
-                    {chairSpecs.filter(c => c.id !== 'none').slice(0, 8).map(c => (
-                      <div 
-                        key={c.id}
-                        className="w-6 h-6 rounded border border-gray-300" 
-                        style={{ backgroundColor: c.color }}
-                        title={c.name}
-                      />
-                    ))}
-                  </div>
-                </div>
+              {/* Compact 4-Column Chair KPI Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <BrandedStatCard icon="🪑" label="Chair Types" value={chairSpecs.filter(c => c.id !== 'none').length} config={config} variant="primary" />
+                <BrandedStatCard icon="📦" label="Total Inventory" value={chairSpecs.filter(c => c.inventoryCount !== undefined && c.inventoryCount > 0).reduce((sum, c) => sum + (c.inventoryCount || 0), 0) || '∞'} config={config} variant="success" />
+                <BrandedStatCard icon="📐" label="Avg. Width" value={`${chairSpecs.length > 0 ? (chairSpecs.filter(c => c.id !== 'none').reduce((sum, c) => sum + (c.width || 1.5), 0) / Math.max(1, chairSpecs.filter(c => c.id !== 'none').length)).toFixed(1) : 0}ft`} config={config} variant="accent" />
+                <BrandedStatCard icon="🎨" label="Color Styles" value={new Set(chairSpecs.filter(c => c.id !== 'none').map(c => c.color)).size} config={config} variant="warning" />
               </div>
 
-              {/* Quick Add Presets */}
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                <h4 className="font-bold text-lg text-gray-800 mb-3 flex items-center gap-2">
-                  ⚡ Quick Add Chair Presets
-                </h4>
-                <p className="text-sm text-gray-500 mb-4">Add common wedding chair styles with one click</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {[
-                    { name: 'Classic Collection', icon: '👑', chairs: [
-                      { name: 'Chiavari Gold', color: '#D4AF37', icon: '✨' },
-                      { name: 'Chiavari Silver', color: '#C0C0C0', icon: '🪑' },
-                      { name: 'Chiavari White', color: '#FFFFFF', icon: '🪑' }
-                    ]},
-                    { name: 'Modern Elegance', icon: '🎨', chairs: [
-                      { name: 'Ghost Chair', color: '#E8E8E8', icon: '🪑' },
-                      { name: 'Acrylic Clear', color: '#F5F5F5', icon: '💎' },
-                      { name: 'Lucite White', color: '#FFFFFF', icon: '✨' }
-                    ]},
-                    { name: 'Rustic & Natural', icon: '🌿', chairs: [
-                      { name: 'Cross Back Wood', color: '#8B4513', icon: '🪵' },
-                      { name: 'Vineyard Oak', color: '#A0522D', icon: '🌳' },
-                      { name: 'Farm Bench', color: '#DEB887', icon: '🪵' }
-                    ]},
-                    { name: 'Garden Party', icon: '🌸', chairs: [
-                      { name: 'White Resin', color: '#FFFFFF', icon: '⬜' },
-                      { name: 'Folding White', color: '#F8F8F8', icon: '🪑' },
-                      { name: 'Garden Lattice', color: '#FFFAF0', icon: '🌿' }
-                    ]},
-                    { name: 'Ceremony Seating', icon: '💒', chairs: [
-                      { name: 'Padded Ceremony', color: '#F5F5DC', icon: '💺' },
-                      { name: 'Church Pew', color: '#654321', icon: '⛪' },
-                      { name: 'Ceremony Bench', color: '#D2B48C', icon: '🪵' }
-                    ]}
-                  ].map(preset => (
-                    <button
-                      key={preset.name}
-                      onClick={() => {
-                        const existingNames = chairSpecs.map(c => c.name.toLowerCase());
-                        const newChairs = preset.chairs
-                          .filter(c => !existingNames.includes(c.name.toLowerCase()))
-                          .map((c, i) => ({
-                            id: `chair-${Date.now()}-${i}` as ChairType,
-                            name: c.name,
-                            color: c.color,
-                            width: 1.5,
-                            depth: 1.5,
-                            icon: c.icon
-                          }));
-                        if (newChairs.length > 0) {
-                          const updated = [...chairSpecs, ...newChairs];
-                          setChairSpecs(updated);
-                          setChairSpecsState(updated);
-                          showSuccess(`Added ${newChairs.length} chairs from "${preset.name}"!`);
-                        } else {
-                          showSuccess('All chairs from this preset already exist!');
-                        }
-                      }}
-                      className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl hover:border-amber-400 hover:shadow-md transition-all text-left group"
-                    >
-                      <div className="text-2xl mb-2">{preset.icon}</div>
-                      <div className="font-semibold text-amber-800 group-hover:text-amber-600 text-sm">{preset.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">{preset.chairs.length} chairs</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Bar */}
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-wrap gap-1">
-                    {chairSpecs.filter(c => c.id !== 'none').slice(0, 5).map(c => (
-                      <span key={c.id} className="text-xl" title={c.name}>{c.icon || '🪑'}</span>
-                    ))}
-                    {chairSpecs.filter(c => c.id !== 'none').length > 5 && (
-                      <span className="text-sm text-gray-400">+{chairSpecs.filter(c => c.id !== 'none').length - 5}</span>
-                    )}
-                  </div>
-                  <span className="text-sm text-gray-500">
-                    {chairSpecs.filter(c => c.id !== 'none').length} chair type{chairSpecs.filter(c => c.id !== 'none').length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div className="flex gap-2 flex-wrap">
+              {/* Compact 1-Row Chair Quick Presets */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-semibold text-gray-500">⚡ Quick Presets:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
+                    type="button"
+                    onClick={() => {
+                      const presetChairs = [
+                        { name: 'Chiavari Gold', color: '#D4AF37', icon: '✨' },
+                        { name: 'Chiavari Silver', color: '#C0C0C0', icon: '🪑' },
+                        { name: 'Chiavari White', color: '#FFFFFF', icon: '🪑' }
+                      ];
+                      const existingNames = chairSpecs.map(c => c.name.toLowerCase());
+                      const newChairs = presetChairs
+                        .filter(c => !existingNames.includes(c.name.toLowerCase()))
+                        .map((c, i) => ({
+                          id: `chair-${Date.now()}-${i}` as ChairType,
+                          name: c.name,
+                          color: c.color,
+                          width: 1.5,
+                          depth: 1.5,
+                          icon: c.icon
+                        }));
+                      if (newChairs.length > 0) {
+                        const updated = [...chairSpecs, ...newChairs];
+                        setChairSpecs(updated);
+                        setChairSpecsState(updated);
+                        showSuccess(`Added ${newChairs.length} Chiavari chairs!`);
+                      }
+                    }}
+                    className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs font-medium hover:bg-amber-100 transition-colors"
+                  >
+                    + 👑 Chiavari Collection
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const presetChairs = [
+                        { name: 'Ghost Chair', color: '#E8E8E8', icon: '🪑' },
+                        { name: 'Acrylic Clear', color: '#F5F5F5', icon: '💎' },
+                        { name: 'Lucite White', color: '#FFFFFF', icon: '✨' }
+                      ];
+                      const existingNames = chairSpecs.map(c => c.name.toLowerCase());
+                      const newChairs = presetChairs
+                        .filter(c => !existingNames.includes(c.name.toLowerCase()))
+                        .map((c, i) => ({
+                          id: `chair-${Date.now()}-${i}` as ChairType,
+                          name: c.name,
+                          color: c.color,
+                          width: 1.5,
+                          depth: 1.5,
+                          icon: c.icon
+                        }));
+                      if (newChairs.length > 0) {
+                        const updated = [...chairSpecs, ...newChairs];
+                        setChairSpecs(updated);
+                        setChairSpecsState(updated);
+                        showSuccess(`Added ${newChairs.length} Modern chairs!`);
+                      }
+                    }}
+                    className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors"
+                  >
+                    + 🎨 Modern Elegance
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const presetChairs = [
+                        { name: 'Cross Back Wood', color: '#8B4513', icon: '🪵' },
+                        { name: 'Vineyard Oak', color: '#A0522D', icon: '🌳' },
+                        { name: 'Farm Bench', color: '#DEB887', icon: '🪵' }
+                      ];
+                      const existingNames = chairSpecs.map(c => c.name.toLowerCase());
+                      const newChairs = presetChairs
+                        .filter(c => !existingNames.includes(c.name.toLowerCase()))
+                        .map((c, i) => ({
+                          id: `chair-${Date.now()}-${i}` as ChairType,
+                          name: c.name,
+                          color: c.color,
+                          width: 1.5,
+                          depth: 1.5,
+                          icon: c.icon
+                        }));
+                      if (newChairs.length > 0) {
+                        const updated = [...chairSpecs, ...newChairs];
+                        setChairSpecs(updated);
+                        setChairSpecsState(updated);
+                        showSuccess(`Added ${newChairs.length} Rustic chairs!`);
+                      }
+                    }}
+                    className="px-2.5 py-1 bg-amber-50 border border-amber-300 text-amber-800 rounded-md text-xs font-medium hover:bg-amber-100 transition-colors"
+                  >
+                    + 🌿 Rustic &amp; Natural
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const presetChairs = [
+                        { name: 'White Resin', color: '#FFFFFF', icon: '⬜' },
+                        { name: 'Folding White', color: '#F8F8F8', icon: '🪑' },
+                        { name: 'Garden Lattice', color: '#FFFAF0', icon: '🌿' }
+                      ];
+                      const existingNames = chairSpecs.map(c => c.name.toLowerCase());
+                      const newChairs = presetChairs
+                        .filter(c => !existingNames.includes(c.name.toLowerCase()))
+                        .map((c, i) => ({
+                          id: `chair-${Date.now()}-${i}` as ChairType,
+                          name: c.name,
+                          color: c.color,
+                          width: 1.5,
+                          depth: 1.5,
+                          icon: c.icon
+                        }));
+                      if (newChairs.length > 0) {
+                        const updated = [...chairSpecs, ...newChairs];
+                        setChairSpecs(updated);
+                        setChairSpecsState(updated);
+                        showSuccess(`Added ${newChairs.length} Garden chairs!`);
+                      }
+                    }}
+                    className="px-2.5 py-1 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-medium hover:bg-pink-100 transition-colors"
+                  >
+                    + 🌸 Garden Party
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const presetChairs = [
+                        { name: 'Padded Ceremony', color: '#F5F5DC', icon: '💺' },
+                        { name: 'Church Pew', color: '#654321', icon: '⛪' },
+                        { name: 'Ceremony Bench', color: '#D2B48C', icon: '🪵' }
+                      ];
+                      const existingNames = chairSpecs.map(c => c.name.toLowerCase());
+                      const newChairs = presetChairs
+                        .filter(c => !existingNames.includes(c.name.toLowerCase()))
+                        .map((c, i) => ({
+                          id: `chair-${Date.now()}-${i}` as ChairType,
+                          name: c.name,
+                          color: c.color,
+                          width: 1.5,
+                          depth: 1.5,
+                          icon: c.icon
+                        }));
+                      if (newChairs.length > 0) {
+                        const updated = [...chairSpecs, ...newChairs];
+                        setChairSpecs(updated);
+                        setChairSpecsState(updated);
+                        showSuccess(`Added ${newChairs.length} Ceremony chairs!`);
+                      }
+                    }}
+                    className="px-2.5 py-1 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs font-medium hover:bg-green-100 transition-colors"
+                  >
+                    + 💒 Ceremony
+                  </button>
+                </div>
+              </div>
+
+              {/* Integrated Chair Search & Action Bar */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <span className="text-xs text-gray-600 font-medium">
+                    {chairSpecs.filter(c => c.id !== 'none').length} chair type{chairSpecs.filter(c => c.id !== 'none').length !== 1 ? 's' : ''} configured
+                  </span>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    type="button"
                     onClick={() => {
                       const allIds = chairSpecs.filter(c => c.id !== 'none').map(c => c.id);
                       if (expandedChairs.size === allIds.length) {
@@ -419,11 +473,15 @@ export function ChairManagement(props: AdminCommonProps) {
                         setExpandedChairs(new Set(allIds));
                       }
                     }}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                    className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs text-gray-700 transition-colors font-medium"
                   >
                     {expandedChairs.size === chairSpecs.filter(c => c.id !== 'none').length ? '▲ Collapse All' : '▼ Expand All'}
                   </button>
+                </div>
+                
+                <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => {
                       const newChair: ChairSpec = {
                         id: `chair-${Date.now()}` as ChairType,
@@ -439,21 +497,12 @@ export function ChairManagement(props: AdminCommonProps) {
                       setExpandedChairs(prev => new Set([...prev, newChair.id]));
                       showSuccess('Chair added!');
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all font-medium shadow-sm"
+                    className="btn-primary px-3.5 py-1.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
+                    style={{ backgroundColor: config.primaryColor }}
                   >
-                    ➕ Add Chair Type
+                    <span>➕</span>
+                    <span>Add Chair Type</span>
                   </button>
-                </div>
-              </div>
-
-              {/* Chair Type Legend */}
-              <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                <div className="flex flex-wrap gap-4 items-center text-sm">
-                  <span className="font-medium text-amber-800">Chair Features:</span>
-                  <span className="flex items-center gap-1"><span className="w-4 h-4 bg-white border border-gray-300 rounded"></span> Color</span>
-                  <span className="flex items-center gap-1">📦 Inventory</span>
-                  <span className="flex items-center gap-1">📐 Dimensions</span>
-                  <span className="flex items-center gap-1">📷 Images</span>
                 </div>
               </div>
 

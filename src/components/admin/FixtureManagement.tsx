@@ -294,8 +294,7 @@ export function FixtureManagement(props: AdminCommonProps) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-4">
-              {/* Header Section */}
+      {/* Header Section */}
               <BrandedSectionHeader 
                 icon="🎪" 
                 title="Fixtures & Features" 
@@ -303,50 +302,21 @@ export function FixtureManagement(props: AdminCommonProps) {
                 config={config}
               />
 
-              {/* Quick Statistics */}
+              {/* Compact 5-Column Fixture KPI Strip */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {fixtureTypes.filter(f => f.category !== 'exterior' && f.category !== 'lodging').length}
-                  </div>
-                  <div className="text-xs text-purple-700 font-medium">🏛️ Venue Fixtures</div>
-                </div>
-                <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-cyan-600">
-                    {fixtureTypes.filter(f => f.category === 'lodging').length}
-                  </div>
-                  <div className="text-xs text-cyan-700 font-medium">🛏️ Lodging/Utilities</div>
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {fixtureTypes.filter(f => f.category === 'exterior').length}
-                  </div>
-                  <div className="text-xs text-green-700 font-medium">🌳 Arch/Landscape</div>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {fixtureTypes.filter(f => f.inventoryCount !== undefined).length}
-                  </div>
-                  <div className="text-xs text-blue-700 font-medium">📦 With Inventory</div>
-                </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-                  <div className="text-2xl font-bold text-amber-600">
-                    {fixtureTypes.filter(f => f.wallStyleId).length}
-                  </div>
-                  <div className="text-xs text-amber-700 font-medium">🧱 Wall-Linked</div>
-                </div>
+                <BrandedStatCard icon="🏛️" label="Venue Fixtures" value={fixtureTypes.filter(f => f.category !== 'exterior' && f.category !== 'lodging').length} config={config} variant="primary" />
+                <BrandedStatCard icon="🛏️" label="Lodging / Utilities" value={fixtureTypes.filter(f => f.category === 'lodging').length} config={config} variant="secondary" />
+                <BrandedStatCard icon="🌳" label="Arch / Landscape" value={fixtureTypes.filter(f => f.category === 'exterior').length} config={config} variant="success" />
+                <BrandedStatCard icon="📦" label="With Inventory" value={fixtureTypes.filter(f => f.inventoryCount !== undefined).length} config={config} variant="accent" />
+                <BrandedStatCard icon="🧱" label="Wall-Linked" value={fixtureTypes.filter(f => f.wallStyleId).length} config={config} variant="warning" />
               </div>
 
-              {/* Quick Add Presets */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-700 flex items-center gap-2">
-                    <span>⚡</span> Quick Add Preset Fixtures
-                  </h4>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                  {/* Venue Fixture Presets */}
+              {/* Compact 1-Row Fixture Quick Presets */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-semibold text-gray-500">⚡ Quick Presets:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: FixtureType[] = [
                         { id: `fix-${Date.now()}-1`, name: 'Dance Floor', shape: 'rectangle', width: 18, height: 18, icon: '💃', color: '#1a1a1a', category: 'interior', pattern: 'checkered' },
@@ -355,11 +325,12 @@ export function FixtureManagement(props: AdminCommonProps) {
                       ];
                       handleSaveFixtures([...fixtureTypes, ...presets]);
                     }}
-                    className="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium text-center"
+                    className="px-2.5 py-1 bg-purple-50 border border-purple-200 text-purple-700 rounded-md text-xs font-medium hover:bg-purple-100 transition-colors"
                   >
-                    🎉 Entertainment
+                    + 🎉 Entertainment
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: FixtureType[] = [
                         { id: `fix-${Date.now()}-1`, name: 'Sweetheart Table', shape: 'semicircle', width: 6, height: 3, icon: '💕', color: '#fdf2f8', category: 'interior' },
@@ -368,11 +339,12 @@ export function FixtureManagement(props: AdminCommonProps) {
                       ];
                       handleSaveFixtures([...fixtureTypes, ...presets]);
                     }}
-                    className="px-3 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors text-sm font-medium text-center"
+                    className="px-2.5 py-1 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-medium hover:bg-pink-100 transition-colors"
                   >
-                    💒 Wedding
+                    + 💒 Wedding
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: FixtureType[] = [
                         { id: `fix-${Date.now()}-1`, name: 'Buffet Station', shape: 'rectangle', width: 10, height: 3, icon: '🍽️', color: '#fef3c7', category: 'interior' },
@@ -382,11 +354,12 @@ export function FixtureManagement(props: AdminCommonProps) {
                       ];
                       handleSaveFixtures([...fixtureTypes, ...presets]);
                     }}
-                    className="px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium text-center"
+                    className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-xs font-medium hover:bg-amber-100 transition-colors"
                   >
-                    🍰 Food & Drink
+                    + 🍰 Food &amp; Drink
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: FixtureType[] = [
                         { id: `fix-${Date.now()}-1`, name: 'Photo Booth', shape: 'rectangle', width: 8, height: 6, icon: '📸', color: '#e0e7ff', category: 'interior' },
@@ -395,12 +368,12 @@ export function FixtureManagement(props: AdminCommonProps) {
                       ];
                       handleSaveFixtures([...fixtureTypes, ...presets]);
                     }}
-                    className="px-3 py-2 bg-[#4A1942]/10 text-[#4A1942] rounded-lg hover:bg-[#4A1942]/20 transition-colors text-sm font-medium text-center"
+                    className="px-2.5 py-1 bg-[#4A1942]/10 text-[#4A1942] rounded-md text-xs font-medium hover:bg-[#4A1942]/20 transition-colors"
                   >
-                    📸 Guest Areas
+                    + 📸 Guest Areas
                   </button>
-                  {/* Exterior Presets */}
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: FixtureType[] = [
                         { id: `fix-${Date.now()}-1`, name: 'Fountain', shape: 'circle', width: 8, height: 8, icon: '⛲', color: '#bfdbfe', category: 'exterior', pattern: 'water' },
@@ -409,11 +382,12 @@ export function FixtureManagement(props: AdminCommonProps) {
                       ];
                       handleSaveFixtures([...fixtureTypes, ...presets]);
                     }}
-                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium text-center"
+                    className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors"
                   >
-                    💧 Water Features
+                    + 💧 Water
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const presets: FixtureType[] = [
                         { id: `fix-${Date.now()}-1`, name: 'Large Tree', shape: 'circle', width: 12, height: 12, icon: '🌳', color: '#166534', category: 'exterior' },
@@ -423,28 +397,36 @@ export function FixtureManagement(props: AdminCommonProps) {
                       ];
                       handleSaveFixtures([...fixtureTypes, ...presets]);
                     }}
-                    className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium text-center"
+                    className="px-2.5 py-1 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs font-medium hover:bg-green-100 transition-colors"
                   >
-                    🌿 Landscaping
+                    + 🌿 Landscape
                   </button>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-500">
-                    {fixtureTypes.length} total fixtures
-                  </span>
-                  <div className="flex gap-1">
-                    {fixtureTypes.slice(0, 8).map(f => (
-                      <span key={f.id} className="text-lg" title={f.name}>{f.icon}</span>
-                    ))}
-                    {fixtureTypes.length > 8 && <span className="text-xs text-gray-400 ml-1">+{fixtureTypes.length - 8}</span>}
+              {/* Integrated Fixture Search & Action Bar */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-xs">🔍</span>
+                    <input
+                      type="search"
+                      value={fixtureSearch}
+                      onChange={(e) => setFixtureSearch(e.target.value)}
+                      placeholder="Search fixtures by name..."
+                      className="w-48 pl-8 pr-3 py-1.5 rounded-lg border border-gray-300 text-xs focus:outline-none focus:ring-2"
+                      aria-label="Search fixtures"
+                    />
                   </div>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-xs text-gray-600 font-medium">
+                    {fixtureTypes.length} fixture{fixtureTypes.length !== 1 ? 's' : ''} configured
+                  </span>
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <button
+                    type="button"
                     onClick={() => {
                       const newFixture: FixtureType = {
                         id: `fixture-${Date.now()}`,
@@ -458,11 +440,13 @@ export function FixtureManagement(props: AdminCommonProps) {
                       };
                       handleSaveFixtures([...fixtureTypes, newFixture]);
                     }}
-                    className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] transition-colors font-medium shadow-sm"
+                    className="btn-primary px-3 py-1.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                    style={{ backgroundColor: config.primaryColor }}
                   >
                     + Venue
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const newFixture: FixtureType = {
                         id: `fixture-${Date.now()}`,
@@ -479,11 +463,12 @@ export function FixtureManagement(props: AdminCommonProps) {
                       };
                       handleSaveFixtures([...fixtureTypes, newFixture]);
                     }}
-                    className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-medium shadow-sm"
+                    className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
                   >
-                    + Lodging/Utilities
+                    + Lodging
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const newFixture: FixtureType = {
                         id: `fixture-${Date.now()}`,
@@ -497,46 +482,21 @@ export function FixtureManagement(props: AdminCommonProps) {
                       };
                       handleSaveFixtures([...fixtureTypes, newFixture]);
                     }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
+                    className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
                   >
-                    + Architectural/Landscape
+                    + Landscape
                   </button>
                   <button
-                     onClick={() => {
-                       setShowDrawingTool(true);
-                     }}
-                     className="px-4 py-2 bg-gradient-to-r from-[#4A1942] via-purple-600 to-cyan-600 text-white rounded-lg hover:opacity-90 transition-opacity font-medium shadow-sm flex items-center gap-2"
-                   >
-                     <span>🎨</span>
-                     Draw Custom Feature
-                   </button>
+                    type="button"
+                    onClick={() => setShowDrawingTool(true)}
+                    className="px-3 py-1.5 bg-gradient-to-r from-[#4A1942] via-purple-600 to-cyan-600 text-white rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shadow-sm flex items-center gap-1"
+                  >
+                    <span>🎨</span>
+                    <span>Draw Custom</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Fixture search */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                  <input
-                    type="search"
-                    value={fixtureSearch}
-                    onChange={(e) => setFixtureSearch(e.target.value)}
-                    placeholder="Search fixtures by name..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
-                    aria-label="Search fixtures"
-                  />
-                </div>
-                {fixtureSearch.trim() && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    Showing{' '}
-                    <strong>
-                      {fixtureTypes.filter((f) => matchesFixtureSearch(f)).length}
-                    </strong>{' '}
-                    of {fixtureTypes.length} fixtures
-                  </div>
-                )}
-              </div>
-              
               {/* Venue Fixtures */}
               <div className="bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-3 flex items-center justify-between cursor-pointer"
@@ -1400,7 +1360,6 @@ export function FixtureManagement(props: AdminCommonProps) {
                 </div>
                 )}
               </div>
-            </div>
     </div>
   );
 }

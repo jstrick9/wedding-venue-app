@@ -25,6 +25,7 @@ import { getGuestPortalConfig } from '../../utils/guestPortal';
 import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeCoupleSetupTask } from '../../services/couples/coupleSetupService';
 import { getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
 import { findPackageAddOn } from '../../services/couples/coupleAddOnService';
+import { BrandedStatCard } from './shared/AdminSharedComponents';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
@@ -347,23 +348,11 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
           }
         });
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-              <div className="text-2xl font-bold text-gray-800">{active.length}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Active couples</div>
-            </div>
-            <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-              <div className={`text-2xl font-bold ${awaiting > 0 ? 'text-amber-600' : 'text-gray-800'}`}>{awaiting}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Awaiting layout review</div>
-            </div>
-            <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-              <div className="text-2xl font-bold text-sky-700">{setupTotal > 0 ? `${Math.round((setupDone / setupTotal) * 100)}%` : '—'}</div>
-              <div className="text-xs text-gray-500 mt-0.5">Setup complete ({setupDone}/{setupTotal})</div>
-            </div>
-            <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-              <div className={`text-2xl font-bold ${overnightTotal > overnightCap ? 'text-red-600' : 'text-[#4A1942]'}`}>{overnightTotal}<span className="text-sm text-gray-400">/{overnightCap}</span></div>
-              <div className="text-xs text-gray-500 mt-0.5">Overnight guests</div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <BrandedStatCard icon="💍" label="Active couples" value={active.length} config={config} variant="primary" />
+            <BrandedStatCard icon="⏳" label="Awaiting review" value={awaiting} config={config} variant="warning" />
+            <BrandedStatCard icon="🛠️" label="Setup complete" value={setupTotal > 0 ? `${Math.round((setupDone / setupTotal) * 100)}%` : '—'} config={config} variant="success" />
+            <BrandedStatCard icon="🛏️" label="Overnight guests" value={`${overnightTotal}/${overnightCap}`} config={config} variant="accent" />
           </div>
         );
       })()}

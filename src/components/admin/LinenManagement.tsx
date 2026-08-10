@@ -291,38 +291,20 @@ export function LinenManagement(props: AdminCommonProps) {
                 config={config}
               />
 
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-                  <div className="text-3xl font-bold text-pink-600">{linenColors.length}</div>
-                  <div className="text-xs text-gray-500 font-medium">Total Colors</div>
-                </div>
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-                  <div className="text-3xl font-bold text-green-600">{linenColors.filter(c => c.enabled).length}</div>
-                  <div className="text-xs text-gray-500 font-medium">✓ Enabled</div>
-                </div>
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-                  <div className="text-3xl font-bold text-gray-400">{linenColors.filter(c => !c.enabled).length}</div>
-                  <div className="text-xs text-gray-500 font-medium">○ Disabled</div>
-                </div>
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
-                  <div className="flex justify-center gap-1 mb-1">
-                    {linenColors.slice(0, 6).map(c => (
-                      <div key={c.id} className="w-4 h-4 rounded-full border border-gray-200" style={{ backgroundColor: c.hex }} />
-                    ))}
-                    {linenColors.length > 6 && <span className="text-xs text-gray-400">+{linenColors.length - 6}</span>}
-                  </div>
-                  <div className="text-xs text-gray-500 font-medium">Color Palette</div>
-                </div>
+              {/* Compact 4-Column Linen KPI Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <BrandedStatCard icon="🎨" label="Total Colors" value={linenColors.length} config={config} variant="primary" />
+                <BrandedStatCard icon="✓" label="Enabled" value={linenColors.filter(c => c.enabled).length} config={config} variant="success" />
+                <BrandedStatCard icon="○" label="Disabled" value={linenColors.filter(c => !c.enabled).length} config={config} variant="warning" />
+                <BrandedStatCard icon="✨" label="Color Styles" value={new Set(linenColors.map(c => c.hex)).size} config={config} variant="accent" />
               </div>
 
-              {/* Quick Add Presets */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
-                <h3 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
-                  <span>✨</span> Quick Add Color Palettes
-                </h3>
-                <div className="flex flex-wrap gap-2">
+              {/* Compact 1-Row Linen Quick Presets */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="font-semibold text-gray-500">✨ Quick Palettes:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => {
                       const classics = [
                         { id: `linen-${Date.now()}-1`, name: 'Classic White', hex: '#FFFFFF', textColor: '#374151', enabled: true },
@@ -334,17 +316,12 @@ export function LinenManagement(props: AdminCommonProps) {
                       const toAdd = classics.filter(c => !existing.includes(c.name.toLowerCase()));
                       if (toAdd.length > 0) handleSaveLinenColors([...linenColors, ...toAdd]);
                     }}
-                    className="px-3 py-2 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all text-sm font-medium flex items-center gap-2"
+                    className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-800 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors"
                   >
-                    <div className="flex -space-x-1">
-                      <span className="w-4 h-4 rounded-full bg-white border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#FFFFF0] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#F7E7CE] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-black border border-gray-300" />
-                    </div>
-                    Classic & Elegant
+                    + 👑 Classics
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const romantic = [
                         { id: `linen-${Date.now()}-1`, name: 'Blush Pink', hex: '#FFC0CB', textColor: '#374151', enabled: true },
@@ -356,15 +333,9 @@ export function LinenManagement(props: AdminCommonProps) {
                       const toAdd = romantic.filter(c => !existing.includes(c.name.toLowerCase()));
                       if (toAdd.length > 0) handleSaveLinenColors([...linenColors, ...toAdd]);
                     }}
-                    className="px-3 py-2 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all text-sm font-medium flex items-center gap-2"
+                    className="px-2.5 py-1 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-medium hover:bg-pink-100 transition-colors"
                   >
-                    <div className="flex -space-x-1">
-                      <span className="w-4 h-4 rounded-full bg-[#FFC0CB] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#DCAE96] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#E0B0FF] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#B76E79] border border-gray-300" />
-                    </div>
-                    💕 Romantic Blush
+                    + 💕 Romantic Blush
                   </button>
                   <button
                     onClick={() => {
@@ -389,6 +360,7 @@ export function LinenManagement(props: AdminCommonProps) {
                     🌿 Rustic & Natural
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const navy = [
                         { id: `linen-${Date.now()}-1`, name: 'Navy Blue', hex: '#000080', textColor: '#FFFFFF', enabled: true },
@@ -400,17 +372,12 @@ export function LinenManagement(props: AdminCommonProps) {
                       const toAdd = navy.filter(c => !existing.includes(c.name.toLowerCase()));
                       if (toAdd.length > 0) handleSaveLinenColors([...linenColors, ...toAdd]);
                     }}
-                    className="px-3 py-2 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all text-sm font-medium flex items-center gap-2"
+                    className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-800 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors"
                   >
-                    <div className="flex -space-x-1">
-                      <span className="w-4 h-4 rounded-full bg-[#000080] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#4169E1] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#7EB1C4] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#FFD700] border border-gray-300" />
-                    </div>
-                    👑 Navy & Gold
+                    + 👑 Navy &amp; Gold
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       const burgundy = [
                         { id: `linen-${Date.now()}-1`, name: 'Burgundy', hex: '#800020', textColor: '#FFFFFF', enabled: true },
@@ -422,56 +389,55 @@ export function LinenManagement(props: AdminCommonProps) {
                       const toAdd = burgundy.filter(c => !existing.includes(c.name.toLowerCase()));
                       if (toAdd.length > 0) handleSaveLinenColors([...linenColors, ...toAdd]);
                     }}
-                    className="px-3 py-2 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all text-sm font-medium flex items-center gap-2"
+                    className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-800 rounded-md text-xs font-medium hover:bg-rose-100 transition-colors"
                   >
-                    <div className="flex -space-x-1">
-                      <span className="w-4 h-4 rounded-full bg-[#800020] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#4A1942] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#722F37] border border-gray-300" />
-                      <span className="w-4 h-4 rounded-full bg-[#FF007F] border border-gray-300" />
-                    </div>
-                    🍷 Burgundy & Wine
+                    + 🍷 Burgundy &amp; Wine
                   </button>
                 </div>
               </div>
 
-              {/* Action Bar */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() => expandedLinens.size === linenColors.length && linenColors.length > 0 ? collapseAllLinens() : expandAllLinens()}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                    >
-                      {expandedLinens.size === linenColors.length && linenColors.length > 0 ? '▲ Collapse All' : '▼ Expand All'}
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      onClick={() => handleSaveLinenColors(linenColors.map(c => ({ ...c, enabled: true })))}
-                      className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
-                    >
-                      ✓ Enable All
-                    </button>
-                    <button
-                      onClick={() => handleSaveLinenColors(linenColors.map(c => ({ ...c, enabled: false })))}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                    >
-                      ○ Disable All
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      onClick={() => {
-                        confirmAction(
-                          { title: 'Sort colors?', message: 'Sort colors alphabetically?', kind: 'warning', confirmLabel: 'Sort Colors' },
-                          () => handleSaveLinenColors([...linenColors].sort((a, b) => a.name.localeCompare(b.name))),
-                        );
-                      }}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                    >
-                      🔤 Sort A-Z
-                    </button>
-                  </div>
+              {/* Integrated Linens Action Bar */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
+                    type="button"
+                    onClick={() => expandedLinens.size === linenColors.length && linenColors.length > 0 ? collapseAllLinens() : expandAllLinens()}
+                    className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs text-gray-700 transition-colors font-medium"
+                  >
+                    {expandedLinens.size === linenColors.length && linenColors.length > 0 ? '▲ Collapse All' : '▼ Expand All'}
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveLinenColors(linenColors.map(c => ({ ...c, enabled: true })))}
+                    className="px-2.5 py-1 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-xs font-medium"
+                  >
+                    ✓ Enable All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveLinenColors(linenColors.map(c => ({ ...c, enabled: false })))}
+                    className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium"
+                  >
+                    ○ Disable All
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      confirmAction(
+                        { title: 'Sort colors?', message: 'Sort colors alphabetically?', kind: 'warning', confirmLabel: 'Sort Colors' },
+                        () => handleSaveLinenColors([...linenColors].sort((a, b) => a.name.localeCompare(b.name))),
+                      );
+                    }}
+                    className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs font-medium"
+                  >
+                    🔤 Sort A-Z
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
                     onClick={() => {
                       const newId = `linen-${Date.now()}`;
                       const newColor: LinenColor = {
@@ -484,9 +450,11 @@ export function LinenManagement(props: AdminCommonProps) {
                       handleSaveLinenColors([...linenColors, newColor]);
                       setExpandedLinens(prev => new Set([...prev, newId]));
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all font-medium shadow-sm flex items-center gap-2"
+                    className="btn-primary px-3.5 py-1.5 bg-[#4A1942] hover:bg-[#3b1435] text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
+                    style={{ backgroundColor: config.primaryColor }}
                   >
-                    <span>➕</span> Add Custom Color
+                    <span>➕</span>
+                    <span>Add Custom Color</span>
                   </button>
                 </div>
               </div>
