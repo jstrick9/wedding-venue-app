@@ -476,7 +476,7 @@ export function SpacingManagement(props: AdminCommonProps) {
                         }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                           (spacingSettings.minTableSpacing || 3) === val 
-                            ? 'bg-[#4A1942] text-white' 
+                            ? 'btn-primary bg-[#4A1942] text-white' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
@@ -556,7 +556,7 @@ export function SpacingManagement(props: AdminCommonProps) {
                         }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                           (spacingSettings.minWallSpacing || 2) === val 
-                            ? 'bg-[#4A1942] text-white' 
+                            ? 'btn-primary bg-[#4A1942] text-white' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
@@ -634,7 +634,7 @@ export function SpacingManagement(props: AdminCommonProps) {
                         }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                           (spacingSettings.minFixtureSpacing || 4) === val 
-                            ? 'bg-[#4A1942] text-white' 
+                            ? 'btn-primary bg-[#4A1942] text-white' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
@@ -692,7 +692,7 @@ export function SpacingManagement(props: AdminCommonProps) {
                         }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                           (spacingSettings.minItemSpacing || 2) === val 
-                            ? 'bg-[#4A1942] text-white' 
+                            ? 'btn-primary bg-[#4A1942] text-white' 
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >

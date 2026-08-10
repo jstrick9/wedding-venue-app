@@ -192,14 +192,14 @@ export function PackageManagement({ onShowSuccess, venues }: Props) {
         <button
           type="button"
           onClick={() => setSection('packages')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${section === 'packages' ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${section === 'packages' ? 'btn-primary bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
         >
           📦 Packages
         </button>
         <button
           type="button"
           onClick={() => setSection('addons')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${section === 'addons' ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${section === 'addons' ? 'btn-primary bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
         >
           ➕ Add-ons
         </button>

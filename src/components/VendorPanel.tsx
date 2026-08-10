@@ -14,6 +14,7 @@ import {
   vendorCategoryLabel,
   VendorCategoryDef,
 } from '../services/vendors/vendorCategoryService';
+import { useBrandingConfig } from '../config';
 
 interface VendorPanelProps {
   onClose: () => void;
@@ -28,6 +29,7 @@ interface VendorPanelProps {
  * is a showcase/directory, not a ledger.
  */
 export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
+  const config = useBrandingConfig();
   const { vendors, addVendor, updateVendor, deleteVendor } = useVendors();
   const categories = useMemo(() => getVendorCategories(), [vendors]);
 
@@ -116,8 +118,15 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
     <div className={inline ? "w-full h-full bg-white flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-4"} style={inline ? undefined : { zIndex: 10000 }}>
       <div className={inline ? "w-full h-full flex flex-col" : "w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
         {/* Header */}
-        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ background: 'linear-gradient(to right, #4A1942, #6b2c5c)' }}>
-          <div className="text-white">
+        <div
+          className="px-5 py-4 border-b flex items-center justify-between text-white"
+          style={{
+            background: `linear-gradient(to right, ${config.primaryColor || '#4A1942'}, ${
+              config.primaryDark || config.primaryColor || '#6b2c5c'
+            })`,
+          }}
+        >
+          <div>
             <h1 className="text-lg font-bold">🧰 Preferred Vendors</h1>
             <p className="text-xs opacity-80">Curate the vendors you recommend to your couples, organized by category.</p>
           </div>
@@ -137,12 +146,28 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Category filter tiles */}
           <div className="flex items-center gap-2 flex-wrap">
-            <button type="button" onClick={() => setActiveCategory('all')} className={`px-3 py-1.5 rounded-full text-sm ${activeCategory === 'all' ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}>All ({vendors.length})</button>
-            {categories.map((c) => (
-              <button key={c.id} type="button" onClick={() => setActiveCategory(c.id)} className={`px-3 py-1.5 rounded-full text-sm ${activeCategory === c.id ? 'bg-[#4A1942] text-white' : 'bg-white border border-gray-200 text-gray-700'}`}>
-                {c.icon} {c.label} ({countsByCategory[c.id] || 0})
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={() => setActiveCategory('all')}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium ${activeCategory === 'all' ? 'btn-primary bg-[#4A1942] text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+              style={activeCategory === 'all' ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
+            >
+              All ({vendors.length})
+            </button>
+            {categories.map((c) => {
+              const active = activeCategory === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setActiveCategory(c.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${active ? 'btn-primary bg-[#4A1942] text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                  style={active ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
+                >
+                  {c.icon} {c.label} ({countsByCategory[c.id] || 0})
+                </button>
+              );
+            })}
             <button type="button" onClick={() => setShowCategoryManager((v) => !v)} className="px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">⚙️ Categories</button>
           </div>
 
@@ -210,18 +235,26 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
                         {v.contactName && <div className="text-xs text-gray-400">{v.contactName}</div>}
                       </div>
                     </div>
-                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-[#4A1942]/10 text-[#4A1942]">⭐ Preferred</span>
+                    <span
+                      className="shrink-0 text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        backgroundColor: `${config.primaryColor || '#4A1942'}1A`,
+                        color: config.primaryColor || '#4A1942',
+                      }}
+                    >
+                      ⭐ Preferred
+                    </span>
                   </div>
                   {v.description && <p className="text-sm text-gray-600 mt-2">{v.description}</p>}
                   {couplesUsingVendor[v.id] ? (
                     <div className="mt-2 text-xs text-gray-500">
-                      Used by <span className="font-semibold text-[#4A1942]">{couplesUsingVendor[v.id]}</span> couple{couplesUsingVendor[v.id] === 1 ? '' : 's'}
+                      Used by <span className="font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>{couplesUsingVendor[v.id]}</span> couple{couplesUsingVendor[v.id] === 1 ? '' : 's'}
                     </div>
                   ) : null}
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                    {v.phone && <a href={`tel:${v.phone}`} className="text-[#4A1942] hover:underline">📞 {v.phone}</a>}
-                    {v.email && <a href={`mailto:${v.email}`} className="text-[#4A1942] hover:underline">✉️</a>}
-                    {v.website && <a href={v.website} target="_blank" rel="noreferrer" className="text-[#4A1942] hover:underline">🌐</a>}
+                    {v.phone && <a href={`tel:${v.phone}`} className="hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>📞 {v.phone}</a>}
+                    {v.email && <a href={`mailto:${v.email}`} className="hover:underline" style={{ color: config.primaryColor || '#4A1942' }}>✉️</a>}
+                    {v.website && <a href={v.website} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: config.primaryColor || '#4A1942' }}>🌐</a>}
                   </div>
                   <div className="flex items-center gap-2 mt-3">
                     <button type="button" onClick={() => handleStartEdit(v)} className="text-xs text-gray-600 hover:underline">Edit</button>

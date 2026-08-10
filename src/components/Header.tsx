@@ -342,7 +342,7 @@ export function Header({
                 <span>🔎</span>
                 <span className="hidden lg:inline">Filter</span>
                 {selectedVenueCategories.length > 0 && (
-                  <span className="bg-white text-[#4A1942] rounded-full px-1.5 text-[10px] font-bold">
+                  <span className="bg-white rounded-full px-1.5 text-[10px] font-bold" style={{ color: config.primaryColor || '#4A1942' }}>
                     {selectedVenueCategories.length}
                   </span>
                 )}
@@ -363,7 +363,8 @@ export function Header({
                         e.preventDefault();
                         clearVenueCategories();
                       }}
-                      className="text-xs text-[#4A1942] hover:underline"
+                      className="text-xs hover:underline font-semibold"
+                      style={{ color: config.primaryColor || '#4A1942' }}
                     >
                       Clear all
                     </button>
@@ -697,9 +698,10 @@ export function Header({
                         }}
                         className={`rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                           active
-                            ? 'bg-white text-[#4A1942]'
+                            ? 'bg-white font-bold'
                             : 'bg-white/10 text-white/90 hover:bg-white/20'
                         }`}
+                        style={active ? { color: config.primaryColor || '#4A1942' } : undefined}
                       >
                         <div className="font-medium flex items-center gap-1">
                           <span>{category.icon}</span>

@@ -337,7 +337,14 @@ const StaffOperationsPanel: React.FC<Props> = ({
       <div className="space-y-6">
         {/* BEO & Conflict Quick Action Banners */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-gradient-to-r from-[#4A1942] to-purple-800 text-white p-5 rounded-xl shadow-sm flex flex-col justify-between gap-3">
+          <div
+            className="text-white p-5 rounded-xl shadow-sm flex flex-col justify-between gap-3"
+            style={{
+              background: `linear-gradient(to right, ${config.primaryColor || '#4A1942'}, ${
+                config.primaryDark || config.primaryColor || '#3d1a45'
+              })`,
+            }}
+          >
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-xl">📜</span>

@@ -314,7 +314,7 @@ export function VenueDashboard(props: Props) {
                 <div className="text-xs text-gray-500 mt-0.5">Setup ({stats.setupDone}/{stats.setupTotal})</div>
               </Card>
               <Card className="p-4">
-                <div className={`text-2xl font-bold ${stats.overnightTotal > stats.overnightCap ? 'text-red-600' : 'text-[#4A1942]'}`}>{stats.overnightTotal}<span className="text-sm text-gray-400">/{stats.overnightCap}</span></div>
+                <div className={`text-2xl font-bold ${stats.overnightTotal > stats.overnightCap ? 'text-red-600' : ''}`} style={stats.overnightTotal > stats.overnightCap ? undefined : { color: config.primaryColor || '#4A1942' }}>{stats.overnightTotal}<span className="text-sm text-gray-400">/{stats.overnightCap}</span></div>
                 <div className="text-xs text-gray-500 mt-0.5">Overnight guests</div>
               </Card>
               <Card className="p-4">

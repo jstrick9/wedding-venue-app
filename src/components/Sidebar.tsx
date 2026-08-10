@@ -210,7 +210,7 @@ export function Sidebar({
               cy={halfSize}
               r={halfSize - 2}
               fill={color}
-              stroke="#4A1942"
+              stroke={config.primaryColor || '#4A1942'}
               strokeWidth="1"
             />
           </svg>
@@ -225,7 +225,7 @@ export function Sidebar({
               rx={halfSize - 2}
               ry={halfSize / 2 - 1}
               fill={color}
-              stroke="#4A1942"
+              stroke={config.primaryColor || '#4A1942'}
               strokeWidth="1"
             />
           </svg>
@@ -239,7 +239,7 @@ export function Sidebar({
                 size - 2
               } ${size - 2} Z`}
               fill={color}
-              stroke="#4A1942"
+              stroke={config.primaryColor || '#4A1942'}
               strokeWidth="1"
             />
           </svg>
@@ -251,7 +251,7 @@ export function Sidebar({
             <polygon
               points={`${halfSize},2 ${size - 2},${size - 2} 2,${size - 2}`}
               fill={color}
-              stroke="#4A1942"
+              stroke={config.primaryColor || '#4A1942'}
               strokeWidth="1"
             />
           </svg>
@@ -266,7 +266,7 @@ export function Sidebar({
                 size - hx
               },${size - 2} ${hx},${size - 2} 2,${halfSize}`}
               fill={color}
-              stroke="#4A1942"
+              stroke={config.primaryColor || '#4A1942'}
               strokeWidth="1"
             />
           </svg>
@@ -282,7 +282,7 @@ export function Sidebar({
                 size - ox
               } ${size - ox},${size - 2} ${ox},${size - 2} 2,${size - ox} 2,${ox}`}
               fill={color}
-              stroke="#4A1942"
+              stroke={config.primaryColor || '#4A1942'}
               strokeWidth="1"
             />
           </svg>
@@ -298,7 +298,7 @@ export function Sidebar({
               width={size - 4}
               height={size - 4}
               fill={color}
-              stroke="#4A1942"
+              stroke={config.primaryColor || '#4A1942'}
               strokeWidth="1"
               rx="2"
             />
@@ -534,7 +534,13 @@ export function Sidebar({
               )}
 
               {type === 'table' && item.capacity && (
-                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded bg-[#4A1942]/10 text-[#4A1942] font-medium">
+                <span
+                  className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded font-medium"
+                  style={{
+                    backgroundColor: `${config.primaryColor || '#4A1942'}1A`,
+                    color: config.primaryColor || '#4A1942',
+                  }}
+                >
                   🪑{' '}
                   {item.isSeatingType
                     ? item.capacity * Math.max(1, item.seatingRowCount || 1)
@@ -683,7 +689,7 @@ export function Sidebar({
               onClick={() => setActiveSection(section.id)}
               className={`inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium transition-colors ${
                 active
-                  ? 'bg-[#4A1942] text-white shadow-sm'
+                  ? 'btn-primary bg-[#4A1942] text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
               style={active ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
@@ -730,7 +736,8 @@ export function Sidebar({
                     <button
                       type="button"
                       onClick={() => setCatalogSearch('')}
-                      className="text-[#4A1942] hover:underline"
+                      className="hover:underline font-semibold"
+                      style={{ color: config.primaryColor || '#4A1942' }}
                     >
                       Clear
                     </button>
@@ -853,7 +860,7 @@ export function Sidebar({
                         }}
                         className="group bg-white border border-gray-200 rounded-2xl p-3 hover:border-[#4A1942] hover:shadow-xl transition-all cursor-grab active:cursor-grabbing flex items-center gap-4 relative overflow-hidden"
                       >
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#4A1942] opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#4A1942] opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: config.primaryColor || '#4A1942' }} />
                         <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-105 transition-transform overflow-hidden border border-gray-100">
                           {(() => {
                             const catalog = getDecorItems();
@@ -956,7 +963,8 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={() => emit('spm_open_workspace_help')}
-                  className="text-xs font-medium text-[#4A1942] hover:underline"
+                  className="text-xs font-medium hover:underline"
+                  style={{ color: config.primaryColor || '#4A1942' }}
                 >
                   Keyboard help
                 </button>
@@ -990,6 +998,7 @@ export function Sidebar({
                     checked={showGrid}
                     onChange={(e) => onShowGridChange(e.target.checked)}
                     className="w-4 h-4 accent-[#4A1942]"
+                    style={{ accentColor: config.primaryColor || '#4A1942' }}
                   />
                 </label>
                 <label className="flex items-center justify-between gap-3 text-sm text-gray-700 cursor-pointer">
@@ -999,6 +1008,7 @@ export function Sidebar({
                     checked={snapToGrid}
                     onChange={(e) => onSnapToGridChange?.(e.target.checked)}
                     className="w-4 h-4 accent-[#4A1942]"
+                    style={{ accentColor: config.primaryColor || '#4A1942' }}
                   />
                 </label>
                 <label className="flex items-center justify-between gap-3 text-sm text-gray-700">
@@ -1023,6 +1033,7 @@ export function Sidebar({
                     value={gridContrast}
                     onChange={(e) => onGridContrastChange?.(Number(e.target.value))}
                     className="w-28 accent-[#4A1942]"
+                    style={{ accentColor: config.primaryColor || '#4A1942' }}
                   />
                 </label>
               </div>
@@ -1160,7 +1171,8 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={() => emit('spm_open_workspace_help')}
-                  className="text-[11px] text-[#4A1942] hover:underline"
+                  className="text-[11px] hover:underline font-semibold"
+                  style={{ color: config.primaryColor || '#4A1942' }}
                 >
                   Open shortcut guide
                 </button>

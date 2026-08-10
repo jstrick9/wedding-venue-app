@@ -27,12 +27,22 @@ import { useBrandingConfig } from '../config';
 
 type View = 'month' | 'week' | 'day' | 'agenda';
 
-const CAT_STYLE: Record<VenueCalendarCategory, { dot: string; chip: string }> = {
-  couple: { dot: 'bg-[#4A1942]/100', chip: 'bg-[#4A1942]/10 text-[#4A1942]' },
-  'open-house': { dot: 'bg-emerald-500', chip: 'bg-emerald-100 text-emerald-700' },
-  staffing: { dot: 'bg-amber-500', chip: 'bg-amber-100 text-amber-700' },
-  blocked: { dot: 'bg-red-500', chip: 'bg-red-100 text-red-700' },
-  other: { dot: 'bg-slate-500', chip: 'bg-slate-100 text-slate-700' },
+const getCatStyle = (cat: VenueCalendarCategory, primaryColor: string) => {
+  if (cat === 'couple') {
+    return {
+      dotClass: '',
+      dotStyle: { backgroundColor: primaryColor },
+      chipClass: 'font-medium',
+      chipStyle: { backgroundColor: `${primaryColor}20`, color: primaryColor },
+    };
+  }
+  const map: Record<string, { dotClass: string; dotStyle?: React.CSSProperties; chipClass: string; chipStyle?: React.CSSProperties }> = {
+    'open-house': { dotClass: 'bg-emerald-500', chipClass: 'bg-emerald-100 text-emerald-700 font-medium' },
+    staffing: { dotClass: 'bg-amber-500', chipClass: 'bg-amber-100 text-amber-700 font-medium' },
+    blocked: { dotClass: 'bg-red-500', chipClass: 'bg-red-100 text-red-700 font-medium' },
+    other: { dotClass: 'bg-slate-500', chipClass: 'bg-slate-100 text-slate-700 font-medium' },
+  };
+  return map[cat] || map.other;
 };
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -213,7 +223,7 @@ export function VenueCalendar({
   };
 
   const renderChip = (e: EventItem) => {
-    const s = CAT_STYLE[e.category];
+    const s = getCatStyle(e.category, config.primaryColor || '#4A1942');
     const draggable = !!e.venue; // venue-created events can be rescheduled by drag
     return (
       <button
@@ -223,7 +233,8 @@ export function VenueCalendar({
         onDragStart={(ev) => { setDragId(e.id); ev.dataTransfer?.setData('text/plain', e.id); ev.dataTransfer!.effectAllowed = 'move'; }}
         onDragEnd={() => setDragId(null)}
         onClick={(ev) => { ev.stopPropagation(); if (e.coupleEventId && onOpenCouple) onOpenCouple(e.coupleEventId); else setDetail(e); }}
-        className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] leading-tight truncate ${s.chip} ${dragId === e.id ? 'opacity-50' : ''} ${draggable ? 'cursor-grab' : 'cursor-pointer'}`}
+        className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] leading-tight truncate ${s.chipClass} ${dragId === e.id ? 'opacity-50' : ''} ${draggable ? 'cursor-grab' : 'cursor-pointer'}`}
+        style={s.chipStyle}
         title={e.title}
       >
         {e.startTime ? `${e.startTime} ` : ''}{e.title}
@@ -293,12 +304,15 @@ export function VenueCalendar({
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-        {(Object.keys(CAT_STYLE) as VenueCalendarCategory[]).map((c) => (
-          <Badge key={c} tone={c === 'blocked' ? 'danger' : c === 'staffing' ? 'warning' : c === 'couple' ? 'primary' : 'default'}>
-            <span className={`w-2 h-2 rounded-full ${CAT_STYLE[c].dot}`} />
-            {CALENDAR_CATEGORY_LABELS[c]}
-          </Badge>
-        ))}
+        {(['couple', 'open-house', 'staffing', 'blocked', 'other'] as VenueCalendarCategory[]).map((c) => {
+          const s = getCatStyle(c, config.primaryColor || '#4A1942');
+          return (
+            <Badge key={c} tone={c === 'blocked' ? 'danger' : c === 'staffing' ? 'warning' : c === 'couple' ? 'primary' : 'default'}>
+              <span className={`w-2 h-2 rounded-full ${s.dotClass}`} style={s.dotStyle} />
+              {CALENDAR_CATEGORY_LABELS[c]}
+            </Badge>
+          );
+        })}
       </div>
 
       {/* Blocked-vs-booked conflict warning */}
@@ -331,7 +345,11 @@ export function VenueCalendar({
               <div
                 key={i}
                 onClick={() => { setSelectedDate(k || today); setView('day'); }}
-                className={`min-h-[72px] border border-gray-100 p-1 cursor-pointer ${k && isToday(k) ? 'bg-[#4A1942]/10' : 'hover:bg-gray-50'} ${!k ? 'bg-gray-50' : ''} ${dragOver === k ? 'ring-2 ring-[#4A1942]' : ''}`}
+                className={`min-h-[72px] border border-gray-100 p-1 cursor-pointer ${!k ? 'bg-gray-50' : 'hover:bg-gray-50'} ${dragOver === k ? 'ring-2' : ''}`}
+                style={{
+                  backgroundColor: k && isToday(k) ? `${config.primaryColor || '#4A1942'}15` : undefined,
+                  borderColor: dragOver === k ? config.primaryColor || '#4A1942' : undefined,
+                }}
                 {...(k ? cellDragProps(k) : {})}
               >
                 {k && (
@@ -356,15 +374,30 @@ export function VenueCalendar({
         <div className="rounded-xl bg-white border border-gray-200 overflow-hidden shadow-sm">
           <div className="grid grid-cols-7 bg-gray-50 text-xs font-medium text-gray-500">
             {weekDays.map((k) => (
-              <div key={k} className="px-2 py-2 text-center cursor-pointer hover:bg-[#4A1942]/10" onClick={() => { setSelectedDate(k); setView('day'); }}>
+              <div
+                key={k}
+                className="px-2 py-2 text-center cursor-pointer hover:bg-gray-100"
+                onClick={() => { setSelectedDate(k); setView('day'); }}
+              >
                 <div>{DAYS[new Date(k + 'T00:00:00').getDay()]}</div>
-                <div className={`font-bold ${isToday(k) ? 'text-[#4A1942]' : ''}`}>{Number(k.slice(8))}</div>
+                <div
+                  className="font-bold"
+                  style={isToday(k) ? { color: config.primaryColor || '#4A1942' } : undefined}
+                >
+                  {Number(k.slice(8))}
+                </div>
               </div>
             ))}
           </div>
           <div className="grid grid-cols-7 border-t border-gray-100">
             {weekDays.map((k) => (
-              <div key={k} className={`min-h-[160px] border border-gray-100 p-1 cursor-pointer hover:bg-gray-50 ${dragOver === k ? 'ring-2 ring-[#4A1942]' : ''}`} onClick={() => { setSelectedDate(k); setView('day'); }} {...cellDragProps(k)}>
+              <div
+                key={k}
+                className={`min-h-[160px] border border-gray-100 p-1 cursor-pointer hover:bg-gray-50 ${dragOver === k ? 'ring-2' : ''}`}
+                style={dragOver === k ? { borderColor: config.primaryColor || '#4A1942' } : undefined}
+                onClick={() => { setSelectedDate(k); setView('day'); }}
+                {...cellDragProps(k)}
+              >
                 <div className="space-y-0.5">
                   {itemsByDate(k).map(renderChip)}
                   <button type="button" onClick={(e) => { e.stopPropagation(); openCreate(k); }} className="text-[10px] text-emerald-600 hover:underline pl-1">+</button>
@@ -386,22 +419,25 @@ export function VenueCalendar({
             {itemsByDate(selectedDate).length === 0 && (
               <EmptyState icon="🗓️" title="No events on this day." hint="Use “+ Add event” to schedule an open house, setup, or blocked date." />
             )}
-            {itemsByDate(selectedDate).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e) => (
-              <div key={e.id} className="flex items-center gap-2 px-4 py-2 text-sm">
-                <span className={`w-2.5 h-2.5 rounded-full ${CAT_STYLE[e.category].dot}`} />
-                <span className="text-gray-500 w-20">{e.startTime || '—'}</span>
-                <span className="flex-1 text-gray-800 font-medium">{e.title}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_STYLE[e.category].chip}`}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
-                {e.venue && e.venue.assignees && e.venue.assignees.length > 0 && (
-                  <span className="text-xs text-sky-700">👤 {e.venue.assignees.length}</span>
-                )}
-                {e.coupleEventId && onOpenCouple ? (
-                  <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-[#4A1942] hover:underline">Open</button>
-                ) : e.venue ? (
-                  <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
-                ) : null}
-              </div>
-            ))}
+            {itemsByDate(selectedDate).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e) => {
+              const s = getCatStyle(e.category, config.primaryColor || '#4A1942');
+              return (
+                <div key={e.id} className="flex items-center gap-2 px-4 py-2 text-sm">
+                  <span className={`w-2.5 h-2.5 rounded-full ${s.dotClass}`} style={s.dotStyle} />
+                  <span className="text-gray-500 w-20">{e.startTime || '—'}</span>
+                  <span className="flex-1 text-gray-800 font-medium">{e.title}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${s.chipClass}`} style={s.chipStyle}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
+                  {e.venue && e.venue.assignees && e.venue.assignees.length > 0 && (
+                    <span className="text-xs text-sky-700">👤 {e.venue.assignees.length}</span>
+                  )}
+                  {e.coupleEventId && onOpenCouple ? (
+                    <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Open</button>
+                  ) : e.venue ? (
+                    <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -417,23 +453,26 @@ export function VenueCalendar({
             {allItems
               .slice()
               .sort((a, b) => (a.date < b.date ? -1 : 1) || (a.startTime || '').localeCompare(b.startTime || ''))
-              .map((e) => (
-                <div key={e.id} className="flex items-center gap-2 px-4 py-2 text-sm">
-                  <span className={`w-2.5 h-2.5 rounded-full ${CAT_STYLE[e.category].dot}`} />
-                  <span className="text-gray-500 w-24">{new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                  <span className="text-gray-500 w-14">{e.startTime || ''}</span>
-                  <span className="flex-1 text-gray-800">{e.title}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${CAT_STYLE[e.category].chip}`}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
-                  {e.venue?.recurrence && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#4A1942]/10 text-[#4A1942] capitalize">↻ {e.venue.recurrence}</span>
-                  )}
-                  {e.coupleEventId && onOpenCouple ? (
-                    <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs text-[#4A1942] hover:underline">Open</button>
-                  ) : e.venue ? (
-                    <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
-                  ) : null}
-                </div>
-              ))}
+              .map((e) => {
+                const s = getCatStyle(e.category, config.primaryColor || '#4A1942');
+                return (
+                  <div key={e.id} className="flex items-center gap-2 px-4 py-2 text-sm">
+                    <span className={`w-2.5 h-2.5 rounded-full ${s.dotClass}`} style={s.dotStyle} />
+                    <span className="text-gray-500 w-24">{new Date(e.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                    <span className="text-gray-500 w-14">{e.startTime || ''}</span>
+                    <span className="flex-1 text-gray-800">{e.title}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${s.chipClass}`} style={s.chipStyle}>{CALENDAR_CATEGORY_LABELS[e.category]}</span>
+                    {e.venue?.recurrence && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full capitalize" style={{ backgroundColor: `${config.primaryColor || '#4A1942'}1A`, color: config.primaryColor || '#4A1942' }}>↻ {e.venue.recurrence}</span>
+                    )}
+                    {e.coupleEventId && onOpenCouple ? (
+                      <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Open</button>
+                    ) : e.venue ? (
+                      <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
+                    ) : null}
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}
@@ -442,7 +481,7 @@ export function VenueCalendar({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[12000] p-4" onClick={() => setDetail(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${CAT_STYLE[detail.category].dot}`} />
+              {(() => { const s = getCatStyle(detail.category, config.primaryColor || '#4A1942'); return <span className={`w-3 h-3 rounded-full ${s.dotClass}`} style={s.dotStyle} />; })()}
               <h3 className="font-semibold">{detail.title}</h3>
             </div>
             <p className="text-sm text-gray-600">

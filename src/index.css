@@ -125,30 +125,30 @@ a:not([class*="text-"]):not([class*="bg-"]) {
 }
 
 /* Primary buttons should use the primary color */
-.btn-primary, [class*="bg-\\[#4A1942\\]"], [class*="bg-purple-600"], [class*="bg-purple-700"], [class*="bg-purple-900"], [class*="bg-plum"] {
+.btn-primary, [class*="bg-[#4A1942]"]:not([class*="bg-[#4A1942]/"]), [class*="bg-[#3b1435]"]:not([class*="bg-[#3b1435]/"]), [class*="bg-[#3d1a45]"]:not([class*="bg-[#3d1a45]/"]), [class*="bg-[#6b2c5c]"]:not([class*="bg-[#6b2c5c]/"]), [class*="bg-purple-600"], [class*="bg-purple-700"], [class*="bg-purple-900"], [class*="bg-plum"] {
   background-color: var(--primary-color) !important;
 }
 
 /* Primary text color */
-.text-primary, [class*="text-\\[#4A1942\\]"], [class*="text-purple-600"], [class*="text-purple-700"], [class*="text-purple-800"], [class*="text-purple-900"] {
+.text-primary, [class*="text-[#4A1942]"], [class*="text-[#3b1435]"], [class*="text-[#3d1a45]"], [class*="text-purple-600"], [class*="text-purple-700"], [class*="text-purple-800"], [class*="text-purple-900"] {
   color: var(--primary-color) !important;
 }
 
 /* Brand color is also used for borders, rings, and gradient stops — map all of
    them to the configured primary color so custom branding applies everywhere. */
-[class*="border-\\[#4A1942\\]"], [class*="border-purple-600"], [class*="border-purple-500"], [class*="border-purple-400"] {
+[class*="border-[#4A1942]"]:not([class*="border-[#4A1942]/"]), [class*="border-[#3b1435]"]:not([class*="border-[#3b1435]/"]), [class*="border-purple-600"], [class*="border-purple-500"], [class*="border-purple-400"] {
   border-color: var(--primary-color) !important;
 }
-[class*="ring-\\[#4A1942\\]"], [class*="ring-purple-600"], [class*="ring-purple-500"] {
+[class*="ring-[#4A1942]"]:not([class*="ring-[#4A1942]/"]), [class*="ring-[#3b1435]"]:not([class*="ring-[#3b1435]/"]), [class*="ring-purple-600"], [class*="ring-purple-500"] {
   --tw-ring-color: var(--primary-color) !important;
 }
-[class*="from-\\[#4A1942\\]"], [class*="from-purple-600"], [class*="from-purple-700"] {
+[class*="from-[#4A1942]"]:not([class*="from-[#4A1942]/"]), [class*="from-[#3b1435]"]:not([class*="from-[#3b1435]/"]), [class*="from-purple-600"], [class*="from-purple-700"] {
   --tw-gradient-from: var(--primary-color) !important;
 }
-[class*="to-\\[#4A1942\\]"], [class*="to-purple-800"], [class*="to-purple-900"] {
+[class*="to-[#4A1942]"]:not([class*="to-[#4A1942]/"]), [class*="to-[#3b1435]"]:not([class*="to-[#3b1435]/"]), [class*="to-[#3d1a45]"]:not([class*="to-[#3d1a45]/"]), [class*="to-purple-800"], [class*="to-purple-900"] {
   --tw-gradient-to: var(--primary-color) !important;
 }
-[class*="divide-\\[#4A1942\\]"] > :not([hidden]) ~ :not([hidden]) {
+[class*="divide-[#4A1942]"]:not([class*="divide-[#4A1942]/"]) > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--primary-color) !important;
 }
 
@@ -1011,13 +1011,13 @@ input[type="checkbox"] {
 }
 
 /* Keep Tailwind hardcoded plum utility classes in sync with branding theme */
-[class*="focus:ring-\\[#4A1942\\]"]:focus {
+[class*="focus:ring-[#4A1942]"]:focus {
   --tw-ring-color: var(--primary-color) !important;
 }
-[class*="text-\\[#4A1942\\]"] {
+[class*="text-[#4A1942]"] {
   color: var(--primary-color) !important;
 }
-[class*="bg-\\[#4A1942\\]"] {
+[class*="bg-[#4A1942]"]:not([class*="bg-[#4A1942]/"]) {
   background-color: var(--primary-color) !important;
 }
 
@@ -1296,37 +1296,37 @@ body {
    restore correct alpha and re-tint hover/active states.
    ============================================================ */
 /* Hover / active states use the configured dark & light shades */
-[class*="hover:bg-\[#3b1435\]"]:hover,
-[class*="hover:bg-\[#3d1a45\]"]:hover {
+[class*="hover:bg-[#3b1435]"]:hover,
+[class*="hover:bg-[#3d1a45]"]:hover {
   background-color: var(--primary-dark) !important;
 }
-[class*="hover:bg-\[#4A1942\]"]:hover,
+[class*="hover:bg-[#4A1942]"]:hover,
 [class*="hover:bg-purple-700"]:hover,
 [class*="hover:bg-purple-800"]:hover {
   background-color: var(--primary-color) !important;
 }
-[class*="hover:bg-\[#5b2352\]"]:hover,
-[class*="hover:bg-\[#6b2c5c\]"]:hover,
+[class*="hover:bg-[#5b2352]"]:hover,
+[class*="hover:bg-[#6b2c5c]"]:hover,
 [class*="hover:bg-purple-600"]:hover {
   background-color: var(--primary-light) !important;
 }
 
 /* Semi-transparent brand fills (preserve alpha via color-mix) */
-[class*="bg-\[#4A1942\]/5"], [class*="bg-purple-50"] { background-color: color-mix(in srgb, var(--primary-color) 6%, transparent) !important; }
-[class*="bg-\[#4A1942\]/10"], [class*="bg-purple-100"] { background-color: color-mix(in srgb, var(--primary-color) 12%, transparent) !important; }
-[class*="bg-\[#4A1942\]/20"] { background-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important; }
-[class*="bg-\[#4A1942\]/50"] { background-color: color-mix(in srgb, var(--primary-color) 50%, transparent) !important; }
+[class*="bg-[#4A1942]/5"], [class*="bg-purple-50"] { background-color: color-mix(in srgb, var(--primary-color) 6%, transparent) !important; }
+[class*="bg-[#4A1942]/10"], [class*="bg-purple-100"] { background-color: color-mix(in srgb, var(--primary-color) 12%, transparent) !important; }
+[class*="bg-[#4A1942]/20"] { background-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important; }
+[class*="bg-[#4A1942]/50"] { background-color: color-mix(in srgb, var(--primary-color) 50%, transparent) !important; }
 
 /* Focus/soft rings stay translucent brand color */
-[class*="ring-\[#4A1942\]/20"], [class*="ring-purple-200"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important; }
-[class*="ring-\[#4A1942\]/30"], [class*="ring-purple-300"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 30%, transparent) !important; }
-[class*="ring-\[#4A1942\]/40"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important; }
-[class*="ring-\[#4A1942\]/50"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 50%, transparent) !important; }
+[class*="ring-[#4A1942]/20"], [class*="ring-purple-200"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important; }
+[class*="ring-[#4A1942]/30"], [class*="ring-purple-300"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 30%, transparent) !important; }
+[class*="ring-[#4A1942]/40"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important; }
+[class*="ring-[#4A1942]/50"] { --tw-ring-color: color-mix(in srgb, var(--primary-color) 50%, transparent) !important; }
 
 /* Borders */
-[class*="border-\[#4A1942\]/20"], [class*="border-purple-200"], [class*="border-purple-300"] { border-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important; }
-[class*="border-\[#4A1942\]/40"], [class*="border-purple-400"] { border-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important; }
+[class*="border-[#4A1942]/20"], [class*="border-purple-200"], [class*="border-purple-300"] { border-color: color-mix(in srgb, var(--primary-color) 20%, transparent) !important; }
+[class*="border-[#4A1942]/40"], [class*="border-purple-400"] { border-color: color-mix(in srgb, var(--primary-color) 40%, transparent) !important; }
 
 /* Gradient stops */
-[class*="from-\[#4A1942\]/5"] { --tw-gradient-from: color-mix(in srgb, var(--primary-color) 5%, transparent) !important; }
-[class*="to-\[#4A1942\]/10"] { --tw-gradient-to: color-mix(in srgb, var(--primary-color) 10%, transparent) !important; }
+[class*="from-[#4A1942]/5"] { --tw-gradient-from: color-mix(in srgb, var(--primary-color) 5%, transparent) !important; }
+[class*="to-[#4A1942]/10"] { --tw-gradient-to: color-mix(in srgb, var(--primary-color) 10%, transparent) !important; }

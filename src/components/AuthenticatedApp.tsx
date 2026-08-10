@@ -1016,14 +1016,22 @@ export default function AuthenticatedApp() {
             <button
               type="button"
               onClick={() => { setShowLayoutsHome(true); }}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-0.5 text-[#4A1942] hover:bg-[#4A1942]/10"
+              className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-0.5 hover:bg-gray-100 font-semibold"
+              style={{ color: brandingConfig.primaryColor || '#4A1942' }}
             >
               🏛️ Spaces &amp; Layouts
             </button>
             {layoutState.layoutDirty && (
               <span className="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[10px] font-semibold">● Unsaved</span>
             )}
-            <button type="button" onClick={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })} className="text-[#4A1942] hover:underline">← Dashboard</button>
+            <button
+              type="button"
+              onClick={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })}
+              className="hover:underline font-semibold"
+              style={{ color: brandingConfig.primaryColor || '#4A1942' }}
+            >
+              ← Dashboard
+            </button>
           </span>
         </div>
         <Header
@@ -1139,9 +1147,9 @@ export default function AuthenticatedApp() {
             )}
             {isMasterBasicUser && (
               <div className="absolute bottom-4 left-44 z-20 flex gap-2 no-print spm-studio-chrome">
-                <button onClick={() => open('messages')} className="bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium">💬 Messages</button>
-                <button onClick={() => open('submission')} className="bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium">📤 Submit</button>
-                <button onClick={() => open('eventQuestions')} className="bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium">📝 Questions</button>
+                <button onClick={() => open('messages')} className="btn-primary bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium" style={{ backgroundColor: brandingConfig.primaryColor || '#4A1942' }}>💬 Messages</button>
+                <button onClick={() => open('submission')} className="btn-primary bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium" style={{ backgroundColor: brandingConfig.primaryColor || '#4A1942' }}>📤 Submit</button>
+                <button onClick={() => open('eventQuestions')} className="btn-primary bg-[#4A1942] text-white rounded-xl shadow-lg px-3 py-2 text-sm font-medium" style={{ backgroundColor: brandingConfig.primaryColor || '#4A1942' }}>📝 Questions</button>
               </div>
             )}
           </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBrandingConfig } from '../../config';
 
 /**
  * Shared UI primitives — a lightweight design system so the dashboard, admin,
@@ -21,13 +22,20 @@ export function Button({
   tone = 'default',
   size = 'md',
   className = '',
+  style,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: Tone; size?: 'sm' | 'md' }) {
+  const config = useBrandingConfig();
   const sz = size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2 text-sm font-medium';
+  const primaryStyle = tone === 'primary' ? {
+    backgroundColor: config.primaryColor || '#4A1942',
+    ...style,
+  } : style;
   return (
     <button
       {...props}
-      className={`rounded-lg transition-colors disabled:opacity-50 ${toneBtn[tone]} ${sz} ${className}`}
+      style={primaryStyle}
+      className={`rounded-lg transition-colors disabled:opacity-50 ${tone === 'primary' ? 'btn-primary ' : ''}${toneBtn[tone]} ${sz} ${className}`}
     />
   );
 }
@@ -58,9 +66,25 @@ const toneBadge: Record<Tone, string> = {
   danger: 'bg-red-100 text-red-700',
 };
 
-export function Badge({ tone = 'default', children }: { tone?: Tone; children: React.ReactNode }) {
+export function Badge({
+  tone = 'default',
+  style,
+  className = '',
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement> & { tone?: Tone; style?: React.CSSProperties; children: React.ReactNode }) {
+  const config = useBrandingConfig();
+  const primaryStyle = tone === 'primary' ? {
+    backgroundColor: `${config.primaryColor || '#4A1942'}1A`,
+    color: config.primaryColor || '#4A1942',
+    ...style,
+  } : style;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${toneBadge[tone]}`}>
+    <span
+      {...props}
+      style={primaryStyle}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${toneBadge[tone]} ${className}`}
+    >
       {children}
     </span>
   );

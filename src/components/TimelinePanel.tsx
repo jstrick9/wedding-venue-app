@@ -10,6 +10,7 @@ import {
 import { CoupleEvent } from '../types';
 import { on } from '../utils/appEvents';
 import { showToast } from './Toast';
+import { useBrandingConfig } from '../config';
 
 interface TimelinePanelProps {
   onClose: () => void;
@@ -29,6 +30,7 @@ function portalUrl(token: string): string {
 }
 
 export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
+  const config = useBrandingConfig();
   const {
     timelines,
     activeTimeline,
@@ -195,7 +197,14 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
     <div className={inline ? "w-full h-full bg-white flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-4"} style={inline ? undefined : { zIndex: 10000 }}>
       <div className={inline ? "w-full h-full flex flex-col" : "w-full max-w-4xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#4A1942] to-[#3d1a45] text-white p-4 flex items-center justify-between">
+        <div
+          className="text-white p-4 flex items-center justify-between"
+          style={{
+            background: `linear-gradient(to right, ${config.primaryColor || '#4A1942'}, ${
+              config.primaryDark || config.primaryColor || '#3d1a45'
+            })`,
+          }}
+        >
           <div>
             <h2 className="text-xl font-bold">📅 Wedding Timeline</h2>
             <p className="text-sm text-white/70">
@@ -357,7 +366,8 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
               <div className="flex flex-col gap-3 items-center">
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="px-6 py-3 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] transition-colors"
+                  className="btn-primary px-6 py-3 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] transition-colors"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   ➕ Create New Timeline
                 </button>
@@ -439,7 +449,13 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                       </div>
                       <div className="flex flex-col justify-center">
                         <div className="w-full bg-purple-200 rounded-full h-2.5 overflow-hidden">
-                          <div className="bg-[#4A1942] h-2.5 rounded-full transition-all duration-300" style={{ width: `${progressPct}%` }} />
+                          <div
+                            className="bg-[#4A1942] h-2.5 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${progressPct}%`,
+                              backgroundColor: config.primaryColor || '#4A1942',
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -481,6 +497,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                               checked={hideCompletedEvents}
                               onChange={(e) => setHideCompletedEvents(e.target.checked)}
                               className="rounded border-gray-300 text-[#4A1942] focus:ring-[#4A1942]"
+                              style={{ accentColor: config.primaryColor || '#4A1942' }}
                             />
                             <span>Show incomplete only</span>
                           </label>
@@ -490,6 +507,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                             type="button"
                             onClick={() => { setEventSearch(''); setEventCategoryFilter('all'); setHideCompletedEvents(false); }}
                             className="text-xs text-[#4A1942] hover:underline font-semibold whitespace-nowrap"
+                            style={{ color: config.primaryColor || '#4A1942' }}
                           >
                             Clear filters
                           </button>
@@ -514,7 +532,8 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setShowAddEvent(day.id)}
-                          className="px-3 py-1.5 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#3b1435] transition-colors"
+                          className="btn-primary px-3 py-1.5 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#3b1435] transition-colors"
+                          style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                         >
                           + Add Event
                         </button>
@@ -598,7 +617,8 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                         <button
                           onClick={() => handleAddEvent(day.id)}
                           disabled={!newEvent.title.trim()}
-                          className="px-4 py-2 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#3b1435] disabled:opacity-50"
+                          className="btn-primary px-4 py-2 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#3b1435] disabled:opacity-50"
+                          style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                         >
                           Add Event
                         </button>
@@ -637,6 +657,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                               type="button"
                               onClick={() => { setEventSearch(''); setEventCategoryFilter('all'); setHideCompletedEvents(false); }}
                               className="text-xs text-[#4A1942] hover:underline font-semibold"
+                              style={{ color: config.primaryColor || '#4A1942' }}
                             >
                               Clear filters
                             </button>
@@ -757,7 +778,8 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                 <button
                   onClick={handleCreateTimeline}
                   disabled={!newTimelineName.trim() || !newTimelineDate}
-                  className="flex-1 px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#3b1435] disabled:opacity-50"
+                  className="btn-primary flex-1 px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#3b1435] disabled:opacity-50"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
                 >
                   Create
                 </button>
@@ -820,7 +842,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <button onClick={handleSaveEditEvent} disabled={!editEventForm.title.trim()} className="flex-1 py-2.5 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] disabled:opacity-50 transition-colors">
+                  <button onClick={handleSaveEditEvent} disabled={!editEventForm.title.trim()} className="btn-primary flex-1 py-2.5 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] disabled:opacity-50 transition-colors" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
                     Save Changes
                   </button>
                   <button onClick={() => setEditingEvent(null)} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
@@ -862,7 +884,7 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <button onClick={handleSaveAddDay} disabled={!newDay.date.trim() || !newDay.label.trim()} className="flex-1 py-2.5 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] disabled:opacity-50 transition-colors">
+                  <button onClick={handleSaveAddDay} disabled={!newDay.date.trim() || !newDay.label.trim()} className="btn-primary flex-1 py-2.5 bg-[#4A1942] text-white rounded-lg font-medium hover:bg-[#3b1435] disabled:opacity-50 transition-colors" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
                     Add Day
                   </button>
                   <button onClick={() => setShowAddDay(false)} className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">

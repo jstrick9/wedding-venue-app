@@ -3,6 +3,7 @@ import { CoupleEvent } from '../../types';
 import { TIMELINE_CATEGORIES, TimelineCategory, TimelineEvent } from '../../types/timeline';
 import { useTimeline } from '../../hooks/useTimeline';
 import { hasVenueCoordination } from '../../services/couples/coupleService';
+import { useBrandingConfig } from '../../config';
 
 interface Props {
   event: CoupleEvent;
@@ -15,6 +16,7 @@ export const CoupleTimelineTab: React.FC<Props> = ({
   canEdit = true,
   onNavigateToPackage,
 }) => {
+  const config = useBrandingConfig();
   const {
     getTimelineForCouple,
     createTimeline,
@@ -222,9 +224,10 @@ export const CoupleTimelineTab: React.FC<Props> = ({
                     onClick={() => setActiveDayId(day.id)}
                     className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
                       isActive
-                        ? 'bg-[#4A1942] text-white shadow-sm'
+                        ? 'btn-primary bg-[#4A1942] text-white shadow-sm'
                         : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                     }`}
+                    style={isActive ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
                   >
                     <span>{day.label}</span>
                     <span className="ml-1.5 opacity-80">({day.events.length})</span>
@@ -270,7 +273,8 @@ export const CoupleTimelineTab: React.FC<Props> = ({
                 });
                 setShowAddEvent(true);
               }}
-              className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-xs font-bold shadow-sm hover:bg-[#3d1536] transition-colors"
+              className="btn-primary px-4 py-2 rounded-lg bg-[#4A1942] text-white text-xs font-bold shadow-sm hover:bg-[#3d1536] transition-colors"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               ＋ Add Timeline Event
             </button>
@@ -312,7 +316,8 @@ export const CoupleTimelineTab: React.FC<Props> = ({
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="px-3 py-1.5 bg-[#4A1942] text-white rounded-lg text-xs font-bold"
+              className="btn-primary px-3 py-1.5 bg-[#4A1942] text-white rounded-lg text-xs font-bold"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               Save Day
             </button>
@@ -446,7 +451,8 @@ export const CoupleTimelineTab: React.FC<Props> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 bg-[#4A1942] text-white rounded-lg text-xs font-bold"
+              className="btn-primary px-4 py-1.5 bg-[#4A1942] text-white rounded-lg text-xs font-bold"
+              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
             >
               {editingEventId ? 'Save Changes' : 'Add Event'}
             </button>
@@ -488,6 +494,7 @@ export const CoupleTimelineTab: React.FC<Props> = ({
                           toggleEventComplete(timeline.id, activeDay.id, ev.id);
                         }}
                         className="w-4 h-4 rounded mt-1 accent-[#4A1942] cursor-pointer"
+                        style={{ accentColor: config.primaryColor || '#4A1942' }}
                         title="Mark milestone complete"
                         aria-label={`Mark milestone ${ev.title} complete`}
                       />
