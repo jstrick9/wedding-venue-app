@@ -450,16 +450,19 @@ export function VenueDashboard(props: Props) {
                   <span className="text-sm font-semibold text-gray-700">Today</span>
                   <div className="flex flex-wrap gap-2">
                     {todayEvents.map((e, i) => (
-                      <span
+                      <button
                         key={`${e.id}-${i}`}
-                        className="text-xs rounded-full px-2.5 py-1 font-medium"
+                        type="button"
+                        onClick={() => (e.category === 'couple' ? openCouplePortal(e.id) : setSection('calendar'))}
+                        className="text-xs rounded-full px-2.5 py-1 font-medium hover:opacity-80 transition-opacity"
                         style={{
                           backgroundColor: `${config.primaryColor || '#4A1942'}18`,
                           color: config.primaryColor || '#4A1942',
                         }}
+                        title={e.category === 'couple' ? `Open Couples Portal for ${e.title}` : `Open calendar for ${e.title}`}
                       >
-                        {e.title}
-                      </span>
+                        {e.title} →
+                      </button>
                     ))}
                   </div>
                 </Card>
@@ -506,12 +509,23 @@ export function VenueDashboard(props: Props) {
                           <button
                             type="button"
                             onClick={() => openCouplePortal(e.id.replace('couple-', ''))}
-                            className="text-xs hover:underline"
+                            className="text-xs hover:underline font-semibold"
                             style={{ color: config.primaryColor || '#4A1942' }}
+                            title={`Open Couples Portal for ${e.title}`}
                           >
-                            Open
+                            Open portal →
                           </button>
-                        ) : null}
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSection('calendar')}
+                            className="text-xs hover:underline font-semibold"
+                            style={{ color: config.primaryColor || '#4A1942' }}
+                            title={`Open calendar for ${e.title}`}
+                          >
+                            View in calendar →
+                          </button>
+                        )}
                       </div>
                     );
                     const section = (label: string, items: any[], base: number) => (

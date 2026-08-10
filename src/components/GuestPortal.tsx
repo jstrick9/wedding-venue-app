@@ -1359,6 +1359,34 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
                   <p>
                     <span className="font-semibold">Plus One:</span>{' '}
                     {rsvpSuccess.plusOneName}
+                    {rsvpSuccess.plusOneMealChoice && (
+                      <span className="text-gray-500">
+                        {' '}
+                        ({mealOptions.find((o) => o.value === rsvpSuccess.plusOneMealChoice)?.label ||
+                          rsvpSuccess.plusOneMealChoice})
+                      </span>
+                    )}
+                  </p>
+                )}
+
+                {rsvpSuccess.dietaryNotes && (
+                  <p>
+                    <span className="font-semibold">Dietary Notes:</span>{' '}
+                    {rsvpSuccess.dietaryNotes}
+                  </p>
+                )}
+
+                {rsvpSuccess.attendingDays && rsvpSuccess.attendingDays.length > 0 && (
+                  <p>
+                    <span className="font-semibold">Attending Days:</span>{' '}
+                    {rsvpSuccess.attendingDays.join(', ')}
+                  </p>
+                )}
+
+                {rsvpSuccess.specialNeeds && (
+                  <p>
+                    <span className="font-semibold">Accommodations:</span>{' '}
+                    {rsvpSuccess.specialNeeds}
                   </p>
                 )}
               </div>

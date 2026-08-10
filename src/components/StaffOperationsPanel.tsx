@@ -53,6 +53,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
   const canAccessPanel = canAccessOperationsPanel(currentUser);
   const canMutateOperations = canManageOperationsData(currentUser);
   const [activeTab, setActiveTab] = useState<'overview' | 'beo' | 'tasks' | 'areas' | 'shifts' | 'checklists' | 'export'>('overview');
+  const [checklistSearch, setChecklistSearch] = useState('');
   const [beoCoupleId, setBeoCoupleId] = useState<string | null>(null);
   const { getTimelineForCouple } = useTimeline();
 
@@ -1486,15 +1487,40 @@ const StaffOperationsPanel: React.FC<Props> = ({
           </div>
         </div>
 
+        <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm flex items-center gap-2">
+          <span className="text-sm">🔍</span>
+          <input
+            type="search"
+            value={checklistSearch}
+            onChange={(e) => setChecklistSearch(e.target.value)}
+            placeholder="Quick search checklist item by task or keyword…"
+            aria-label="Search operational checklists"
+            className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+          />
+          {checklistSearch && (
+            <button
+              type="button"
+              onClick={() => setChecklistSearch('')}
+              className="text-xs font-semibold hover:underline"
+              style={{ color: config.primaryColor || '#4A1942' }}
+            >
+              Clear search
+            </button>
+          )}
+        </div>
+
         <div className="space-y-8">
           {PHASES.map((phase) => {
             const phaseTasks = tasks.filter((t) => normalizedPhase(t.phase) === phase);
             const allItems = phaseTasks.flatMap((t) =>
               t.checklist.map((item) => ({ ...item, taskTitle: t.title, taskId: t.id })),
             );
-            const displayItems = hideCompletedChecklist
-              ? allItems.filter((i) => !i.completed)
-              : allItems;
+            const displayItems = allItems.filter((i) => {
+              if (hideCompletedChecklist && i.completed) return false;
+              const q = checklistSearch.trim().toLowerCase();
+              if (q && !`${i.label} ${i.taskTitle} ${i.completedBy || ''}`.toLowerCase().includes(q)) return false;
+              return true;
+            });
 
             if (displayItems.length === 0) return null;
 
@@ -1549,6 +1575,31 @@ const StaffOperationsPanel: React.FC<Props> = ({
               </div>
             );
           })}
+          {tasks.flatMap((t) => t.checklist).length > 0 &&
+            PHASES.every((phase) => {
+              const phaseTasks = tasks.filter((t) => normalizedPhase(t.phase) === phase);
+              const allItems = phaseTasks.flatMap((t) =>
+                t.checklist.map((item) => ({ ...item, taskTitle: t.title, taskId: t.id })),
+              );
+              return allItems.filter((i) => {
+                if (hideCompletedChecklist && i.completed) return false;
+                const q = checklistSearch.trim().toLowerCase();
+                if (q && !`${i.label} ${i.taskTitle} ${i.completedBy || ''}`.toLowerCase().includes(q)) return false;
+                return true;
+              }).length === 0;
+            }) && (
+              <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-gray-500">
+                <p>No checklist items match &ldquo;{checklistSearch}&rdquo;.</p>
+                <button
+                  type="button"
+                  onClick={() => setChecklistSearch('')}
+                  className="mt-2 text-xs hover:underline font-semibold"
+                  style={{ color: config.primaryColor || '#4A1942' }}
+                >
+                  Clear search
+                </button>
+              </div>
+            )}
           {tasks.flatMap((t) => t.checklist).length === 0 && (
             <div className="text-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 italic text-gray-500">
               No checklist items found in any tasks.
