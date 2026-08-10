@@ -308,7 +308,10 @@ export function UserManagement(props: AdminCommonProps) {
       u.name?.toLowerCase().includes(q) ||
       u.username?.toLowerCase().includes(q) ||
       u.email?.toLowerCase().includes(q);
-    const matchesRole = !roleFilter || u.role === roleFilter;
+    const matchesRole =
+      !roleFilter ||
+      u.role === roleFilter ||
+      (roleFilter === 'staff' && u.role !== 'admin');
     const matchesStatus =
       !statusFilter ||
       (statusFilter === 'active' ? u.isActive !== false : u.isActive === false);
@@ -502,18 +505,16 @@ export function UserManagement(props: AdminCommonProps) {
               
               {/* Direct Messages (Admin) */}
               {user?.role === 'admin' && (() => {
-                const masterUsers = users.filter(
-                  (u) => u.role === 'basic' && (u.userRole === 'master' || u.isMasterUser),
+                const staffMembers = users.filter(
+                  (u) => u.id !== user?.id && u.isActive !== false,
                 );
-                const selectedMaster =
-                  masterUsers.find((u) => u.id === selectedMessageMasterUserId) || masterUsers[0] || null;
-                const selectedEventName = selectedMaster?.eventName || selectedMaster?.department || 'general';
-                const threadId = selectedMaster
-                  ? buildMessageThreadId(selectedEventName, selectedMaster.id)
+                const selectedStaff =
+                  staffMembers.find((u) => u.id === selectedMessageMasterUserId) || staffMembers[0] || null;
+                const threadId = selectedStaff
+                  ? buildMessageThreadId(selectedStaff.department || 'internal', selectedStaff.id)
                   : '';
-                const newMessageCount = masterUsers.reduce((sum, m) => {
-                  const eventName = m.eventName || m.department || 'general';
-                  const tId = buildMessageThreadId(eventName, m.id);
+                const newMessageCount = staffMembers.reduce((sum, m) => {
+                  const tId = buildMessageThreadId(m.department || 'internal', m.id);
                   return sum + directMessages.unreadCountForRole(tId, 'admin');
                 }, 0);
 
@@ -526,7 +527,7 @@ export function UserManagement(props: AdminCommonProps) {
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-gray-600">{showUserDirectMessagesSection ? '▼' : '▶'}</span>
-                        <h4 className="text-sm font-semibold text-gray-800">Direct Messages</h4>
+                        <h4 className="text-sm font-semibold text-gray-800">💬 Internal Venue Staff Messaging</h4>
                         {newMessageCount > 0 && (
                           <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
                             {newMessageCount} new
@@ -537,25 +538,25 @@ export function UserManagement(props: AdminCommonProps) {
                     {showUserDirectMessagesSection && (
                       <div className="p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-xs text-gray-500">Admin ↔ Master Basic User communication thread by event.</p>
-                          {masterUsers.length > 0 && (
+                          <p className="text-xs text-gray-500">Admin ↔ Internal Staff communication thread across the venue.</p>
+                          {staffMembers.length > 0 && (
                             <select
-                              value={selectedMaster?.id || ''}
+                              value={selectedStaff?.id || ''}
                               onChange={(e) => setSelectedMessageMasterUserId(e.target.value)}
                               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#4A1942] focus:border-transparent min-w-[260px]"
                             >
-                              {masterUsers.map((m) => (
+                              {staffMembers.map((m) => (
                                 <option key={m.id} value={m.id}>
-                                  {m.name} ({m.eventName || m.department || 'General Event'})
+                                  {m.name} (@{m.username} • {m.jobTitle || 'Internal Staff'})
                                 </option>
                               ))}
                             </select>
                           )}
                         </div>
-                        {selectedMaster && threadId ? (
+                        {selectedStaff && threadId ? (
                           <div className="mt-4">
                             <DirectMessagePanel
-                              title={`Chat with ${selectedMaster.name}`}
+                              title={`Chat with ${selectedStaff.name}`}
                               threadId={threadId}
                               currentUserId={user.id}
                               currentUserName={user.name}
@@ -564,7 +565,7 @@ export function UserManagement(props: AdminCommonProps) {
                           </div>
                         ) : (
                           <p className="mt-3 text-sm text-gray-500">
-                            No master basic users available yet. Create a Basic User with User Role set to Master.
+                            No other active staff members available yet. Create another Internal Staff account to start messaging.
                           </p>
                         )}
                       </div>
@@ -603,98 +604,6 @@ export function UserManagement(props: AdminCommonProps) {
                 </div>
               )}
 
-              {/* Manage Event Roles (Admin) */}
-              {user?.role === 'admin' && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setShowUserEventRolesSection(v => !v)}
-                    className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-600">{showUserEventRolesSection ? '▼' : '▶'}</span>
-                      <h4 className="text-sm font-semibold text-gray-800">Manage Event Roles</h4>
-                    </div>
-                  </button>
-                  {showUserEventRolesSection && (
-                    <div className="p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-xs text-gray-500">Create role options used in Basic User Event Role dropdowns.</p>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={newEventRoleName}
-                            onChange={(e) => setNewEventRoleName(e.target.value)}
-                            placeholder="Add Event Role"
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddEventRole}
-                            className="px-3 py-2 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#3d1a45]"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-                      <ul className="mt-3 space-y-2">
-                        {eventRoles.map((role) => (
-                          <li key={role} className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2">
-                            {editingEventRoleName === role ? (
-                              <div className="flex-1 flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={editingEventRoleValue}
-                                  onChange={(e) => setEditingEventRoleValue(e.target.value)}
-                                  className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={handleSaveEventRoleEdit}
-                                  className="px-2 py-1.5 text-xs bg-green-600 text-white rounded-md"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingEventRoleName(null);
-                                    setEditingEventRoleValue('');
-                                  }}
-                                  className="px-2 py-1.5 text-xs bg-gray-200 text-gray-700 rounded-md"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <span className="text-sm text-gray-800">{role}</span>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStartEditEventRole(role)}
-                                    className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-md"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteEventRole(role)}
-                                    className="px-2 py-1 text-xs bg-red-50 text-red-700 rounded-md"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* User Accounts */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <button
@@ -727,9 +636,9 @@ export function UserManagement(props: AdminCommonProps) {
                   variant="accent"
                 />
                 <BrandedStatCard
-                  value={users.filter(u => u.role === 'basic').length}
-                  label="Basic Users"
-                  icon="👤"
+                  value={users.filter(u => u.role !== 'admin').length}
+                  label="Operations Staff"
+                  icon="🛡️"
                   config={config}
                 />
                 <BrandedStatCard
@@ -775,7 +684,7 @@ export function UserManagement(props: AdminCommonProps) {
                     >
                       <option value="">All Roles</option>
                       <option value="admin">👑 Admins</option>
-                      <option value="basic">👤 Basic Users</option>
+                      <option value="staff">🛡️ Operations Staff</option>
                     </select>
                     <select
                       value={statusFilter}
@@ -1106,33 +1015,30 @@ export function UserManagement(props: AdminCommonProps) {
 								</div>
 								<div>
 								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-									💼 Event Role
-								  </label>
-								  <select
-									value={u.eventRole || u.jobTitle || ''}
-									onChange={(e) => handleSaveUsers(users.map(usr => 
-									  usr.id === u.id ? { ...usr, eventRole: e.target.value, jobTitle: e.target.value, updatedAt: new Date().toISOString() } : usr
-									))}
-									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-								  >
-									<option value="">Select Event Role</option>
-									{eventRoles.map(role => (
-									  <option key={role} value={role}>{role}</option>
-									))}
-								  </select>
-								</div>
-								<div>
-								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
-									🏛️ Event Name
+									💼 Internal Job Title (Optional)
 								  </label>
 								  <input
 									type="text"
-									value={u.eventName || u.department || ''}
+									value={u.jobTitle || ''}
 									onChange={(e) => handleSaveUsers(users.map(usr => 
-									  usr.id === u.id ? { ...usr, eventName: e.target.value, department: e.target.value, updatedAt: new Date().toISOString() } : usr
+									  usr.id === u.id ? { ...usr, jobTitle: e.target.value, eventRole: undefined, updatedAt: new Date().toISOString() } : usr
 									))}
 									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
-									placeholder="Smith Wedding"
+									placeholder="e.g. Lead Coordinator, Banquet Director"
+								  />
+								</div>
+								<div>
+								  <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1 mb-1">
+									🏛️ Department (Optional)
+								  </label>
+								  <input
+									type="text"
+									value={u.department || ''}
+									onChange={(e) => handleSaveUsers(users.map(usr => 
+									  usr.id === u.id ? { ...usr, department: e.target.value, eventName: undefined, updatedAt: new Date().toISOString() } : usr
+									))}
+									className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent bg-gray-50"
+									placeholder="e.g. Operations, Sales & Events"
 								  />
 								</div>
 							  </div>
@@ -1150,7 +1056,8 @@ export function UserManagement(props: AdminCommonProps) {
 									🔐 Role (RBAC)
 								  </label>
 								  <select
-									value={u.assignedRoles?.[0] || u.role || 'basic'}
+									aria-label="Role (RBAC)"
+									value={u.assignedRoles?.[0] || u.role || 'staff'}
 									onChange={(e) => {
 									  const roleId = e.target.value;
 									  const selectedRole = allRoles.find(r => r.id === roleId);
@@ -1158,9 +1065,7 @@ export function UserManagement(props: AdminCommonProps) {
 										usr.id === u.id ? { 
 										  ...usr, 
 										  assignedRoles: [roleId],
-										  role: selectedRole?.hierarchy && selectedRole.hierarchy >= 90 ? 'admin' :
-												selectedRole?.hierarchy && selectedRole.hierarchy >= 40 ? 'staff' :
-												roleId === 'guest' ? 'guest' : 'basic',
+										  role: selectedRole?.hierarchy && selectedRole.hierarchy >= 90 ? 'admin' : 'staff',
 										  updatedAt: new Date().toISOString() 
 										} : usr
 									  ));
@@ -1172,7 +1077,7 @@ export function UserManagement(props: AdminCommonProps) {
 										: 'border-blue-300 bg-blue-50'
 									}`}
 								  >
-									{allRoles.map(role => (
+									{allRoles.filter(role => role.id !== 'basic' && role.id !== 'guest').map(role => (
 									  <option key={role.id} value={role.id}>
 										{role.name} {role.isImmutable ? '(System)' : role.isSystem ? '(Default)' : '(Custom)'}
 									  </option>
@@ -1480,21 +1385,20 @@ export function UserManagement(props: AdminCommonProps) {
 					    <div className="md:col-span-2">
 						  <label className="text-xs font-medium text-gray-500 uppercase">Role * (Controls access permissions)</label>
 						  <select
-						    value={newUser.assignedRoles?.[0] || newUser.role || 'basic'}
+						    aria-label="Role"
+						    value={newUser.assignedRoles?.[0] || newUser.role || 'staff'}
 						    onChange={(e) => {
 							  const roleId = e.target.value;
 							  const selectedRole = allRoles.find(r => r.id === roleId);
 							  setNewUser({
 							    ...newUser,
 							    assignedRoles: [roleId],
-							    role: selectedRole?.hierarchy && selectedRole.hierarchy >= 90 ? 'admin' :
-									  selectedRole?.hierarchy && selectedRole.hierarchy >= 40 ? 'staff' :
-									  roleId === 'guest' ? 'guest' : 'basic',
+							    role: selectedRole?.hierarchy && selectedRole.hierarchy >= 90 ? 'admin' : 'staff',
 							  });
 						    }}
-						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent font-semibold"
 						  >
-						    {allRoles.map(role => (
+						    {allRoles.filter(role => role.id !== 'basic' && role.id !== 'guest').map(role => (
 							  <option key={role.id} value={role.id}>
 							    {role.name} {role.isImmutable ? '(System)' : role.isSystem ? '(Default)' : '(Custom)'}
 							  </option>
@@ -1535,41 +1439,15 @@ export function UserManagement(props: AdminCommonProps) {
 						  </select>
 					    </div>
 					  
-					    {/* Event Role */}
+					    {/* Internal Job Title */}
 					    <div>
-						  <label className="text-xs font-medium text-gray-500 uppercase">Event Role</label>
-						  <select
-						    value={newUser.eventRole || ''}
-						    onChange={(e) => setNewUser({ ...newUser, eventRole: e.target.value, jobTitle: e.target.value })}
-						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
-						  >
-						    <option value="">Select Event Role</option>
-						    {eventRoles.map(role => (
-							  <option key={role} value={role}>{role}</option>
-						    ))}
-						  </select>
-					    </div>
-					  
-					    {/* Event Name */}
-					    <div>
-						  <label className="text-xs font-medium text-gray-500 uppercase">Event Name</label>
+						  <label className="text-xs font-medium text-gray-500 uppercase">Internal Job Title (Optional)</label>
 						  <input
 						    type="text"
-						    value={newUser.eventName || ''}
-						    onChange={(e) => setNewUser({ ...newUser, eventName: e.target.value, department: e.target.value })}
+						    value={newUser.jobTitle || ''}
+						    onChange={(e) => setNewUser({ ...newUser, jobTitle: e.target.value, department: e.target.value })}
 						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
-						    placeholder="Smith Wedding"
-						  />
-					    </div>
-					  
-					    {/* Event Date */}
-					    <div>
-						  <label className="text-xs font-medium text-gray-500 uppercase">Event Date</label>
-						  <input
-						    type="date"
-						    value={newUser.eventDate || ''}
-						    onChange={(e) => setNewUser({ ...newUser, eventDate: e.target.value })}
-						    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A1942] focus:border-transparent"
+						    placeholder="e.g. Lead Coordinator, Banquet Manager"
 						  />
 					    </div>
 					  
@@ -1602,7 +1480,7 @@ export function UserManagement(props: AdminCommonProps) {
 						    username: '',
 						    password: '',
 						    name: '',
-						    role: 'basic',
+						    role: 'staff',
 						    email: '',
 						    phone: '',
 						    contactPhoneNumber: '',

@@ -191,6 +191,19 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                     <div>
                       <h3 className="text-lg font-semibold">{selectedRole.name}</h3>
                       <p className="text-sm text-gray-500">{selectedRole.description}</p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                          Hierarchy: {selectedRole.hierarchy}
+                        </span>
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                          {selectedRole.hierarchy >= 90 ? '👑 Administrator Role' : selectedRole.hierarchy >= 40 ? '🛡️ Internal Staff Role' : '💍 External Portal Role'}
+                        </span>
+                        {selectedRole.isImmutable && (
+                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                            🔒 System Immutable
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       {/* Copy permissions + Delete buttons (kept from original) */}

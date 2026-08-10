@@ -44,6 +44,16 @@ const DEFAULT_ROLES: Role[] = [
     updatedAt: new Date().toISOString(),
   },
   {
+    id: 'manager',
+    name: 'Manager',
+    description: 'Venue manager with full operational and layout access',
+    permissions: PERMISSIONS.filter(p => !p.id.startsWith('admin.')).map(p => p.id),
+    isSystem: true,
+    hierarchy: 70,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
     id: 'basic',
     name: 'Basic User',
     description: 'Standard user with layout and guest management',

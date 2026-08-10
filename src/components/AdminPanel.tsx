@@ -197,7 +197,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     username: '',
     password: '',
     name: '',
-    role: 'basic' as 'admin' | 'basic' | 'staff' | 'guest',
+    role: 'staff' as 'admin' | 'basic' | 'staff' | 'guest',
     email: '',
     phone: '',
     contactPhoneNumber: '',
@@ -651,7 +651,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
       : u);
     handleSaveUsers(updatedUsers);
     setNewUser({
-      username: '', password: '', name: '', role: 'basic', email: '', phone: '', contactPhoneNumber: '', phoneType: 'Mobile',
+      username: '', password: '', name: '', role: 'staff', email: '', phone: '', contactPhoneNumber: '', phoneType: 'Mobile',
       preferredCommunication: [], eventRole: '', eventName: '', userRole: 'master', isMasterUser: false, parentUserId: undefined,
       allowSharedAccess: false, sharedUserLimit: 0, userStatus: 'active', eventDate: '', jobTitle: '', department: '', assignedRoles: [],
     });
