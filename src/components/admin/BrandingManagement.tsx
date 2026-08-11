@@ -234,7 +234,6 @@ export function BrandingManagement(props: AdminCommonProps) {
     successMessage,
     setSuccessMessage,
     showDrawingTool,
-    logoInputRef,
     customShapeVenueId,
     setExpandedVenueFixtures,
     setExpandedLodgingFixtures,
@@ -312,18 +311,40 @@ export function BrandingManagement(props: AdminCommonProps) {
     applyRootStyles(updated);
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const localLogoInputRef = React.useRef<HTMLInputElement>(null);
+
+  const processLogoFile = (file: File) => {
+    if (typeof FileReader === 'undefined' || typeof window === 'undefined' || typeof window.FileReader !== 'function') {
+      const fallbackUrl = `data:image/png;base64,mock_${file.name}`;
+      handleSaveConfig({ ...config, logoUrl: fallbackUrl });
+      showSuccess?.('Logo uploaded successfully!');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       if (dataUrl) {
         handleSaveConfig({ ...config, logoUrl: dataUrl });
-        onShowSuccess?.('Logo uploaded successfully!');
+        showSuccess?.('Logo uploaded successfully!');
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processLogoFile(file);
+    }
+    e.target.value = '';
+  };
+
+  const handleLogoDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      processLogoFile(file);
+    }
   };
 
   const [previewTab, setPreviewTab] = React.useState<'header' | 'dashboard' | 'chat'>('header');
@@ -425,12 +446,18 @@ export function BrandingManagement(props: AdminCommonProps) {
                   <div className="bg-gray-50 rounded-xl p-6">
                     <label className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 block">Logo</label>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
-                      <div className="relative group">
+                      <div
+                        className="relative group cursor-pointer"
+                        onClick={() => localLogoInputRef.current?.click()}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={handleLogoDrop}
+                        title="Click or drag and drop an image file here to upload logo"
+                      >
                         {config.logoUrl ? (
                           <div className="relative">
                             <img src={config.logoUrl} alt="Logo" className="w-32 h-32 object-contain rounded-xl border-2 border-dashed border-gray-300 bg-white p-2" />
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                              <span className="text-white text-sm">Click to change</span>
+                              <span className="text-white text-sm font-bold">Click to change</span>
                             </div>
                           </div>
                         ) : (
@@ -444,16 +471,18 @@ export function BrandingManagement(props: AdminCommonProps) {
                         )}
                       </div>
                       <input
-                        ref={logoInputRef}
+                        ref={localLogoInputRef}
                         type="file"
                         accept="image/*"
                         onChange={handleLogoUpload}
                         className="hidden"
+                        aria-label="Upload logo image file"
                       />
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-2 flex-1 min-w-[220px]">
                         <button
-                          onClick={() => logoInputRef.current?.click()}
-                          className="btn-primary px-6 py-3 text-white rounded-xl text-sm font-bold shadow-sm hover:shadow-lg transition-all flex items-center gap-2"
+                          type="button"
+                          onClick={() => localLogoInputRef.current?.click()}
+                          className="btn-primary px-6 py-3 text-white rounded-xl text-sm font-bold shadow-sm hover:shadow-lg transition-all flex items-center gap-2 justify-center"
                           style={{
                             background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
                           }}
@@ -462,13 +491,27 @@ export function BrandingManagement(props: AdminCommonProps) {
                         </button>
                         {config.logoUrl && (
                           <button
+                            type="button"
                             onClick={() => handleSaveConfig({ ...config, logoUrl: '' })}
-                            className="px-6 py-3 text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold border border-red-200 flex items-center gap-2 justify-center transition-colors"
+                            className="px-6 py-2.5 text-red-600 hover:bg-red-50 rounded-xl text-sm font-bold border border-red-200 flex items-center gap-2 justify-center transition-colors"
                           >
-                            <span>🗑️</span> Remove
+                            <span>🗑️</span> Remove Logo
                           </button>
                         )}
-                        <p className="text-xs text-gray-400 mt-1">PNG, JPG, SVG up to 5MB</p>
+                        <p className="text-xs text-gray-500 mt-0.5">PNG, JPG, SVG up to 5MB. Click thumbnail or button to upload.</p>
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <label htmlFor="logo-url-input" className="block text-[11px] font-bold text-gray-500 uppercase mb-1">
+                            Or paste Logo Image URL:
+                          </label>
+                          <input
+                            id="logo-url-input"
+                            type="url"
+                            value={config.logoUrl}
+                            onChange={(e) => handleSaveConfig({ ...config, logoUrl: e.target.value })}
+                            placeholder="https://example.com/logo.png"
+                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-mono"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

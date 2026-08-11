@@ -233,28 +233,6 @@ export function Header({
                 <span>Spaces &amp; Layouts</span>
               </button>
             )}
-            {config.websiteUrl && (
-              <a
-                href={config.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-white transition-colors hidden xl:flex items-center gap-1.5 text-xs text-white/85 bg-white/10 px-2.5 py-1.5 rounded-lg font-medium"
-                title={`Visit website: ${config.websiteUrl}`}
-              >
-                <span>🌐</span>
-                <span>Website</span>
-              </a>
-            )}
-            {config.supportEmail && (
-              <a
-                href={`mailto:${config.supportEmail}`}
-                className="hover:text-white transition-colors hidden xl:flex items-center gap-1.5 text-xs text-white/85 bg-white/10 px-2.5 py-1.5 rounded-lg font-medium"
-                title={`Email: ${config.supportEmail}`}
-              >
-                <span>✉️</span>
-                <span>Email</span>
-              </a>
-            )}
           </div>
 
           <div className="hidden md:flex items-center gap-2 flex-shrink min-w-0">

@@ -20,6 +20,8 @@ vi.mock('../config', async (importOriginal) => {
       primaryDark: '#047857',
       primaryLight: '#34d399',
       venueName: 'Emerald Manor',
+      supportEmail: 'coordinator@emeraldmanor.com',
+      websiteUrl: 'https://emeraldmanor.com',
     }),
   };
 });
@@ -55,6 +57,18 @@ describe('CouplesPortal - Universal Branding Integration (#159)', () => {
     // 3. Verify Switch Couple button has inline color matching primaryColor (#10b981)
     const switchBtn = screen.getByTitle('Switch to another couple event or test token');
     expect(switchBtn.getAttribute('style')).toContain('color: rgb(16, 185, 129)');
+  });
+
+  it('renders venue email address as a mailto: link on the word Email alongside Website in Header/Hero Banner', () => {
+    setupTestEvent();
+    render(<CouplesPortal onExitPortal={() => {}} />);
+
+    const emailLink = screen.getByRole('link', { name: /✉️\s*Email/i });
+    expect(emailLink).toHaveAttribute('href', 'mailto:coordinator@emeraldmanor.com');
+    expect(emailLink).toHaveAttribute('title', 'Email venue coordinator: coordinator@emeraldmanor.com');
+
+    const websiteLink = screen.getByRole('link', { name: /🌐\s*Website/i });
+    expect(websiteLink).toHaveAttribute('href', 'https://emeraldmanor.com');
   });
 
   it('applies branding settings to EventQuestionsWizard primary action buttons', () => {

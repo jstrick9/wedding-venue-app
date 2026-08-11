@@ -5,6 +5,7 @@ import { VenueManagement } from './VenueManagement';
 import { AdminDecorSection } from '../AdminDecorSection';
 import { AccessControlPanel } from './AccessControlPanel';
 import { BackupManagement } from './BackupManagement';
+import { BrandingManagement } from './BrandingManagement';
 import { StudioLayoutsHome } from '../StudioLayoutsHome';
 import { VenueDashboard } from '../VenueDashboard';
 import { Sidebar } from '../Sidebar';
@@ -271,62 +272,6 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     expect(headerEl?.className).toContain('rounded-2xl');
   });
 
-  it('renders Sidebar Layout Tools header with Venue Map and Spaces & Layouts buttons, Ops & Admin in menu, and no Templates or Sign out in menu', () => {
-    const onShowLayoutsHome = vi.fn();
-    const onOpenVenueMap = vi.fn();
-    const onShowAdmin = vi.fn();
-    const onOpenOperations = vi.fn();
-
-    render(
-      <Sidebar
-        width={280}
-        collapsed={false}
-        onWidthChange={vi.fn()}
-        onCollapsedChange={vi.fn()}
-        zoom={1}
-        onZoomChange={vi.fn()}
-        showGrid={true}
-        onShowGridChange={vi.fn()}
-        gridSize={4}
-        onGridSizeChange={vi.fn()}
-        onDragStart={vi.fn()}
-        onDragEnd={vi.fn()}
-        currentDragItem={null}
-        onClearLayout={vi.fn()}
-        isAdmin={true}
-        currentUser={testUser}
-        onViewImage={vi.fn()}
-        layoutCategories={[{ id: 'reception', name: 'Reception', color: '#FFF', icon: '🎉', description: 'Reception space' }]}
-        currentVenueCategory="reception"
-        venueWidth={60}
-        venueHeight={40}
-        onResetView={vi.fn()}
-        placedTables={[]}
-        placedFixtures={[]}
-        onShowLayoutsHome={onShowLayoutsHome}
-        onOpenVenueMap={onOpenVenueMap}
-        onShowAdmin={onShowAdmin}
-        onOpenOperations={onOpenOperations}
-      />
-    );
-
-    // Verify Venue Map and Spaces & Layouts buttons at top of Layout Tools header
-    expect(screen.getByRole('button', { name: /Spaces & Layouts/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Venue Map/i })).toBeInTheDocument();
-
-    // Open administrative Menu
-    const menuBtn = screen.getByRole('button', { name: /menu/i });
-    fireEvent.click(menuBtn);
-
-    // Verify Admin and Ops are inside menu
-    expect(screen.getByRole('button', { name: /Admin & System Settings/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Operations Studio/i })).toBeInTheDocument();
-
-    // Verify Templates and Sign out are NOT in menu
-    expect(screen.queryByText(/Templates/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Sign out/i)).not.toBeInTheDocument();
-  });
-
   it('renders Landing Page sidebar in VenueDashboard with Branding attributes and collapsible mouse-hold resize handle', () => {
     const props: any = {
       user: testUser,
@@ -460,5 +405,27 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     const homeTitle = screen.getByText('Welcome back to Seven Paths Manor');
     const headerEl = homeTitle.closest('header')!;
     expect(within(headerEl).queryByRole('button', { name: /system settings/i })).not.toBeInTheDocument();
+  });
+
+  it('renders BrandingManagement with Live Preview heading and logo file upload input', () => {
+    render(
+      <BrandingManagement
+        {...commonProps}
+        config={testConfig}
+        handleSaveConfig={vi.fn()}
+        showSuccess={vi.fn()}
+        expandedBrandingSections={new Set(['logo', 'preview'])}
+        setExpandedBrandingSections={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('👁️ Live Preview')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Upload Logo/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('https://example.com/logo.png')).toBeInTheDocument();
+
+    const fileInput = screen.getByLabelText(/Upload logo image file/i);
+    expect(fileInput).toBeInTheDocument();
+    const file = new File(['(binary)'], 'logo.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
   });
 });

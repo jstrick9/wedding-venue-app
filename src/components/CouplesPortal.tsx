@@ -1022,7 +1022,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                       title={`Email venue coordinator: ${config.supportEmail}`}
                     >
                       <span>✉️</span>
-                      <span className="truncate max-w-[140px]">{config.supportEmail}</span>
+                      <span>Email</span>
                     </a>
                   )}
                   {config.websiteUrl && (
