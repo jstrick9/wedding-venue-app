@@ -376,22 +376,19 @@ export default function AuthenticatedApp() {
   useEffect(() => {
     layoutState.setOnVenueChange(() => {
       setTimeout(() => {
-        if (!canvasContainerRef.current) return;
-        const container = canvasContainerRef.current;
-        const venue = layoutState.currentVenue;
-        const scale = 8;
-        const padding = venue.exteriorPadding || { top: 40, right: 30, bottom: 30, left: 40 };
-        const venueWidth = venue.width * scale; const venueHeight = venue.height * scale;
-        const containerWidth = container.clientWidth - 40; const containerHeight = container.clientHeight - 40;
-        const zoomX = containerWidth / venueWidth; const zoomY = containerHeight / venueHeight;
-        const newZoom = Math.min(zoomX, zoomY, 1);
-        const venueX = (venue.venueX || padding.left) * scale; const venueY = (venue.venueY || padding.top) * scale;
-        const panX = (containerWidth - venueWidth * newZoom) / 2 - venueX * newZoom + 20;
-        const panY = (containerHeight - venueHeight * newZoom) / 2 - venueY * newZoom + 20;
-        setZoom(newZoom); setPanOffset({ x: panX, y: panY });
-      }, 100);
+        fitAndCenterVenue();
+      }, 50);
     });
-  }, [layoutState]);
+  }, [layoutState, fitAndCenterVenue]);
+
+  useEffect(() => {
+    if (view === 'studio') {
+      const timer = setTimeout(() => {
+        fitAndCenterVenue();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [view, fitAndCenterVenue]);
 
   const refreshSavedLayouts = useCallback(() => setSavedLayoutsState(getSavedLayouts()), []);
 

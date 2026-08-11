@@ -51,7 +51,7 @@ export function FloorPlanCanvas({
   tables,
   fixtures,
   decor = [],
-  guests,
+  guests = [],
   arrangements: propArrangements,
   ceremonyRows = [],
   reviewPins = [],
@@ -104,6 +104,38 @@ export function FloorPlanCanvas({
   const linenColors = getLinenColors();
   const arrangements = propArrangements || getDecorArrangements();
   const config = useBrandingConfig();
+
+  const [showOnboardingHint, setShowOnboardingHint] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('spm_studio_onboarding_seen') !== 'true';
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    if (!showOnboardingHint) return;
+    const timer = setTimeout(() => {
+      setShowOnboardingHint(false);
+      try {
+        localStorage.setItem('spm_studio_onboarding_seen', 'true');
+      } catch {
+        // ignore
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [showOnboardingHint]);
+
+  useEffect(() => {
+    if ((tables.length > 0 || fixtures.length > 0 || decor.length > 0) && showOnboardingHint) {
+      setShowOnboardingHint(false);
+      try {
+        localStorage.setItem('spm_studio_onboarding_seen', 'true');
+      } catch {
+        // ignore
+      }
+    }
+  }, [tables.length, fixtures.length, decor.length, showOnboardingHint]);
 
   const scale = 8; // pixels per foot
   
@@ -1832,8 +1864,8 @@ export function FloorPlanCanvas({
         </g>
       </svg>
 
-      {/* Empty-state onboarding hint: shown when the canvas has no items yet. */}
-      {!isDragging && tables.length === 0 && fixtures.length === 0 && decor.length === 0 && (
+      {/* Empty-state onboarding hint: shown only the first time when the canvas has no items yet, auto-dismissing after 2-3 seconds. */}
+      {showOnboardingHint && !isDragging && tables.length === 0 && fixtures.length === 0 && decor.length === 0 && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
           <div className="max-w-sm rounded-2xl border border-gray-200 bg-white/90 p-5 text-center shadow-sm backdrop-blur">
             <div className="text-4xl mb-2">🪑</div>

@@ -3,6 +3,7 @@ import {
   VenueMapPoint,
   VenueMapPointKind,
   VenueMapRoute,
+  DrawingObject,
 } from '../types';
 
 /**
@@ -237,4 +238,110 @@ export function routePoints(
 /** All point ids currently on the map (for building routes). */
 export function mapPointIds(map: VenueMapConfig): string[] {
   return map.points.map((p) => p.id);
+}
+
+export function updateMapBackground(
+  map: VenueMapConfig,
+  backgroundImageUrl?: string,
+  backgroundOpacity?: number,
+): VenueMapConfig {
+  return {
+    ...map,
+    backgroundImageUrl,
+    backgroundOpacity,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function addMapDrawing(
+  map: VenueMapConfig,
+  drawing: DrawingObject,
+): VenueMapConfig {
+  return {
+    ...map,
+    drawings: [...(map.drawings || []), drawing],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function removeMapDrawing(
+  map: VenueMapConfig,
+  id: string,
+): VenueMapConfig {
+  return {
+    ...map,
+    drawings: (map.drawings || []).filter((d) => d.id !== id),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function clearMapDrawings(map: VenueMapConfig): VenueMapConfig {
+  return {
+    ...map,
+    drawings: [],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function addPresetMapZones(map: VenueMapConfig): VenueMapConfig {
+  const now = Date.now();
+  const presets: DrawingObject[] = [
+    {
+      id: `zone-ceremony-${now}`,
+      type: 'zone',
+      x: 10,
+      y: 15,
+      width: 28,
+      height: 18,
+      fillColor: '#10b981',
+      strokeColor: '#059669',
+      strokeWidth: 1.2,
+      opacity: 0.22,
+      text: '🌳 Ceremony Lawn Zone',
+    },
+    {
+      id: `zone-parking-${now}`,
+      type: 'zone',
+      x: 65,
+      y: 55,
+      width: 26,
+      height: 18,
+      fillColor: '#6366f1',
+      strokeColor: '#4f46e5',
+      strokeWidth: 1.2,
+      opacity: 0.22,
+      text: '🅿️ Main Parking Lot',
+    },
+    {
+      id: `zone-manor-${now}`,
+      type: 'zone',
+      x: 42,
+      y: 20,
+      width: 25,
+      height: 22,
+      fillColor: '#4A1942',
+      strokeColor: '#3b1435',
+      strokeWidth: 1.5,
+      opacity: 0.25,
+      text: '🏛️ Main Manor Building',
+    },
+    {
+      id: `zone-gardens-${now}`,
+      type: 'zone',
+      x: 15,
+      y: 45,
+      width: 22,
+      height: 22,
+      fillColor: '#0d9488',
+      strokeColor: '#0f766e',
+      strokeWidth: 1.2,
+      opacity: 0.22,
+      text: '🌿 Gardens Boundary',
+    },
+  ];
+  return {
+    ...map,
+    drawings: [...(map.drawings || []), ...presets],
+    updatedAt: new Date().toISOString(),
+  };
 }

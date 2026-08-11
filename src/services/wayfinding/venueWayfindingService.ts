@@ -34,6 +34,7 @@ export function emptyVenueMapConfig(): VenueMapConfig {
     points: [],
     rainContingencies: [],
     routes: [],
+    drawings: [],
     updatedAt: new Date().toISOString(),
   };
 }

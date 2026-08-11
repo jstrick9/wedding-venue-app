@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Venue, VenueMapConfig, VenueMapPoint, VenueMapPointKind } from '../types';
 import { VenueMapCanvas } from './VenueMapCanvas';
+import { DrawingTool } from './DrawingTool';
 import {
   addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint, duplicateMapPoint,
   addMapRoute, removeMapRoute, renameMapRoute, pointKindLabel, pointKindIcon, pointColor, updateMapSize,
+  updateMapBackground, addPresetMapZones, clearMapDrawings, removeMapDrawing,
 } from '../utils/venueMapDesigner';
 import { downloadLayoutPng, downloadLayoutPdf } from '../utils/layoutExport';
 import { showToast } from './Toast';
@@ -42,6 +44,45 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
   const [undoStack, setUndoStack] = useState<VenueMapConfig[]>([]);
   const [redoStack, setRedoStack] = useState<VenueMapConfig[]>([]);
   const [preview, setPreview] = useState(false);
+  const [showDrawingStudio, setShowDrawingStudio] = useState(false);
+  const [bgUrlInput, setBgUrlInput] = useState(initialMap.backgroundImageUrl || '');
+  const baseMapInputRef = useRef<HTMLInputElement | null>(null);
+
+  const processBaseMapFile = (file: File) => {
+    if (typeof FileReader === 'undefined' || typeof window === 'undefined' || typeof window.FileReader !== 'function') {
+      const fallbackUrl = `data:image/png;base64,mock_basemap_${file.name}`;
+      pushUndo(map);
+      update(updateMapBackground(map, fallbackUrl, map.backgroundOpacity ?? 0.85));
+      showToast('Base map uploaded successfully!', 'success');
+      return;
+    }
+    const reader = new FileReader();
+    let isDone = false;
+    const finish = (resultUrl?: string) => {
+      if (isDone) return;
+      isDone = true;
+      const url = resultUrl || `data:image/png;base64,mock_basemap_${file.name}`;
+      pushUndo(map);
+      update(updateMapBackground(map, url, map.backgroundOpacity ?? 0.85));
+      showToast('Base map uploaded successfully!', 'success');
+    };
+    reader.onload = () => finish(reader.result as string);
+    reader.onloadend = () => finish(reader.result as string);
+    reader.onerror = () => finish();
+    try {
+      reader.readAsDataURL(file);
+    } catch {
+      finish();
+    }
+  };
+
+  const handleBaseMapUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processBaseMapFile(file);
+    }
+  };
+
   const svgRef = useRef<SVGSVGElement | null>(null);
   // Captures the pre-drag snapshot so a drag undo is one step, not per-mousemove.
   const pendingDragRef = useRef<VenueMapConfig | null>(null);
@@ -425,6 +466,164 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
 
         {/* Side panel */}
         <div className="space-y-3 no-print spm-studio-chrome">
+          {/* Base Map Image Upload & Opacity */}
+          <div className="rounded-xl border border-gray-200 p-3 space-y-2.5 bg-gray-50/60">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-800">🖼️ Base Map Image</span>
+              <span className="text-xs text-gray-400">
+                {map.backgroundImageUrl ? `${Math.round((map.backgroundOpacity ?? 0.85) * 100)}% opacity` : 'None'}
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500">
+              Upload an aerial photo, property diagram, or architectural site map to place your points &amp; routes on.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                id="venue-base-map-upload"
+                ref={baseMapInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleBaseMapUpload}
+                className="sr-only"
+                aria-label="Upload base map image file"
+              />
+              <label
+                htmlFor="venue-base-map-upload"
+                onClick={() => baseMapInputRef.current?.click()}
+                className="px-3 py-1.5 rounded-lg bg-[#4A1942] text-white text-xs font-bold cursor-pointer hover:bg-[#3b1435] transition-colors shadow-sm flex items-center gap-1.5"
+              >
+                <span>📤</span> {map.backgroundImageUrl ? 'Change Base Map' : 'Upload Image'}
+              </label>
+              {map.backgroundImageUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    pushUndo(map);
+                    update(updateMapBackground(map, undefined, map.backgroundOpacity));
+                    showToast('Base map removed.', 'info');
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50"
+                >
+                  <span>🗑️</span> Remove
+                </button>
+              )}
+            </div>
+            {map.backgroundImageUrl && (
+              <div className="space-y-1 pt-1 border-t border-gray-200/80">
+                <div className="flex items-center justify-between text-xs text-gray-600">
+                  <span>Opacity</span>
+                  <span>{Math.round((map.backgroundOpacity ?? 0.85) * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  value={Math.round((map.backgroundOpacity ?? 0.85) * 100)}
+                  onChange={(e) => {
+                    update(updateMapBackground(map, map.backgroundImageUrl, Number(e.target.value) / 100));
+                  }}
+                  className="w-full accent-[#4A1942]"
+                  aria-label="Base map opacity slider"
+                />
+              </div>
+            )}
+            <div className="pt-1 border-t border-gray-200/80">
+              <label htmlFor="base-map-url-input" className="block text-[11px] font-bold text-gray-500 uppercase mb-1">
+                Or paste Image URL:
+              </label>
+              <div className="flex gap-1.5">
+                <input
+                  id="base-map-url-input"
+                  type="url"
+                  value={bgUrlInput}
+                  onChange={(e) => setBgUrlInput(e.target.value)}
+                  placeholder="https://example.com/property-aerial.png"
+                  className="flex-1 px-2.5 py-1 border border-gray-300 rounded-lg text-xs font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!bgUrlInput.trim()) return;
+                    pushUndo(map);
+                    update(updateMapBackground(map, bgUrlInput.trim(), map.backgroundOpacity ?? 0.85));
+                    showToast('Base map URL applied!', 'success');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-black"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Drawing & Property Zones */}
+          <div className="rounded-xl border border-gray-200 p-3 space-y-2.5 bg-gray-50/60">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-800">🎨 Map Drawing &amp; Zones</span>
+              <span className="text-xs text-gray-400">
+                {(map.drawings || []).length} shape{(map.drawings || []).length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500">
+              Draw property borders, parking lots, ceremony areas, arrows, and custom shapes on top of your map.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowDrawingStudio(true)}
+                className="w-full px-3 py-2 rounded-lg bg-teal-700 text-white text-xs font-bold hover:bg-teal-800 shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <span>✏️</span> Open Full Map Drawing Studio
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  pushUndo(map);
+                  update(addPresetMapZones(map));
+                  showToast('Added 4 property zone shapes to map.', 'success');
+                }}
+                className="flex-1 px-2.5 py-1.5 rounded-lg border border-teal-200 bg-white text-teal-800 text-xs font-semibold hover:bg-teal-50"
+              >
+                ＋ Add 4 Preset Zones
+              </button>
+              {(map.drawings || []).length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    pushUndo(map);
+                    update(clearMapDrawings(map));
+                    showToast('All custom drawings cleared.', 'info');
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50"
+                >
+                  Clear Shapes
+                </button>
+              )}
+            </div>
+            {(map.drawings || []).length > 0 && (
+              <div className="space-y-1 pt-1 border-t border-gray-200/80 max-h-36 overflow-y-auto">
+                {(map.drawings || []).map((d, i) => (
+                  <div key={d.id} className="flex items-center justify-between gap-2 text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="truncate font-medium text-gray-700">
+                      {d.text || `Shape #${i + 1} (${d.type})`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        pushUndo(map);
+                        update(removeMapDrawing(map, d.id));
+                      }}
+                      className="text-red-400 hover:text-red-600 text-xs shrink-0"
+                      aria-label={`Delete drawing shape ${d.text || d.id}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Map size */}
           <div className="rounded-xl border border-gray-200 p-3 space-y-2">
             <div className="flex items-center justify-between">
@@ -618,6 +817,26 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
         {onClose && <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600">Close</button>}
         <button type="button" onClick={() => { persist(map); showToast('Venue map saved.', 'success'); }} className="px-4 py-2 rounded-lg bg-[#4A1942] text-white text-sm">💾 Save Venue Map</button>
       </div>
+
+      {showDrawingStudio && (
+        <DrawingTool
+          onSave={(payload) => {
+            pushUndo(map);
+            const next = updateMapBackground(
+              {
+                ...map,
+                drawings: payload.objects && payload.objects.length > 0 ? payload.objects : map.drawings,
+              },
+              payload.imageDataUrl,
+              map.backgroundOpacity ?? 0.85,
+            );
+            persist(next);
+            setShowDrawingStudio(false);
+            showToast('Annotated map drawing saved to venue map!', 'success');
+          }}
+          onClose={() => setShowDrawingStudio(false)}
+        />
+      )}
     </div>
   );
 }

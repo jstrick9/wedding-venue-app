@@ -115,6 +115,77 @@ export function VenueMapCanvas({
             {title}
           </text>
         )}
+        {/* Background base image */}
+        {map.backgroundImageUrl && (
+          <image
+            href={map.backgroundImageUrl}
+            x={0}
+            y={0}
+            width={W}
+            height={H}
+            preserveAspectRatio="none"
+            opacity={map.backgroundOpacity ?? 0.85}
+          />
+        )}
+        {/* Custom drawings / property zones */}
+        {(map.drawings || []).map((draw) => {
+          if (draw.type === 'rectangle' || draw.type === 'zone') {
+            return (
+              <g key={draw.id}>
+                <rect
+                  x={draw.x}
+                  y={draw.y}
+                  width={draw.width || 20}
+                  height={draw.height || 15}
+                  fill={draw.fillColor || '#0d9488'}
+                  fillOpacity={draw.opacity ?? 0.25}
+                  stroke={draw.strokeColor || '#0d9488'}
+                  strokeWidth={draw.strokeWidth || 1}
+                  rx={2}
+                />
+                {draw.text && (
+                  <text
+                    x={draw.x + (draw.width || 20) / 2}
+                    y={draw.y + (draw.height || 15) / 2}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={3.5}
+                    fontWeight="bold"
+                    fill={draw.strokeColor || '#0d9488'}
+                  >
+                    {draw.text}
+                  </text>
+                )}
+              </g>
+            );
+          }
+          if (draw.type === 'circle') {
+            return (
+              <circle
+                key={draw.id}
+                cx={draw.x}
+                cy={draw.y}
+                r={draw.radius || 10}
+                fill={draw.fillColor || '#0d9488'}
+                fillOpacity={draw.opacity ?? 0.25}
+                stroke={draw.strokeColor || '#0d9488'}
+                strokeWidth={draw.strokeWidth || 1}
+              />
+            );
+          }
+          if (draw.type === 'line' && draw.points && draw.points.length >= 2) {
+            return (
+              <polyline
+                key={draw.id}
+                points={draw.points.map((pt) => `${pt.x},${pt.y}`).join(' ')}
+                fill="none"
+                stroke={draw.strokeColor || '#0d9488'}
+                strokeWidth={draw.strokeWidth || 1.5}
+              />
+            );
+          }
+          return null;
+        })}
         {/* Walkway routes */}
         {(map.routes || []).map((route) => {
           const pts = routePoints(map, route);

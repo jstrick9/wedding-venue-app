@@ -1284,6 +1284,12 @@ export interface VenueMapConfig {
   rainContingencies: RainContingency[];
   /** A named walkway/path drawn as an ordered polyline between point ids. */
   routes: VenueMapRoute[];
+  /** Optional base map image (data URI or URL) for aerial/property maps. */
+  backgroundImageUrl?: string;
+  /** Opacity of the background image (0.1 to 1.0). */
+  backgroundOpacity?: number;
+  /** Custom drawing shapes and property zone boxes/polylines. */
+  drawings?: DrawingObject[];
   updatedAt: string;
 }
 
