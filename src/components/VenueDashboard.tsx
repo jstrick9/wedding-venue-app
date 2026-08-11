@@ -61,6 +61,42 @@ export function VenueDashboard(props: Props) {
   const [section, setSection] = useState<Section>('home');
   // Mobile drawer toggle for the left sidebar.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(260);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizing) {
+        if (e.clientX < 120) {
+          setSidebarCollapsed(true);
+        } else {
+          setSidebarCollapsed(false);
+          const newWidth = Math.max(200, Math.min(450, e.clientX));
+          setSidebarWidth(newWidth);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   useEffect(() => {
     const offHome = on('spm_dashboard_go_home', () => setSection('home'));
@@ -201,16 +237,119 @@ export function VenueDashboard(props: Props) {
 
       {/* Persistent left sidebar — off-canvas on mobile, static on lg+ */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-20 w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col transition-transform lg:translate-x-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-20 shrink-0 bg-white border-r border-gray-200 flex flex-col transition-transform lg:translate-x-0 relative select-none ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{ color: config.textColor }}
+        style={{
+          width: sidebarCollapsed ? 72 : sidebarWidth,
+          color: config.textColor,
+        }}
       >
-        <div className="px-4 py-4 border-b border-gray-100">
-          <div className="font-bold" style={{ color: config.primaryColor }}>{config.venueName || 'Venue'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Workspace</div>
+        {/* Top Branding Section (venue name, logo, email, website) */}
+        <div className="p-3.5 border-b border-gray-200 bg-gray-50/70 flex items-center justify-between gap-2 shrink-0">
+          {sidebarCollapsed ? (
+            <div className="w-full flex flex-col items-center gap-2">
+              {config.logoUrl ? (
+                <img
+                  src={config.logoUrl}
+                  alt={config.venueName}
+                  className="w-9 h-9 object-contain rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm"
+                  title={config.venueName}
+                />
+              ) : (
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-lg text-white shadow-sm"
+                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                  title={config.venueName}
+                >
+                  🏛️
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(false)}
+                className="p-1 hover:bg-gray-200 rounded text-gray-500 transition-colors"
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                ▶
+              </button>
+            </div>
+          ) : (
+            <div className="w-full space-y-2.5 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {config.logoUrl ? (
+                    <img
+                      src={config.logoUrl}
+                      alt={config.venueName}
+                      className="w-9 h-9 object-contain rounded-lg shrink-0 border border-gray-200 bg-white p-0.5 shadow-sm"
+                    />
+                  ) : (
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0 text-white shadow-sm"
+                      style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                    >
+                      🏛️
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div
+                      className="font-extrabold text-sm text-gray-900 truncate"
+                      style={{ fontFamily: config.headingFontFamily }}
+                    >
+                      {config.venueName || 'Seven Paths Manor'}
+                    </div>
+                    <div className="text-[11px] text-gray-500 truncate font-medium">
+                      {config.tagline || 'Wedding Venue Intelligence'}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="p-1 hover:bg-gray-200 rounded text-gray-500 transition-colors shrink-0"
+                  title="Collapse sidebar"
+                  aria-label="Collapse sidebar"
+                >
+                  ◀
+                </button>
+              </div>
+              {(config.supportEmail || config.websiteUrl) && (
+                <div className="flex items-center gap-2.5 text-xs pt-2 border-t border-gray-200/80 text-gray-600 flex-wrap">
+                  {config.supportEmail && (
+                    <a
+                      href={`mailto:${config.supportEmail}`}
+                      className="hover:underline flex items-center gap-1 truncate text-gray-600 font-medium"
+                      title={`Email venue: ${config.supportEmail}`}
+                    >
+                      <span>✉️</span>
+                      <span className="truncate max-w-[130px]">{config.supportEmail}</span>
+                    </a>
+                  )}
+                  {config.websiteUrl && (
+                    <>
+                      {config.supportEmail && <span className="text-gray-300">•</span>}
+                      <a
+                        href={config.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline flex items-center gap-1 shrink-0 text-gray-600 font-medium"
+                        title={`Website: ${config.websiteUrl}`}
+                      >
+                        <span>🌐</span>
+                        <span>Website</span>
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+
+        {/* Navigation items */}
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
           {sidebarItems.map((item) => {
             const active = item.id === section;
             const divider = item.id === 'ops' || item.id === 'studio';
@@ -220,14 +359,17 @@ export function VenueDashboard(props: Props) {
                 <button
                   type="button"
                   onClick={item.action}
-                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    active ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                  title={sidebarCollapsed ? item.label : undefined}
+                  className={`w-full flex items-center ${
+                    sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2.5'
+                  } rounded-lg text-sm transition-colors ${
+                    active ? 'text-white font-bold shadow-sm' : 'text-gray-700 hover:bg-gray-100 font-medium'
                   }`}
                   style={active ? { backgroundColor: config.primaryColor || '#4A1942' } : undefined}
                 >
-                  <span className="flex items-center gap-2">
-                    <span>{item.icon}</span>
-                    <span>{item.label}</span>
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-base shrink-0">{item.icon}</span>
+                    {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                   </span>
                   {(item as any).badgeCount > 0 && (
                     <span
@@ -243,10 +385,30 @@ export function VenueDashboard(props: Props) {
             );
           })}
         </nav>
-        <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-500">
-          <div className="truncate">{user?.name || user?.username}</div>
-          <button type="button" onClick={props.onLogout} className="mt-1 hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Sign out</button>
+
+        {/* Footer with user info and Sign out */}
+        <div className={`px-4 py-3 border-t border-gray-100 text-xs text-gray-500 shrink-0 ${sidebarCollapsed ? 'text-center' : ''}`}>
+          {!sidebarCollapsed && <div className="truncate font-semibold text-gray-700">{user?.name || user?.username}</div>}
+          <button
+            type="button"
+            onClick={props.onLogout}
+            title="Sign out"
+            className="mt-1 hover:underline font-bold"
+            style={{ color: config.primaryColor || '#4A1942' }}
+          >
+            {sidebarCollapsed ? '🚪' : 'Sign out'}
+          </button>
         </div>
+
+        {/* Mouse-Hold Drag Resize Handle */}
+        {!sidebarCollapsed && (
+          <div
+            onMouseDown={handleMouseDown}
+            className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-[#4A1942]/30 active:bg-[#4A1942] transition-colors z-30"
+            style={{ backgroundColor: isResizing ? (config.primaryColor || '#4A1942') : undefined }}
+            title="Hold mouse button and drag to resize sidebar"
+          />
+        )}
       </aside>
 
       {/* Mobile overlay to dismiss the drawer */}

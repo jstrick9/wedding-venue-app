@@ -7,7 +7,10 @@ import { AccessControlPanel } from './AccessControlPanel';
 import { BackupManagement } from './BackupManagement';
 import { StudioLayoutsHome } from '../StudioLayoutsHome';
 import { VenueDashboard } from '../VenueDashboard';
+import { Sidebar } from '../Sidebar';
+import CouplesPortal from '../CouplesPortal';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
+import { saveCoupleSession } from '../../services/couples/coupleService';
 import type { Config, Venue, User } from '../../types';
 
 vi.mock('../../contexts/AuthContext', () => ({
@@ -265,5 +268,119 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     const homeTitle = screen.getByText('Welcome back to Seven Paths Manor');
     const headerEl = homeTitle.closest('header');
     expect(headerEl?.className).toContain('rounded-2xl');
+  });
+
+  it('renders Sidebar Layout Tools header with Venue Map and Spaces & Layouts buttons, Ops & Admin in menu, and no Templates or Sign out in menu', () => {
+    const onShowLayoutsHome = vi.fn();
+    const onOpenVenueMap = vi.fn();
+    const onShowAdmin = vi.fn();
+    const onOpenOperations = vi.fn();
+
+    render(
+      <Sidebar
+        width={280}
+        collapsed={false}
+        onWidthChange={vi.fn()}
+        onCollapsedChange={vi.fn()}
+        zoom={1}
+        onZoomChange={vi.fn()}
+        showGrid={true}
+        onShowGridChange={vi.fn()}
+        gridSize={4}
+        onGridSizeChange={vi.fn()}
+        onDragStart={vi.fn()}
+        onDragEnd={vi.fn()}
+        currentDragItem={null}
+        onClearLayout={vi.fn()}
+        isAdmin={true}
+        currentUser={testUser}
+        onViewImage={vi.fn()}
+        layoutCategories={[{ id: 'reception', name: 'Reception', color: '#FFF', icon: '🎉', description: 'Reception space' }]}
+        currentVenueCategory="reception"
+        venueWidth={60}
+        venueHeight={40}
+        onResetView={vi.fn()}
+        placedTables={[]}
+        placedFixtures={[]}
+        onShowLayoutsHome={onShowLayoutsHome}
+        onOpenVenueMap={onOpenVenueMap}
+        onShowAdmin={onShowAdmin}
+        onOpenOperations={onOpenOperations}
+      />
+    );
+
+    // Verify Venue Map and Spaces & Layouts buttons at top of Layout Tools header
+    expect(screen.getByRole('button', { name: /Spaces & Layouts/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Venue Map/i })).toBeInTheDocument();
+
+    // Open administrative Menu
+    const menuBtn = screen.getByRole('button', { name: /menu/i });
+    fireEvent.click(menuBtn);
+
+    // Verify Admin and Ops are inside menu
+    expect(screen.getByRole('button', { name: /Admin & System Settings/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Operations Studio/i })).toBeInTheDocument();
+
+    // Verify Templates and Sign out are NOT in menu
+    expect(screen.queryByText(/Templates/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sign out/i)).not.toBeInTheDocument();
+  });
+
+  it('renders Landing Page sidebar in VenueDashboard with Branding attributes and collapsible mouse-hold resize handle', () => {
+    const props: any = {
+      user: testUser,
+      isAdmin: true,
+      isStaff: true,
+      canAdmin: true,
+      canOps: true,
+      onOpenAdmin: vi.fn(),
+      onOpenOperations: vi.fn(),
+      onOpenVendorPanel: vi.fn(),
+      onOpenTimelinePanel: vi.fn(),
+      onLogout: vi.fn(),
+    };
+
+    render(<VenueDashboard {...props} />);
+
+    // Verify venue name and contact email in Landing Page sidebar
+    expect(screen.getAllByText('Seven Paths Manor').length).toBeGreaterThan(0);
+    expect(screen.getByTitle('Email venue: weddings@sevenpathsmanor.com')).toBeInTheDocument();
+
+    // Verify collapse button and mouse-hold resize handle
+    expect(screen.getByTitle('Collapse sidebar')).toBeInTheDocument();
+    expect(screen.getByTitle('Hold mouse button and drag to resize sidebar')).toBeInTheDocument();
+  });
+
+  it('renders CouplesPortal with tasteful Hosted at branding attributes', () => {
+    // Save couple session to display overview
+    localStorage.setItem(
+      STORAGE_KEYS.COUPLE_EVENTS,
+      JSON.stringify([
+        {
+          id: 'event-101',
+          coupleName: 'Smith & Johnson',
+          eventDate: '2026-06-06',
+          guestCount: 120,
+          status: 'active',
+          inviteToken: 'test-token-101',
+          selectedSpaces: ['v1'],
+          availableSpaces: ['v1'],
+          collaborators: [
+            { id: 'collab-101', name: 'John Smith', email: 'john@smith.com', role: 'couple', inviteToken: 'test-token-101' },
+          ],
+          questions: [],
+          layoutStatus: 'approved',
+          vendorIds: [],
+          timelineDays: [],
+        },
+      ])
+    );
+    saveCoupleSession('event-101', 'collab-101');
+
+    render(<CouplesPortal onExitPortal={vi.fn()} />);
+
+    expect(screen.getByText('Hosted at')).toBeInTheDocument();
+    expect(screen.getByTitle('Email venue coordinator: weddings@sevenpathsmanor.com')).toBeInTheDocument();
+    expect(screen.getByTitle('Visit venue website: https://www.sevenpathsmanor.com')).toBeInTheDocument();
   });
 });

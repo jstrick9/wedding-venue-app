@@ -909,17 +909,28 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
         >
           ← Back to Login
         </button>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-gray-900">💍 {config.venueName || 'Wedding Venue'}</span>
-          <span
-            className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
-            style={{
-              backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`,
-              color: config.primaryColor || '#4A1942',
-            }}
-          >
-            Couples Portal
-          </span>
+        <div className="flex items-center gap-2.5 min-w-0">
+          {config.logoUrl ? (
+            <img src={config.logoUrl} alt={config.venueName} className="w-8 h-8 object-contain rounded-lg border border-gray-200 bg-white p-0.5 shrink-0 shadow-sm" />
+          ) : (
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 text-white shadow-sm" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
+              💒
+            </div>
+          )}
+          <div className="min-w-0 flex items-center gap-2">
+            <span className="text-sm font-bold text-gray-900 truncate" style={{ fontFamily: config.headingFontFamily }}>
+              💍 {config.venueName || 'Wedding Venue'}
+            </span>
+            <span
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0"
+              style={{
+                backgroundColor: `color-mix(in srgb, ${config.primaryColor || '#4A1942'} 12%, transparent)`,
+                color: config.primaryColor || '#4A1942',
+              }}
+            >
+              Couples Portal
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -984,14 +995,60 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3.5 py-2 text-xs font-bold backdrop-blur-sm">
-              <span>🏛️ {event.selectedSpaces.length} spaces</span>
-              <span>•</span>
-              <span>👥 {event.collaborators.length} team</span>
+          <div className="flex flex-col sm:items-end gap-3 shrink-0">
+            {/* Tastefully Integrated Venue Branding Attributes (Logo, Name, Email, Website) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/15 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/20 text-left">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {config.logoUrl ? (
+                  <img src={config.logoUrl} alt={config.venueName} className="w-9 h-9 object-contain rounded-lg bg-white p-1 border border-white/30 shrink-0 shadow-sm" />
+                ) : (
+                  <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-lg shrink-0 border border-white/30 shadow-sm">
+                    🏛️
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-white/80">Hosted at</div>
+                  <div className="font-extrabold text-sm leading-tight text-white truncate">
+                    {config.venueName || 'Seven Paths Manor'}
+                  </div>
+                </div>
+              </div>
+              {(config.supportEmail || config.websiteUrl) && (
+                <div className="flex items-center gap-2 text-xs text-white/95 flex-wrap">
+                  {config.supportEmail && (
+                    <a
+                      href={`mailto:${config.supportEmail}`}
+                      className="hover:underline flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-lg transition-colors font-semibold"
+                      title={`Email venue coordinator: ${config.supportEmail}`}
+                    >
+                      <span>✉️</span>
+                      <span className="truncate max-w-[140px]">{config.supportEmail}</span>
+                    </a>
+                  )}
+                  {config.websiteUrl && (
+                    <a
+                      href={config.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-lg transition-colors font-semibold"
+                      title={`Visit venue website: ${config.websiteUrl}`}
+                    >
+                      <span>🌐</span>
+                      <span>Website</span>
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
-            <button
-              type="button"
+
+            <div className="flex flex-wrap items-center gap-2.5 justify-end">
+              <div className="flex items-center gap-1.5 bg-white/15 rounded-xl px-3.5 py-2 text-xs font-bold backdrop-blur-sm">
+                <span>🏛️ {event.selectedSpaces.length} spaces</span>
+                <span>•</span>
+                <span>👥 {event.collaborators.length} team</span>
+              </div>
+              <button
+                type="button"
               onClick={() => handleCopyInviteLink(event.inviteToken)}
               className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold backdrop-blur-sm transition-colors shadow-sm flex items-center gap-1.5"
               title="Copy your private Couples Portal invitation link"
@@ -1013,6 +1070,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
             >
               <span>✉️</span> Email Invite
             </button>
+          </div>
           </div>
         </div>
 

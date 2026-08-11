@@ -77,6 +77,16 @@ export interface SidebarProps {
   onResetToCanvas?: () => void;
   placedTables: PlacedTable[];
   placedFixtures: PlacedFixture[];
+  /* Newly added props for consolidated Layout Studio tools header */
+  currentVenueName?: string;
+  onShowDashboard?: () => void;
+  onOpenVenueMap?: () => void;
+  onShowLayoutsHome?: () => void;
+  onSaveLayout?: () => void;
+  onSaveMasterLayout?: () => void;
+  onPrint?: () => void;
+  onShowAdmin?: () => void;
+  onOpenOperations?: () => void;
 }
 
 export function Sidebar({
@@ -111,6 +121,15 @@ export function Sidebar({
   onGridContrastChange,
   snapToGrid,
   onSnapToGridChange,
+  currentVenueName,
+  onShowDashboard,
+  onOpenVenueMap,
+  onShowLayoutsHome,
+  onSaveLayout,
+  onSaveMasterLayout,
+  onPrint,
+  onShowAdmin,
+  onOpenOperations,
 }: SidebarProps) {
   const [tableSpecs, setTableSpecsLocal] = useState<TableSpec[]>(() => getTableSpecs());
   const [fixtureTypes, setFixtureTypesState] = useState<FixtureType[]>(() => getFixtureTypes());
@@ -121,6 +140,7 @@ export function Sidebar({
   const [catalogSearch, setCatalogSearch] = useState('');
   const [catalogSearchOpen, setCatalogSearchOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const config = useBrandingConfig();
   const normalizedCatalogSearch = catalogSearch.trim().toLowerCase();
@@ -642,31 +662,164 @@ export function Sidebar({
       className="flex flex-col shadow-xl relative select-none"
       style={{ width, backgroundColor: '#f3f4f6' }}
     >
-      {/* Header */}
+      {/* Upgraded Layout Tools Header */}
       <div
-        className="p-3 text-white flex items-center justify-between"
+        className="p-3 text-white flex flex-col gap-2.5 shadow-md shrink-0"
         style={{
-          background: `linear-gradient(to right, ${config.primaryColor}, ${
-            config.primaryDark || config.primaryColor
+          background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${
+            config.primaryDark || '#3d1a45'
           })`,
         }}
       >
-        <h2 className="font-bold text-sm">Layout Tools</h2>
-        <button
-          onClick={() => onCollapsedChange(true)}
-          className="p-1.5 hover:bg-white/20 rounded transition-colors"
-          title="Collapse sidebar"
-          type="button"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-            />
-          </svg>
-        </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🎨</span>
+            <h2 className="font-bold text-sm leading-tight text-white">
+              Layout Studio Tools
+            </h2>
+          </div>
+          <button
+            onClick={() => onCollapsedChange(true)}
+            className="p-1 hover:bg-white/20 rounded transition-colors text-white"
+            title="Collapse sidebar"
+            type="button"
+          >
+            ◀
+          </button>
+        </div>
+
+        {/* Prominent Space & Map Navigation Row */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {onShowLayoutsHome && (
+            <button
+              type="button"
+              onClick={onShowLayoutsHome}
+              className="flex-1 min-w-[130px] inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-all text-white shadow-sm"
+              title="Open venue spaces & layout templates"
+            >
+              <span>🏛️</span>
+              <span className="truncate">Spaces &amp; Layouts</span>
+            </button>
+          )}
+          {onOpenVenueMap && (
+            <button
+              type="button"
+              onClick={onOpenVenueMap}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-all text-white shadow-sm shrink-0"
+              title="Open full-venue wayfinding map"
+            >
+              <span>🗺️</span>
+              <span>Venue Map</span>
+            </button>
+          )}
+        </div>
+
+        {/* Action & Administrative Menu Row */}
+        <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-white/20">
+          <div className="flex items-center gap-1">
+            {onShowDashboard && (
+              <button
+                type="button"
+                onClick={onShowDashboard}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-md text-[11px] font-bold transition-all text-white shadow-sm"
+                title="Close Design Studio and return to Dashboard"
+                aria-label="Close Design Studio and return to Dashboard"
+              >
+                <span>←</span>
+                <span>Dashboard</span>
+                <span className="text-white/60 ml-0.5">✕</span>
+              </button>
+            )}
+            {onSaveLayout && (
+              <button
+                type="button"
+                onClick={onSaveLayout}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-md text-[11px] font-bold transition-all text-white shadow-sm"
+                title="Save current layout"
+              >
+                <span>💾</span>
+                <span>Save Layout</span>
+              </button>
+            )}
+            {onPrint && (
+              <button
+                type="button"
+                onClick={onPrint}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-md text-[11px] font-semibold transition-all text-white"
+                title="Print layout"
+              >
+                <span>🖨️</span>
+                <span>Print</span>
+              </button>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMenu(!showMenu)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-md text-[11px] font-bold transition-all text-white"
+              aria-label="Menu"
+              aria-expanded={showMenu}
+              title="Open administrative menu"
+            >
+              <span>⋮</span>
+              <span>Menu</span>
+            </button>
+
+            {showMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowMenu(false)}
+                />
+                <div
+                  className="absolute right-0 top-full mt-1.5 w-56 rounded-xl bg-white shadow-2xl border border-gray-200 py-1.5 text-gray-800 z-50 text-xs"
+                >
+                  {onSaveMasterLayout && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onSaveMasterLayout();
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-gray-100 flex items-center gap-2 font-semibold text-amber-800 border-b border-gray-100"
+                    >
+                      <span>👑</span>
+                      <span>Save as Master Layout</span>
+                    </button>
+                  )}
+                  {onShowAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onShowAdmin();
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-gray-100 flex items-center gap-2 font-medium"
+                    >
+                      <span>⚙️</span>
+                      <span>Admin &amp; System Settings</span>
+                    </button>
+                  )}
+                  {onOpenOperations && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onOpenOperations();
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-gray-100 flex items-center gap-2 font-medium"
+                    >
+                      <span>🛠️</span>
+                      <span>Operations Studio</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Mobile instruction */}
