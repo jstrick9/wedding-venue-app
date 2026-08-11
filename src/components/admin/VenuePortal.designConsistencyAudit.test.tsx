@@ -407,25 +407,37 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     expect(within(headerEl).queryByRole('button', { name: /system settings/i })).not.toBeInTheDocument();
   });
 
-  it('renders BrandingManagement with Live Preview heading and logo file upload input', () => {
+  it('renders BrandingManagement with Live Preview heading and logo file upload input that saves logoUrl', async () => {
+    const handleSaveConfig = vi.fn();
+    const showSuccess = vi.fn();
+
     render(
       <BrandingManagement
         {...commonProps}
         config={testConfig}
-        handleSaveConfig={vi.fn()}
-        showSuccess={vi.fn()}
+        handleSaveConfig={handleSaveConfig}
+        showSuccess={showSuccess}
         expandedBrandingSections={new Set(['logo', 'preview'])}
         setExpandedBrandingSections={vi.fn()}
       />
     );
 
     expect(screen.getByText('👁️ Live Preview')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Upload Logo/i })).toBeInTheDocument();
+    expect(screen.getByText('Upload Logo')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://example.com/logo.png')).toBeInTheDocument();
 
     const fileInput = screen.getByLabelText(/Upload logo image file/i);
     expect(fileInput).toBeInTheDocument();
     const file = new File(['(binary)'], 'logo.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await vi.waitFor(() => {
+      expect(handleSaveConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          logoUrl: expect.stringContaining('data:image/png'),
+        })
+      );
+    });
+    expect(showSuccess).toHaveBeenCalledWith('Logo uploaded successfully!');
   });
 });

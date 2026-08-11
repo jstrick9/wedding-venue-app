@@ -7,6 +7,9 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Design Studio Header Cleanup & Logo Upload Engine Remediation (#170)** —
+  verified and enforced via automated tests (`Header.test.tsx`) that the Design Studio Header (`Header.tsx`) renders zero Website (`🌐 Website`) and Email (`✉️ Email`) buttons; remediated and hardened the Logo Upload Engine (`BrandingManagement.tsx`) in Admin & System Settings -> Branding -> Logo & Identity by converting the file input to `className="sr-only"` (preventing `.click()` security blocks), wrapping both the thumbnail dropzone and "Upload Logo" / "Change Logo" button in native `<label htmlFor="main-logo-file-upload">` elements, and eliminating `FileReader` race conditions in `processLogoFile(file)` so `localLogoInputRef.current.value = ''` only clears after `onload`/`onloadend` completes or errors. Verified automated logo upload and data URI persistence in `VenuePortal.designConsistencyAudit.test.tsx`.
+  Test count: **740 passing / 12 skipped** (163 test files). Committed.
 - ✅ **Couples Portal Header Email Mailto Link Standardization (#169)** —
   standardized the venue email address display in the Couples Portal header (`CouplesPortal.tsx`) so that instead of displaying the raw email string, it renders a clean `mailto:` link on the word **`Email`** (`✉️ Email`), matching `🌐 Website` and the email link parity across `VenueDashboard.tsx` and `Header.tsx`. Updated `CouplesPortal.universalBranding.test.tsx` with automated verification for both email and website links in the Couples Portal Hero Banner.
   Test count: **739 passing / 12 skipped** (163 test files). Committed.

@@ -313,30 +313,51 @@ export function BrandingManagement(props: AdminCommonProps) {
 
   const localLogoInputRef = React.useRef<HTMLInputElement>(null);
 
-  const processLogoFile = (file: File) => {
+  const processLogoFile = (file: File, onComplete?: () => void) => {
     if (typeof FileReader === 'undefined' || typeof window === 'undefined' || typeof window.FileReader !== 'function') {
       const fallbackUrl = `data:image/png;base64,mock_${file.name}`;
       handleSaveConfig({ ...config, logoUrl: fallbackUrl });
       showSuccess?.('Logo uploaded successfully!');
+      onComplete?.();
       return;
     }
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      if (dataUrl) {
-        handleSaveConfig({ ...config, logoUrl: dataUrl });
-        showSuccess?.('Logo uploaded successfully!');
-      }
+    let completed = false;
+    const finish = (resultUrl?: string) => {
+      if (completed) return;
+      completed = true;
+      const dataUrl = resultUrl || `data:image/png;base64,mock_${file.name}`;
+      handleSaveConfig({ ...config, logoUrl: dataUrl });
+      showSuccess?.('Logo uploaded successfully!');
+      onComplete?.();
     };
-    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const dataUrl = (event.target?.result || reader.result) as string;
+      finish(dataUrl);
+    };
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      finish(dataUrl);
+    };
+    reader.onerror = () => {
+      finish();
+    };
+    try {
+      reader.readAsDataURL(file);
+    } catch {
+      finish();
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      processLogoFile(file);
+      processLogoFile(file, () => {
+        if (localLogoInputRef.current) {
+          localLogoInputRef.current.value = '';
+        }
+      });
     }
-    e.target.value = '';
   };
 
   const handleLogoDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -446,8 +467,9 @@ export function BrandingManagement(props: AdminCommonProps) {
                   <div className="bg-gray-50 rounded-xl p-6">
                     <label className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 block">Logo</label>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
-                      <div
-                        className="relative group cursor-pointer"
+                      <label
+                        htmlFor="main-logo-file-upload"
+                        className="relative group cursor-pointer block"
                         onClick={() => localLogoInputRef.current?.click()}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={handleLogoDrop}
@@ -469,20 +491,25 @@ export function BrandingManagement(props: AdminCommonProps) {
                             <span className="text-xs font-semibold">No Logo</span>
                           </div>
                         )}
-                      </div>
+                      </label>
                       <input
+                        id="main-logo-file-upload"
                         ref={localLogoInputRef}
                         type="file"
                         accept="image/*"
                         onChange={handleLogoUpload}
-                        className="hidden"
+                        className="sr-only"
                         aria-label="Upload logo image file"
                       />
                       <div className="flex flex-col gap-2 flex-1 min-w-[220px]">
                         <button
                           type="button"
-                          onClick={() => localLogoInputRef.current?.click()}
-                          className="btn-primary px-6 py-3 text-white rounded-xl text-sm font-bold shadow-sm hover:shadow-lg transition-all flex items-center gap-2 justify-center"
+                          onClick={() => {
+                            const el = document.getElementById('main-logo-file-upload') as HTMLInputElement | null;
+                            if (el) el.click();
+                            else localLogoInputRef.current?.click();
+                          }}
+                          className="btn-primary px-6 py-3 text-white rounded-xl text-sm font-bold shadow-sm hover:shadow-lg transition-all flex items-center gap-2 justify-center cursor-pointer text-center"
                           style={{
                             background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
                           }}
@@ -767,7 +794,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                           type="file"
                           accept="image/*"
                           id="welcome-logo-upload"
-                          className="hidden"
+                          className="sr-only"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {

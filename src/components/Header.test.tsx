@@ -273,4 +273,11 @@ describe('Header', () => {
 
     expect(screen.getByText(/Signed in as: Jane \(Master\)/)).toBeInTheDocument();
   });
+
+  it('does not render Website or Email links in the Design Studio header', () => {
+    renderHeader();
+
+    expect(screen.queryByText(/Website/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Email/i)).not.toBeInTheDocument();
+  });
 });
