@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { AdminPanel } from '../AdminPanel';
 import { VenueManagement } from './VenueManagement';
 import { AdminDecorSection } from '../AdminDecorSection';
@@ -8,6 +8,7 @@ import { BackupManagement } from './BackupManagement';
 import { StudioLayoutsHome } from '../StudioLayoutsHome';
 import { VenueDashboard } from '../VenueDashboard';
 import { Sidebar } from '../Sidebar';
+import { Header } from '../Header';
 import CouplesPortal from '../CouplesPortal';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { saveCoupleSession } from '../../services/couples/coupleService';
@@ -344,7 +345,7 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
 
     // Verify venue name and contact email in Landing Page sidebar
     expect(screen.getAllByText('Seven Paths Manor').length).toBeGreaterThan(0);
-    expect(screen.getByTitle('Email venue: weddings@sevenpathsmanor.com')).toBeInTheDocument();
+    expect(screen.getByTitle('Email: weddings@sevenpathsmanor.com')).toBeInTheDocument();
 
     // Verify collapse button and mouse-hold resize handle
     expect(screen.getByTitle('Collapse sidebar')).toBeInTheDocument();
@@ -382,5 +383,82 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     expect(screen.getByText('Hosted at')).toBeInTheDocument();
     expect(screen.getByTitle('Email venue coordinator: weddings@sevenpathsmanor.com')).toBeInTheDocument();
     expect(screen.getByTitle('Visit venue website: https://www.sevenpathsmanor.com')).toBeInTheDocument();
+  });
+
+  it('renders Layout Studio Header with Venue Map and Spaces & Layouts buttons, Ops & Admin in menu, and no Templates or Sign out in menu', () => {
+    const onShowSpacesLayouts = vi.fn();
+    const onOpenVenueMap = vi.fn();
+    const onShowAdmin = vi.fn();
+    const onOpenOperations = vi.fn();
+
+    render(
+      <Header
+        currentVenue={testVenue}
+        venues={[testVenue]}
+        selectedVenueCategories={[]}
+        onChangeVenue={vi.fn()}
+        onChangeVenueCategories={vi.fn()}
+        onSaveLayout={vi.fn()}
+        onSaveMasterLayout={vi.fn()}
+        onClearMasterLayout={vi.fn()}
+        onPrint={vi.fn()}
+        onShowTemplates={vi.fn()}
+        onShowSpacesLayouts={onShowSpacesLayouts}
+        onOpenVenueMap={onOpenVenueMap}
+        onShowAdmin={onShowAdmin}
+        onOpenOperations={onOpenOperations}
+        onShowDashboard={vi.fn()}
+        onLogout={vi.fn()}
+        userName="Jane"
+        isAdmin={true}
+        isStaff={true}
+        savedLayouts={[]}
+        onLoadSavedLayout={vi.fn()}
+        onDeleteSavedLayout={vi.fn()}
+        mobileMenuOpen={false}
+        setMobileMenuOpen={vi.fn()}
+        currentUser={testUser}
+      />
+    );
+
+    // Verify Venue Map and Spaces & Layouts buttons on left side of Header
+    expect(screen.getByRole('button', { name: /Spaces & Layouts/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Venue Map/i })).toBeInTheDocument();
+
+    // Open administrative Menu
+    const menuBtn = screen.getByRole('button', { name: /menu/i });
+    fireEvent.click(menuBtn);
+
+    // Verify Admin and Ops are inside menu
+    expect(screen.getByTitle('Admin & System Settings')).toBeInTheDocument();
+    expect(screen.getByTitle('Operations Studio')).toBeInTheDocument();
+
+    // Verify Templates and Sign out are NOT in menu
+    expect(screen.queryByText(/Templates/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sign out/i)).not.toBeInTheDocument();
+  });
+
+  it('renders Email link with word Email in Landing Page left sidebar and omits system settings from Home header', () => {
+    const props: any = {
+      user: testUser,
+      isAdmin: true,
+      isStaff: true,
+      canAdmin: true,
+      canOps: true,
+      onOpenAdmin: vi.fn(),
+      onOpenOperations: vi.fn(),
+      onOpenVendorPanel: vi.fn(),
+      onOpenTimelinePanel: vi.fn(),
+      onLogout: vi.fn(),
+    };
+
+    render(<VenueDashboard {...props} />);
+
+    expect(screen.getByTitle('Email: weddings@sevenpathsmanor.com')).toBeInTheDocument();
+    expect(screen.getByText('Email')).toBeInTheDocument();
+
+    const homeTitle = screen.getByText('Welcome back to Seven Paths Manor');
+    const headerEl = homeTitle.closest('header')!;
+    expect(within(headerEl).queryByRole('button', { name: /system settings/i })).not.toBeInTheDocument();
   });
 });

@@ -30,7 +30,7 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     localStorage.clear();
   });
 
-  it('renders all 7 navigation tabs including BEO Sheet and Print Sheet header button for authorized admin', () => {
+  it('renders all 7 navigation tabs including BEO Sheet for authorized admin', () => {
     render(
       <StaffOperationsPanel
         onClose={() => undefined}
@@ -50,7 +50,6 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     expect(screen.getByRole('button', { name: /^🕒\s*shifts$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /checklists/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /export \/ import/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /print sheet/i })).toBeInTheDocument();
   });
 
   it('adds a staff task, searches/filters tasks, and displays match count', async () => {
@@ -238,7 +237,20 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
     expect(screen.getByRole('heading', { name: /daily operations report/i })).toBeInTheDocument();
   });
 
-  it('calls window.print() when the header Print Sheet button is clicked', () => {
+  it('calls window.print() when the Print BEO button is clicked on the BEO Sheet tab', () => {
+    const testCouple = {
+      id: 'cpl-beo-1',
+      coupleName: 'Elena & Marcus',
+      eventDate: '2026-11-20',
+      guestCount: 200,
+      inviteToken: 'token-beo-123',
+      layoutStatus: 'approved',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEYS.COUPLE_EVENTS, JSON.stringify([testCouple]));
+
     const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
     render(
       <StaffOperationsPanel
@@ -252,7 +264,10 @@ describe('StaffOperationsPanel (Operations Studio Module)', () => {
       />,
     );
 
-    const printBtn = screen.getByRole('button', { name: /print sheet/i });
+    // Switch to BEO Sheet tab
+    fireEvent.click(screen.getByRole('button', { name: /^📜\s*beo sheet$/i }));
+
+    const printBtn = screen.getByRole('button', { name: /print beo/i });
     fireEvent.click(printBtn);
 
     expect(printSpy).toHaveBeenCalledTimes(1);

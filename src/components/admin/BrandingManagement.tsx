@@ -281,7 +281,6 @@ export function BrandingManagement(props: AdminCommonProps) {
     today,
     todayStart,
     limit,
-    handleLogoUpload,
     file,
     reader,
     dataUrl,
@@ -311,6 +310,20 @@ export function BrandingManagement(props: AdminCommonProps) {
   const handleSaveConfig = (updated: Config) => {
     originalSaveConfig(updated);
     applyRootStyles(updated);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        handleSaveConfig({ ...config, logoUrl: dataUrl });
+        onShowSuccess?.('Logo uploaded successfully!');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const [previewTab, setPreviewTab] = React.useState<'header' | 'dashboard' | 'chat'>('header');
@@ -1392,10 +1405,10 @@ export function BrandingManagement(props: AdminCommonProps) {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500">{expandedSections.has('preview') ? '▼' : '▶'}</span>
-                    <h3 className="font-bold text-base text-gray-900">👁️ Live Home &amp; Landing Page / Venue Dashboard Preview</h3>
+                    <h3 className="font-bold text-base text-gray-900">👁️ Live Preview</h3>
                   </div>
                   <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    Home / Landing Page
+                    Home / Landing Page Preview
                   </span>
                 </div>
                 {expandedSections.has('preview') && (
@@ -1404,71 +1417,68 @@ export function BrandingManagement(props: AdminCommonProps) {
                     className="border border-gray-200 rounded-xl overflow-hidden shadow-sm"
                     style={{ fontFamily: config.fontFamily }}
                   >
-                    {/* Branded Venue Navigation Header */}
-                    <div className="px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        {config.logoUrl ? (
-                          <img src={config.logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
-                        ) : (
-                          <span className="text-xl">🏛️</span>
-                        )}
-                        <span className="font-extrabold text-gray-900 text-base" style={{ fontFamily: config.headingFontFamily }}>
-                          {config.venueName || 'Seven Paths Manor'}
-                        </span>
+                    {/* Landing Page Sidebar + Main Content Preview */}
+                    <div className="flex bg-gray-50/70 border-b border-gray-200">
+                      {/* Left Sidebar Preview */}
+                      <div className="w-48 bg-white border-r border-gray-200 p-3 flex flex-col justify-between hidden sm:flex shrink-0">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            {config.logoUrl ? (
+                              <img src={config.logoUrl} alt="Logo" className="w-7 h-7 object-contain rounded border p-0.5" />
+                            ) : (
+                              <div className="w-7 h-7 rounded bg-[#4A1942] text-white flex items-center justify-center text-xs" style={{ backgroundColor: config.primaryColor }}>🏛️</div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-bold text-xs truncate" style={{ color: config.primaryColor }}>{config.venueName || 'Seven Paths Manor'}</div>
+                              <div className="text-[10px] text-gray-400 truncate">Workspace</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] pt-1 border-t border-gray-100 text-gray-500">
+                            <span>✉️ Email</span>
+                            <span>•</span>
+                            <span>🌐 Website</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1 text-xs font-medium text-gray-700 pt-3">
+                          <div className="px-2 py-1.5 rounded bg-[#4A1942] text-white font-bold" style={{ backgroundColor: config.primaryColor }}>🏠 Home</div>
+                          <div className="px-2 py-1.5 rounded hover:bg-gray-100">📅 Calendar</div>
+                          <div className="px-2 py-1.5 rounded hover:bg-gray-100">💍 Couples Portal</div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs font-bold">
-                        <span className="px-3 py-1.5 rounded-lg text-white" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
-                          Home / Dashboard
-                        </span>
-                        <span className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100">
-                          Layout Studio
-                        </span>
-                        <span className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100">
-                          Calendar
-                        </span>
-                      </div>
-                    </div>
 
-                    {/* Landing Page Hero Section */}
-                    <div 
-                      className="p-6 text-white"
-                      style={{ 
-                        background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryLight || '#6b2c5c'}, ${config.primaryDark || '#3d1a45'})`,
-                        color: config.headerTextColor
-                      }}
-                    >
-                      <div className="text-xs uppercase tracking-wider font-bold opacity-80 mb-1">
-                        Venue Management Portal
-                      </div>
-                      <h2 style={{ fontFamily: config.headingFontFamily }} className="text-2xl font-extrabold">
-                        Welcome back to {config.venueName || 'Seven Paths Manor'}
-                      </h2>
-                      <p className="text-sm opacity-90 mt-1">{config.tagline || 'Weddings Reimagined'}</p>
-                      
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/20">
-                        <div className="text-xs opacity-90">
-                          <strong>Active Status:</strong> 3 weddings scheduled today • 12 upcoming tours
+                      {/* Main Home Page Preview */}
+                      <div className="flex-1 p-5">
+                        <div 
+                          className="rounded-2xl p-5 shadow-md flex flex-wrap items-center justify-between gap-3 text-white mb-4"
+                          style={{ 
+                            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
+                            borderLeft: `6px solid color-mix(in srgb, ${config.primaryLight || '#6b2c5c'} 80%, white)`,
+                            color: config.headerTextColor
+                          }}
+                        >
+                          <div>
+                            <h2 style={{ fontFamily: config.headingFontFamily }} className="text-xl font-extrabold flex items-center gap-2">
+                              <span>🏠</span>
+                              <span>Welcome back to {config.venueName || 'Seven Paths Manor'}</span>
+                            </h2>
+                            <p className="text-xs opacity-90 mt-0.5">{config.tagline || 'Weddings Reimagined'}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold px-2.5 py-1 bg-white/20 rounded-full backdrop-blur-sm">
+                              ● Active Brand
+                            </span>
+                            <button
+                              type="button"
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm"
+                              style={{
+                                backgroundColor: config.accentColor || '#059669',
+                                color: '#FFFFFF',
+                              }}
+                            >
+                              🚀 Open Dashboard
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="px-4 py-2 rounded-xl text-xs font-bold shadow-sm"
-                            style={{
-                              backgroundColor: config.accentColor || '#059669',
-                              color: '#FFFFFF',
-                            }}
-                          >
-                            🚀 Launch Studio
-                          </button>
-                          <button
-                            type="button"
-                            className="px-4 py-2 rounded-xl text-xs font-bold bg-white/25 text-white hover:bg-white/35 backdrop-blur-sm"
-                          >
-                            📅 View Calendar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Dashboard Quick Today Strip */}
                     <div 
@@ -1506,6 +1516,8 @@ export function BrandingManagement(props: AdminCommonProps) {
                           </span>
                         </div>
                       </div>
+                    </div>
+                    </div>
                     </div>
                   </div>
                 </div>

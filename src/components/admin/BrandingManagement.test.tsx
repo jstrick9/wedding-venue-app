@@ -61,7 +61,7 @@ describe('BrandingManagement UI/UX & Live Branding Theme Engine (#149)', () => {
     render(<BrandingManagement {...dummyProps} />);
 
     // Initially Header Banner preview is visible
-    expect(screen.getByText('● Active Brand')).toBeInTheDocument();
+    expect(screen.getAllByText('● Active Brand')[0]).toBeInTheDocument();
 
     // Click Dashboard KPI tab
     const dashTab = screen.getByRole('button', { name: /dashboard kpi/i });

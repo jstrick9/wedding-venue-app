@@ -550,6 +550,15 @@ const StaffOperationsPanel: React.FC<Props> = ({
               >
                 📋 Copy BEO Link
               </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 border border-gray-300 text-xs font-bold text-gray-700 transition-colors shadow-sm flex items-center gap-1.5"
+                title="Print Banquet Event Order (BEO) sheet"
+              >
+                <span>🖨️</span>
+                <span>Print BEO</span>
+              </button>
               {isAdmin && (
                 <button
                   type="button"
@@ -1711,25 +1720,19 @@ const StaffOperationsPanel: React.FC<Props> = ({
           <p className="text-sm text-white/80 mt-1">{eventName || 'Event Operations & Shift Roster'}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.print()}
-            className="no-print bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition-colors"
-            type="button"
-          >
-            <span>🖨️</span>
-            <span>{activeTab === 'beo' ? 'Print BEO' : 'Print Sheet'}</span>
-          </button>
           {!inline && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-            >
-              <span>←</span>
-              <span>Dashboard</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+              >
+                <span>←</span>
+                <span>Dashboard</span>
+              </button>
+              <button onClick={onClose} aria-label="Close Staff Operations" className="no-print p-2 hover:bg-white/10 rounded-lg text-white transition-colors text-xl font-bold">✕</button>
+            </>
           )}
-          <button onClick={onClose} aria-label="Close Staff Operations" className="no-print p-2 hover:bg-white/10 rounded-lg text-white transition-colors text-xl font-bold">✕</button>
         </div>
       </header>
 

@@ -9,7 +9,6 @@ import {
   canPrintLayouts,
 } from '../utils/permissions';
 import ModalDialog from './ModalDialog';
-import Logo from './Logo';
 import { emit } from '../utils/appEvents';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -26,6 +25,8 @@ export interface HeaderProps {
   onClearMasterLayout?: () => void;
   onPrint: () => void;
   onShowTemplates: () => void;
+  onShowSpacesLayouts?: () => void;
+  onOpenVenueMap?: () => void;
   onShowAdmin?: () => void;
   onOpenOperations?: () => void;
   onShowDashboard?: () => void;
@@ -54,6 +55,8 @@ export function Header({
   onClearMasterLayout,
   onPrint,
   onShowTemplates,
+  onShowSpacesLayouts,
+  onOpenVenueMap,
   onShowAdmin,
   onOpenOperations,
   onShowDashboard,
@@ -201,51 +204,57 @@ export function Header({
       >
         <div className="flex items-center justify-between px-2 md:px-4 py-2 gap-2">
           <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-            {config.logoUrl ? (
-              <Logo
-                url={config.logoUrl}
-                size="md"
-                className="rounded flex-shrink-0"
-              />
-            ) : (
-              <span className="text-xl md:text-2xl flex-shrink-0">💒</span>
+            <span className="sr-only">Layout Studio</span>
+            {onOpenVenueMap && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onOpenVenueMap();
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-bold transition-all text-white shadow-sm"
+                title="Open full-venue wayfinding map"
+              >
+                <span>🗺️</span>
+                <span>Venue Map</span>
+              </button>
             )}
-
-            <div className="hidden sm:block min-w-0">
-              <h1 className="font-bold text-sm md:text-lg leading-tight text-white truncate">
-                {config.venueName}
-              </h1>
-              <div className="flex items-center gap-1 md:gap-2 text-xs text-white/70">
-                <span className="hidden lg:inline">Wedding Layout Planner</span>
-                <span className="lg:hidden">Layout Planner</span>
-
-                {config.websiteUrl && (
-                  <>
-                    <span className="hidden md:inline">•</span>
-                    <a
-                      href={config.websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-white transition-colors hidden md:flex items-center gap-1"
-                    >
-                      🔗
-                    </a>
-                  </>
-                )}
-
-                {config.supportEmail && (
-                  <>
-                    <span className="hidden md:inline">•</span>
-                    <a
-                      href={`mailto:${config.supportEmail}`}
-                      className="hover:text-white transition-colors hidden md:flex items-center gap-1"
-                    >
-                      📧
-                    </a>
-                  </>
-                )}
-              </div>
-            </div>
+            {onShowSpacesLayouts && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onShowSpacesLayouts();
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-bold transition-all text-white shadow-sm"
+                title="Open venue spaces & layout templates"
+              >
+                <span>🏛️</span>
+                <span>Spaces &amp; Layouts</span>
+              </button>
+            )}
+            {config.websiteUrl && (
+              <a
+                href={config.websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white transition-colors hidden xl:flex items-center gap-1.5 text-xs text-white/85 bg-white/10 px-2.5 py-1.5 rounded-lg font-medium"
+                title={`Visit website: ${config.websiteUrl}`}
+              >
+                <span>🌐</span>
+                <span>Website</span>
+              </a>
+            )}
+            {config.supportEmail && (
+              <a
+                href={`mailto:${config.supportEmail}`}
+                className="hover:text-white transition-colors hidden xl:flex items-center gap-1.5 text-xs text-white/85 bg-white/10 px-2.5 py-1.5 rounded-lg font-medium"
+                title={`Email: ${config.supportEmail}`}
+              >
+                <span>✉️</span>
+                <span>Email</span>
+              </a>
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-2 flex-shrink min-w-0">
@@ -438,35 +447,6 @@ export function Header({
                 <span className="text-white/60 font-normal ml-0.5">✕</span>
               </button>
             )}
-            {canOpenOperations && onOpenOperations && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onOpenOperations();
-                }}
-                className="hidden md:flex items-center gap-1 px-2 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-              >
-                <span>📋</span>
-                <span className="hidden lg:inline">Operations</span>
-                <span className="lg:hidden">Ops</span>
-              </button>
-            )}
-
-            {canOpenAdmin && onShowAdmin && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onShowAdmin();
-                }}
-                className="hidden md:flex items-center gap-1 px-2 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-              >
-                <span>⚙️</span>
-                <span className="hidden lg:inline">Admin &amp; System Settings</span>
-                <span className="lg:hidden">Admin</span>
-              </button>
-            )}
 
             {onShowWorkspaceHelp && (
               <button
@@ -499,75 +479,75 @@ export function Header({
 
               {showMenu && (
                 <div
-                  className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl py-1 min-w-[200px]"
+                  className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl py-1 min-w-[220px]"
                   style={{ zIndex: 99999 }}
                 >
-                  {isStudioPage && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onShowTemplates();
-                          setShowMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                      >
-                        📋 Templates
-                      </button>
-                      <hr className="my-1" />
-                    </>
+                  {canOpenAdmin && onShowAdmin && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onShowAdmin();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 font-medium"
+                      title="Admin & System Settings"
+                    >
+                      <span>⚙️</span>
+                      <span>Admin &amp; System Settings</span>
+                    </button>
                   )}
-				  
-				    <button
-					  onClick={() => {
-					    emit('spm_open_vendors');
-					    setShowMenu(false);
-					  }}
-					  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-					  title="Vendor Management"
-					>
-					  🤝 Vendors
-					</button>
-				  
-					<button
-				      onClick={() => {
-				        emit('spm_open_timeline');
-				        setShowMenu(false);
-				      }}
-				      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-				      title="Wedding Timeline"
-				    >
-				      📅 Timeline
-				    </button>
-
-					{canOpenOperations && (
-					  <button
-					    onClick={() => {
-					      emit('spm_open_ops');
-					      setShowMenu(false);
-					    }}
-					    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-					    title="Operations Studio"
-					  >
-					    🛠️ Operations
-					  </button>
-					)}
-
-					<button
-					  onClick={() => {
-					    emit('spm_open_chat');
-					    setShowMenu(false);
-					  }}
-					  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-					  title="Portal Chat & Direct Messages"
-					>
-					  💬 Chat
-					</button>
-				  
+                  {canOpenOperations && onOpenOperations && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onOpenOperations();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2 font-medium"
+                      title="Operations Studio"
+                    >
+                      <span>🛠️</span>
+                      <span>Operations Studio</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      emit('spm_open_vendors');
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    title="Vendor Management"
+                  >
+                    <span>🤝</span>
+                    <span>Vendors</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      emit('spm_open_timeline');
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    title="Wedding Timeline"
+                  >
+                    <span>📅</span>
+                    <span>Timeline</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      emit('spm_open_chat');
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    title="Portal Chat & Direct Messages"
+                  >
+                    <span>💬</span>
+                    <span>Chat</span>
+                  </button>
                   {isStudioPage && (
                     <>
-                      <hr className="my-1" />
+                      <hr className="my-1 border-gray-100" />
                       <button
                         type="button"
                         onClick={(e) => {
@@ -577,7 +557,8 @@ export function Header({
                         }}
                         className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
-                        💾 Save Layout
+                        <span>💾</span>
+                        <span>Save Layout</span>
                       </button>
 
                       <button
@@ -589,12 +570,13 @@ export function Header({
                         }}
                         className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
-                        📂 Load Layout
+                        <span>📂</span>
+                        <span>Load Layout</span>
                       </button>
 
                       {isAdmin && onSaveMasterLayout && (
                         <>
-                          <hr className="my-1" />
+                          <hr className="my-1 border-gray-100" />
                           <button
                             type="button"
                             onClick={(e) => {
@@ -602,9 +584,10 @@ export function Header({
                               onSaveMasterLayout();
                               setShowMenu(false);
                             }}
-                            className="w-full text-left px-4 py-2 text-green-700 hover:bg-green-50 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-green-700 hover:bg-green-50 flex items-center gap-2 font-semibold"
                           >
-                            👑 Save as Master Layout
+                            <span>👑</span>
+                            <span>Save as Master Layout</span>
                           </button>
 
                           {currentVenue.masterLayout && onClearMasterLayout && (
@@ -617,16 +600,15 @@ export function Header({
                               }}
                               className="w-full text-left px-4 py-2 text-red-700 hover:bg-red-50 flex items-center gap-2"
                             >
-                              🗑️ Clear Master Layout
+                              <span>🗑️</span>
+                              <span>Clear Master Layout</span>
                             </button>
                           )}
                         </>
                       )}
                     </>
                   )}
-
-                  <hr className="my-1" />
-
+                  <hr className="my-1 border-gray-100" />
                   {canPrint && (
                     <button
                       type="button"
@@ -637,28 +619,14 @@ export function Header({
                       }}
                       className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
-                      🖨️ Print Layout
+                      <span>🖨️</span>
+                      <span>Print Layout</span>
                     </button>
                   )}
-
-                  <hr className="my-1" />
-
-                  <div className="px-4 py-2 text-xs text-gray-500">
+                  <hr className="my-1 border-gray-100" />
+                  <div className="px-4 py-2 text-xs text-gray-400 font-medium">
                     Signed in as: {userName} ({roleLabel})
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onLogout();
-                      setShowMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 font-semibold transition-colors"
-                    style={{ color: config.primaryColor || '#4A1942' }}
-                  >
-                    🚪 Sign Out
-                  </button>
                 </div>
               )}
             </div>
@@ -840,20 +808,6 @@ export function Header({
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                {isStudioPage && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onShowTemplates();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
-                  >
-                    📋 Templates
-                  </button>
-                )}
-
                 {onShowWorkspaceHelp && (
                   <button
                     type="button"
@@ -905,7 +859,7 @@ export function Header({
                     onSaveMasterLayout();
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full py-3 px-4 bg-green-600/80 hover:bg-green-600 rounded-lg text-center"
+                  className="w-full py-3 px-4 bg-green-600/80 hover:bg-green-600 rounded-lg text-center font-bold"
                 >
                   👑 Save as Master Layout
                 </button>
@@ -919,7 +873,7 @@ export function Header({
                     onPrint();
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center"
+                  className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-center font-bold"
                 >
                   🖨️ Print Layout
                 </button>
@@ -929,18 +883,6 @@ export function Header({
                 <div className="text-white/60 text-xs mb-2 px-2">
                   Signed in as: {userName} ({roleLabel})
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onLogout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full py-3 px-4 rounded-lg text-center font-bold text-white shadow-sm transition-all"
-                  style={{ backgroundColor: config.primaryColor || '#4A1942' }}
-                >
-                  🚪 Sign Out
-                </button>
               </div>
             </div>
           </div>

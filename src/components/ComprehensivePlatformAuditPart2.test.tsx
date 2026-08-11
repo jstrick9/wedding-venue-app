@@ -98,19 +98,12 @@ describe('Comprehensive Platform Application & Functional Design Audit Part 2 (#
     expect(searchInput).toHaveValue('ceremony');
   });
 
-  it('renders the Print Directory button in VendorPanel header and calls window.print', () => {
-    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
-
+  it('renders VendorPanel category filter buttons and search box dynamically', () => {
     render(<VendorPanel onClose={() => {}} inline={true} />);
 
-    const printBtn = screen.getByRole('button', { name: /Print Directory/i });
-    expect(printBtn).toBeInTheDocument();
-    expect(printBtn.className).toContain('no-print');
-
-    fireEvent.click(printBtn);
-    expect(printSpy).toHaveBeenCalledTimes(1);
-
-    printSpy.mockRestore();
+    expect(screen.getByRole('heading', { name: /Preferred Vendors/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /All \(0\)/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search vendors…/i)).toBeInTheDocument();
   });
 
   it('renders the Quick Guest List Search & Status Filter bar and filters by RSVP in CouplesPortal', () => {

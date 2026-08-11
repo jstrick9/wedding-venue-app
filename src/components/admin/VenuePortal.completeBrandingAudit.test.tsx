@@ -126,8 +126,8 @@ describe('Venue Portal (#/admin) — Complete Universal Branding Audit & Home/La
     const uploadBtn = screen.getByRole('button', { name: /Upload Logo/i });
     expect(uploadBtn.getAttribute('style')).toContain('linear-gradient(135deg, rgb(16, 185, 129), rgb(4, 120, 87))');
 
-    // 2. Verify Live Home & Landing Page / Venue Dashboard Preview header exists
-    expect(screen.getByText(/Live Home & Landing Page \/ Venue Dashboard Preview/i)).toBeInTheDocument();
+    // 2. Verify Live Preview header exists
+    expect(screen.getByText(/Live Preview/i)).toBeInTheDocument();
 
     // Check preview contents
     expect(screen.getByText(/Welcome back to Emerald Manor/i)).toBeInTheDocument();

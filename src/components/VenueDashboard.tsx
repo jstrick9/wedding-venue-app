@@ -320,11 +320,11 @@ export function VenueDashboard(props: Props) {
                   {config.supportEmail && (
                     <a
                       href={`mailto:${config.supportEmail}`}
-                      className="hover:underline flex items-center gap-1 truncate text-gray-600 font-medium"
-                      title={`Email venue: ${config.supportEmail}`}
+                      className="hover:underline flex items-center gap-1 shrink-0 text-gray-600 font-medium"
+                      title={`Email: ${config.supportEmail}`}
                     >
                       <span>✉️</span>
-                      <span className="truncate max-w-[130px]">{config.supportEmail}</span>
+                      <span>Email</span>
                     </a>
                   )}
                   {config.websiteUrl && (
@@ -452,13 +452,6 @@ export function VenueDashboard(props: Props) {
                     <span>{stats.unread} Unread Message{stats.unread === 1 ? '' : 's'}</span>
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => props.onOpenAdmin()}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-colors"
-                >
-                  ⚙️ System Settings
-                </button>
               </div>
             </header>
 

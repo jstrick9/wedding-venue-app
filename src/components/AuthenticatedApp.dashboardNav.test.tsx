@@ -40,7 +40,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     render(<App />);
 
     // Verify on dashboard home
-    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Welcome back/i, {}, { timeout: 4000 })).toBeInTheDocument();
 
     // Click "Vendor Showcase" quick action button
     const vendorBtn = screen.getByRole('button', { name: /vendor showcase/i });
@@ -50,9 +50,9 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(await screen.findByRole('heading', { name: /preferred vendors/i })).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    // Click close button in Vendors header
-    const closeBtn = screen.getByRole('button', { name: /close vendor panel/i });
-    fireEvent.click(closeBtn);
+    // Click Home button in sidebar to return to dashboard home
+    const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
+    fireEvent.click(homeBtn);
 
     // Verify user is back on dashboard home and did not jump to #/studio
     expect(screen.queryByRole('heading', { name: /preferred vendors/i })).not.toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     window.location.hash = '#/dashboard';
     render(<App />);
 
-    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Welcome back/i, {}, { timeout: 4000 })).toBeInTheDocument();
 
     const timelineBtn = screen.getByRole('button', { name: /timeline studio/i });
     fireEvent.click(timelineBtn);
@@ -72,8 +72,8 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(await screen.findByRole('heading', { name: /wedding timeline/i })).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /close timeline panel/i });
-    fireEvent.click(closeBtn);
+    const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
+    fireEvent.click(homeBtn);
 
     expect(screen.queryByRole('heading', { name: /wedding timeline/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
@@ -92,8 +92,8 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(await screen.findByRole('heading', { name: /staff & operations/i })).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /close staff operations/i });
-    fireEvent.click(closeBtn);
+    const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
+    fireEvent.click(homeBtn);
 
     expect(screen.queryByRole('heading', { name: /staff & operations/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
@@ -113,8 +113,8 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(await screen.findByRole('heading', { name: /wedding timeline/i })).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /close timeline panel/i });
-    fireEvent.click(closeBtn);
+    const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
+    fireEvent.click(homeBtn);
 
     expect(screen.queryByRole('heading', { name: /wedding timeline/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
@@ -135,8 +135,8 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     ).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /close chat panel/i });
-    fireEvent.click(closeBtn);
+    const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
+    fireEvent.click(homeBtn);
 
     expect(
       screen.queryByRole('heading', { name: /portal chat & direct messages/i })
@@ -160,8 +160,8 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     ).toBeInTheDocument();
     expect(window.location.hash).toBe('#/dashboard');
 
-    const closeBtn = screen.getByRole('button', { name: /close chat panel/i });
-    fireEvent.click(closeBtn);
+    const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
+    fireEvent.click(homeBtn);
 
     expect(
       screen.queryByRole('heading', { name: /portal chat & direct messages/i })

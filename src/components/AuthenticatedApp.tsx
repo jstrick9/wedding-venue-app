@@ -989,6 +989,23 @@ export default function AuthenticatedApp() {
   return (
     <UndoRedoProvider onRestore={handleRestoreSnapshot}>
       <div className="h-screen flex flex-col overflow-hidden spm-studio-root" style={{ fontFamily: brandingConfig.fontFamily, backgroundColor: brandingConfig.backgroundColor, color: brandingConfig.bodyTextColor }}>
+        <Header
+          currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
+          onSaveLayout={() => handleSaveLayoutWithSync(`${layoutState.currentVenue.name} Layout`)} onSaveLayoutOverwrite={handleSaveLayoutOverwriteWithSync} onSaveMasterLayout={isAdmin ? handleSaveMasterLayout : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
+          onShowTemplates={() => open('templates')} onShowSpacesLayouts={() => setShowLayoutsHome(true)} onOpenVenueMap={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/venuemap'; setView('venuemap'); }) : undefined} onShowAdmin={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/admin'; setView('admin'); }) : undefined} onShowDashboard={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })} onLogout={() => guardStudioLeave(logout)} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
+          onOpenOperations={
+            canOpenOperationsPanel
+              ? () => guardStudioLeave(() => {
+                  closeAll();
+                  window.location.hash = '#/dashboard';
+                  setView('dashboard');
+                  emit('spm_dashboard_open_section', 'ops');
+                })
+              : undefined
+          }
+          savedLayouts={savedLayouts} onLoadSavedLayout={handleLoadSavedLayout} onDeleteSavedLayout={handleDeleteSavedLayoutWithSync}
+          mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} onShowWorkspaceHelp={() => setShowWorkspaceHelp(true)} currentUser={user}
+        />
         <div className="no-print spm-studio-chrome">
           <AppStatusBar items={statusItems} />
         </div>
@@ -1001,24 +1018,6 @@ export default function AuthenticatedApp() {
               onDragStart={handleDragStart} onDragEnd={handleDragEnd} currentDragItem={dragItem} onClearLayout={handleClearLayout} isAdmin={isAdmin} onViewImage={(url, title) => setImagePreview({ url, title })}
               layoutCategories={layoutCategories} currentVenueCategory={layoutState.currentVenue.category} venueWidth={layoutState.currentVenue.width} venueHeight={layoutState.currentVenue.height} canvasWidth={layoutState.currentVenue.canvasWidth} canvasHeight={layoutState.currentVenue.canvasHeight}
               onResetView={handleResetView} onResetToVenue={handleResetToVenue} onResetToCanvas={handleResetToCanvas} placedTables={layoutState.layout.tables} placedFixtures={layoutState.layout.fixtures} currentUser={user}
-              currentVenueName={layoutState.currentVenue.name}
-              onShowDashboard={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })}
-              onOpenVenueMap={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/venuemap'; setView('venuemap'); }) : undefined}
-              onShowLayoutsHome={() => setShowLayoutsHome(true)}
-              onSaveLayout={() => handleSaveLayoutWithSync(`${layoutState.currentVenue.name} Layout`)}
-              onSaveMasterLayout={isAdmin ? handleSaveMasterLayout : undefined}
-              onPrint={() => open('print')}
-              onShowAdmin={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/admin'; setView('admin'); }) : undefined}
-              onOpenOperations={
-                canOpenOperationsPanel
-                  ? () => guardStudioLeave(() => {
-                      closeAll();
-                      window.location.hash = '#/dashboard';
-                      setView('dashboard');
-                      emit('spm_dashboard_open_section', 'ops');
-                    })
-                  : undefined
-              }
             />
           </div>
           <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden spm-print-canvas-container">

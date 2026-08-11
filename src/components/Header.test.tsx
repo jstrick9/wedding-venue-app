@@ -151,6 +151,7 @@ describe('Header', () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /menu/i }));
     expect(screen.getByRole('button', { name: /admin & system settings/i })).toBeInTheDocument();
   });
 

@@ -135,26 +135,19 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
             <p className="text-sm text-white/80 mt-1">Curate the vendors you recommend to your couples, organized by category.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-              title="Print Preferred Vendors directory"
-            >
-              <span>🖨️</span>
-              <span>Print Directory</span>
-            </button>
             {!inline && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-              >
-                <span>←</span>
-                <span>Dashboard</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                >
+                  <span>←</span>
+                  <span>Dashboard</span>
+                </button>
+                <button type="button" onClick={onClose} className="no-print text-white text-xl hover:opacity-80 p-1" aria-label="Close Vendor Panel">✕</button>
+              </>
             )}
-            <button type="button" onClick={onClose} className="no-print text-white text-xl hover:opacity-80 p-1" aria-label="Close Vendor Panel">✕</button>
           </div>
         </div>
 

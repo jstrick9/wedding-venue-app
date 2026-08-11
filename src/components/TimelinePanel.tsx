@@ -228,23 +228,25 @@ export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {
               </button>
             )}
             {!inline && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-              >
-                <span>←</span>
-                <span>Dashboard</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="no-print inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                >
+                  <span>←</span>
+                  <span>Dashboard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="no-print p-2 hover:bg-white/20 rounded-lg transition-colors text-xl leading-none"
+                  aria-label="Close timeline panel"
+                >
+                  ✕
+                </button>
+              </>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="no-print p-2 hover:bg-white/20 rounded-lg transition-colors text-xl leading-none"
-              aria-label="Close timeline panel"
-            >
-              ✕
-            </button>
           </div>
         </header>
 
