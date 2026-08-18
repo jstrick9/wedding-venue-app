@@ -1,6 +1,8 @@
-# Wedding Venue Intelligence Platform — Comprehensive Code Review
+# Wedding Venue Intelligence Platform — Historical Comprehensive Code Review
 
-**Repo:** `jstrick9/wedding-venue-app-old` (branch `main`, head `c26cdc2`)
+> **Superseded notice (2026-08-18):** This is the 2026-08-03 historical review and its backend findings/test counts are not the current repository truth. Read `docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md` and Section 9 of `docs/AI_AGENT_MEMORY.md` for the current full-repository audit at the latest `main` baseline.
+
+**Repo:** `jstrick9/wedding-venue-app-old` (historical branch `main`, head `c26cdc2`)
 **Reviewed by:** full-stack + wedding-venue domain expert
 **Date:** 2026-08-03
 

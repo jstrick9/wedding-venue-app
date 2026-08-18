@@ -15,6 +15,7 @@
 6. [Core Module Deep-Dives & Key Implementations](#6-core-module-deep-dives--key-implementations)
 7. [Quality Assurance, Automated Testing & Edge-Case Playbook](#7-quality-assurance-automated-testing--edge-case-playbook)
 8. [AI Agent Operational Directive ("Comprehensive" Protocol)](#8-ai-agent-operational-directive-comprehensive-protocol)
+9. [Current Audit Snapshot & Production Truth (2026-08-18)](#9-current-audit-snapshot--production-truth-2026-08-18)
 
 ---
 
@@ -23,8 +24,8 @@
 ### 1.1 Platform Identity
 - **Name**: Wedding Venue Intelligence Platform (default brand: *Seven Paths Manor* / *Weddings Reimagined*).
 - **Tech Stack**: React 19 + TypeScript + Vite (`vite:singlefile` single-file HTML bundle distribution) + Tailwind CSS + Lucide/Unicode Iconography.
-- **Data Provider**: Versioned Local-First Storage (`localStorage` via typed `src/utils/storage.ts`) with reactive event-bus synchronization (`src/utils/appEvents.ts`) and scaffolded Supabase cloud backend integration.
-- **Production Bundle**: Distributed as a single, self-contained HTML artifact (`dist/index.html`, ~1.79 MB uncompressed / ~409 KB gzipped) requiring zero external network calls or remote CDN scripts to operate in offline or sandboxed environments.
+- **Data Provider**: The default and fully exercised provider is versioned local-first storage (`localStorage` via typed `src/utils/storage.ts`) with reactive event-bus synchronization (`src/utils/appEvents.ts`). Supabase is a partial backend seam; do not describe it as a complete shared platform until the P0 items in Section 9 are fixed.
+- **Production Bundle**: The default build produces one HTML artifact (`dist/index.html`, approximately 1.79 MB uncompressed / 409 KB gzipped). JavaScript/CSS are inlined, but `index.html`/`src/index.css` still load Google Fonts and optional workflows use external Supabase, weather, Maps, signed-image, and email services. Call this an offline-capable core, not a zero-network bundle.
 
 ### 1.2 Competitive Positioning
 Grounded in UX and feature research on leading venue-management platforms:
@@ -38,14 +39,15 @@ Grounded in UX and feature research on leading venue-management platforms:
 ## 2. ENVIRONMENT SETUP & MANDATORY GIT / CI PROTOCOL
 
 ### 2.1 Workspace & Git Environment Rules
-1. **Working Directory**: `/home/user/venue-app/`.
+1. **Working Directory**: The checked-out repository directory (in this review: `/home/user/wedding-venue-app-old/`). Do not assume a permanent sandbox path; always verify with `git rev-parse --show-toplevel`.
 2. **Volatile Environment**: `node_modules` and git identity/remote are reset between turns.
 3. **Restoration Script** (run at the start of any new turn):
    ```bash
-   cd /home/user/venue-app && npm install
+   cd "$(git rev-parse --show-toplevel)"
+   npm ci
    git config user.email "jstrick9@users.noreply.github.com"
    git config user.name "jstrick9"
-   git remote add origin "https://github.com/jstrick9/wedding-venue-app-old.git" 2>/dev/null || git remote -v
+   git remote set-url origin "https://github.com/jstrick9/wedding-venue-app-old.git"
    ```
 4. **Push Policy**: If `git push origin main` encounters a 403 error, retry immediately (`git push origin main || git push origin main || true`). Commits must stay local even if remote push fails.
 
@@ -62,7 +64,7 @@ npm run lint:events # Runs node scripts/check-event-bus.mjs (FAILS on raw 'spm_*
 npx tsc --noEmit --noUnusedLocals 2>&1 | grep -v "\.test\." | grep -v "node_modules"
 
 # 4. Comprehensive Unit & Integration Suite
-npx vitest run      # ~165 test files, ~742+ passing tests (do not skip or comment out tests)
+npx vitest run      # Review #173 baseline: 729 passed / 11 skipped (do not skip or comment out tests)
 
 # 5. Production Bundle Single-File Verification
 npm run build       # Verifies vite:singlefile builds cleanly under ~415 KB gzip
@@ -80,9 +82,9 @@ npm run build       # Verifies vite:singlefile builds cleanly under ~415 KB gzip
 ### 3.2 Typed Event Bus (`src/utils/appEvents.ts`)
 - **NEVER use raw `window.dispatchEvent` or `'spm_*'` event strings outside `appEvents.ts`.**
 - Use typed emitters and listeners:
-  - `emit('spm_data_changed', { scope: 'all' })` / `emitDataChanged('all')`
-  - `on('spm_data_changed', (e) => { ... })`
-  - `emit('spm_open_modal', 'spaces-layouts')`
+  - `emit('spm_data_changed', { type: 'all' })` / `emitDataChanged('all')`
+  - `on('spm_data_changed', (detail) => { ... })`
+  - `emit('spm_open_admin_tab', 'venues')`
 
 ### 3.3 Dynamic Branding & CSS Variables (`src/config.ts`)
 - Platform-wide primary brand color is **Purple `#4A1942`** (`config.primaryColor`), dark purple `#3d1a45` (`config.primaryDark`), and light purple `#6b2c5c` (`config.primaryLight`).
@@ -293,7 +295,7 @@ All modal overlays **must** prevent viewport cutoff on tall content (e.g. *"Spac
 
 ### 7.1 Automated Test Suite Structure
 - Built with **Vitest + Testing Library React + jsdom**.
-- **Run Full Suite**: `npx vitest run` (~742+ passing tests across ~165+ test files).
+- **Run Full Suite**: `npm run test` / `npx vitest run`. Review #173 baseline: 729 passing and 11 skipped across 174 test files (167 files pass, 7 files are skipped).
 - **Core Audit Suite Files**:
   - `src/components/admin/VenuePortal.designConsistencyAudit.test.tsx` (14 tests: layout consistency, presets, modal parity, logo file upload).
   - `src/components/admin/VenuePortal.completeBrandingAudit.test.tsx` (5 tests: dynamic styling, live landing page preview).
@@ -334,6 +336,61 @@ Whenever a user prompt contains the word **"comprehensive"**, the AI Agent **mus
 4. **Zero-Regression Commitment**:
    - Run the full 5-gate CI protocol (`typecheck`, `lint:events`, `unusedLocals`, `vitest run`, `build`) before committing any finding.
    - Never leave unstaged files or failing tests behind.
+
+---
+
+## 9. CURRENT AUDIT SNAPSHOT & PRODUCTION TRUTH (2026-08-18)
+
+### 9.1 Review baseline
+
+Review #173 inspected the full tracked repository at commit `9254f03` on `main`: 539 tracked files, about 98,464 lines, 169 non-test runtime files, 174 test files, 181 documentation files, and four Supabase migrations plus the email Edge Function.
+
+Verified local gates:
+- `npm run typecheck` — green.
+- `npm run lint:events` — green.
+- strict unused-locals scan — green.
+- `npm run test` — 729 passed / 11 skipped across 174 files.
+- `npm run build` — green, about 1.79 MB HTML / 409 KB gzip.
+
+Additional checks:
+- `npm run test:coverage` is currently broken because `@vitest/coverage-v8` is not installed.
+- `npm run build:split` is currently broken because `vite.config.ts` still references removed `yjs`/`y-websocket` manual chunks.
+- A live Supabase project was not available; cloud/RLS findings are static and require a real integration gate before launch.
+
+### 9.2 Authoritative architecture truth
+
+- LocalStorage is the complete, exercised product mode.
+- Supabase Auth, layout repository, generic entity repository, object storage, invite RPC, public guest RPC, realtime layout channel, and email function are **partial seams**, not proof that every product domain is cloud-backed.
+- Only 28 catalog/settings prefixes are listed in `src/services/repository/entityRepository.ts`. Couple events, couple guests, couple chat, packages/add-ons, guest events, maps/rules/weather, calendar, couple/legacy RSVP, admin settings, and other critical domains remain local or are not wired end-to-end.
+- The server guest RPC has no reliable projection from the local couple guest model. Never claim server-side couple/guest security is active until the projection and RLS tests exist.
+- `org_data` is an all-domain JSON table with broad member read/write policies. UI hiding is not authorization; sensitive domains require server-side role enforcement.
+
+### 9.3 P0 blockers that every future agent must preserve in context
+
+1. Initial Supabase owner membership creation is rejected by the current RLS policy because the new owner has no active membership yet; the client ignores the insert error.
+2. Supabase `owner` maps to local `basic`, so admin access disappears after sign-in restore/reload.
+3. `submit_guest_rsvp()` does not enforce portal access/deadline and casts JWT `sub` to `inet`, which is not a request IP and can fail.
+4. The visible password-reset flow is local-only and does not call the Supabase reset path; “Continue as Planner Guest” remains available in cloud mode.
+5. Cloud layout save is destructive organization-wide replace-sync; it has no safe row-level optimistic revision protocol.
+
+### 9.4 P1 data-integrity/security rules
+
+- Never silently fall back to local persistence after a cloud write error.
+- `pullLayouts()` must replace local state even when the remote result is empty; entity pulls must hydrate active React state or emit matching typed events.
+- Event-bus domain values must exactly match the backup/entity registry (`chairSpecs`, `spacingSettings`, `venueMapConfigs`, etc.); do not use arbitrary strings or skip `all` mutations.
+- Do not export or print password hashes, portal password fields, invite tokens, or guest bearer tokens. The backup registry must cover every persistent domain or explicitly classify it as session-only.
+- Use Web Crypto for bearer tokens. Remove tokens from URLs with `history.replaceState`.
+- Use one authoritative RBAC service. Admin/staff early returns currently bypass granular revocation; unregistered permission ids exist in the bridge.
+- `org_data` must not let every active org member write RBAC, security, or unrelated venue data.
+- Rotate-aware collision validation, chair/linen/decor inventory enforcement, and time/space booking conflicts are domain-critical follow-up work.
+
+### 9.5 Known code-quality exceptions
+
+Twenty-four runtime files currently use `// @ts-nocheck`, including major admin, dashboard, calendar, couple, vendor, chat, and portal components. Hidden file inputs remain in several upload/import flows despite the `sr-only` rule. `ConfirmDialog` does not actually trap focus even though its documentation says it does. Future fixes should add regression tests rather than expanding these exceptions.
+
+### 9.6 Documentation precedence
+
+`docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md` and this section describe the current code truth. Numbered reviews before #173, `docs/CODE_REVIEW.md`, `docs/QUICKSTART.md`, and parts of `docs/platform/PLATFORM.md` contain historical claims and may describe an earlier commit. Read the current source and the P0/P1 list before trusting a “wired,” “complete,” test-count, or navigation claim.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*

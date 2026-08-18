@@ -20,10 +20,13 @@ npm run build
 ## Production backend (Intelligence Platform)
 
 The app runs in **Local** mode by default (all data in `localStorage`, zero
-setup — best for trying it and single-device use). It can be switched to a
-**Supabase multi-user Intelligence Platform** with shared, RLS-scoped data,
-account auth, real-time layout collaboration, object storage, and transactional
-email.
+setup — best for trying it and single-device use). It contains a **partial
+Supabase backend seam** for account auth, saved-layout sync, selected catalog
+entities, object storage, invites, guest RPCs, and transactional email. The
+Supabase mode is not yet a production-complete multi-user implementation for
+all couple, guest, operations, and admin domains; review
+`docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md`
+before enabling it with real venue data.
 
 **Follow `docs/platform/PLATFORM.md` to go live from scratch** (create a Supabase
 project, apply the migration, configure `.env.local`, and see what's wired vs.

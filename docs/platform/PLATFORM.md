@@ -1,5 +1,7 @@
 # Going Live: Turning the app into a true Intelligence Platform (Supabase)
 
+> **Audit status (2026-08-18):** This document describes the intended Supabase architecture, not a completed production certification. Review #173 found that owner-membership bootstrap/RLS, role mapping, public guest RSVP RPC behavior, couple/guest data projection, generic `org_data` authorization, entity hydration, and destructive layout sync must be fixed and tested against a live project before enabling this mode for real venue data. See `docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md`.
+
 This app runs in two modes:
 
 - **Local** (default) — everything in `localStorage`. Works offline, zero setup.
@@ -93,39 +95,38 @@ Email (invitations, RSVP confirmations, staff notifications) uses a Supabase
 
 ---
 
-## What is already wired (verified in this repo)
+## Backend seams present in this repo — current status
 
-| Area | Status | Where |
+| Area | Current status | Where |
 |---|---|---|
-| Account registration + org bootstrap | ✅ Built + tested | `AuthBackend.signUpWithSupabase`, `AuthContext.register`, LoginScreen sign-up |
-| Sign in / session restore / sign out / password reset | ✅ Built | `AuthBackend` (existing) |
-| Org scope (RLS) in auth/session | ✅ Built + tested | `AuthBackend` / `AuthContext.organizationId` |
-| Data persistence seam (local + Supabase providers) | ✅ Built + tested | `services/repository/layoutRepository.ts`, `services/platform.ts` |
-| Layout sync wired into the app UI | ✅ Built + tested | `services/sync/layoutSync.ts`, `hooks/useLayoutBackendSync.ts` |
-| Real-time layout collaboration | ✅ Built + tested | `services/sync/layoutRealtime.ts` |
-| Server-side guest portal (identity + RSVP) | ✅ Built + tested | `services/portal/guestPortalBackend.ts`, migration `0002_guest_portal.sql` |
-| Object storage for images | ✅ Built + tested | `services/storage/imageStorage.ts`, `SafeImage`, `MultiImageUpload` |
-| Entity repository (venues/decor/vendors/staff/settings) | ✅ Built + tested | `services/repository/entityRepository.ts`, `services/sync/entitySync.ts`, migration `0003_org_data.sql` |
-| Multi-org invites | ✅ Built + tested | `services/org/inviteService.ts`, `InviteMembers`, `AcceptInvite`, migration `0004_invites.sql` |
-| DB schema + Row-Level Security + storage buckets | ✅ Ready (migration) | `supabase/migrations/0001_initial.sql` |
-| Transactional email Edge Function | ✅ Ready | `supabase/functions/send-email/` |
-| Object storage service | ✅ Ready | `services/storage/ObjectStorageService.ts` |
+| Account registration + org bootstrap | ⚠️ Code exists, but initial owner membership is rejected by current RLS and the client ignores the error. | `AuthBackend.signUpWithSupabase`, migration `0001_initial.sql` |
+| Sign in / session restore / sign out / password reset | ⚠️ Supabase sign-in/restore exists; visible forgot-password UI is still local-only. | `AuthBackend`, `AuthContext`, `PasswordReset` |
+| Org scope / RLS | ⚠️ Schema exists; owner mapping and broad `org_data` member write policy require remediation and live tests. | `AuthBackend`, migrations `0001`/`0003` |
+| Layout persistence | ⚠️ Saved layouts only; current cloud save is organization-wide destructive replace-sync with no safe optimistic revision. | `services/repository/layoutRepository.ts`, `services/sync/layoutSync.ts` |
+| Real-time collaboration | ⚠️ Layout-table channel only; entity/couple/operations data is not realtime. | `services/sync/layoutRealtime.ts` |
+| Server-side guest portal | ⚠️ Public RPCs exist, but access/deadline/IP handling needs fixes and couple guests are not projected into `public.guests`. | `services/portal/guestPortalBackend.ts`, migration `0002_guest_portal.sql` |
+| Object storage for images | ✅ Seam exists and is unit-tested; hosted image references still need live bucket/RLS verification. | `services/storage/*`, `SafeImage`, `MultiImageUpload` |
+| Entity repository | ⚠️ 28 catalog/settings domains only; active UI hydration and several event-key mappings are incomplete. | `services/repository/entityRepository.ts`, `services/sync/entitySync.ts`, migration `0003_org_data.sql` |
+| Couple/guest/operations/admin settings data | ❌ Not end-to-end cloud-backed; most remains localStorage. | `services/couples/*`, admin settings, `BACKUP_DOMAINS` |
+| Multi-org invites | ⚠️ RPC and UI exist; acceptance does not refresh active AuthContext and invite email binding is not enforced. | `services/org/inviteService.ts`, `InviteMembers`, `AcceptInvite`, migration `0004_invites.sql` |
+| DB schema / storage buckets / Edge Function | ⚠️ Migration and function code exist; no live project/RLS/Resend certification has been run. | `supabase/migrations/*`, `supabase/functions/send-email/` |
 
 ## What still needs a live project (just apply migrations + test)
 
-All platform code is **built and unit-tested** against mocks. Final verification
-only requires running against your real project (paste your URL + anon key) and
-applying the remaining migrations alongside `0001_initial.sql`:
+The backend seams are unit-tested against mocks, but they are **not a substitute for a live RLS/integration test**. Final verification requires running against your real project (paste your URL + anon key), applying all migrations, and first resolving the P0/P1 findings in Review #173. In particular, do not assume all couple/guest/operations/admin data is cloud-backed simply because the provider flag is set.
+
+The remaining migration/application checklist is:
 
 1. **`0002_guest_portal.sql`** — secure public guest portal (token-verified
    identity RPC + RSVP RPC).
 2. **`0003_org_data.sql`** — generic org-scoped catalog/asset key-value store.
 3. **`0004_invites.sql`** — organization invites + accept-invite RPC.
 
-Apply all four (`supabase db push`, or paste each into the SQL editor). The
-feature code (layout sync, real-time, guest portal backend, entity repository,
-object storage, invites) is already wired into the app and enabled automatically
-when `VITE_BACKEND_PROVIDER=supabase` is set.
+Apply all four (`supabase db push`, or paste each into the SQL editor) only in a
+non-production test project first. Setting `VITE_BACKEND_PROVIDER=supabase` turns
+on the available seams, but it does not make every local couple/guest/operations
+workflow cloud-backed. Complete Review #173's P0/P1 work and a live RLS/browser
+smoke test before migrating real venue data.
 
 ---
 

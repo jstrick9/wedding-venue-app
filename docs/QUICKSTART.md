@@ -1,5 +1,7 @@
 # Wedding Venue Intelligence Platform — Quick-Start Cheat Sheet
 
+> **Current audit note (2026-08-18):** Local mode is the complete, exercised product mode. Supabase support is a partial backend seam, not yet a production-complete shared implementation; review `docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md` before enabling it for real venue data.
+
 ## Run it locally (local mode, no backend — 3 commands)
 
 ```bash
@@ -117,8 +119,10 @@ schedule items to their calendar (`.ics`).
 
 ```bash
 npm run typecheck   # TypeScript check
-npm run test        # test suite (295 tests)
+npm run test        # current baseline: 729 passed / 11 skipped
 npm run build       # production build → dist/index.html
+# npm run test:coverage currently requires @vitest/coverage-v8
+# npm run build:split currently requires stale yjs manual-chunk config cleanup
 npm run preview     # serve the built app
 ```
 
@@ -131,6 +135,8 @@ Full steps in `docs/platform/PLATFORM.md`. Short version:
 2. Apply the four migrations in `supabase/migrations/` (`0001`–`0004`).
 3. Create `.env.local` with `VITE_BACKEND_PROVIDER=supabase` + `VITE_SUPABASE_URL`
    + `VITE_SUPABASE_ANON_KEY`.
-4. `npm run dev` → "Create a new account" appears on login; all platform
-   features (auth, shared/real-time layouts, server-side guest portal, object
-   storage, invites) activate automatically.
+4. `npm run dev` → "Create a new account" appears on login. Auth, layout sync,
+   object storage, invites, and the guest RPC are present as backend seams, but
+   not all couple/guest/operations/admin domains are cloud-backed yet. Do not use
+   this mode for production venue data until the P0 blockers in Review #173 are
+   resolved and a live Supabase/RLS smoke test is green.
