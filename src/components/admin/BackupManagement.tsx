@@ -109,6 +109,12 @@ export function BackupManagement({ user, onDataRestored }: BackupManagementProps
         config={config}
       />
 
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+        <strong>Local-mode privacy note:</strong> this backup contains the venue workspace,
+        couple/guest records, and local access links so a restore can preserve your vetting
+        data. Store the downloaded JSON securely and do not email or publicly share it.
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-col gap-3">
           <h4 className="font-medium text-gray-700">Export backup</h4>
@@ -127,22 +133,23 @@ export function BackupManagement({ user, onDataRestored }: BackupManagementProps
         <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-col gap-3">
           <h4 className="font-medium text-gray-700">Import / restore</h4>
           <p className="text-xs text-gray-500">Upload a backup JSON to preflight-check and restore it.</p>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-            className="px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-60"
-            style={{ backgroundColor: config.primaryColor }}
-          >
-            {isImporting ? 'Reading…' : '📤 Choose Backup File'}
-          </button>
           <input
+            id="backup-file-upload"
             ref={fileInputRef}
             type="file"
             accept=".json,application/json"
             onChange={(e) => void handleFileChange(e)}
-            className="hidden"
+            className="sr-only"
+            aria-label="Choose backup JSON file"
           />
+          <label
+            htmlFor="backup-file-upload"
+            aria-disabled={isImporting}
+            className={`px-4 py-2 rounded-lg text-white text-sm font-medium text-center ${isImporting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+            style={{ backgroundColor: config.primaryColor }}
+          >
+            {isImporting ? 'Reading…' : '📤 Choose Backup File'}
+          </label>
         </div>
       </div>
 

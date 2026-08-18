@@ -29,6 +29,8 @@ interface GuestPortalSession {
   guestToken?: string;
   guestId?: string;
   eventKey?: string;
+  /** Couple event scope; prevents a shared browser session crossing couples. */
+  coupleEventId?: string;
   portalFingerprint: string;
 }
 
@@ -308,6 +310,7 @@ export function createGuestPortalSession(
   guestToken?: string,
   eventName?: string,
   guestId?: string,
+  coupleEventId?: string,
 ): GuestPortalSession {
   const now = Date.now();
   const accessEnd = config ? getGuestPortalAccessEnd(config) : null;
@@ -325,6 +328,7 @@ export function createGuestPortalSession(
     guestToken,
     guestId,
     eventKey: eventName ? normalizeEventKey(eventName) : undefined,
+    coupleEventId,
     portalFingerprint: getPortalFingerprint(config),
   };
 }
@@ -334,10 +338,11 @@ export function saveGuestPortalSession(
   guestToken?: string,
   eventName?: string,
   guestId?: string,
+  coupleEventId?: string,
 ): void {
   sessionStorage.setItem(
     GUEST_PORTAL_STORAGE_KEYS.AUTH,
-    JSON.stringify(createGuestPortalSession(config, guestToken, eventName, guestId)),
+    JSON.stringify(createGuestPortalSession(config, guestToken, eventName, guestId, coupleEventId)),
   );
 }
 
@@ -348,6 +353,7 @@ export function clearGuestPortalSession(): void {
 export function loadGuestPortalSession(
   config: GuestPortalConfig | null,
   eventName?: string,
+  coupleEventId?: string,
 ): GuestPortalSession | null {
   const raw = sessionStorage.getItem(GUEST_PORTAL_STORAGE_KEYS.AUTH);
   if (!raw) return null;
@@ -362,6 +368,14 @@ export function loadGuestPortalSession(
       if (parsed.eventKey && parsed.eventKey !== expectedEventKey) {
         return null;
       }
+    }
+    // A couple-scoped session must match the exact couple event. A legacy
+    // venue-wide session must never be reused inside a couple portal, and a
+    // couple session must never be reused by the venue-wide portal.
+    if (coupleEventId) {
+      if (parsed.coupleEventId !== coupleEventId) return null;
+    } else if (parsed.coupleEventId) {
+      return null;
     }
 
     return parsed;

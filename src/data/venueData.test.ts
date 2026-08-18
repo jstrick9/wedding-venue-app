@@ -122,4 +122,22 @@ describe('resetToDefaults', () => {
     expect(checkEnvelope(STORAGE_KEYS.PORTAL_GUESTS).data).toEqual([]);
     expect(checkEnvelope(STORAGE_KEYS.RSVP_SUBMISSIONS).data).toEqual([]);
   });
+
+  it('clears all couple-scoped local data during a full reset', () => {
+    localStorage.setItem(STORAGE_KEYS.COUPLE_EVENTS, JSON.stringify({ version: 1, data: [{ id: 'couple-1' }] }));
+    localStorage.setItem(STORAGE_KEYS.COUPLE_GUESTS, JSON.stringify({ version: 1, data: [{ id: 'guest-1', eventName: 'couple-1' }] }));
+    localStorage.setItem(STORAGE_KEYS.COUPLE_SUBMISSIONS, JSON.stringify({ version: 1, data: [{ id: 'rsvp-1', eventKey: 'couple-1' }] }));
+    localStorage.setItem(STORAGE_KEYS.COMMUNICATION_TEMPLATES, JSON.stringify([{ id: 'template-1' }]));
+    localStorage.setItem(STORAGE_KEYS.OPERATIONS_SETTINGS, JSON.stringify({ checklist: [{ id: 'task-1' }], zones: [{ id: 'zone-1' }] }));
+    localStorage.setItem(STORAGE_KEYS.ORG_INVITES, JSON.stringify([{ token: 'invite-1' }]));
+
+    resetToDefaults();
+
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.COUPLE_EVENTS) || '{}').data).toEqual([]);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.COUPLE_GUESTS) || '{}').data).toEqual([]);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.COUPLE_SUBMISSIONS) || '{}').data).toEqual([]);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.COMMUNICATION_TEMPLATES) || 'null')).toEqual([]);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.OPERATIONS_SETTINGS) || 'null')).toEqual({ checklist: [], zones: [] });
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.ORG_INVITES) || 'null')).toEqual([]);
+  });
 });

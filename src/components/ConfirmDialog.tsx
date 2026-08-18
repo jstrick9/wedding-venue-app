@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { openConfirmDialog, closeConfirmDialog } from '../utils/modalEscape';
 
 interface ConfirmDialogProps {
@@ -28,20 +29,28 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Confirm dialogs sit above another modal, so they need their own focus trap
+  // and Escape handler. This also restores focus to the triggering control when
+  // the confirmation closes.
+  useFocusTrap(dialogRef, open);
 
   useEffect(() => {
-    if (open) {
-      confirmRef.current?.focus();
-      openConfirmDialog();
-      const onKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onCancel();
-      };
-      window.addEventListener('keydown', onKey);
-      return () => {
-        closeConfirmDialog();
-        window.removeEventListener('keydown', onKey);
-      };
-    }
+    if (!open) return;
+    confirmRef.current?.focus();
+    openConfirmDialog();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      closeConfirmDialog();
+      window.removeEventListener('keydown', onKey);
+    };
   }, [open, onCancel]);
 
   if (!open) return null;
@@ -53,9 +62,11 @@ export function ConfirmDialog({
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
+        tabIndex={-1}
         className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >

@@ -2790,21 +2790,37 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                 )}
                 {guestError && canManageGuests && <p className="text-xs text-red-600 mt-2">{guestError}</p>}
                 {canManageGuests && (
-                  <label className="mt-3 inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-                    <input
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => handleImportGuests(String(reader.result || ''));
+                  <>
+                  <input
+                    id="couple-guest-csv-upload"
+                    type="file"
+                    accept=".csv"
+                    className="sr-only"
+                    aria-label="Import couple guests CSV"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      e.currentTarget.value = '';
+                      if (!file) return;
+                      const reader = new FileReader();
+                      let completed = false;
+                      const finish = (value: string) => {
+                        if (completed) return;
+                        completed = true;
+                        handleImportGuests(value);
+                      };
+                      reader.onload = () => finish(String(reader.result || ''));
+                      reader.onerror = () => setGuestError('Could not read the guest CSV file.');
+                      try {
                         reader.readAsText(file);
-                      }}
-                    />
+                      } catch {
+                        setGuestError('Could not read the guest CSV file.');
+                      }
+                    }}
+                  />
+                  <label htmlFor="couple-guest-csv-upload" className="mt-3 inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
                     📥 Import guests (CSV: name,email,phone)
                   </label>
+                  </>
                 )}
                 <button
                   type="button"

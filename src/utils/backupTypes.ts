@@ -52,10 +52,15 @@ export interface BackupPayload {
   portalConfig?: unknown;
   portalGuests?: unknown;
   rsvpSubmissions?: unknown;
+  communicationTemplates?: unknown;
+  operationsSettings?: unknown;
+  securitySettings?: unknown;
+  orgInvites?: unknown;
   coupleEvents?: unknown;
   coupleAnswers?: unknown;
   coupleSubmissions?: unknown;
   coupleMessages?: unknown;
+  coupleChatRead?: unknown;
   coupleGuests?: unknown;
   couplePortalConfigs?: unknown;
   coupleChecklists?: unknown;

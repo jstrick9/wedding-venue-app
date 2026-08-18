@@ -276,8 +276,8 @@ export function GuestPanel({
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                 </div>
                 <button onClick={() => setShowAdd(true)} className="px-4 py-2 bg-[#4A1942] text-white rounded-lg text-sm hover:bg-[#5c2a54]">➕ Add Guest</button>
-                <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" />
-                <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100">📥 Import</button>
+                <input id="venue-guest-csv-upload" ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="sr-only" aria-label="Import guest CSV" />
+                <label htmlFor="venue-guest-csv-upload" className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-100 cursor-pointer">📥 Import</label>
                 <button
                   onClick={() => {
                     onExportCSV();

@@ -785,19 +785,21 @@ export const DrawingTool: React.FC<DrawingToolProps> = ({ onSave, onClose }) => 
                   </div>
 
                   <div>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      📷 Upload Image
-                    </button>
                     <input
+                      id="drawing-tool-image-upload"
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="hidden"
+                      className="sr-only"
+                      aria-label="Upload drawing background image"
                     />
+                    <label
+                      htmlFor="drawing-tool-image-upload"
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+                    >
+                      📷 Upload Image
+                    </label>
                   </div>
 
                   <button

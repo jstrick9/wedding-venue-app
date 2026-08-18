@@ -920,12 +920,13 @@ export function UserManagement(props: AdminCommonProps) {
                                       {u.name?.charAt(0).toUpperCase() || '?'}
                                     </div>
                                   )}
-                                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                  <label htmlFor={`user-avatar-upload-${u.id}`} className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                     <span className="text-white text-2xl">📷</span>
                                     <input
+                                      id={`user-avatar-upload-${u.id}`}
                                       type="file"
                                       accept="image/*"
-                                      className="hidden"
+                                      className="sr-only"
                                       onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {

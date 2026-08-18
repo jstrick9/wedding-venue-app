@@ -1,6 +1,8 @@
 import { getPlatformProvider } from '../platform';
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { sendTransactionalEmail, buildInvitationTemplateData } from '../backend/EmailService';
+import { createOpaqueToken } from '../../utils/secureTokens';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
 
 /**
  * Organization invite service.
@@ -30,7 +32,7 @@ export interface InviteResult {
   inviteUrl?: string;
 }
 
-const INVITES_KEY = 'spm_org_invites';
+const INVITES_KEY = STORAGE_KEYS.ORG_INVITES;
 
 function localInvites(): Array<Record<string, unknown>> {
   try {
@@ -48,7 +50,7 @@ export async function createInvite(params: InviteParams): Promise<InviteResult> 
 
   if (provider !== 'supabase' || !isSupabaseConfigured()) {
     // Local simulation: record the invite; no email is sent.
-    const token = `invite-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const token = createOpaqueToken('invite');
     saveLocalInvites([...localInvites(), {
       email: params.email,
       role: params.role,

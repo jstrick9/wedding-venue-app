@@ -162,7 +162,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         setPortalData({ venues, guests, submissions, guestEvents });
 
       if (loadedConfig && isGuestPortalEventActive(loadedConfig)) {
-        const session = loadGuestPortalSession(loadedConfig, loadedConfig.eventTitle);
+        const session = loadGuestPortalSession(loadedConfig, loadedConfig.eventTitle, coupleEventId);
         // Auto-authenticate a guest who opened their invite link (guestToken) — the token
         // identifies them, so they shouldn't need to re-enter their name.
         const tokenGuest = guestToken
@@ -175,7 +175,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
             setResolvedGuestId(session.guestId || null);
           } else if (tokenGuest) {
             setResolvedGuestId(tokenGuest.id);
-            saveGuestPortalSession(loadedConfig, guestToken, loadedConfig.eventTitle, tokenGuest.id);
+            saveGuestPortalSession(loadedConfig, guestToken, loadedConfig.eventTitle, tokenGuest.id, coupleEventId);
           }
           setEventInput(loadedConfig.eventTitle || '');
         } else {
@@ -293,14 +293,23 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   } as React.CSSProperties;
 
   const scopedGuests = useMemo(() => {
+    // Couple portals already load guests from the couple-scoped store. Do not
+    // replace that list with the legacy venue-wide portal store after the guest
+    // is authenticated; doing so made valid couple invite links appear to lose
+    // their identity on the next render.
+    if (isCouplePortal) return portalData.guests;
     if (!activeEventName) return portalData.guests;
     return getPortalGuestsForEvent(activeEventName);
-  }, [activeEventName, portalData.guests]);
+  }, [activeEventName, isCouplePortal, portalData.guests]);
 
   const scopedSubmissions = useMemo(() => {
+    // Couple RSVPs live under COUPLE_SUBMISSIONS, while the legacy venue portal
+    // uses RSVP_SUBMISSIONS. Keep the two stores separate so one couple cannot
+    // hide or inherit another event's responses.
+    if (isCouplePortal) return portalData.submissions;
     if (!activeEventName) return portalData.submissions;
     return getPortalRSVPSubmissionsForEvent(activeEventName);
-  }, [activeEventName, portalData.submissions]);
+  }, [activeEventName, isCouplePortal, portalData.submissions]);
 
   const identifiedGuest = useMemo(() => {
     if (resolvedGuestId) {
@@ -329,9 +338,13 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   }, [identifiedGuest, portalData.guestEvents, isCouplePortal]);
 
   // In preview mode the couple browses as a generic visitor: access-controlled tabs
-  // (map/schedule/rsvp/lodging) are shown as long as the venue enabled them.
+  // (map/schedule/rsvp/lodging) are shown as long as the venue enabled them. A
+  // couple guest is scoped by coupleEventId, not the couple's display title.
+  const guestAccessScope = isCouplePortal && coupleEventId
+    ? coupleEventId
+    : activeEventLabel;
   const canViewTab = (allow: (g: GuestPortalGuestRecord | undefined, ev: string) => boolean) =>
-    isPreview ? true : allow(identifiedGuest, activeEventLabel);
+    isPreview ? true : allow(identifiedGuest, guestAccessScope);
 
   const requiresPortalPassword = !!(
     config?.portalPassword || (config as any)?.portalPasswordHash
@@ -362,16 +375,30 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       return;
     }
 
+    // Couple portals already have an event-scoped guest store. Use it directly
+    // in local mode instead of asking the legacy venue-wide portal store to find
+    // a guest whose scope is the couple event id rather than the display title.
+    const normalizedGuestIdentifier = guestIdentifier.trim().toLowerCase();
+    const coupleGuest = isCouplePortal && coupleEventId
+      ? getCoupleGuests(coupleEventId).find((candidate) =>
+          candidate.email?.trim().toLowerCase() === normalizedGuestIdentifier ||
+          candidate.name.trim().toLowerCase() === normalizedGuestIdentifier ||
+          candidate.token?.trim().toLowerCase() === normalizedGuestIdentifier,
+        )
+      : undefined;
+
     // In platform mode, identity is verified server-side via the portal token
     // RPC (falling back to published guest records). In local mode we use the
-    // existing localStorage lookup.
+    // legacy venue store only for the non-couple portal.
     const backend = getGuestPortalBackend();
-    const guest =
+    const guest = coupleGuest || (
       backend.provider === 'supabase'
         ? await backend.findGuest({ eventName: config.eventTitle }, guestIdentifier)
-        : findGuestInEvent(config.eventTitle, guestIdentifier);
+        : findGuestInEvent(config.eventTitle, guestIdentifier)
+    );
+    const guestScope = isCouplePortal && coupleEventId ? coupleEventId : config.eventTitle;
 
-    if (!guest || !guestCanAccessPortal(guest, config.eventTitle)) {
+    if (!guest || !guestCanAccessPortal(guest, guestScope)) {
       setPasswordError('Guest not found for this event.');
       return;
     }
@@ -398,7 +425,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     setIsAuthed(true);
     setActiveEventName(config.eventTitle || eventInput.trim());
     setResolvedGuestId(guest.id);
-    saveGuestPortalSession(config, guest.token, config.eventTitle, guest.id);
+    if (isCouplePortal && coupleEventId) {
+      saveGuestPortalSession(config, guest.token, config.eventTitle, guest.id, coupleEventId);
+    } else {
+      saveGuestPortalSession(config, guest.token, config.eventTitle, guest.id);
+    }
     setPasswordError('');
   };
 
@@ -2060,7 +2091,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     !!config.showLodging &&
     lodgingVenues.length > 0 &&
     (isPreview ||
-      guestCanAccessLodging(identifiedGuest, activeEventName || config.eventTitle || '') ||
+      guestCanAccessLodging(identifiedGuest, guestAccessScope) ||
       // A guest invited to the couple's "Overnight Lodging" guest event gets lodging access.
       (isCouplePortal && identifiedGuest && guestAssignedEvents.some((e) => e.kind === 'lodging')));
   const tabPanelId = `guest-portal-panel-${activeTab}`;

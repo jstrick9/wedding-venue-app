@@ -23,6 +23,7 @@ import { removeCoupleGuestEvents } from './coupleGuestEventService';
 import { removeVenueCalendarEventsForCouple } from '../calendar/venueCalendarService';
 import { findPackageAddOn } from './coupleAddOnService';
 import { emitDataChanged } from '../../utils/appEvents';
+import { createOpaqueToken } from '../../utils/secureTokens';
 
 const COUPLE_EVENTS_KEY = STORAGE_KEYS.COUPLE_EVENTS;
 const COUPLE_EVENTS_VERSION = 1;
@@ -35,9 +36,32 @@ export function getCoupleTokenFromLocation(location: Location = window.location)
   const queryIndex = hash.indexOf('?');
   if (queryIndex >= 0) {
     const params = new URLSearchParams(hash.slice(queryIndex + 1));
-    return params.get('token') || undefined;
+    const token = params.get('token') || undefined;
+    if (token && typeof window !== 'undefined' && location === window.location) {
+      clearCoupleTokenFromUrl(location);
+    }
+    return token;
   }
   return undefined;
+}
+
+/** Remove couple bearer tokens from browser history while preserving the route. */
+function clearCoupleTokenFromUrl(location: Location): void {
+  try {
+    const url = new URL(location.href);
+    const hashQueryIndex = url.hash.indexOf('?');
+    if (hashQueryIndex >= 0) {
+      const route = url.hash.slice(0, hashQueryIndex);
+      const params = new URLSearchParams(url.hash.slice(hashQueryIndex + 1));
+      params.delete('token');
+      url.hash = params.toString() ? `${route}?${params.toString()}` : route;
+    } else {
+      url.searchParams.delete('token');
+    }
+    window.history.replaceState({}, '', url.toString());
+  } catch {
+    // URL cleanup is best-effort in file:// and test environments.
+  }
 }
 
 /** Build named days across an event date span (e.g. Fri rehearsal, Sat ceremony). */
@@ -98,8 +122,7 @@ export function deriveRecommendedVenueCategories(
 }
 
 function randomToken(prefix: string): string {
-  const rand = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
-  return `${prefix}-${Date.now().toString(36)}-${rand}`;
+  return createOpaqueToken(prefix);
 }
 
 export function getCoupleEvents(): CoupleEvent[] {

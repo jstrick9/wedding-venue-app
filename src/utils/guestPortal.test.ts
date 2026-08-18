@@ -262,6 +262,15 @@ describe('guest portal helpers', () => {
     expect(loaded?.eventKey).toBe('smith-wedding');
   });
 
+  it('isolates couple-scoped sessions by couple event id', () => {
+    saveGuestPortalSession(sampleConfig as any, 'guest-token-couple', 'Smith Wedding', 'g1', 'couple-1');
+
+    expect(loadGuestPortalSession(sampleConfig as any, 'Smith Wedding', 'couple-1')).not.toBeNull();
+    expect(loadGuestPortalSession(sampleConfig as any, 'Smith Wedding', 'couple-2')).toBeNull();
+    // A couple session must not be accepted by the legacy venue-wide portal.
+    expect(loadGuestPortalSession(sampleConfig as any, 'Smith Wedding')).toBeNull();
+  });
+
   it('rejects a guest portal session when the config fingerprint changes', () => {
     saveGuestPortalSession(sampleConfig as any, 'guest-token-2', 'Smith Wedding', 'g1');
 

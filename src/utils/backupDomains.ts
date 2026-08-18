@@ -25,6 +25,7 @@ import { getCoupleSetupTasksForBackup } from '../services/couples/coupleSetupSer
 import { getWeddingPackagesForBackup } from '../services/couples/couplePackageService';
 import { getPackageAddOnsForBackup } from '../services/couples/coupleAddOnService';
 import { getCoupleGuestEventsForBackup } from '../services/couples/coupleGuestEventService';
+import { getCoupleRsvpSubmissionsForBackup } from '../services/couples/coupleRsvpService';
 import { getVenueCalendarEventsForBackup } from '../services/calendar/venueCalendarService';
 import { getVendorCategoriesForBackup } from '../services/vendors/vendorCategoryService';
 import {
@@ -317,6 +318,51 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     write: (v) => writeVersioned(STORAGE_KEYS.DIRECT_MESSAGES, STORAGE_VERSIONS.DIRECT_MESSAGES, v),
   },
   {
+    key: 'coupleChatRead',
+    storageKey: STORAGE_KEYS.COUPLE_CHAT_READ,
+    label: 'Couple Chat Read Markers',
+    defaultValue: {},
+    recovery: true,
+    read: () => readJson(STORAGE_KEYS.COUPLE_CHAT_READ, {}),
+    write: (v) => writeJson(STORAGE_KEYS.COUPLE_CHAT_READ, v),
+  },
+  {
+    key: 'communicationTemplates',
+    storageKey: STORAGE_KEYS.COMMUNICATION_TEMPLATES,
+    label: 'Communication Templates',
+    defaultValue: [],
+    recovery: true,
+    read: () => readJson(STORAGE_KEYS.COMMUNICATION_TEMPLATES, []),
+    write: (v) => writeJson(STORAGE_KEYS.COMMUNICATION_TEMPLATES, v),
+  },
+  {
+    key: 'operationsSettings',
+    storageKey: STORAGE_KEYS.OPERATIONS_SETTINGS,
+    label: 'Operations Settings',
+    defaultValue: { checklist: [], zones: [] },
+    recovery: true,
+    read: () => readJson(STORAGE_KEYS.OPERATIONS_SETTINGS, { checklist: [], zones: [] }),
+    write: (v) => writeJson(STORAGE_KEYS.OPERATIONS_SETTINGS, v),
+  },
+  {
+    key: 'securitySettings',
+    storageKey: STORAGE_KEYS.SECURITY_SETTINGS,
+    label: 'Security Settings',
+    defaultValue: null,
+    recovery: true,
+    read: () => readJson(STORAGE_KEYS.SECURITY_SETTINGS, null),
+    write: (v) => writeJson(STORAGE_KEYS.SECURITY_SETTINGS, v),
+  },
+  {
+    key: 'orgInvites',
+    storageKey: STORAGE_KEYS.ORG_INVITES,
+    label: 'Local Organization Invites',
+    defaultValue: [],
+    recovery: true,
+    read: () => readJson(STORAGE_KEYS.ORG_INVITES, []),
+    write: (v) => writeJson(STORAGE_KEYS.ORG_INVITES, v),
+  },
+  {
     key: 'portalConfig',
     storageKey: STORAGE_KEYS.PORTAL_CONFIG,
     label: 'Guest Portal Config',
@@ -355,6 +401,16 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     version: STORAGE_VERSIONS.COUPLE_ANSWERS,
     read: () => getCoupleAnswersForBackup(),
     write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_ANSWERS, STORAGE_VERSIONS.COUPLE_ANSWERS, v),
+  },
+  {
+    key: 'coupleSubmissions',
+    storageKey: STORAGE_KEYS.COUPLE_SUBMISSIONS,
+    label: 'Couple RSVP Submissions',
+    defaultValue: [],
+    recovery: true,
+    version: STORAGE_VERSIONS.COUPLE_SUBMISSIONS,
+    read: () => getCoupleRsvpSubmissionsForBackup(),
+    write: (v) => writeVersioned(STORAGE_KEYS.COUPLE_SUBMISSIONS, STORAGE_VERSIONS.COUPLE_SUBMISSIONS, v),
   },
   {
     key: 'coupleMessages',

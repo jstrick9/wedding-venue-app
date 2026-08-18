@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../utils/guestPortal', () => ({
@@ -56,6 +57,7 @@ vi.mock('../services/weather/venueWeatherService', () => ({
 import GuestPortal from './GuestPortal';
 import * as guestPortalHelpers from '../utils/guestPortal';
 import * as coupleGuestService from '../services/couples/coupleGuestService';
+import * as coupleRsvpService from '../services/couples/coupleRsvpService';
 
 describe('GuestPortal guest-token auto-auth', () => {
   beforeEach(() => {
@@ -86,6 +88,30 @@ describe('GuestPortal guest-token auto-auth', () => {
     await waitFor(() => {
       expect(guestPortalHelpers.saveGuestPortalSession).toHaveBeenCalled();
     });
+    // The authenticated identity must continue to come from the couple-scoped
+    // guest store, not the legacy venue-wide portal store.
+    expect(screen.getAllByText('Jane').length).toBeGreaterThan(0);
+  });
+
+  it('uses couple-scoped RSVP submissions instead of the legacy venue RSVP store', async () => {
+    vi.mocked(coupleRsvpService.getCoupleRsvpSubmissions).mockReturnValue([
+      {
+        id: 'r1',
+        guestId: 'g1',
+        eventKey: 'e1',
+        eventName: 'e1',
+        fullName: 'Jane',
+        email: 'jane@example.com',
+        attending: true,
+        submittedAt: new Date().toISOString(),
+      },
+    ] as any);
+
+    render(<GuestPortal guestToken="tok-123" coupleEventId="e1" onExitPortal={() => {}} />);
+    await waitFor(() => expect(screen.getAllByText('Jane').length).toBeGreaterThan(0));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /rsvp now/i }));
+    expect(screen.getByRole('button', { name: /update rsvp/i })).toBeInTheDocument();
   });
 
   it('shows the sign-in gate when the token matches no guest', () => {

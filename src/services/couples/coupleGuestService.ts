@@ -6,6 +6,7 @@ import {
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../../constants/storageVersions';
 import { loadVersionedStorage, saveVersionedStorage } from '../../utils/storage';
+import { createOpaqueToken } from '../../utils/secureTokens';
 
 const GUESTS_KEY = STORAGE_KEYS.COUPLE_GUESTS;
 const GUESTS_VERSION = STORAGE_VERSIONS.COUPLE_GUESTS;
@@ -26,14 +27,18 @@ function writeGuests(guests: GuestPortalGuestRecord[]): void {
   saveVersionedStorage(GUESTS_KEY, GUESTS_VERSION, guests);
 }
 
+function guestBelongsToCouple(guest: GuestPortalGuestRecord, coupleEventId: string): boolean {
+  return guest.eventName === coupleEventId || guest.eventKey === coupleEventId;
+}
+
 /** Guests scoped to one couple event. */
 export function getCoupleGuests(coupleEventId: string): GuestPortalGuestRecord[] {
-  return readGuests().filter((g) => g.eventName === coupleEventId);
+  return readGuests().filter((g) => guestBelongsToCouple(g, coupleEventId));
 }
 
 /** Remove all guests + portal config belonging to a couple event (on delete). */
 export function removeCoupleGuestsAndConfig(coupleEventId: string): void {
-  writeGuests(readGuests().filter((g) => g.eventName !== coupleEventId));
+  writeGuests(readGuests().filter((g) => !guestBelongsToCouple(g, coupleEventId)));
   const configs = readConfigs();
   if (coupleEventId in configs) {
     const next = { ...configs };
@@ -75,7 +80,7 @@ export function addCoupleGuest(
     phone: input.phone?.trim() || '',
     eventName: coupleEventId,
     eventKey: coupleEventId,
-    token: `g-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+    token: createOpaqueToken('guest'),
     allowPortalAccess: true,
   };
   const all = readGuests();
@@ -90,13 +95,13 @@ export function updateCoupleGuest(
   updates: Partial<GuestPortalGuestRecord>,
 ): void {
   const all = readGuests().map((g) =>
-    g.id === guestId && g.eventName === coupleEventId ? { ...g, ...updates } : g,
+    g.id === guestId && guestBelongsToCouple(g, coupleEventId) ? { ...g, ...updates } : g,
   );
   writeGuests(all);
 }
 
 export function removeCoupleGuest(coupleEventId: string, guestId: string): void {
-  writeGuests(readGuests().filter((g) => !(g.id === guestId && g.eventName === coupleEventId)));
+  writeGuests(readGuests().filter((g) => !(g.id === guestId && guestBelongsToCouple(g, coupleEventId))));
 }
 
 /** Download the couple's guest list as a CSV (name,email,phone). */
@@ -143,7 +148,7 @@ export function importCoupleGuests(
 
   // Skip rows that duplicate an existing guest for this couple (by email, or by
   // name when no email) so an accidental re-import doesn't create duplicates.
-  const existingForCouple = all.filter((g) => g.eventName === coupleEventId);
+  const existingForCouple = all.filter((g) => guestBelongsToCouple(g, coupleEventId));
   const seenEmails = new Set(existingForCouple.map((g) => g.email?.trim().toLowerCase()).filter(Boolean));
   const seenNames = new Set(existingForCouple.map((g) => g.name.trim().toLowerCase()));
 
@@ -168,7 +173,7 @@ export function importCoupleGuests(
       phone: r.phone?.trim() || '',
       eventName: coupleEventId,
       eventKey: coupleEventId,
-      token: `g-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+      token: createOpaqueToken('guest'),
       allowPortalAccess: true,
     }));
   writeGuests([...existing, ...added]);

@@ -345,16 +345,16 @@ Whenever a user prompt contains the word **"comprehensive"**, the AI Agent **mus
 
 Review #173 inspected the full tracked repository at commit `9254f03` on `main`: 539 tracked files, about 98,464 lines, 169 non-test runtime files, 174 test files, 181 documentation files, and four Supabase migrations plus the email Edge Function.
 
-Verified local gates:
+Verified local gates at Review #174:
 - `npm run typecheck` — green.
 - `npm run lint:events` — green.
 - strict unused-locals scan — green.
-- `npm run test` — 729 passed / 11 skipped across 174 files.
-- `npm run build` — green, about 1.79 MB HTML / 409 KB gzip.
+- `npm run test` — 735 passed / 11 skipped across 176 files (169 files pass, 7 files are skipped).
+- `npm run build` — green, about 1.80 MB HTML / 411 KB gzip.
 
-Additional checks:
-- `npm run test:coverage` is currently broken because `@vitest/coverage-v8` is not installed.
-- `npm run build:split` is currently broken because `vite.config.ts` still references removed `yjs`/`y-websocket` manual chunks.
+Additional checks at Review #174:
+- `npm run test:coverage` — green after adding `@vitest/coverage-v8`.
+- `npm run build:split` — green after removing stale `yjs`/`y-websocket` manual chunks; it still reports a large admin chunk warning.
 - A live Supabase project was not available; cloud/RLS findings are static and require a real integration gate before launch.
 
 ### 9.2 Authoritative architecture truth
@@ -386,9 +386,24 @@ Additional checks:
 
 ### 9.5 Known code-quality exceptions
 
-Twenty-four runtime files currently use `// @ts-nocheck`, including major admin, dashboard, calendar, couple, vendor, chat, and portal components. Hidden file inputs remain in several upload/import flows despite the `sr-only` rule. `ConfirmDialog` does not actually trap focus even though its documentation says it does. Future fixes should add regression tests rather than expanding these exceptions.
+Twenty-four runtime files currently use `// @ts-nocheck`, including major admin, dashboard, calendar, couple, vendor, chat, and portal components. Most visible file inputs now use the `sr-only` rule, but programmatic pickers remain in `MultiImageUpload`/`AdminPanel` and several FileReader paths still need one shared utility. Future fixes should add regression tests rather than expanding these exceptions.
 
-### 9.6 Documentation precedence
+### 9.6 Local-first remediation progress (Review #174)
+
+The product direction is now explicitly **one venue, many couple events, local-first** for vetting, usability, and cost control. Supabase scaffolding remains dormant/optional and must not drive local behavior.
+
+Review #174 implemented and tested:
+- Couple guest and RSVP reads now remain in their couple-scoped stores instead of falling back to the legacy venue-wide portal stores after authentication.
+- Couple guest portal access checks use the stable couple event id, not a display title; sessionStorage records the couple event scope so two couple sessions cannot be reused across each other in the same browser.
+- Couple invite, guest invite, collaborator, and local organization-invite bearer tokens now use centralized Web Crypto opaque-token generation.
+- `resetToDefaults()` clears couple events, couple guests/RSVPs/chat/configs, packages/add-ons, guest events, venue calendar/map/rules/weather, staff/admin settings, RBAC state, local invites, and legacy portal data while preserving versioned envelopes.
+- The backup registry now covers all business storage domains, including couple RSVP submissions, local invites, communication templates, operations settings, security settings, and chat read markers; round-trip coverage was added.
+- File import controls touched in the local workflows use accessible `sr-only` inputs and labels; `ConfirmDialog` now has a real focus trap; the map null validator no longer treats a persisted empty map as corrupt.
+- The split build and coverage command are repaired (`@vitest/coverage-v8` installed; stale yjs manual chunk removed); the favicon is embedded for the local/file bundle.
+
+Local-mode limitations remain intentional: localStorage/sessionStorage is per browser/device, so separate devices do not share couples, guests, RSVPs, or venue data. Use backup/export/import for controlled vetting transfer. Do not call localStorage-backed portal access production security.
+
+### 9.7 Documentation precedence
 
 `docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md` and this section describe the current code truth. Numbered reviews before #173, `docs/CODE_REVIEW.md`, `docs/QUICKSTART.md`, and parts of `docs/platform/PLATFORM.md` contain historical claims and may describe an earlier commit. Read the current source and the P0/P1 list before trusting a “wired,” “complete,” test-count, or navigation claim.
 

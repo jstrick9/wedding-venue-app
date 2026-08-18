@@ -18,7 +18,7 @@ export function getVenueMapConfig(): VenueMapConfig | null {
     key: MAP_KEY,
     defaultValue: null,
     currentVersion: MAP_VERSION,
-    validate: (v): v is VenueMapConfig => !!v && typeof v === 'object',
+    validate: (v): v is VenueMapConfig | null => v === null || (!!v && typeof v === 'object'),
     normalize: (v) => (v ? (v as VenueMapConfig) : null),
   });
 }

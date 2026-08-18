@@ -1673,9 +1673,11 @@ const StaffOperationsPanel: React.FC<Props> = ({
             <label className="px-8 py-3 bg-white border-2 border-purple-600 text-purple-600 rounded-xl font-bold hover:bg-purple-50 transition-all cursor-pointer flex items-center justify-center" style={{ borderColor: config.primaryColor, color: config.primaryColor }}>
               <span className="mr-2">📂</span> Import JSON
               <input 
+                id="operations-json-upload"
                 type="file" 
                 accept=".json" 
-                className="hidden" 
+                className="sr-only"
+                aria-label="Import operations JSON"
                 onChange={e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
