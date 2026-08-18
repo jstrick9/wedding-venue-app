@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, type AuthRegistrationParams } from '../contexts/AuthContext';
 import { useBrandingConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { isUserLocked, MAX_FAILED_LOGINS } from '../utils/auth';
@@ -10,10 +10,15 @@ import { shouldUseSupabaseAuth } from '../services/backend/AuthBackend';
 
 export interface LoginScreenProps {
   onContinueAsGuest?: () => void;
+  /** Public sign-up is disabled for the multi-tenant cloud entry point. */
+  allowAccountCreation?: boolean;
+  /** Optional invite-aware registration handler for an existing tenant invite. */
+  onRegister?: (params: AuthRegistrationParams) => Promise<string | null>;
 }
 
-export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
-  const { login, register, continueAsGuest } = useAuth();
+export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, onRegister }: LoginScreenProps) {
+  const { login, register: authRegister, continueAsGuest } = useAuth();
+  const register = onRegister || authRegister;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -150,6 +155,8 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
         localStorage.removeItem(STORAGE_KEYS.REMEMBERED_USER);
       }
       setLockoutSecondsLeft(0);
+    } else if (usingSupabaseAuth) {
+      setError('Sign-in failed. Use the email address and password for your Supabase account. Local admin credentials do not apply in cloud mode.');
     } else {
       // The AuthContext.login() call already persisted the failed-login state
       // (via recordFailedLogin → setUsers). Re-read to get the up-to-date
@@ -290,7 +297,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 htmlFor="login-username"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Username
+                {usingSupabaseAuth ? 'Email address' : 'Username'}
               </label>
               <input
                 ref={usernameInputRef}
@@ -300,8 +307,8 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 onKeyDown={handleKeyDown}
                 onFocus={handleInputFocus}
                 onBlur={handleInputBlur}
-                placeholder="Enter username"
-                autoComplete="username"
+                placeholder={usingSupabaseAuth ? 'you@example.com' : 'Enter username'}
+                autoComplete={usingSupabaseAuth ? 'email' : 'username'}
                 disabled={isLockedOut}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none transition-shadow disabled:bg-gray-100"
                 required
@@ -381,6 +388,15 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
                 className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700"
               >
                 Local demo accounts are disabled in production bundles. Configure Supabase auth to sign in securely.
+              </div>
+            )}
+
+            {usingSupabaseAuth && !allowAccountCreation && !error && (
+              <div
+                role="status"
+                className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-800"
+              >
+                Venue access is invitation-only. Contact your platform administrator or use the venue setup link you received.
               </div>
             )}
 
@@ -471,7 +487,7 @@ export function LoginScreen({ onContinueAsGuest }: LoginScreenProps) {
           )}
 
           <div className="space-y-3">
-            {usingSupabaseAuth && (
+            {usingSupabaseAuth && allowAccountCreation && (
               <button
                 type="button"
                 onClick={() => setShowSignUp((v) => !v)}

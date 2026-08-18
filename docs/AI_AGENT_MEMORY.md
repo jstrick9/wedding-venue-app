@@ -419,5 +419,29 @@ This path is **not live-certified yet** because a Supabase project has not been 
 
 `docs/reviews/175-cross-device-supabase-implementation.md`, `docs/reviews/174-local-first-multi-couple-remediation.md`, the #173 audit, and this section describe the current code truth. Numbered reviews before #173, `docs/CODE_REVIEW.md`, `docs/QUICKSTART.md`, and parts of `docs/platform/PLATFORM.md` contain historical claims and may describe an earlier commit. Read the current source and the P0/P1 list before trusting a “wired,” “complete,” test-count, or navigation claim.
 
+### 9.9 Multi-tenant platform-control implementation (Review #176)
+
+The selected product direction is now explicitly:
+
+- one Supabase project with organization-level tenant isolation;
+- one initial internal platform owner, with an extensible platform role table;
+- platform-created venue organizations;
+- one-time managed venue-administrator onboarding links;
+- venue administrators managing their own staff/admin/planner invitations;
+- platform metadata visibility with an audit foundation, not automatic unrestricted access to tenant business data;
+- MFA deferred until after the first platform-owner/managed-admin smoke test.
+
+Review #176 added:
+
+- `supabase/migrations/0006_platform_tenancy.sql` with `platform_memberships`, nullable pre-onboarding organization owners, `venue_admin_invites`, platform metadata RLS, platform audit foundation, and RPCs for platform venue creation and managed-admin invite claiming;
+- `src/services/platform/platformTypes.ts` and `platformAdminService.ts`;
+- `PlatformAdminPortal.tsx` at the root/`#/platform-admin` route;
+- `VenueAdminOnboarding.tsx` at `#/venue-onboarding?token=...`;
+- global platform role loading in Supabase Auth restoration/sign-in;
+- invite-only cloud login messaging and routing for regular organization invites;
+- `docs/platform/MULTI_TENANT_PLATFORM.md` with the live migration/bootstrap/onboarding/smoke checklist.
+
+The first platform owner is intentionally bootstrapped once through Supabase SQL Editor by inserting an active `platform_owner` row for the existing Supabase Auth user. No service-role credential belongs in Vercel or the browser. Migration `0006` and the live tenant/RLS/onboarding smoke test remain pending in the user's Supabase project; do not call this path live-certified until that test passes.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

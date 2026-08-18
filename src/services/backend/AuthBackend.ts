@@ -1,4 +1,5 @@
 import type { User, UserRole } from '../../types';
+import type { PlatformRole } from '../platform/platformTypes';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
 export interface BackendAuthSession {
@@ -6,6 +7,8 @@ export interface BackendAuthSession {
   accessToken: string;
   /** The user's active organization id (RLS scope) when known. */
   organizationId?: string;
+  /** A global platform role, separate from the user's venue organization role. */
+  platformRole?: PlatformRole;
 }
 
 function mapRole(rawRole: unknown): UserRole {
@@ -43,6 +46,21 @@ export function shouldUseSupabaseAuth(): boolean {
   return import.meta.env.VITE_BACKEND_PROVIDER === 'supabase' && isSupabaseConfigured();
 }
 
+async function loadPlatformRole(userId: string): Promise<PlatformRole | undefined> {
+  const { data, error } = await getSupabaseClient()
+    .from('platform_memberships')
+    .select('role,status')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .maybeSingle();
+  if (error || !data?.role) return undefined;
+  return data.role as PlatformRole;
+}
+
+function hasPlatformAdminAuthority(platformRole?: PlatformRole): boolean {
+  return platformRole === 'platform_owner' || platformRole === 'platform_admin';
+}
+
 export async function signInWithSupabase(
   email: string,
   password: string,
@@ -65,8 +83,12 @@ export async function signInWithSupabase(
     .limit(1)
     .maybeSingle();
 
+  const platformRole = await loadPlatformRole(data.user.id);
   const user = mapProfileToUser(
-    { ...profile, app_role: membership?.role },
+    {
+      ...profile,
+      app_role: hasPlatformAdminAuthority(platformRole) ? 'admin' : membership?.role,
+    },
     data.user.id,
     data.user.email || email,
   );
@@ -75,6 +97,7 @@ export async function signInWithSupabase(
     user,
     accessToken: data.session.access_token,
     organizationId: membership?.organization_id,
+    platformRole,
   };
 }
 
@@ -98,14 +121,19 @@ export async function restoreSupabaseSession(): Promise<BackendAuthSession | nul
     .limit(1)
     .maybeSingle();
 
+  const platformRole = await loadPlatformRole(session.user.id);
   return {
     user: mapProfileToUser(
-      { ...profile, app_role: membership?.role },
+      {
+        ...profile,
+        app_role: hasPlatformAdminAuthority(platformRole) ? 'admin' : membership?.role,
+      },
       session.user.id,
       session.user.email || '',
     ),
     accessToken: session.access_token,
     organizationId: membership?.organization_id,
+    platformRole,
   };
 }
 
@@ -190,6 +218,78 @@ export async function signUpWithSupabase({
     accessToken: data.session.access_token,
     organizationId: orgRow?.id,
   };
+  return session;
+}
+
+export interface VenueAdminInviteSignUpParams {
+  email: string;
+  password: string;
+  fullName: string;
+  inviteToken: string;
+}
+
+/**
+ * Create the first managed administrator for a platform-created venue. Unlike
+ * ordinary platform sign-up, this never creates a new organization; the
+ * invitation claims the organization created by the platform administrator.
+ */
+export async function signUpVenueAdminWithInvite({
+  email,
+  password,
+  fullName,
+  inviteToken,
+}: VenueAdminInviteSignUpParams): Promise<BackendAuthSession> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+  if (error) throw error;
+  if (!data.session || !data.user) {
+    throw new Error('Account created but no session was returned. Email confirmation may be enabled; complete confirmation or use a test project with confirmation disabled.');
+  }
+
+  const { data: accepted, error: acceptError } = await supabase.rpc('accept_venue_admin_invite', {
+    p_token: inviteToken,
+  });
+  if (acceptError) throw acceptError;
+  if (!accepted?.ok) {
+    throw new Error(String(accepted?.error || 'The venue administrator invitation could not be accepted.'));
+  }
+
+  const session = await restoreSupabaseSession();
+  if (!session) throw new Error('Venue administrator account was created, but the session could not be restored.');
+  return session;
+}
+
+export async function signUpOrganizationInvite({
+  email,
+  password,
+  fullName,
+  inviteToken,
+}: VenueAdminInviteSignUpParams): Promise<BackendAuthSession> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+  if (error) throw error;
+  if (!data.session || !data.user) {
+    throw new Error('Account created but no session was returned. Email confirmation may be enabled; complete confirmation or use a test project with confirmation disabled.');
+  }
+
+  const { data: accepted, error: acceptError } = await supabase.rpc('accept_invite', {
+    p_token: inviteToken,
+  });
+  if (acceptError) throw acceptError;
+  if (!accepted?.ok) {
+    throw new Error(String(accepted?.error || 'The organization invitation could not be accepted.'));
+  }
+
+  const session = await restoreSupabaseSession();
+  if (!session) throw new Error('Account was created, but the organization session could not be restored.');
   return session;
 }
 

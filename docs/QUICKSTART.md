@@ -128,14 +128,20 @@ npm run preview     # serve the built app
 
 ---
 
-## To go live with the multi-user platform (Supabase)
+## To go live with the multi-tenant platform (Supabase + Vercel)
 
-Full steps in `docs/platform/PLATFORM.md`. Short version:
-1. Create a free project at supabase.com.
-2. Apply the five migrations in `supabase/migrations/` (`0001`–`0005`).
-3. Create `.env.local` with `VITE_BACKEND_PROVIDER=supabase` + `VITE_SUPABASE_URL`
-   + `VITE_SUPABASE_ANON_KEY`.
-4. `npm run dev` → "Create a new account" appears on login. Apply migrations
-   `0001`–`0005` to enable the cross-device couple/guest invite-link path. Do not
-   use this mode for production venue data until Review #175's live Supabase/RLS
-   and Device A → Device B → Device C smoke test is green.
+The current setup runbooks are:
+
+- `docs/platform/PLATFORM.md` — backend architecture and original Supabase setup.
+- `docs/platform/MULTI_TENANT_PLATFORM.md` — platform owner, venue tenants, managed-admin onboarding, and tenant smoke test.
+
+Short version:
+1. Create/configure the Supabase project and Vercel environment variables.
+2. Apply migrations `0001` through `0006` in order. Migration `0006` adds the platform-control layer.
+3. Bootstrap the first `platform_owner` once in Supabase SQL Editor using the operator's Auth user id/email.
+4. Sign in at the root application URL to open the Platform Admin Console.
+5. Create a venue organization and copy its one-time managed-admin setup link.
+6. Have the venue administrator claim the link, create their own Supabase Auth account, and then use **Admin → Invite Members** for venue staff/planners.
+7. Run the platform-owner, managed-admin, tenant-isolation, and couple/guest cross-device smoke tests before using production data.
+
+Cloud venue accounts are invitation-only. The old local `admin`/`REPLACE_ON_FIRST_LOGIN` account is not the Supabase platform authority.

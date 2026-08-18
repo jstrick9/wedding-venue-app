@@ -15,29 +15,41 @@ import {
   saveSession,
   verifyPassword,
 } from '../utils/auth';
+import type { PlatformRole } from '../services/platform/platformTypes';
 import {
   restoreSupabaseSession,
   shouldUseSupabaseAuth,
   signInWithSupabase,
   signOutSupabase,
+  signUpOrganizationInvite,
   signUpWithSupabase,
 } from '../services/backend/AuthBackend';
+
+export interface AuthRegistrationParams {
+  email: string;
+  password: string;
+  fullName: string;
+  organizationName?: string;
+}
 
 interface AuthContextType {
   user: User | null;
   /** The user's active organization id (RLS scope), when on the Supabase backend. */
   organizationId: string | null;
+  /** Global platform role, separate from the venue organization role. */
+  platformRole: PlatformRole | null;
+  /** True for platform_owner and platform_admin memberships. */
+  isPlatformAdmin: boolean;
+  /** True for any active platform membership, including support. */
+  isPlatformSupport: boolean;
   isAdmin: boolean;
   isBasicUser: boolean;
   isGuest: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   /** Register a new account (Supabase backend). Returns an error message or null on success. */
-  register: (params: {
-    email: string;
-    password: string;
-    fullName: string;
-    organizationName?: string;
-  }) => Promise<string | null>;
+  register: (params: AuthRegistrationParams) => Promise<string | null>;
+  /** Register and accept an existing organization invitation without creating a new tenant. */
+  registerWithInvite: (inviteToken: string, params: AuthRegistrationParams) => Promise<string | null>;
   logout: () => void;
   continueAsGuest: () => void;
   createUser: (
@@ -89,6 +101,7 @@ function buildGuestUser(): User {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [platformRole, setPlatformRole] = useState<PlatformRole | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -98,9 +111,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (session?.user) {
             setUser(session.user);
             setOrganizationId(session.organizationId ?? null);
+            setPlatformRole(session.platformRole ?? null);
           } else {
             clearSession();
             setOrganizationId(null);
+            setPlatformRole(null);
           }
         })
         .finally(() => setInitialized(true));
@@ -118,6 +133,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (savedSession.isGuest) {
       const guestUser = buildGuestUser();
       setUser(guestUser);
+      setPlatformRole(null);
       saveSession(createSession(guestUser as any, true));
       setInitialized(true);
       return;
@@ -133,6 +149,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     setUser(foundUser);
+    setPlatformRole(null);
     saveSession(createSession(foundUser as any, false));
     setInitialized(true);
   }, []);
@@ -143,6 +160,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!session) return false;
       setUser(session.user);
       setOrganizationId(session.organizationId ?? null);
+      setPlatformRole(session.platformRole ?? null);
       return true;
     }
 
@@ -200,6 +218,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     setUser(null);
     setOrganizationId(null);
+    setPlatformRole(null);
     clearSession();
     if (shouldUseSupabaseAuth()) {
       void signOutSupabase();
@@ -214,15 +233,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const session = await signUpWithSupabase({ email, password, fullName, organizationName });
       setUser(session.user);
       setOrganizationId(session.organizationId ?? null);
+      setPlatformRole(session.platformRole ?? null);
       return null;
     } catch (err) {
       return err instanceof Error ? err.message : 'Unable to create your account.';
     }
   };
 
+  const registerWithInvite: AuthContextType['registerWithInvite'] = async (inviteToken, { email, password, fullName }) => {
+    if (!shouldUseSupabaseAuth()) {
+      return 'Organization invitations require the Supabase backend.';
+    }
+    try {
+      const session = await signUpOrganizationInvite({ email, password, fullName, inviteToken });
+      setUser(session.user);
+      setOrganizationId(session.organizationId ?? null);
+      setPlatformRole(session.platformRole ?? null);
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : 'Unable to create your invited account.';
+    }
+  };
+
   const continueAsGuest = () => {
     const guestUser = buildGuestUser();
     setUser(guestUser);
+    setPlatformRole(null);
     saveSession(createSession(guestUser as any, true));
   };
 
@@ -364,6 +400,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return true;
   };
 
+  const isPlatformAdmin = platformRole === 'platform_owner' || platformRole === 'platform_admin';
+  const isPlatformSupport = isPlatformAdmin || platformRole === 'platform_support';
   const isAdmin = user?.role === 'admin';
   const isBasicUser = user?.role === 'basic';
   const isGuest = user?.role === 'guest';
@@ -377,11 +415,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       value={{
         user,
         organizationId,
+        platformRole,
+        isPlatformAdmin,
+        isPlatformSupport,
         isAdmin,
         isBasicUser,
         isGuest,
         login,
         register,
+        registerWithInvite,
         logout,
         continueAsGuest,
         createUser,

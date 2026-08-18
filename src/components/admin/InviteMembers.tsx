@@ -131,7 +131,7 @@ export function InviteMembers() {
       {result?.inviteUrl && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-medium mb-1">Invitation link (local mode)</p>
+            <p className="font-medium mb-1">Invitation link</p>
             <button
               type="button"
               onClick={() => {

@@ -17,6 +17,8 @@ const CouplesPortal = lazy(() => import('./components/CouplesPortal'));
 const GuestPortal = lazy(() => import('./components/GuestPortal'));
 const ForcePasswordChange = lazy(() => import('./components/ForcePasswordChange'));
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then((m) => ({ default: m.AcceptInvite })));
+const PlatformAdminPortal = lazy(() => import('./components/PlatformAdminPortal'));
+const VenueAdminOnboarding = lazy(() => import('./components/VenueAdminOnboarding'));
 
 /**
  * Surfaces `spm_storage_error` events as toasts no matter which screen is
@@ -24,6 +26,13 @@ const AcceptInvite = lazy(() => import('./components/AcceptInvite').then((m) => 
  * listener only existed inside AuthenticatedApp, so storage failures on the
  * login/guest screens were silently dropped.
  */
+function getVenueAdminTokenFromLocation(location: Location = window.location): string | undefined {
+  const hash = location.hash || '';
+  const queryIndex = hash.indexOf('?');
+  if (queryIndex < 0) return undefined;
+  return new URLSearchParams(hash.slice(queryIndex + 1)).get('token') || undefined;
+}
+
 function GlobalStorageErrorListener() {
   useEffect(
     () =>
@@ -37,7 +46,7 @@ function GlobalStorageErrorListener() {
 }
 
 function AppContent() {
-  const { user, continueAsGuest } = useAuth();
+  const { user, continueAsGuest, isPlatformAdmin, registerWithInvite } = useAuth();
   const [hash, setHash] = useState(window.location.hash);
 
   useEffect(() => {
@@ -46,12 +55,28 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // First venue administrator onboarding is a public invitation route. The
+  // invitee creates an Auth account and claims the platform-created tenant.
+  if (hash.startsWith('#/venue-onboarding')) {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <VenueAdminOnboarding token={getVenueAdminTokenFromLocation(window.location)} />
+      </Suspense>
+    );
+  }
+
   // Accept-invite route: requires the user to be signed in.
   if (hash.startsWith('#/accept-invite/')) {
-    if (!user) {
-      return <LoginScreen onContinueAsGuest={continueAsGuest} />;
-    }
     const token = hash.slice('#/accept-invite/'.length).split('/')[0];
+    if (!user) {
+      return (
+        <LoginScreen
+          onContinueAsGuest={continueAsGuest}
+          allowAccountCreation
+          onRegister={(params) => registerWithInvite(token, params)}
+        />
+      );
+    }
     return (
       <Suspense fallback={<LoadingScreen />}>
         <AcceptInvite
@@ -108,6 +133,23 @@ function AppContent() {
     );
   }
 
+  if (hash.startsWith('#/platform-admin') && !user) {
+    return <LoginScreen onContinueAsGuest={continueAsGuest} />;
+  }
+
+  if (hash.startsWith('#/platform-admin') && user && !isPlatformAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-lg">
+          <div className="text-4xl">🔒</div>
+          <h1 className="mt-3 text-lg font-bold text-gray-900">Platform administrator access required</h1>
+          <p className="mt-2 text-sm text-gray-600">This account is not assigned a platform administrator role.</p>
+          <button type="button" onClick={() => { window.location.hash = ''; }} className="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white">Return to workspace</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return <LoginScreen onContinueAsGuest={continueAsGuest} />;
   }
@@ -120,6 +162,14 @@ function AppContent() {
         fallback={<LoadingScreen />}
       >
         <ForcePasswordChange />
+      </Suspense>
+    );
+  }
+
+  if (isPlatformAdmin && (hash === '' || hash === '#/' || hash.startsWith('#/platform-admin'))) {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <PlatformAdminPortal onOpenVenueWorkspace={() => { window.location.hash = '#/venue'; }} />
       </Suspense>
     );
   }
