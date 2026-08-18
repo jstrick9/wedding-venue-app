@@ -9,7 +9,11 @@ export interface BackendAuthSession {
 }
 
 function mapRole(rawRole: unknown): UserRole {
-  if (rawRole === 'admin' || rawRole === 'staff' || rawRole === 'guest') return rawRole;
+  // Supabase has an explicit owner role; the local UI's admin role is the
+  // equivalent authority for the single-venue product.
+  if (rawRole === 'owner' || rawRole === 'admin') return 'admin';
+  if (rawRole === 'staff') return 'staff';
+  if (rawRole === 'guest') return 'guest';
   return 'basic';
 }
 
@@ -160,20 +164,22 @@ export async function signUpWithSupabase({
     .insert({ name: orgName, slug: slugify(orgName), owner_id: data.user.id });
   if (orgError) throw orgError;
 
-  const { data: orgRow } = await supabase
+  const { data: orgRow, error: orgLookupError } = await supabase
     .from('organizations')
     .select('id')
     .eq('owner_id', data.user.id)
     .maybeSingle();
-
-  if (orgRow) {
-    await supabase.from('organization_memberships').insert({
-      organization_id: orgRow.id,
-      user_id: data.user.id,
-      role: 'owner',
-      status: 'active',
-    });
+  if (orgLookupError || !orgRow) {
+    throw orgLookupError || new Error('Organization bootstrap did not return an organization.');
   }
+
+  const { error: membershipError } = await supabase.from('organization_memberships').insert({
+    organization_id: orgRow.id,
+    user_id: data.user.id,
+    role: 'owner',
+    status: 'active',
+  });
+  if (membershipError) throw membershipError;
 
   const session: BackendAuthSession = {
     user: mapProfileToUser(

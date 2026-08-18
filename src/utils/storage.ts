@@ -52,7 +52,12 @@ function getFirstExistingRawValue(
   return null;
 }
 
-export function saveVersionedStorage<T>(key: string, version: number, data: T): void {
+export function saveVersionedStorage<T>(
+  key: string,
+  version: number,
+  data: T,
+  options: { emitChange?: boolean } = {},
+): void {
   const envelope: VersionedStorageEnvelope<T> = {
     version,
     savedAt: new Date().toISOString(),
@@ -61,6 +66,20 @@ export function saveVersionedStorage<T>(key: string, version: number, data: T): 
 
   try {
     localStorage.setItem(key, JSON.stringify(envelope));
+    if (options.emitChange !== false) {
+      // Defer notification until the current call stack completes. Some local
+      // getters seed defaults while a component is rendering; dispatching a
+      // React-facing event synchronously from that getter causes setState-during
+      // render warnings. The backend/couple bridges only need eventual delivery.
+      const notify = () => {
+        // The storage key is intentionally carried as the event type. The
+        // backend repository resolves it to its domain key, while local
+        // consumers can continue to handle the existing named event types.
+        emit('spm_data_changed', { type: key });
+      };
+      if (typeof queueMicrotask === 'function') queueMicrotask(notify);
+      else setTimeout(notify, 0);
+    }
   } catch (error) {
     console.error(`Failed to save versioned storage for key ${key}:`, error);
     
@@ -104,14 +123,14 @@ export function loadVersionedStorage<T>({
         candidate = envelope.data as T;
       } else if (migration) {
         candidate = migration(envelope.data);
-        saveVersionedStorage(key, currentVersion, candidate);
+        saveVersionedStorage(key, currentVersion, candidate, { emitChange: false });
       } else {
         candidate = envelope.data as T;
       }
     } else {
       const rawMigration = migrations[0];
       candidate = rawMigration ? rawMigration(parsed) : (parsed as T);
-      saveVersionedStorage(key, currentVersion, candidate);
+      saveVersionedStorage(key, currentVersion, candidate, { emitChange: false });
     }
 
     const normalized = normalize ? normalize(candidate) : candidate;

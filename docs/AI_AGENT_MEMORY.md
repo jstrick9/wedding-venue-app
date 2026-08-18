@@ -390,7 +390,7 @@ Twenty-four runtime files currently use `// @ts-nocheck`, including major admin,
 
 ### 9.6 Local-first remediation progress (Review #174)
 
-The product direction is now explicitly **one venue, many couple events, local-first** for vetting, usability, and cost control. Supabase scaffolding remains dormant/optional and must not drive local behavior.
+The product direction is now explicitly **one venue, many couple events, local-first by default** for vetting, usability, and cost control. Supabase is optional until a project is configured; when enabled, the cross-device path below becomes the source of truth for shared couple/guest data and must not silently fall back after a cloud error.
 
 Review #174 implemented and tested:
 - Couple guest and RSVP reads now remain in their couple-scoped stores instead of falling back to the legacy venue-wide portal stores after authentication.
@@ -403,9 +403,21 @@ Review #174 implemented and tested:
 
 Local-mode limitations remain intentional: localStorage/sessionStorage is per browser/device, so separate devices do not share couples, guests, RSVPs, or venue data. Use backup/export/import for controlled vetting transfer. Do not call localStorage-backed portal access production security.
 
-### 9.7 Documentation precedence
+### 9.7 Cross-device Supabase implementation (Review #175)
 
-`docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md` and this section describe the current code truth. Numbered reviews before #173, `docs/CODE_REVIEW.md`, `docs/QUICKSTART.md`, and parts of `docs/platform/PLATFORM.md` contain historical claims and may describe an earlier commit. Read the current source and the P0/P1 list before trusting a “wired,” “complete,” test-count, or navigation claim.
+The repository now contains the first cross-device implementation path for the selected architecture: Supabase + Vercel + invite-link access.
+
+- `supabase/migrations/0001_initial.sql` now permits the first authenticated organization owner to create the initial owner membership; `AuthBackend` maps Supabase `owner` to the local admin authority and checks bootstrap errors.
+- `0003_org_data.sql` is enabled for Realtime invalidation. `EntityRepository` mirrors all business domains except local-only authentication/security/session domains, and `useEntityBackendSync` rehydrates React state on remote changes.
+- `0005_couple_portal_sync.sql` adds private per-couple snapshots and token-validated RPCs for couple/collaborator access, guest hydration, and guest RSVP writes.
+- `src/services/couples/coupleCloudSync.ts` builds event-scoped snapshots, registers them from the authenticated venue workspace, hydrates a couple portal on another device, and polls for changes. The guest portal uses the guest token RPC and polls for RSVP/config updates.
+- `CouplesPortal.tsx` and `GuestPortal.tsx` remain local-cache-first for responsiveness, but when `VITE_BACKEND_PROVIDER=supabase` is configured they pull/push the Supabase snapshot path.
+
+This path is **not live-certified yet** because a Supabase project has not been created in this workspace. Before real use: create the project, apply migrations `0001`–`0005`, configure Vercel `VITE_BACKEND_PROVIDER=supabase`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY`, then run the device-A/device-B/device-C smoke workflow in Review #175. Current guest snapshot polling is approximately five seconds; true broadcast/realtime optimization and token-field redaction remain follow-up hardening.
+
+### 9.8 Documentation precedence
+
+`docs/reviews/175-cross-device-supabase-implementation.md`, `docs/reviews/174-local-first-multi-couple-remediation.md`, the #173 audit, and this section describe the current code truth. Numbered reviews before #173, `docs/CODE_REVIEW.md`, `docs/QUICKSTART.md`, and parts of `docs/platform/PLATFORM.md` contain historical claims and may describe an earlier commit. Read the current source and the P0/P1 list before trusting a “wired,” “complete,” test-count, or navigation claim.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*

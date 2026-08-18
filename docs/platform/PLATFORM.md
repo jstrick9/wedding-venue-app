@@ -104,16 +104,16 @@ Email (invitations, RSVP confirmations, staff notifications) uses a Supabase
 | Org scope / RLS | ⚠️ Schema exists; owner mapping and broad `org_data` member write policy require remediation and live tests. | `AuthBackend`, migrations `0001`/`0003` |
 | Layout persistence | ⚠️ Saved layouts only; current cloud save is organization-wide destructive replace-sync with no safe optimistic revision. | `services/repository/layoutRepository.ts`, `services/sync/layoutSync.ts` |
 | Real-time collaboration | ⚠️ Layout-table channel only; entity/couple/operations data is not realtime. | `services/sync/layoutRealtime.ts` |
-| Server-side guest portal | ⚠️ Public RPCs exist, but access/deadline/IP handling needs fixes and couple guests are not projected into `public.guests`. | `services/portal/guestPortalBackend.ts`, migration `0002_guest_portal.sql` |
+| Server-side guest portal | ⚠️ Existing public RPCs remain for the legacy portal; new couple snapshot RPCs provide the cross-device invite-link path, pending live-project verification. | `services/portal/guestPortalBackend.ts`, `services/couples/coupleCloudSync.ts`, migrations `0002`/`0005` |
 | Object storage for images | ✅ Seam exists and is unit-tested; hosted image references still need live bucket/RLS verification. | `services/storage/*`, `SafeImage`, `MultiImageUpload` |
-| Entity repository | ⚠️ 28 catalog/settings domains only; active UI hydration and several event-key mappings are incomplete. | `services/repository/entityRepository.ts`, `services/sync/entitySync.ts`, migration `0003_org_data.sql` |
-| Couple/guest/operations/admin settings data | ❌ Not end-to-end cloud-backed; most remains localStorage. | `services/couples/*`, admin settings, `BACKUP_DOMAINS` |
+| Entity repository | ⚠️ Extended to mirror business domains and hydrate on `org_data` Realtime changes; pending live RLS verification. | `services/repository/entityRepository.ts`, `services/sync/*`, migration `0003_org_data.sql` |
+| Couple/guest cross-device snapshots | ⚠️ Code and migration path added; requires `0005` plus a live Supabase project. | `services/couples/coupleCloudSync.ts`, `GuestPortal.tsx`, `CouplesPortal.tsx` |
 | Multi-org invites | ⚠️ RPC and UI exist; acceptance does not refresh active AuthContext and invite email binding is not enforced. | `services/org/inviteService.ts`, `InviteMembers`, `AcceptInvite`, migration `0004_invites.sql` |
 | DB schema / storage buckets / Edge Function | ⚠️ Migration and function code exist; no live project/RLS/Resend certification has been run. | `supabase/migrations/*`, `supabase/functions/send-email/` |
 
 ## What still needs a live project (just apply migrations + test)
 
-The backend seams are unit-tested against mocks, but they are **not a substitute for a live RLS/integration test**. Final verification requires running against your real project (paste your URL + anon key), applying all migrations, and first resolving the P0/P1 findings in Review #173. In particular, do not assume all couple/guest/operations/admin data is cloud-backed simply because the provider flag is set.
+The backend seams are unit-tested against mocks, but they are **not a substitute for a live RLS/integration test**. Final verification requires running against your real project (paste your URL + anon key), applying all migrations, and completing the live smoke test in Review #175. In particular, do not assume cross-device couple/guest sharing is live until the Supabase project passes the device-A/device-B/device-C workflow.
 
 The remaining migration/application checklist is:
 
@@ -121,8 +121,9 @@ The remaining migration/application checklist is:
    identity RPC + RSVP RPC).
 2. **`0003_org_data.sql`** — generic org-scoped catalog/asset key-value store.
 3. **`0004_invites.sql`** — organization invites + accept-invite RPC.
+4. **`0005_couple_portal_sync.sql`** — cross-device couple snapshots, token-validated couple access, guest portal hydration, and guest RSVP writes.
 
-Apply all four (`supabase db push`, or paste each into the SQL editor) only in a
+Apply all five (`supabase db push`, or paste each into the SQL editor) only in a
 non-production test project first. Setting `VITE_BACKEND_PROVIDER=supabase` turns
 on the available seams, but it does not make every local couple/guest/operations
 workflow cloud-backed. Complete Review #173's P0/P1 work and a live RLS/browser

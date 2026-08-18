@@ -44,3 +44,9 @@ drop trigger if exists set_org_data_updated_at on public.org_data;
 create trigger set_org_data_updated_at
   before update on public.org_data
   for each row execute function public.set_org_data_updated_at();
+
+-- Enable cross-device catalog/couple mirror invalidation through Supabase Realtime.
+do $$ begin
+  alter publication supabase_realtime add table public.org_data;
+exception when duplicate_object then null;
+end $$;

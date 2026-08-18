@@ -24,40 +24,24 @@ export interface EntitySyncContext {
 
 export type EntityDomain = string;
 
-/** Which domains belong to the org-scoped catalog/asset set (syncable). */
-const SYNCABLE_PREFIXES = [
-  'venues',
-  'tableSpecs',
-  'fixtureTypes',
-  'guidelines',
-  'templates',
-  'linenColors',
-  'chairSpecs',
-  'wallStyles',
-  'spacingSettings',
-  'alignmentSettings',
-  'indoorFeatureTemplates',
-  'outdoorFeatureTemplates',
-  'decorItems',
-  'decorCategories',
-  'decorArrangements',
-  'decorPackages',
-  'eventRoles',
-  'eventQuestions',
-  'eventAnswers',
-  'staffTasks',
-  'staffAreas',
-  'staffShifts',
-  'vendors',
-  'vendorPayments',
-  'timelines',
-  'rbacRoles',
-  'rbacGroups',
-  'rbacAudit',
-];
+/**
+ * Domains that remain intentionally local while local authentication and
+ * browser-only session state are active. All business data can otherwise be
+ * mirrored into the single-venue organization store for cross-device use.
+ */
+const LOCAL_ONLY_DOMAINS = new Set([
+  'users',
+  'securitySettings',
+  'orgInvites',
+  'coupleChatRead',
+  'savedLayouts', // Saved layouts use the dedicated layouts repository.
+]);
 
 export function isSyncableDomain(domain: EntityDomain): boolean {
-  return SYNCABLE_PREFIXES.includes(domain);
+  const definition = BACKUP_DOMAINS.find(
+    (entry) => entry.key === domain || entry.storageKey === domain,
+  );
+  return Boolean(definition && !LOCAL_ONLY_DOMAINS.has(definition.key));
 }
 
 export interface EntityRepository {
@@ -104,7 +88,9 @@ export class SupabaseEntityRepository implements EntityRepository {
 
   async pushDomain(context: EntitySyncContext, domain: string): Promise<void> {
     if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
-    const def = BACKUP_DOMAINS.find((d) => d.key === domain);
+    const def = BACKUP_DOMAINS.find(
+      (d) => d.key === domain || d.storageKey === domain,
+    );
     if (!def) return;
     await this.upsertDomain(context, domain, def.read());
   }

@@ -94,7 +94,7 @@ function writeJson(key: string, value: unknown): void {
 
 function writeVersioned(key: string, version: number, value: unknown): void {
   if (value === undefined) return;
-  saveVersionedStorage(key, version, value);
+  saveVersionedStorage(key, version, value, { emitChange: false });
 }
 
 export const BACKUP_DOMAINS: BackupDomain[] = [

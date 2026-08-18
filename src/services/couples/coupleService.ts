@@ -150,7 +150,7 @@ export function createCoupleEvent(input: {
   createdBy?: string;
 }): CoupleEvent {
   const event: CoupleEvent = {
-    id: `couple-${Date.now()}`,
+    id: createOpaqueToken('couple'),
     coupleName: input.coupleName.trim(),
     inviteToken: randomToken('cp'),
     status: 'invited',

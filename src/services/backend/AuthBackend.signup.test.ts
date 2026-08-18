@@ -32,7 +32,7 @@ describe('signUpWithSupabase', () => {
 
     // organizations.insert then .select
     const insertOrg = { error: null };
-    const selectOrg = { data: [{ id: 'org1' }], error: null };
+    const selectOrg = { data: { id: 'org1' }, error: null };
     const insertMembership = { error: null };
 
     mockFrom.mockImplementation((table: string) => {
@@ -56,6 +56,7 @@ describe('signUpWithSupabase', () => {
     });
 
     expect(session.accessToken).toBe('tok');
+    expect(session.organizationId).toBe('org1');
     expect(session.user.email).toBe('a@b.com');
     expect(session.user.role).toBe('admin');
     expect(session.user.requiresPasswordChange).toBeUndefined();

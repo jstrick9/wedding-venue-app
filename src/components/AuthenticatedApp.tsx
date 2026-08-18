@@ -421,7 +421,11 @@ export default function AuthenticatedApp() {
     if (!entityBackendSync.enabled) return;
     return on('spm_data_changed', (detail) => {
       const type = detail?.type;
-      if (!type || type === 'all') return;
+      if (!type || type === 'backend_hydrated') return;
+      if (type === 'all') {
+        void entityBackendSync.saveToBackend();
+        return;
+      }
       void entityBackendSync.saveDomainToBackend(type);
     });
   }, [entityBackendSync]);

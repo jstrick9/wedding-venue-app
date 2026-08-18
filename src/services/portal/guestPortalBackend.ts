@@ -6,6 +6,7 @@ import {
   setPortalRSVPSubmissions,
 } from '../../utils/guestPortal';
 import type { GuestPortalGuestRecord, RSVPSubmission } from '../../types';
+import { pullGuestPortalSnapshot, submitGuestPortalRsvp, isCoupleCloudEnabled } from '../couples/coupleCloudSync';
 
 /**
  * Guest-portal persistence/identity abstraction.
@@ -22,6 +23,8 @@ import type { GuestPortalGuestRecord, RSVPSubmission } from '../../types';
 
 export interface GuestPortalContext {
   eventName: string;
+  /** Couple event id when the portal is accessed through a per-couple invite. */
+  coupleEventId?: string;
 }
 
 export interface GuestPortalBackend {
@@ -56,10 +59,27 @@ export class SupabaseGuestPortalBackend implements GuestPortalBackend {
   async findGuest(context: GuestPortalContext, identifier: string): Promise<GuestPortalGuestRecord | undefined> {
     if (!isSupabaseConfigured()) return undefined;
     const supabase = getSupabaseClient();
+    const token = identifier.trim();
+    if (context.coupleEventId && token.length >= 16 && isCoupleCloudEnabled()) {
+      const remote = await pullGuestPortalSnapshot(context.coupleEventId, token);
+      if (remote?.guest) {
+        const g = remote.guest;
+        return {
+          id: String(g.id),
+          name: String(g.name || g.full_name || ''),
+          email: g.email ? String(g.email) : undefined,
+          token,
+          eventName: context.coupleEventId,
+          eventKey: context.coupleEventId,
+          allowPortalAccess: true,
+          tableId: g.tableId || g.table_assignment || undefined,
+          roomId: g.roomId || g.room_assignment || undefined,
+        } as GuestPortalGuestRecord;
+      }
+    }
     // The token is the primary server-side identifier. For email/name lookup we
     // still fall back to local records if the org has published them (the
     // server RPC only resolves tokens).
-    const token = identifier.trim();
     if (token.length >= 8) {
       const { data, error } = await supabase.rpc('get_guest_by_portal_token', { p_token: token });
       if (error) return undefined;
@@ -88,6 +108,9 @@ export class SupabaseGuestPortalBackend implements GuestPortalBackend {
   }
 
   async submitRSVP(context: GuestPortalContext, submission: RSVPSubmission): Promise<boolean> {
+    if (context.coupleEventId && submission.token && isCoupleCloudEnabled()) {
+      return submitGuestPortalRsvp(context.coupleEventId, submission.token, submission);
+    }
     if (!isSupabaseConfigured()) return false;
     const supabase = getSupabaseClient();
     const token = submission.token || findToken(submission);

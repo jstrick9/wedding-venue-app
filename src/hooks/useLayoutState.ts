@@ -424,7 +424,7 @@ export function useLayoutState(initialVenueId: string = 'setup-venue') {
     const handleDataChange = (detail: { type: string } | void) => {
       const type = detail?.type;
 
-      if (type === 'venues' || type === 'all') {
+      if (type === 'venues' || type === 'all' || type === 'backend_hydrated') {
         const allVenues = getVenues();
         setVenuesState(allVenues);
 

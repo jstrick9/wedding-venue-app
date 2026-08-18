@@ -21,10 +21,11 @@ npm run build
 
 The app runs in **Local** mode by default (all data in `localStorage`, zero
 setup — best for trying it and single-device use). It contains a **partial
-Supabase backend seam** for account auth, saved-layout sync, selected catalog
-entities, object storage, invites, guest RPCs, and transactional email. The
-Supabase mode is not yet a production-complete multi-user implementation for
-all couple, guest, operations, and admin domains; review
+Supabase backend seam** for account auth, saved-layout sync, business-domain
+mirroring, cross-device couple snapshots, guest RSVP RPCs, object storage,
+invites, and transactional email. The cross-device path requires migrations
+`0001`–`0005` and a live Supabase project; it is not yet live-verified for
+production. Review
 `docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md`
 before enabling it with real venue data.
 

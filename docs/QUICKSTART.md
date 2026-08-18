@@ -132,11 +132,10 @@ npm run preview     # serve the built app
 
 Full steps in `docs/platform/PLATFORM.md`. Short version:
 1. Create a free project at supabase.com.
-2. Apply the four migrations in `supabase/migrations/` (`0001`–`0004`).
+2. Apply the five migrations in `supabase/migrations/` (`0001`–`0005`).
 3. Create `.env.local` with `VITE_BACKEND_PROVIDER=supabase` + `VITE_SUPABASE_URL`
    + `VITE_SUPABASE_ANON_KEY`.
-4. `npm run dev` → "Create a new account" appears on login. Auth, layout sync,
-   object storage, invites, and the guest RPC are present as backend seams, but
-   not all couple/guest/operations/admin domains are cloud-backed yet. Do not use
-   this mode for production venue data until the P0 blockers in Review #173 are
-   resolved and a live Supabase/RLS smoke test is green.
+4. `npm run dev` → "Create a new account" appears on login. Apply migrations
+   `0001`–`0005` to enable the cross-device couple/guest invite-link path. Do not
+   use this mode for production venue data until Review #175's live Supabase/RLS
+   and Device A → Device B → Device C smoke test is green.

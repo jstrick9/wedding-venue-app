@@ -33,6 +33,7 @@ import {
   PortalMealOption,
   VenueMapPoint,
   CoupleGuestEvent,
+  CoupleEvent,
   DEFAULT_MEAL_OPTIONS,
 } from '../types';
 import {
@@ -53,8 +54,15 @@ import {
 } from '../utils/guestPortal';
 import { verifySecret } from '../utils/auth';
 import { useBrandingConfig } from '../config';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { STORAGE_VERSIONS } from '../constants/storageVersions';
+import { saveVersionedStorage } from '../utils/storage';
 import { deriveShades } from '../utils/color';
 import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
+import {
+  isCoupleCloudEnabled,
+  pullGuestPortalSnapshot,
+} from '../services/couples/coupleCloudSync';
 import {
   getCoupleGuests,
   getCouplePortalConfig,
@@ -103,6 +111,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   const isPreview = preview;
   const venueConfig = useBrandingConfig();
   const [config, setConfig] = useState<GuestPortalConfig | null>(null);
+  const [remoteCouple, setRemoteCouple] = useState<CoupleEvent | undefined>();
   const [portalData, setPortalData] = useState<PortalData>({
     venues: [],
     guests: [],
@@ -133,8 +142,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
   // Per-couple guest portal: scopes config, guests, and RSVPs to a couple event.
   const isCouplePortal = !!coupleEventId;
   const couple = useMemo(
-    () => (coupleEventId ? findCoupleEventById(coupleEventId) : undefined),
-    [coupleEventId],
+    () => (coupleEventId ? findCoupleEventById(coupleEventId) || remoteCouple : remoteCouple),
+    [coupleEventId, remoteCouple],
   );
 
   // Shared helper: open a map point in Google Maps when it has GPS.
@@ -142,6 +151,54 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     if (p.lat == null || p.lng == null) return;
     window.open(`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`, '_blank');
   };
+
+  // On a separate device the browser has no local CoupleEvent/guest record.
+  // Hydrate the public, token-validated snapshot before relying on localStorage.
+  useEffect(() => {
+    if (!isCoupleCloudEnabled() || !isCouplePortal || !coupleEventId || !guestToken) return;
+    let cancelled = false;
+
+    const hydrateGuest = async () => {
+      const remote = await pullGuestPortalSnapshot(coupleEventId, guestToken);
+      if (!remote || cancelled || !remote.guest) return;
+      const remoteEvent = remote.event?.find((candidate) => candidate.id === coupleEventId);
+      const remoteConfig = remote.portalConfig?.[coupleEventId]
+        || Object.values(remote.portalConfig || {})[0]
+        || null;
+      const guest = {
+        ...(remote.guest as unknown as GuestPortalGuestRecord),
+        token: guestToken,
+        eventName: coupleEventId,
+        eventKey: coupleEventId,
+        allowPortalAccess: true,
+      };
+      const rsvp = remote.rsvp ? { ...remote.rsvp, token: guestToken } : undefined;
+      if (remote.venueMap !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_MAP_CONFIGS, STORAGE_VERSIONS.VENUE_MAP_CONFIGS, remote.venueMap);
+      if (remote.venueRules !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_RULES, STORAGE_VERSIONS.VENUE_RULES, remote.venueRules);
+      if (remote.venueWeather !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_WEATHER, STORAGE_VERSIONS.VENUE_WEATHER, remote.venueWeather);
+      if (remoteEvent) setRemoteCouple(remoteEvent);
+      if (remoteConfig) setConfig(remoteConfig);
+      setPortalData((previous) => ({
+        venues: Array.isArray(remote.venues) ? remote.venues as Venue[] : previous.venues,
+        guests: [guest],
+        submissions: rsvp ? [rsvp] : [],
+        guestEvents: Array.isArray(remote.guestEvents)
+          ? (remote.guestEvents as CoupleGuestEvent[]).filter((item) => item.coupleEventId === coupleEventId)
+          : previous.guestEvents,
+      }));
+      setIsAuthed(true);
+      setActiveEventName(remoteConfig?.eventTitle || coupleEventId);
+      setResolvedGuestId(guest.id);
+      saveGuestPortalSession(remoteConfig, guestToken, remoteConfig?.eventTitle || coupleEventId, guest.id, coupleEventId);
+    };
+
+    void hydrateGuest();
+    const poll = window.setInterval(() => { void hydrateGuest(); }, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(poll);
+    };
+  }, [coupleEventId, guestToken, isCouplePortal]);
 
   useEffect(() => {
     try {
@@ -393,7 +450,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     const backend = getGuestPortalBackend();
     const guest = coupleGuest || (
       backend.provider === 'supabase'
-        ? await backend.findGuest({ eventName: config.eventTitle }, guestIdentifier)
+        ? await backend.findGuest({
+            eventName: config.eventTitle,
+            coupleEventId: isCouplePortal ? coupleEventId : undefined,
+          }, guestIdentifier)
         : findGuestInEvent(config.eventTitle, guestIdentifier)
     );
     const guestScope = isCouplePortal && coupleEventId ? coupleEventId : config.eventTitle;
@@ -558,7 +618,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       setPortalRSVPSubmissions(updatedSubmissions);
     }
     void getGuestPortalBackend()
-      .submitRSVP({ eventName }, newSubmission)
+      .submitRSVP({ eventName, coupleEventId: isCouplePortal ? coupleEventId : undefined }, newSubmission)
       .then(() => setIsSubmittingRSVP(false))
       .catch(() => setIsSubmittingRSVP(false));
 

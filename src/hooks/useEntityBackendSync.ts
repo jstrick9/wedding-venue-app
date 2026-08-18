@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { canSyncEntities, pullEntities, pushEntities, pushEntityDomain } from '../services/sync/entitySync';
+import { subscribeToEntityChanges } from '../services/sync/entityRealtime';
 
 export interface EntityBackendSyncOptions {
   userId: string | null;
@@ -71,6 +72,11 @@ export function useEntityBackendSync({
     loadedRef.current = true;
     void loadFromBackend();
   }, [enabled, context, loadFromBackend]);
+
+  useEffect(() => {
+    if (!enabled || !context) return;
+    return subscribeToEntityChanges(context, () => onLoaded?.());
+  }, [enabled, context, onLoaded]);
 
   // Stable object identity so consumers can depend on it without re-rendering.
   return useMemo(

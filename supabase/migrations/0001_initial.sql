@@ -397,6 +397,26 @@ create policy "org_update_admins" on public.organizations for update using (publ
 create policy "membership_select_members" on public.organization_memberships for select using (public.is_org_member(organization_id));
 create policy "membership_manage_admins" on public.organization_memberships for all using (public.has_org_role(organization_id, array['owner','admin']::public.app_role[])) with check (public.has_org_role(organization_id, array['owner','admin']::public.app_role[]));
 
+-- The first owner has no membership yet. Permit exactly that owner to create
+-- the initial active owner membership during sign-up; subsequent membership
+-- changes still require an existing owner/admin membership.
+create policy "membership_bootstrap_owner" on public.organization_memberships for insert
+with check (
+  user_id = auth.uid()
+  and role = 'owner'
+  and status = 'active'
+  and exists (
+    select 1
+    from public.organizations o
+    where o.id = organization_id
+      and o.owner_id = auth.uid()
+      and not exists (
+        select 1 from public.organization_memberships existing
+        where existing.organization_id = public.organization_memberships.organization_id
+      )
+  )
+);
+
 -- Organization-scoped tables
 create policy "venues_select_members" on public.venues for select using (public.is_org_member(organization_id));
 create policy "venues_manage_admins" on public.venues for all using (public.has_org_role(organization_id, array['owner','admin']::public.app_role[])) with check (public.has_org_role(organization_id, array['owner','admin']::public.app_role[]));

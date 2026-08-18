@@ -68,6 +68,14 @@ import { getVenueMapConfig, findRainContingency, getVenueRules } from '../servic
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import { useBrandingConfig } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { on } from '../utils/appEvents';
+import {
+  buildCouplePortalSnapshot,
+  hydrateCouplePortalSnapshot,
+  isCoupleCloudEnabled,
+  pullCouplePortalSnapshot,
+  saveCouplePortalSnapshot,
+} from '../services/couples/coupleCloudSync';
 import { EventQuestionsWizard } from './EventQuestionsWizard';
 import { showToast } from './Toast';
 import { createSecretRecord } from '../utils/auth';
@@ -115,6 +123,8 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const [invalidInvite, setInvalidInvite] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const [demoSelectToken, setDemoSelectToken] = useState('');
+  const cloudHydratingRef = useRef(false);
+  const cloudSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const event = useMemo(
     () => events.find((e) => e.id === session?.eventId) || null,
@@ -171,6 +181,58 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     setSession(newSession);
     setEvents(getCoupleEvents());
   }, [coupleToken, session]);
+
+  // Cross-device couple sync: Supabase is optional, but when configured the
+  // invite token becomes the remote session key. The local services remain the
+  // immediate UI cache; a short polling interval keeps another device's edits
+  // visible without requiring the couple to create a Supabase Auth account.
+  const cloudToken = coupleToken || event?.inviteToken || '';
+  useEffect(() => {
+    if (!isCoupleCloudEnabled() || !cloudToken) return;
+    let cancelled = false;
+
+    const hydrateRemote = async () => {
+      const snapshot = await pullCouplePortalSnapshot(cloudToken);
+      if (!snapshot || cancelled) return;
+      cloudHydratingRef.current = true;
+      hydrateCouplePortalSnapshot(snapshot);
+      const latestEvents = getCoupleEvents();
+      setEvents(latestEvents);
+      const resolved = resolveCoupleInviteToken(cloudToken);
+      if (resolved) {
+        saveCoupleSession(resolved.event.id, resolved.collaborator.id);
+        setSession(loadCoupleSession());
+        setInvalidInvite(false);
+      }
+      cloudHydratingRef.current = false;
+    };
+
+    const pushLocalSnapshot = async () => {
+      if (cloudHydratingRef.current) return;
+      const activeEventId = event?.id || session?.eventId;
+      if (!activeEventId) return;
+      const snapshot = await buildCouplePortalSnapshot(activeEventId);
+      if (snapshot) await saveCouplePortalSnapshot(cloudToken, snapshot);
+    };
+
+    void hydrateRemote();
+    const off = on('spm_data_changed', (detail) => {
+      if (cloudHydratingRef.current) return;
+      const type = detail?.type || '';
+      if (type !== 'all' && !type.includes('couple') && !type.includes('guest') && !type.includes('package')) return;
+      if (cloudSaveTimerRef.current) clearTimeout(cloudSaveTimerRef.current);
+      cloudSaveTimerRef.current = setTimeout(() => { void pushLocalSnapshot(); }, 350);
+    });
+    const poll = window.setInterval(() => { void hydrateRemote(); }, 5000);
+
+    return () => {
+      cancelled = true;
+      off();
+      window.clearInterval(poll);
+      if (cloudSaveTimerRef.current) clearTimeout(cloudSaveTimerRef.current);
+      cloudSaveTimerRef.current = null;
+    };
+  }, [cloudToken, event?.id, session?.eventId]);
 
   const handleManualLaunch = (tokenInput: string) => {
     const token = tokenInput.trim();
