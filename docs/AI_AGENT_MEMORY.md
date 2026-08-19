@@ -468,5 +468,25 @@ Review #177 extends the platform layer with the user-approved venue/public bound
 
 Files include `supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql`, `0008_platform_console_management.sql`, `PlatformLoginScreen.tsx`, `VenueLoginScreen.tsx`, `publicVenueService.ts`, `organizationContext.ts`, access lifecycle helpers, link rotation changes in couple services/portals, and `docs/platform/PLATFORM_CONSOLE_OPERATING_MODEL.md`. The existing Seven Paths Manor tenant should be preserved and assigned a stable slug such as `seven-paths-manor` after confirming uniqueness. Email confirmation, venue-specific timezone, MFA, transactional invite email, live cross-tenant/RPC smoke tests, and production break-glass support remain follow-up gates.
 
+### 9.11 Deep full-stack & venue-domain audit (Review #180, 2026-08-19)
+
+Review #180 re-ran all gates against HEAD `5d682ff` and reviewed the platform-console layer (#176–#179) as shipped code for the first time.
+
+- **Verified baseline:** typecheck green; `lint:events` green; `vitest run` **738 passed / 11 skipped** (749 total, 170/7 files); single-file build green at **2,073.67 kB / 481.45 kB gzip**; `build:split` green (was broken at #173) but warns on empty `vendor-react` chunk and a **738 kB (158 kB gzip) `chunk-admin`**; 24 runtime `@ts-nocheck` files; ~170 `any` / ~89 `as any`.
+- **Fixed since #173:** P0-1 owner bootstrap (RLS `membership_bootstrap_owner` policy + AuthBackend now throws on membership-insert error, unverified live); P0-4 owner→admin role mapping in `AuthBackend.mapRole`; split build.
+- **Still open:** P0-2 (cloud not the complete provider; couple/guest/calendar/staff domains remain local, no relational projection); P0-3 (legacy `submit_guest_rsvp` still has no access/deadline enforcement and casts JWT `sub` to `inet`; `0005` couple path also has no deadline enforcement); P0-5 (PasswordReset local-only; planner-guest now hidden on platform/venue login); P1-1 (`org_data` broad member RLS); P1-2/3 (repository pulls bypass event bus; domain keys mismatch registry); P1-4/5 (layout destructive replace-sync; empty remote ignored); P1-7 (two RBAC authorities); P1-8 (backup incomplete + secrets in cleartext); P1-9; P1-11 (invite acceptance does not refresh AuthContext).
+- **NEW platform-console findings (#180):**
+  1. **Zero automated tests** for the entire #176–#179 platform console (no test references PlatformAdminPortal, venue/platform login, onboarding, platform chat/map, createVenueOrganization, console metrics, geocoding). Live RLS/storage/chat/map smoke tests remain pending.
+  2. Onboarding invite token stays in the URL hash (`#/venue-onboarding?token=…`), not removed via `history.replaceState` — contradicts the memory's own token hygiene rule.
+  3. `couple_portal_snapshots.payload` stores raw guest/collaborator bearer tokens in cleartext JSONB (only the dedicated token-hash columns are hashed).
+  4. `get_platform_console_metrics()` reads `coupleEvents/coupleGuests/coupleSubmissions` from `org_data`, which are **local-only** — so console couple/guest/rsvp metrics will read 0 until the couple→org_data projection exists.
+  5. `geocode-venue` Edge Function has no rate-limit/throttle in front of public Nominatim (cache-only); bulk onboarding can violate the 1 req/sec policy.
+  6. Platform↔venue chat accepts `sender_side` from the client (RLS still enforces the two role-based combinations, but a platform-admin-venue-member can spoof venue-side).
+  7. README/`.env.example` stale re: migrations `0006`–`0009` and the multi-tenant console.
+  8. CI (`ci.yml`) runs only typecheck/lint:events/test/build — the memory's stricter "5-gate" protocol (unused-locals, `build:split`, coverage, `npm audit`, and ESLint, which is absent) is not enforced in CI.
+- **Top wedding-domain gaps:** no space×time double-booking/setup-teardown-buffer/blackout/multi-space atomic reservation; guest RSVP does not project to an authoritative venue-level catering/headcount roll-up; BEO is a print doc (no issued versions/sign-off); inventory is advisory not a pull/return ledger; no booking/contract/deposit/revenue lifecycle; rotation-aware collision missing; day-of coordination has no vendor-arrival conflicts or dependency blockers.
+
+**Rule going forward:** treat the #180 report (`docs/reviews/180-deep-audit-2026-08-19.md`) and §9.1–9.11 here as the current source of truth. Before claiming any cloud/tenancy/portal feature is live, add a migration/RLS smoke test and a unit test for the platform console surface. Re-run all five gates plus `build:split` before committing.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
