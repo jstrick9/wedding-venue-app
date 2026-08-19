@@ -45,6 +45,13 @@ export const defaultConfig: Config = {
   accentTextColor: '#4A1942',
 
   welcomeLogoUrl: '',
+  loginBackgroundType: 'gradient',
+  loginBackgroundColor: '#f3f4f6',
+  loginBackgroundSecondaryColor: '#f8f5f7',
+  loginBackgroundPattern: 'dots',
+  loginBackgroundAnimation: 'none',
+  loginBackgroundOverlayOpacity: 0,
+  loginWelcomeMessage: '',
   welcomeTitle: 'Welcome to the Wedding Venue Layout Planner',
   showWelcomeByDefault: true,
   welcomeFeatures: [
