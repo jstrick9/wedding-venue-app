@@ -488,5 +488,25 @@ Review #180 re-ran all gates against HEAD `5d682ff` and reviewed the platform-co
 
 **Rule going forward:** treat the #180 report (`docs/reviews/180-deep-audit-2026-08-19.md`) and §9.1–9.11 here as the current source of truth. Before claiming any cloud/tenancy/portal feature is live, add a migration/RLS smoke test and a unit test for the platform console surface. Re-run all five gates plus `build:split` before committing.
 
+### 9.12 Remediation of Review #180 (Review #181, 2026-08-19)
+
+The P0 + P1 remediation roadmap (and the highest-value new findings + P2 config) was executed and committed. See `docs/reviews/181-remediation-2026-08-19.md` for the full ledger.
+
+**Done & tested:**
+- **P1-8 backup secrets** — new `backupSecrets.ts`; `buildRedactedExportBundle()` redacts passwords/salts/tokens before file export (checksum recomputed over redacted payload); import skips redacted domains and warns. Tested.
+- **P1-3 event-bus keys** — `DataChangedType` is now a strict union of registry keys (no `(string & {})`); fixed `venue-map`→`venueMapConfigs`, `couple-chat`→`coupleMessages`, `couples`→`coupleEvents`, `spacing`→`spacingSettings`, `chairs`→`chairSpecs`; `storage.ts` resolves keys via `storageKeyToDomainKey`. Drift-guard test added.
+- **P1-2 hydration** — `SupabaseEntityRepository.pullAll` emits typed events per domain + `'all'`.
+- **P1-4 layout optimistic upsert** — `SupabaseLayoutRepository.saveAll` is now per-row insert/update/delete with `revision+1` and `layout_versions`; stale edits skipped. Tested (mocked supabase).
+- **P1-5 empty pull + retry/reset** — `pullLayouts` always overwrites (incl. empty); `loadedRef` reset on org change and only set on success in `useLayoutBackendSync`/`useEntityBackendSync`.
+- **N-2 onboarding token URL** — `VenueAdminOnboarding` strips `?token=` via `history.replaceState`.
+- **P0-5 password reset cloud** — `PasswordReset` uses Supabase Auth recovery in cloud mode; local flow unchanged.
+- **P1-1 org_data RLS**, **P0-3 guest RSVP RPC**, **N-6 chat sender_side**, **N-5 geocode rate slot** — new migration `0010` (SQL reviewed; live RLS still needs a project).
+- **N-1/N-7 platform console tests** — added `platformAdminService.test.ts` and `platformGeocodingAndChat.test.ts` (mocked supabase).
+- **P2 config** — ESLint added (`eslint.config.js`, `npm run lint`, 0 errors / 46 warnings); split build cleaned (removed empty `vendor-react` + circular `chunk-platform`); CI expanded (typecheck, lint:events, lint, unused-locals, tests, build, build:split, `npm audit --omit=dev`); README/`.env.example` updated.
+
+**Deferred (documented):** Phase 3 features; **P0-2/N-4/P1-9 couple→org_data/relational projection** (console couple/guest/rsvp metrics still read 0 until it exists — largest remaining "cloud honesty" item); P1-7 RBAC unification; P1-11 invite-acceptance AuthContext refresh; `@ts-nocheck` removal; 11 skipped tests; browser E2E/axe. **N-3** (tokens at rest in couple snapshot payload) was deliberately NOT changed to hash-only because the couple portal's guest-management UI needs the raw guest token after hydration — mitigations remain (RPCs strip tokens, `tokenHash` stored, RLS-restricted, exports redacted).
+
+**Verified gates (HEAD):** typecheck/lint:events/lint pass; unused-locals pass; full suite passes (~758+); single-file build 2,075.74 kB / 481.28 kB gzip; split build green; `npm audit --omit=dev` 0 vulnerabilities.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

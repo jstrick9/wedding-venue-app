@@ -59,8 +59,12 @@ export default defineConfig({
             chunkFileNames: "assets/[name]-[hash].js",
             entryFileNames: "assets/[name]-[hash].js",
             assetFileNames: "assets/[name]-[hash][extname]",
+            // React is statically imported by the entry (main.tsx), so it cannot
+            // be pulled into a separate chunk; the previous explicit
+            // "vendor-react" entry only produced an empty chunk and a build
+            // warning. Keep splits for modules that are genuinely lazy-loadable
+            // and do not circularly reference one another.
             manualChunks: {
-              "vendor-react": ["react", "react-dom"],
               "vendor-supabase": ["@supabase/supabase-js"],
               "chunk-admin": [
                 "./src/components/AdminPanel",

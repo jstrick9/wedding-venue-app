@@ -22,6 +22,21 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
   const [state, setState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
+  // Strip the bearer invite token from the URL hash as soon as this component
+  // has read it, so the secret does not linger in browser history or in a
+  // copied/shareable link after use (Review #180 N-2).
+  useEffect(() => {
+    if (!token) return;
+    try {
+      const clean = window.location.hash.replace(/[?&]token=[^&#]*/i, '');
+      if (clean !== window.location.hash) {
+        window.history.replaceState(null, '', clean || '#/venue-onboarding');
+      }
+    } catch {
+      // Best-effort; failing to rewrite the URL is not fatal to onboarding.
+    }
+  }, [token]);
+
   useEffect(() => {
     let cancelled = false;
     if (!token || !isSupabaseConfigured()) {

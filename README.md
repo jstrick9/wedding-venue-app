@@ -1,6 +1,6 @@
-# wedding-venue-app
+# Wedding Venue Intelligence Platform
 
-A React/Vite wedding venue planning and layout application with optional Supabase production backend support.
+A React/Vite wedding venue planning, layout, and guest-management application with an optional Supabase multi-tenant production backend.
 
 ## Development
 
@@ -12,34 +12,51 @@ npm run dev
 ## Validation
 
 ```bash
-npm run typecheck
-npm test -- --run
-npm run build
+npm run typecheck      # tsc --noEmit
+npm run lint:events    # typed event-bus linter
+npm run lint           # ESLint
+npm run test           # vitest
+npm run build          # single-file bundle
 ```
 
-## Production backend (Intelligence Platform)
+The CI workflow (`.github/workflows/ci.yml`) enforces all of the above plus a
+strict unused-locals scan, the code-split build, and a production-only dependency
+audit.
 
-The app runs in **Local** mode by default (all data in `localStorage`, zero
-setup — best for trying it and single-device use). It contains a **partial
-Supabase backend seam** for account auth, saved-layout sync, business-domain
-mirroring, cross-device couple snapshots, guest RSVP RPCs, object storage,
-invites, and transactional email. The cross-device path requires migrations
-`0001`–`0005` and a live Supabase project; it is not yet live-verified for
-production. Review
-`docs/reviews/173-comprehensive-platform-code-and-domain-audit-2026-08-18.md`
-before enabling it with real venue data.
+## Product & architecture
 
-**Follow `docs/platform/PLATFORM.md` to go live from scratch** (create a Supabase
-project, apply the migration, configure `.env.local`, and see what's wired vs.
-what remains).
+- **Local mode (default):** all data in `localStorage`, zero setup, single-browser/
+  single-device use. Offline-capable core.
+- **Supabase mode (`VITE_BACKEND_PROVIDER=supabase`):** an optional multi-tenant
+  backend with:
+  - platform console (`#/platform-admin`, `#/platform-login`) and venue-specific
+    login (`#/venue-login/<slug>`) with public venue branding;
+  - organization-level tenant isolation with lifecycle (`provisioning` / `active` /
+    `suspended` / `archived`), managed venue-administrator onboarding invites, and
+    audited platform actions;
+  - cross-device couple/guest portal snapshots, platform↔venue chat, venue
+    address/contact + server-side geocoding (Nominatim) with caching and a rate
+    slot, and object storage for public branding.
+  - Migrations live in `supabase/migrations/` (`0001`–`0010`). Apply them in order
+    and run a live RLS/onboarding smoke test before trusting cloud mode with real
+    venue data. The geocode Edge Function requires
+    `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_APP_URL`, and `ALLOWED_ORIGIN`
+    as server secrets (the service-role key must never go into Vercel/client env or
+    GitHub).
+
+> **Honesty boundary:** local mode is the exercised product mode today. In cloud
+> mode the catalog/design domains and couple/guest snapshots are mirrored, but not
+> every workflow is a server-side source of truth yet — see
+> `docs/AI_AGENT_MEMORY.md` §9 and `docs/reviews/180-deep-audit-2026-08-19.md`.
 
 Platform code lives under:
 - `supabase/migrations/` — Postgres schema + Row-Level Security + storage buckets
-- `supabase/functions/send-email/` — transactional email Edge Function (Resend)
-- `src/services/backend/` — Supabase auth backend (sign in / register / session)
-- `src/services/platform.ts` — runtime provider detection (local vs supabase)
+- `supabase/functions/geocode-venue/` — server-side geocoding Edge Function
+- `supabase/functions/send-email/` — transactional email Edge Function
+- `src/services/backend/` — Supabase auth backend
+- `src/services/platform/` — platform console / tenant / chat / branding / geocoding
 - `src/services/repository/` — data-persistence seam (local + Supabase providers)
 - `src/services/storage/` — object storage service
-- `docs/production-backend.md` — earlier backend notes
 
-Never commit real credentials. Configure Supabase, email, and deployment secrets through your hosting provider or the Supabase CLI.
+Never commit real credentials. Configure Supabase, email, and deployment secrets
+through your hosting provider or the Supabase CLI.

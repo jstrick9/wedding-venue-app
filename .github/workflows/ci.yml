@@ -23,7 +23,15 @@ jobs:
         run: npm run typecheck
       - name: Lint event bus
         run: npm run lint:events
+      - name: Lint (ESLint)
+        run: npm run lint
+      - name: Strict unused-locals scan (non-test)
+        run: npx tsc --noEmit --noUnusedLocals 2>&1 | grep -v "\.test\." | grep -v "node_modules"
       - name: Run tests
         run: npm run test
-      - name: Build
+      - name: Build (single-file)
         run: npm run build
+      - name: Build (split / code-split)
+        run: npm run build:split
+      - name: Production dependency audit (no dev tooling)
+        run: npm audit --omit=dev

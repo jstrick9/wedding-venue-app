@@ -46,14 +46,16 @@ describe('layoutSync', () => {
     expect(stored[0].id).toBe('l1');
   });
 
-  it('pullLayouts leaves local store untouched when remote is empty', async () => {
+  it('pullLayouts replaces the local store with the remote result even when empty (P1-5)', async () => {
+    // A server that correctly has zero layouts must clear stale local layouts so
+    // the UI reflects the shared source of truth.
     loadAll.mockResolvedValue([]);
     stored = [{ id: 'local' }];
 
     await pullLayouts(ctx);
 
-    expect(stored).toHaveLength(1);
-    expect(stored[0].id).toBe('local');
+    expect(loadAll).toHaveBeenCalledWith(ctx);
+    expect(stored).toHaveLength(0);
   });
 
   it('pushLayouts sends the current local layouts to the backend', async () => {

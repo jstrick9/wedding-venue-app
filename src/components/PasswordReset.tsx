@@ -3,6 +3,7 @@ import { getConfig } from '../config';
 import { getUsers, setUsers } from '../hooks/useLayoutState';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { createPasswordRecord, createSecretRecord, verifySecret } from '../utils/auth';
+import { shouldUseSupabaseAuth, requestSupabasePasswordReset } from '../services/backend/AuthBackend';
 
 interface PasswordResetProps {
   onClose: () => void;
@@ -52,6 +53,9 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [userSecurityQuestion, setUserSecurityQuestion] = useState('');
   const [displayCode, setDisplayCode] = useState('');
+  // In Supabase (cloud) mode the visible flow must use Supabase Auth's recovery
+  // emails, not the local demo code. (Review #180 P0-5.)
+  const usingSupabaseAuth = shouldUseSupabaseAuth();
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.MODE === 'test';
 
   useEffect(() => {
@@ -128,6 +132,25 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
   const handleRequestCode = async () => {
     setError('');
     setLoading(true);
+
+    // Cloud mode: delegate to Supabase Auth recovery so real accounts can reset
+    // their password by email. No local code is generated.
+    if (usingSupabaseAuth) {
+      try {
+        if (!email.trim()) {
+          setError('Enter the email address for your Supabase account.');
+          setLoading(false);
+          return;
+        }
+        await requestSupabasePasswordReset(email.trim());
+        setStep('verify');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not send a password reset email.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -414,33 +437,37 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
 
           {step === 'request' && (
             <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="password-reset-username"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Username
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    👤
-                  </span>
-                  <input
-                    id="password-reset-username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter your username"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  />
-                </div>
-              </div>
+              {!usingSupabaseAuth && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="password-reset-username"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Username
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        👤
+                      </span>
+                      <input
+                        id="password-reset-username"
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Enter your username"
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-sm text-gray-400">or</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-sm text-gray-400">or</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label
@@ -464,35 +491,64 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-                <strong>💡 How it works:</strong>
-                <ol className="mt-1 ml-4 list-decimal space-y-1">
-                  <li>Enter your username or email</li>
-                  <li>Receive a 6-digit verification code</li>
-                  <li>Enter the code to verify your identity</li>
-                  <li>Create a new secure password</li>
-                </ol>
-              </div>
+              {usingSupabaseAuth ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                  <strong>💡 How it works:</strong>
+                  <p className="mt-1">
+                    Enter your Supabase account email and we will send a password-reset link to that
+                    inbox. No local verification code is used in cloud mode.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                  <strong>💡 How it works:</strong>
+                  <ol className="mt-1 ml-4 list-decimal space-y-1">
+                    <li>Enter your username or email</li>
+                    <li>Receive a 6-digit verification code</li>
+                    <li>Enter the code to verify your identity</li>
+                    <li>Create a new secure password</li>
+                  </ol>
+                </div>
+              )}
 
               <button
                 onClick={handleRequestCode}
-                disabled={loading || (!username && !email)}
+                disabled={loading || (usingSupabaseAuth ? !email : !username && !email)}
                 className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
                 type="button"
               >
                 {loading ? (
                   <>
                     <span className="animate-spin">⏳</span>
-                    Sending Code...
+                    {usingSupabaseAuth ? 'Sending Reset Link...' : 'Sending Code...'}
                   </>
                 ) : (
-                  <>📤 Send Verification Code</>
+                  <>{usingSupabaseAuth ? '📧 Send Password Reset Link' : '📤 Send Verification Code'}</>
                 )}
               </button>
             </div>
           )}
 
-          {step === 'verify' && (
+          {step === 'verify' && usingSupabaseAuth && (
+            <div className="space-y-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm text-emerald-800">
+                <strong>📬 Check your email.</strong>
+                <p className="mt-1">
+                  We sent a password-reset link to <strong>{email.trim()}</strong>. Use that link
+                  (opened in the same browser) to choose a new password. This window can be closed.
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+                type="button"
+              >
+                Close
+              </button>
+            </div>
+          )}
+
+          {step === 'verify' && !usingSupabaseAuth && (
             <div className="space-y-4">
               {isDemoMode && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">

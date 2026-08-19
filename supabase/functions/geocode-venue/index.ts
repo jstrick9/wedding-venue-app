@@ -68,6 +68,13 @@ serve(async (request) => {
     .maybeSingle();
   if (cached) return json({ ok: true, displayName: cached.display_name, latitude: cached.latitude, longitude: cached.longitude, provider: cached.provider, cached: true });
 
+  // Respect Nominatim's ~1 request/second public policy: acquire a server-side
+  // rate slot before hitting the external service. A cached result bypasses this.
+  const { data: slot, error: slotError } = await adminClient.rpc('geocode_try_acquire_slot');
+  if (slotError || slot !== true) {
+    return json({ ok: false, error: 'Rate limit reached. Please wait a moment and try again.' }, 429);
+  }
+
   // Nominatim is deliberately called only by this server function, not by the
   // browser. The cache prevents repeated queries for the same venue address.
   const query = new URLSearchParams({
