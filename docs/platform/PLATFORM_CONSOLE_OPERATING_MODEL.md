@@ -127,4 +127,21 @@ Still required before production:
 - real activity timestamps and structured server-side request logs;
 - a formal break-glass support-session workflow;
 - retention/export/deletion workflows;
-- billing/subscription metrics if monetization is introduced.
+- billing/subscription metrics if monetization is introduced;
+- global platform branding and public-branding asset storage;
+- one platform↔venue thread per tenant, accessible to platform admins and active venue members;
+- venue address/contact validation and geocoded point data;
+- point map, density map, region/choropleth-style view, and table alternative.
+
+## Venue geocoding and mapping
+
+The chosen provider is the open-source Nominatim service. The integration deliberately runs through the `geocode-venue` Supabase Edge Function, not from browser autocomplete. Results are cached in `venue_geocode_cache`, and the setup flow makes one request per venue address. Nominatim's public service has an absolute maximum of one request per second, requires a descriptive User-Agent/Referer, discourages heavy/bulk use, and requires OSM attribution. See the [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) and [structured search API](https://nominatim.org/release-docs/latest/api/Search/).
+
+For hundreds of venues, the platform should eventually run a controlled/hosted Nominatim instance or move to a commercial geocoder. The current public endpoint is appropriate only for deliberate, cached, low-rate setup operations, not continuous batch geocoding.
+
+## Branding and chat
+
+- Platform branding is stored separately from venue branding and is exposed publicly only through a safe branding RPC.
+- Venue branding uses the venue's organization-scoped config; public logo assets are placed in the public branding bucket when uploaded in Supabase mode.
+- The platform↔venue chat is organization-scoped, uses RLS, supports platform and venue participants, and is separated from couple/guest chat.
+- Chat uses Realtime with polling fallback and is designed around one thread per venue, not a global cross-tenant stream.

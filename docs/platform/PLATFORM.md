@@ -44,8 +44,8 @@ npx supabase db push
 
 **Option B — SQL editor (no CLI):**
 1. In the dashboard go to **SQL Editor** → **New query**.
-2. Paste and run `supabase/migrations/0001_initial.sql` through `0008_platform_console_management.sql`, one file at a time and in numeric order.
-3. Click **Run** after each file and stop if one returns an error. Migrations `0006`–`0008` add platform-admin roles, managed venue-admin onboarding, venue-specific branding, venue-bound public links, access expiration, immutable slugs, invite lifecycle controls, tenant suspension, and metrics.
+2. Paste and run `supabase/migrations/0001_initial.sql` through `0009_platform_branding_chat_and_venue_location.sql`, one file at a time and in numeric order.
+3. Click **Run** after each file and stop if one returns an error. Migrations `0006`–`0009` add platform-admin roles, managed venue-admin onboarding, venue-specific branding, venue-bound public links, access expiration, immutable slugs, invite lifecycle controls, tenant suspension, metrics, platform branding/chat, required venue contact/location, and geocoding cache.
 
 ## Step 3 — Configure the app
 
@@ -106,7 +106,7 @@ Email (invitations, RSVP confirmations, staff notifications) uses a Supabase
 | Entity repository | ⚠️ Extended to mirror business domains and hydrate on `org_data` Realtime changes; pending live RLS verification. | `services/repository/entityRepository.ts`, `services/sync/*`, migration `0003_org_data.sql` |
 | Couple/guest cross-device snapshots | ⚠️ Code and migration path added; requires `0005` plus a live Supabase project. | `services/couples/coupleCloudSync.ts`, `GuestPortal.tsx`, `CouplesPortal.tsx` |
 | Multi-org/venue invites | ⚠️ Existing organization invite UI remains available for venue admins; the acceptance RPC is hardened by `0006`, while the active AuthContext refresh and cloud email delivery still require live testing. | `services/org/inviteService.ts`, `InviteMembers`, `AcceptInvite`, migration `0004_invites.sql`/`0006_platform_tenancy.sql` |
-| DB schema / storage buckets / Edge Function | ⚠️ Migrations now include platform tenancy, venue public branding, access lifecycle, console management, and metrics (`0006`–`0008`); no live project/RLS/Resend certification has been run. | `supabase/migrations/*`, `supabase/functions/send-email/` |
+| DB schema / storage buckets / Edge Function | ⚠️ Migrations now include platform tenancy, venue public branding, access lifecycle, console management, metrics, platform branding/chat, venue address/contact, and geocoding (`0006`–`0009`); no live project/RLS/Edge Function certification has been run. | `supabase/migrations/*`, `supabase/functions/*` |
 
 ## What still needs a live project (just apply migrations + test)
 
@@ -152,7 +152,7 @@ event-members for guests), so a venue can never see another venue's data.
 
 ## Checklist before you go live
 - [ ] Supabase project created
-- [ ] Migrations `0001` through `0008` applied in order
+- [ ] Migrations `0001` through `0009` applied in order
 - [ ] First Auth user inserted into `platform_memberships` as `platform_owner`
 - [ ] Vercel variables set: `VITE_BACKEND_PROVIDER=supabase`, URL, and public key
 - [ ] Platform Admin Console creates a test venue organization
