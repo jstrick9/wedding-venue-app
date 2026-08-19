@@ -537,5 +537,15 @@ The platform admin portal is no longer a single long page. It is a sidebar conso
 
 **Rule going forward:** treat #183 + §9.12–9.14 as current truth. Apply migrations `0001`–`0012` and smoke-test venue edit + audit before calling the console rebuild live.
 
+### 9.15 Login screens tied to branding (Review #184, 2026-08-19)
+
+See `docs/reviews/184-login-branding-2026-08-19.md`.
+
+Staff auth chrome (platform login, venue login including loading/not-found/suspended/signed-in, password reset, force password change, venue-admin onboarding, accept-invite) is driven by branding. Missing venue colors fall back to charcoal/white/gray (`NEUTRAL_LOGIN_CONFIG`), never Seven Paths plum. Platform login keeps navy (`DEFAULT_PLATFORM_LOGIN_CONFIG`). `getPublicPlatformBranding` no longer merges into the venue product default. Migration `0013` updates `get_public_venue_branding` SQL fallbacks and exposes login-background fields. Semantic error/warning/success colors are unchanged. Local Seven Paths demo and already-saved venue branding stay as they are.
+
+**Verified gates (HEAD at #184):** typecheck/lint:events/lint pass; unused-locals pass; full suite **807 passed / 5 skipped**; single-file build 2,097.77 kB / 486.48 kB gzip; split build green; `npm audit --omit=dev` 0 vulnerabilities.
+
+**Rule going forward:** treat #184 + §9.12–9.15 as current truth. Apply migrations `0001`–`0013` before claiming new-venue login branding is live.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

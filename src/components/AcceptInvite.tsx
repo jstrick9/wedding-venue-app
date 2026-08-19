@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { acceptInvite } from '../services/org/inviteService';
 import { getConfig } from '../config';
 import { useAuth } from '../contexts/AuthContext';
+import { resolveLoginChrome } from '../utils/loginBranding';
 
 interface AcceptInviteProps {
   token: string;
@@ -15,6 +16,7 @@ interface AcceptInviteProps {
  */
 export function AcceptInvite({ token, onDone }: AcceptInviteProps) {
   const config = getConfig();
+  const chrome = resolveLoginChrome(config);
   const { refreshSession } = useAuth();
   const [state, setState] = useState<'processing' | 'success' | 'error'>('processing');
   const [message, setMessage] = useState('Accepting invite…');
@@ -49,12 +51,12 @@ export function AcceptInvite({ token, onDone }: AcceptInviteProps) {
   }, [token, onDone, refreshSession]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: config.backgroundColor }}>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: chrome.background, fontFamily: chrome.fontFamily }}>
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center">
         <div className="text-4xl mb-3">
           {state === 'processing' ? '⏳' : state === 'success' ? '🎉' : '⚠️'}
         </div>
-        <h1 className="text-xl font-semibold" style={{ color: config.primaryColor }}>
+        <h1 className="text-xl font-semibold" style={{ color: chrome.primary, fontFamily: chrome.headingFontFamily }}>
           {state === 'success' ? 'Welcome to the workspace!' : state === 'error' ? 'Invite issue' : 'Accepting invite'}
         </h1>
         <p className="text-sm text-gray-600 mt-2">{message}</p>
@@ -62,8 +64,8 @@ export function AcceptInvite({ token, onDone }: AcceptInviteProps) {
           <button
             type="button"
             onClick={onDone}
-            className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium"
-            style={{ backgroundColor: config.primaryColor }}
+            className="mt-4 px-4 py-2 rounded-lg text-sm font-medium"
+            style={{ backgroundColor: chrome.primary, color: chrome.headerText }}
           >
             Back to workspace
           </button>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getConfig } from '../config';
+import { getConfig, type Config } from '../config';
+import { resolveLoginChrome } from '../utils/loginBranding';
 import { getUsers, setUsers } from '../hooks/useLayoutState';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { createPasswordRecord, createSecretRecord, verifySecret } from '../utils/auth';
@@ -8,6 +9,7 @@ import { shouldUseSupabaseAuth, requestSupabasePasswordReset } from '../services
 interface PasswordResetProps {
   onClose: () => void;
   onSuccess: () => void;
+  branding?: Config;
 }
 
 type ResetStep = 'request' | 'verify' | 'reset' | 'success';
@@ -32,8 +34,10 @@ interface StoredResetCodeRecord {
   expiry: string;
 }
 
-const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => {
-  const config = getConfig();
+const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, branding }) => {
+  const config = branding || getConfig();
+  const chrome = resolveLoginChrome(config);
+  const primaryButtonStyle = { backgroundColor: chrome.primary, color: chrome.headerText };
 
   const [step, setStep] = useState<ResetStep>('request');
   const [username, setUsername] = useState('');
@@ -366,9 +370,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
         <div
           className="p-4 text-white text-center relative"
           style={{
-            background: `linear-gradient(135deg, ${
-              config.primaryColor || '#4A1942'
-            } 0%, ${config.primaryDark || '#3d1536'} 100%)`,
+            background: `linear-gradient(135deg, ${chrome.primary} 0%, ${chrome.primaryDark} 100%)`,
+            color: chrome.headerText,
           }}
         >
           <button
@@ -402,11 +405,12 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                     step === s
-                      ? 'bg-purple-600 text-white'
+                      ? 'text-white'
                       : ['request', 'verify', 'reset'].indexOf(step) > idx
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-200 text-gray-500'
                   }`}
+                  style={step === s ? primaryButtonStyle : undefined}
                 >
                   {['request', 'verify', 'reset'].indexOf(step) > idx ? '✓' : idx + 1}
                 </div>
@@ -514,7 +518,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
               <button
                 onClick={handleRequestCode}
                 disabled={loading || (usingSupabaseAuth ? !email : !username && !email)}
-                className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 disabled:bg-gray-300 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                style={primaryButtonStyle}
                 type="button"
               >
                 {loading ? (
@@ -540,7 +545,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
               </div>
               <button
                 onClick={onClose}
-                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+                className="w-full py-3 font-semibold rounded-lg transition-colors"
+                style={primaryButtonStyle}
                 type="button"
               >
                 Close
@@ -621,7 +627,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 <button
                   onClick={handleResendCode}
                   disabled={resendCooldown > 0 || loading}
-                  className="text-sm text-purple-600 hover:text-purple-800 disabled:text-gray-400 transition-colors"
+                  className="text-sm disabled:text-gray-400 transition-colors"
+                  style={{ color: chrome.primary }}
                   type="button"
                 >
                   {resendCooldown > 0
@@ -645,7 +652,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                 <button
                   onClick={() => void handleVerifyCode()}
                   disabled={verificationCode.length !== 6}
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors"
+                  className="flex-1 py-2.5 disabled:bg-gray-300 font-semibold rounded-lg transition-colors"
+                  style={primaryButtonStyle}
                   type="button"
                 >
                   Verify Code →
@@ -795,7 +803,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                     newPassword !== confirmPassword ||
                     passwordStrength.score < 3
                   }
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 disabled:bg-gray-300 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                  style={primaryButtonStyle}
                   type="button"
                 >
                   {loading ? (
@@ -835,7 +844,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
                   onSuccess();
                   onClose();
                 }}
-                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+                className="w-full py-3 font-semibold rounded-lg transition-colors"
+                style={primaryButtonStyle}
                 type="button"
               >
                 ✓ Return to Sign In
@@ -849,7 +859,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess }) => 
             Need help? Contact{' '}
             <a
               href={`mailto:${config.supportEmail || 'weddings@sevenpathsmanor.com'}`}
-              className="text-purple-600 hover:underline"
+              className="hover:underline"
+              style={{ color: chrome.primary }}
             >
               {config.supportEmail || 'weddings@sevenpathsmanor.com'}
             </a>

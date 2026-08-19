@@ -13,6 +13,7 @@ vi.mock('../contexts/AuthContext', () => ({
 }));
 
 vi.mock('../config', () => ({
+  applyRootStyles: () => undefined,
   getConfig: () => ({
     venueName: 'Seven Paths Manor',
     tagline: 'Where Your Love Story Unfolds',
@@ -168,5 +169,37 @@ describe('LoginScreen', () => {
 
     const guestPortalBtn = screen.getByRole('button', { name: /open wedding guest portal/i });
     expect(guestPortalBtn.style.color).toBe('rgb(74, 25, 66)');
+  });
+
+  it('uses brandingOverride chrome instead of the Seven Paths plum fallback', () => {
+    render(
+      <LoginScreen
+        brandingOverride={{
+          venueName: 'Platform Console',
+          tagline: 'Admin',
+          location: '',
+          websiteUrl: '',
+          supportEmail: '',
+          primaryColor: '#26354A',
+          primaryDark: '#182436',
+          primaryLight: '#3E5875',
+          accentColor: '#6B8DB3',
+          backgroundColor: '#F4F7FA',
+          textColor: '#1F2937',
+          headerTextColor: '#FFFFFF',
+          bodyTextColor: '#334155',
+          accentTextColor: '#26354A',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          headingFontFamily: 'Inter, system-ui, sans-serif',
+        }}
+        showPublicPortalLinks={false}
+        loginScope="platform"
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Platform Console' })).toBeInTheDocument();
+    const signIn = screen.getByRole('button', { name: /sign in/i });
+    expect(signIn).toHaveStyle({ backgroundColor: 'rgb(38, 53, 74)' });
+    expect(signIn).not.toHaveStyle({ backgroundColor: 'rgb(74, 25, 66)' });
   });
 });

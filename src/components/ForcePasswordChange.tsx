@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getConfig } from '../config';
+import { resolveLoginChrome } from '../utils/loginBranding';
 
 /**
  * Forced "change your password on first login" gate.
@@ -16,6 +17,7 @@ import { getConfig } from '../config';
 export default function ForcePasswordChange() {
   const { user, changePassword } = useAuth();
   const config = getConfig();
+  const chrome = resolveLoginChrome(config);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -53,14 +55,14 @@ export default function ForcePasswordChange() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
-      style={{ backgroundColor: config.backgroundColor }}
+      style={{ backgroundColor: chrome.background, fontFamily: chrome.fontFamily }}
     >
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">🔐</div>
           <h1
             className="text-2xl font-semibold"
-            style={{ color: config.primaryColor, fontFamily: config.headingFontFamily }}
+            style={{ color: chrome.primary, fontFamily: chrome.headingFontFamily }}
           >
             Set a New Password
           </h1>
@@ -82,7 +84,7 @@ export default function ForcePasswordChange() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-              style={{ ['--tw-ring-color' as string]: config.primaryColor }}
+              style={{ ['--tw-ring-color' as string]: chrome.primary }}
               autoComplete="new-password"
               minLength={8}
               required
@@ -99,7 +101,7 @@ export default function ForcePasswordChange() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-              style={{ ['--tw-ring-color' as string]: config.primaryColor }}
+              style={{ ['--tw-ring-color' as string]: chrome.primary }}
               autoComplete="new-password"
               required
             />
@@ -115,7 +117,7 @@ export default function ForcePasswordChange() {
             type="submit"
             disabled={isLoading}
             className="w-full py-2.5 rounded-lg text-white font-medium disabled:opacity-60"
-            style={{ backgroundColor: config.primaryColor }}
+            style={{ backgroundColor: chrome.primary, color: chrome.headerText }}
           >
             {isLoading ? 'Updating…' : 'Update Password'}
           </button>

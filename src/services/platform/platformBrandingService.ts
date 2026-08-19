@@ -1,18 +1,18 @@
-import { defaultConfig } from '../../config';
 import type { Config } from '../../types';
+import { DEFAULT_PLATFORM_LOGIN_CONFIG, mergePlatformLoginBranding } from '../../utils/loginBranding';
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 
 function normalizeBranding(value: Record<string, unknown> | null | undefined): Config {
-  return {
-    ...defaultConfig,
-    ...value,
-    venueName: String(value?.venueName || defaultConfig.venueName),
-    tagline: String(value?.tagline || defaultConfig.tagline),
+  return mergePlatformLoginBranding({
+    ...DEFAULT_PLATFORM_LOGIN_CONFIG,
+    ...(value || {}),
+    venueName: String(value?.venueName || DEFAULT_PLATFORM_LOGIN_CONFIG.venueName),
+    tagline: String(value?.tagline || DEFAULT_PLATFORM_LOGIN_CONFIG.tagline),
     location: String(value?.location || ''),
     websiteUrl: String(value?.websiteUrl || ''),
     supportEmail: String(value?.supportEmail || ''),
     logoUrl: String(value?.logoUrl || ''),
-  } as Config;
+  });
 }
 
 export async function getPublicPlatformBranding(): Promise<Config> {

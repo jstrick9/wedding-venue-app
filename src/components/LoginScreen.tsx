@@ -7,39 +7,12 @@ import { getUsers } from '../hooks/useLayoutState';
 import PasswordReset from './PasswordReset';
 import Logo from './Logo';
 import { shouldUseSupabaseAuth } from '../services/backend/AuthBackend';
-
-function loginBackgroundStyle(config: Config): React.CSSProperties {
-  const primary = config.loginBackgroundColor || config.backgroundColor || '#f3f4f6';
-  const secondary = config.loginBackgroundSecondaryColor || config.primaryLight || '#f8f5f7';
-  const type = config.loginBackgroundType || 'gradient';
-  const pattern = config.loginBackgroundPattern || 'dots';
-  let backgroundImage = `linear-gradient(135deg, ${primary}, ${secondary})`;
-
-  if (type === 'solid') backgroundImage = 'none';
-  if (type === 'pattern') {
-    const patterns: Record<string, string> = {
-      dots: `radial-gradient(circle at 1px 1px, ${config.primaryColor || '#4A1942'}22 1px, transparent 0)`,
-      grid: `linear-gradient(${config.primaryColor || '#4A1942'}12 1px, transparent 1px), linear-gradient(90deg, ${config.primaryColor || '#4A1942'}12 1px, transparent 1px)`,
-      diagonal: `repeating-linear-gradient(135deg, ${config.primaryColor || '#4A1942'}12 0, ${config.primaryColor || '#4A1942'}12 1px, transparent 1px, transparent 12px)`,
-      confetti: `radial-gradient(circle at 20% 20%, ${config.accentColor || '#D4AF37'}55 0 2px, transparent 3px), radial-gradient(circle at 80% 35%, ${config.primaryColor || '#4A1942'}33 0 2px, transparent 3px), radial-gradient(circle at 35% 78%, ${config.primaryLight || '#6b2c5c'}55 0 2px, transparent 3px)`,
-    };
-    backgroundImage = `${patterns[pattern] || patterns.dots}, linear-gradient(135deg, ${primary}, ${secondary})`;
-  }
-  if (type === 'animated') {
-    backgroundImage = `linear-gradient(120deg, ${primary}, ${secondary}, ${config.primaryLight || secondary}, ${primary})`;
-  }
-
-  return {
-    backgroundColor: primary,
-    backgroundImage,
-    backgroundSize: type === 'pattern' ? (pattern === 'grid' ? '24px 24px, 24px 24px, cover' : '24px 24px, cover') : '300% 300%',
-  };
-}
-
-function loginBackgroundAnimationClass(config: Config): string {
-  if (config.loginBackgroundType !== 'animated') return '';
-  return `spm-login-animation-${config.loginBackgroundAnimation || 'drift'}`;
-}
+import {
+  applyLoginBranding,
+  loginBackgroundAnimationClass,
+  loginBackgroundStyle,
+  resolveLoginChrome,
+} from '../utils/loginBranding';
 
 export interface LoginScreenProps {
   onContinueAsGuest?: () => void;
@@ -87,14 +60,14 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
   const usernameInputRef = useRef<HTMLInputElement>(null);
   const localConfig = useBrandingConfig();
   const config = brandingOverride || localConfig;
+  const chrome = resolveLoginChrome(config);
   const usingSupabaseAuth = shouldUseSupabaseAuth();
   const hasLocalAccounts = getUsers().length > 0;
   const showNoLocalAccountsHint = !usingSupabaseAuth && !hasLocalAccounts;
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    const color = config.primaryColor || '#4A1942';
-    e.currentTarget.style.borderColor = color;
-    e.currentTarget.style.boxShadow = `0 0 0 3px ${color}33`;
+    e.currentTarget.style.borderColor = chrome.primary;
+    e.currentTarget.style.boxShadow = `0 0 0 3px ${chrome.primary}33`;
   };
 
   const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -121,6 +94,10 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    applyLoginBranding(config);
+  }, [config]);
 
   // ─── Tick the lockout countdown every second ──────────────────────────────
   useEffect(() => {
@@ -268,8 +245,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
       className={`relative min-h-screen flex px-4 py-8 overflow-y-auto ${loginBackgroundAnimationClass(config)}`}
       style={{
         ...loginBackgroundStyle(config),
-        color: config.bodyTextColor || '#374151',
-        fontFamily: config.fontFamily || 'Inter, system-ui, sans-serif',
+        color: chrome.bodyText,
+        fontFamily: chrome.fontFamily,
       }}
     >
       {!!config.loginBackgroundOverlayOpacity && (
@@ -282,8 +259,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
         <div
           className="px-6 py-8 text-white text-center shrink-0"
           style={{
-            background: `linear-gradient(135deg, ${config.primaryColor || '#4A1942'}, ${config.primaryDark || '#3d1a45'})`,
-            color: config.headerTextColor || '#FFFFFF',
+            background: `linear-gradient(135deg, ${chrome.primary}, ${chrome.primaryDark})`,
+            color: chrome.headerText,
           }}
         >
           <div className="mx-auto mb-4 flex justify-center">
@@ -291,7 +268,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
           </div>
           <h1
             className="text-2xl font-semibold"
-            style={{ fontFamily: config.headingFontFamily || 'Inter, system-ui, sans-serif' }}
+            style={{ fontFamily: chrome.headingFontFamily }}
           >
             {config.venueName || 'Seven Paths Manor'}
           </h1>
@@ -431,8 +408,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
                 type="button"
                 onClick={() => setShowPasswordReset(true)}
                 disabled={showNoLocalAccountsHint}
-                className="text-sm text-[#4A1942] hover:underline disabled:text-gray-400 disabled:no-underline"
-                style={{ color: config.primaryColor || '#4A1942' }}
+                className="text-sm hover:underline disabled:text-gray-400 disabled:no-underline"
+                style={{ color: chrome.primary }}
               >
                 Forgot password?
               </button>
@@ -459,7 +436,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
             {usingSupabaseAuth && !allowAccountCreation && !error && (
               <div
                 role="status"
-                className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-800"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
               >
                 Venue access is invitation-only. Contact your platform administrator or use the venue setup link you received.
               </div>
@@ -483,8 +460,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
             <button
               type="submit"
               disabled={isLoading || isLockedOut || showNoLocalAccountsHint}
-              className="btn-primary w-full rounded-lg bg-[#4A1942] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: chrome.primary, color: chrome.headerText }}
             >
               {isLoading ? 'Signing in…' : 'Sign In'}
             </button>
@@ -536,8 +513,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
               <button
                 type="submit"
                 disabled={isSigningUp}
-                className="btn-primary w-full rounded-lg bg-[#4A1942] px-4 py-2 text-sm font-medium text-white hover:bg-[#5b2352] disabled:opacity-50"
-                style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                className="w-full rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+                style={{ backgroundColor: chrome.primary, color: chrome.headerText }}
               >
                 {isSigningUp ? 'Creating account…' : 'Create Account'}
               </button>
@@ -556,8 +533,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
               <button
                 type="button"
                 onClick={() => setShowSignUp((v) => !v)}
-                className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-[#4A1942] hover:bg-gray-50 transition-colors"
-                style={{ color: config.primaryColor || '#4A1942' }}
+                className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                style={{ color: chrome.primary }}
               >
                 {showSignUp ? 'Cancel account creation' : 'Create a new account'}
               </button>
@@ -581,9 +558,9 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
                   onClick={handleOpenGuestPortal}
                   className="w-full rounded-xl border px-4 py-3 text-left transition-colors hover:shadow-sm"
                   style={{
-                    borderColor: `${config.primaryColor || '#4A1942'}66`,
-                    backgroundColor: `${config.primaryColor || '#4A1942'}15`,
-                    color: config.primaryColor || '#4A1942',
+                    borderColor: `${chrome.primary}66`,
+                    backgroundColor: `${chrome.primary}15`,
+                    color: chrome.primary,
                   }}
                 >
                   <span className="block text-sm font-semibold">💍 Open Wedding Guest Portal</span>
@@ -616,6 +593,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
 
       {showPasswordReset && (
         <PasswordReset
+          branding={config}
           onClose={() => setShowPasswordReset(false)}
           onSuccess={() => {
             setShowPasswordReset(false);

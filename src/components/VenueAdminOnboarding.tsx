@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useBrandingConfig } from '../config';
 import {
   acceptVenueAdminInvite,
   getVenueAdminInviteContext,
@@ -8,16 +7,20 @@ import {
 import { signUpVenueAdminWithInvite } from '../services/backend/AuthBackend';
 import { isSupabaseConfigured } from '../services/backend/supabaseClient';
 import type { VenueAdminInviteContext } from '../services/platform/platformAdminService';
+import { getPublicVenueBranding } from '../services/platform/publicVenueService';
+import { NEUTRAL_LOGIN_CONFIG, applyLoginBranding, loginBackgroundStyle, resolveLoginChrome } from '../utils/loginBranding';
+import type { Config } from '../types';
 
 interface VenueAdminOnboardingProps {
   token?: string;
 }
 
 export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProps) {
-  const config = useBrandingConfig();
   const { user, logout } = useAuth();
   const [invite, setInvite] = useState<VenueAdminInviteContext | null>(null);
+  const [branding, setBranding] = useState<Config>(NEUTRAL_LOGIN_CONFIG);
   const [loadingInvite, setLoadingInvite] = useState(true);
+  const chrome = resolveLoginChrome(branding);
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
   const [state, setState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
@@ -25,6 +28,10 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
   // Strip the bearer invite token from the URL hash as soon as this component
   // has read it, so the secret does not linger in browser history or in a
   // copied/shareable link after use (Review #180 N-2).
+  useEffect(() => {
+    applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
+  }, []);
+
   useEffect(() => {
     if (!token) return;
     try {
@@ -43,10 +50,21 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
       setLoadingInvite(false);
       return;
     }
-    void getVenueAdminInviteContext(token).then((context) => {
+    void getVenueAdminInviteContext(token).then(async (context) => {
       if (cancelled) return;
       setInvite(context);
       if (context) setForm((current) => ({ ...current, email: context.email }));
+      if (context?.organizationSlug) {
+        const publicBrand = await getPublicVenueBranding(context.organizationSlug);
+        if (!cancelled && publicBrand) {
+          setBranding(publicBrand.config);
+          applyLoginBranding(publicBrand.config);
+        } else if (!cancelled) {
+          applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
+        }
+      } else {
+        applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
+      }
       setLoadingInvite(false);
     });
     return () => { cancelled = true; };
@@ -128,13 +146,13 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8" style={{ fontFamily: config.fontFamily || 'Inter, system-ui, sans-serif' }}>
+    <div className="min-h-screen px-4 py-8" style={{ ...loginBackgroundStyle(branding), fontFamily: chrome.fontFamily, color: chrome.bodyText }}>
       <div className="mx-auto flex min-h-[80vh] max-w-lg items-center justify-center">
         <div className="w-full rounded-2xl border border-gray-200 bg-white p-6 shadow-xl sm:p-8">
           <div className="text-center">
             <div className="text-4xl">🏛️</div>
             <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Venue administrator setup</p>
-            <h1 className="mt-1 text-2xl font-bold text-gray-900">Claim your venue workspace</h1>
+            <h1 className="mt-1 text-2xl font-bold" style={{ color: chrome.primary, fontFamily: chrome.headingFontFamily }}>Claim your venue workspace</h1>
             <p className="mt-2 text-sm leading-relaxed text-gray-600">Create the managed administrator account for this venue. This account will configure the venue and invite its internal team.</p>
           </div>
 
@@ -153,7 +171,7 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
           ) : user ? (
             <div className="mt-6 space-y-4">
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">You are signed in as <strong>{user.email}</strong>, the invited venue administrator for <strong>{invite.organizationName}</strong>.</div>
-              <button type="button" onClick={() => void handleExistingAccount()} disabled={state === 'saving'} className="w-full rounded-lg px-4 py-3 text-sm font-bold text-white disabled:opacity-60" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>{state === 'saving' ? 'Claiming venue…' : 'Claim Venue Administrator Access'}</button>
+              <button type="button" onClick={() => void handleExistingAccount()} disabled={state === 'saving'} className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:opacity-60" style={{ backgroundColor: chrome.primary, color: chrome.headerText }}>{state === 'saving' ? 'Claiming venue…' : 'Claim Venue Administrator Access'}</button>
             </div>
           ) : (
             <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-3">
@@ -161,7 +179,7 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
               <div><label htmlFor="venue-admin-email" className="mb-1 block text-xs font-semibold text-gray-700">Invited email address</label><input id="venue-admin-email" type="email" value={form.email} readOnly className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2.5 text-sm" autoComplete="email" /><p className="mt-1 text-[11px] text-gray-500">This address is fixed to the platform invitation: {invite.email}</p></div>
               <div><label htmlFor="venue-admin-password" className="mb-1 block text-xs font-semibold text-gray-700">Password</label><input id="venue-admin-password" type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="new-password" /></div>
               <div><label htmlFor="venue-admin-confirm-password" className="mb-1 block text-xs font-semibold text-gray-700">Confirm password</label><input id="venue-admin-confirm-password" type="password" value={form.confirmPassword} onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="new-password" /></div>
-              <button type="submit" disabled={state === 'saving'} className="w-full rounded-lg px-4 py-3 text-sm font-bold text-white disabled:opacity-60" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>{state === 'saving' ? 'Creating account…' : 'Create Venue Administrator Account'}</button>
+              <button type="submit" disabled={state === 'saving'} className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:opacity-60" style={{ backgroundColor: chrome.primary, color: chrome.headerText }}>{state === 'saving' ? 'Creating account…' : 'Create Venue Administrator Account'}</button>
             </form>
           )}
 
