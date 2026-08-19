@@ -7,7 +7,7 @@ import { CustomVenueBuilder } from '../CustomVenueBuilder';
 import { DirectMessagePanel } from '../DirectMessagePanel';
 import { AdminSubmissionQueue } from '../AdminSubmissionQueue';
 import { LinenColor } from '../../data/venueData';
-import { getCoupleEvents, updateCoupleEvent, hasVenueCoordination } from '../../services/couples/coupleService';
+import { buildCoupleInviteUrl, getCoupleEvents, updateCoupleEvent, hasVenueCoordination } from '../../services/couples/coupleService';
 import { emit, emitDataChanged } from '../../utils/appEvents';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
 import type { AdminCommonProps } from './AdminTabTypes';
@@ -416,7 +416,7 @@ export function UserManagement(props: AdminCommonProps) {
                     ) : (
                       coupleEventsList.map((couple) => {
                         const isCoordinationBooked = hasVenueCoordination(couple);
-                        const portalLink = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(couple.inviteToken)}`;
+                        const portalLink = buildCoupleInviteUrl(couple.inviteToken);
                         return (
                           <div
                             key={couple.id}

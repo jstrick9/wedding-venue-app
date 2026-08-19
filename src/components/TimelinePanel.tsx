@@ -3,6 +3,7 @@ import { useTimeline } from '../hooks/useTimeline';
 import { TimelineEvent, TIMELINE_CATEGORIES, TimelineCategory } from '../types/timeline';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
+  buildCoupleInviteUrl,
   getCoupleEvents,
   updateCoupleEvent,
   hasVenueCoordination,
@@ -26,7 +27,7 @@ function fmtDay(dateStr: string): string {
 }
 
 function portalUrl(token: string): string {
-  return `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
+  return buildCoupleInviteUrl(token);
 }
 
 export function TimelinePanel({ onClose, inline = false }: TimelinePanelProps) {

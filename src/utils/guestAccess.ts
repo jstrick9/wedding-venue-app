@@ -1,5 +1,6 @@
 import type { GuestPortalGuestRecord } from '../types';
 import { normalizeEventKey } from './guestPortal';
+import { isPortalAccessActive } from '../services/couples/accessLifecycle';
 
 export function guestBelongsToEvent(
   guest: GuestPortalGuestRecord,
@@ -22,6 +23,7 @@ export function guestCanAccessPortal(
 ): boolean {
   if (!guest) return false;
   if (guest.allowPortalAccess === false) return false;
+  if (!isPortalAccessActive(guest.tokenExpiresAt)) return false;
 
   return guestBelongsToEvent(guest, eventName);
 }

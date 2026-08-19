@@ -434,14 +434,35 @@ The selected product direction is now explicitly:
 Review #176 added:
 
 - `supabase/migrations/0006_platform_tenancy.sql` with `platform_memberships`, nullable pre-onboarding organization owners, `venue_admin_invites`, platform metadata RLS, platform audit foundation, and RPCs for platform venue creation and managed-admin invite claiming;
-- `src/services/platform/platformTypes.ts` and `platformAdminService.ts`;
+- `supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql` with safe public branding lookup by venue slug, venue-bound public RPC wrappers, and server-enforced expiration for couple/collaborator/guest links;
+- `src/services/platform/platformTypes.ts`, `platformAdminService.ts`, `publicVenueService.ts`, and `organizationContext.ts`;
 - `PlatformAdminPortal.tsx` at the root/`#/platform-admin` route;
+- `PlatformLoginScreen.tsx` at the neutral root/`#/platform-login` route;
+- `VenueLoginScreen.tsx` at `#/venue-login/<venue-slug>` with organization-scoped Supabase sign-in and public venue branding;
 - `VenueAdminOnboarding.tsx` at `#/venue-onboarding?token=...`;
 - global platform role loading in Supabase Auth restoration/sign-in;
 - invite-only cloud login messaging and routing for regular organization invites;
-- `docs/platform/MULTI_TENANT_PLATFORM.md` with the live migration/bootstrap/onboarding/smoke checklist.
+- separate neutral platform login, venue-specific login routes, and hidden public-portal controls on venue/platform login pages;
+- couple/co-owner/planner/family/vendor portal access roles, event-day-after link expiry, token rotation/reissue helpers that preserve history, and explicit venue query parameters on new public links;
+- `docs/platform/MULTI_TENANT_PLATFORM.md` with the live migration/bootstrap/onboarding/login/access-lifecycle/smoke checklist.
 
-The first platform owner is intentionally bootstrapped once through Supabase SQL Editor by inserting an active `platform_owner` row for the existing Supabase Auth user. No service-role credential belongs in Vercel or the browser. Migration `0006` and the live tenant/RLS/onboarding smoke test remain pending in the user's Supabase project; do not call this path live-certified until that test passes.
+The first platform owner is intentionally bootstrapped once through Supabase SQL Editor by inserting an active `platform_owner` row for the existing Supabase Auth user. No service-role credential belongs in Vercel or the browser. Migrations `0006`/`0007` and the live tenant/RLS/onboarding smoke test remain pending in the user's Supabase project; do not call this path live-certified until that test passes.
+
+### 9.10 Venue-specific login and portal lifecycle (Review #177)
+
+Review #177 extends the platform layer with the user-approved venue/public boundary:
+
+- root/`#/platform-login` uses neutral Platform Administration branding;
+- `#/venue-login/<venue-slug>` resolves safe public venue branding through `get_public_venue_branding` and only permits active members of that organization;
+- couples and guests bypass venue login through public invite routes;
+- new couple/guest URLs carry the venue slug and use venue-bound RPC wrappers;
+- couples retain invite-link access without Supabase Auth accounts;
+- one guest token is scoped to one couple, while `guestEventIds` determines which assigned events the guest can see and RSVP to;
+- links expire through the day after the final event day (with a temporary 30-day fallback when no event date exists);
+- couple owners, venue administrators, and couples can reissue couple/collaborator/guest tokens without deleting history;
+- collaborator roles now allow an explicit `couple`/co-owner grant in addition to planner, family, and vendor.
+
+Files include `supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql`, `PlatformLoginScreen.tsx`, `VenueLoginScreen.tsx`, `publicVenueService.ts`, `organizationContext.ts`, access lifecycle helpers, and link rotation changes in couple services/portals. The existing Seven Paths Manor tenant should be preserved and assigned a stable slug such as `seven-paths-manor` after confirming uniqueness. Email confirmation, venue-specific timezone, MFA, transactional invite email, and live cross-tenant/RPC smoke tests remain follow-up gates.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*

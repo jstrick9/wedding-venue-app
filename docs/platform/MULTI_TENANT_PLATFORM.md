@@ -34,6 +34,7 @@ The initial deployment uses one Supabase project:
 - `public.platform_memberships` — global platform roles, separate from venue roles.
 - Existing business tables and `org_data` remain protected by organization/event RLS.
 - `couple_portal_snapshots` remains token-scoped for public couple/guest access.
+- Migration `0007_public_venue_branding_and_access_lifecycle.sql` exposes only safe public venue branding by slug and enforces invite expiration server-side.
 
 A user may have both:
 
@@ -65,13 +66,14 @@ The app must not use localStorage's old `admin` user as the cloud authority. In 
 
 ## Apply the new migration
 
-After migrations `0001` through `0005` are already applied, run:
+After migrations `0001` through `0005` are already applied, run these files in order:
 
 ```text
 supabase/migrations/0006_platform_tenancy.sql
+supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql
 ```
 
-Run it once in Supabase SQL Editor or through the Supabase CLI. Do not rerun a partially successful migration without checking which objects were created.
+Run each once in Supabase SQL Editor or through the Supabase CLI. Do not rerun a partially successful migration without checking which objects were created.
 
 ## Bootstrap the first platform owner
 
@@ -97,6 +99,36 @@ After the SQL runs:
 2. Sign in again with the Supabase email/password.
 3. Open the root application URL or `#/platform-admin`.
 4. The Platform Admin Console should appear.
+
+## Login and public portal boundaries
+
+- The root route is a neutral platform login (`#/platform-login`). It is not branded as a venue.
+- Each venue has a staff login route using its tenant slug: `#/venue-login/<venue-slug>`.
+- The venue login resolves safe branding through the public branding RPC and only accepts an active membership in that organization.
+- Couples and wedding guests do not receive venue login controls. Their invite links open the appropriate public portal directly.
+- New couple and guest links carry the venue slug and are checked against the organization stored on the server snapshot. Legacy token-only links remain available for migration compatibility.
+
+## Portal access lifecycle and reissue
+
+Couple, collaborator, and guest links are event-scoped bearer links. By default, access remains available through the full calendar day after the couple's final event day, then expires. If an event has no date yet, a temporary 30-day fallback is used until the venue sets dates.
+
+Reissuing a link rotates only its bearer token. It does not delete or replace:
+
+- couple planning data;
+- collaborators and their roles;
+- guest records;
+- event assignments;
+- RSVP submissions;
+- couple chat/history.
+
+The venue can reissue couple and guest links from the venue Couples management screen. A couple owner can reissue their own couple link, collaborator links, and guest links from the Couples Portal. The old token stops resolving after the new snapshot is synchronized.
+
+Couple collaborator roles remain distinct:
+
+- `couple` / co-owner — full couple-level access when explicitly granted;
+- `planner` — planning edits such as layouts and guests;
+- `family` — view/answer/chat access;
+- `vendor` — view/chat access.
 
 ## Platform-admin onboarding flow
 
@@ -137,6 +169,7 @@ The legacy local User Management form still represents local browser records. It
 - Copy the managed-admin setup link.
 - Confirm a row appears in `public.organizations` with a null `owner_id`.
 - Confirm a pending row appears in `public.venue_admin_invites`.
+- Confirm `get_public_venue_branding(slug)` returns only safe branding fields.
 
 ### Managed venue administrator
 

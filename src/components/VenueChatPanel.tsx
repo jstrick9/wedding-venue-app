@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useMemo, useEffect } from 'react';
-import { getCoupleEvents } from '../services/couples/coupleService';
+import { buildCoupleInviteUrl, getCoupleEvents } from '../services/couples/coupleService';
 import {
   getCoupleMessages,
   sendCoupleMessage,
@@ -143,7 +143,7 @@ export function VenueChatPanel({
 
   const openPortalUrl = (token?: string) => {
     if (!token) return;
-    const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${token}`;
+    const url = buildCoupleInviteUrl(token);
     window.open(url, '_blank');
   };
 

@@ -19,6 +19,9 @@ import {
   loadCoupleSession,
   clearCoupleSession,
   getCoupleTokenFromLocation,
+  buildCoupleInviteUrl,
+  rotateCoupleInviteToken,
+  rotateCoupleCollaboratorToken,
   addCoupleCollaborator,
   removeCoupleCollaborator,
   updateCoupleEvent,
@@ -39,6 +42,7 @@ import {
   buildGuestInviteUrl,
   getCouplePortalConfig,
   setCouplePortalConfig,
+  rotateCoupleGuestToken,
 } from '../services/couples/coupleGuestService';
 import { getGuestPortalConfig } from '../utils/guestPortal';
 import { parseGuestCsv } from '../utils/guestCsv';
@@ -67,6 +71,9 @@ import { getVenueVendors } from '../hooks/useVendors';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import { useBrandingConfig } from '../config';
+import { getPublicVenueBranding } from '../services/platform/publicVenueService';
+import { getActiveOrganizationSlug } from '../services/platform/organizationContext';
+import { isPortalAccessActive } from '../services/couples/accessLifecycle';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { on } from '../utils/appEvents';
 import {
@@ -105,6 +112,7 @@ type TabId = 'overview' | 'package' | 'spaces' | 'questions' | 'design' | 'check
 
 interface CouplesPortalProps {
   coupleToken?: string;
+  venueSlug?: string;
   onExitPortal: () => void;
 }
 
@@ -115,8 +123,19 @@ interface CouplesPortalProps {
  * inviting collaborators (planner / parents / vendors). Space-driven questions,
  * layout design/approval, and a per-couple guest portal are layered on next.
  */
-export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPortalProps) {
-  const config = useBrandingConfig();
+export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: CouplesPortalProps) {
+  const localConfig = useBrandingConfig();
+  const [publicVenueConfig, setPublicVenueConfig] = useState<typeof localConfig | null>(null);
+  const config = publicVenueConfig || localConfig;
+  const organizationSlug = getActiveOrganizationSlug();
+  const linkVenueSlug = venueSlug || organizationSlug || undefined;
+
+  useEffect(() => {
+    if (!venueSlug) return;
+    void getPublicVenueBranding(venueSlug).then((branding) => {
+      if (branding) setPublicVenueConfig(branding.config);
+    });
+  }, [venueSlug]);
   const [session, setSession] = useState(() => loadCoupleSession());
   const [events, setEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -134,6 +153,13 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     () => event?.collaborators.find((c) => c.id === session?.collaboratorId) || null,
     [event, session],
   );
+
+  useEffect(() => {
+    if (event && !isPortalAccessActive(event.inviteExpiresAt)) {
+      clearCoupleSession();
+      setSession(null);
+    }
+  }, [event]);
 
   // ── Tiered collaborator permissions ─────────────────────────────────────────
   // couple: full control. planner: design/spaces/guests/questions but not portal
@@ -192,7 +218,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     let cancelled = false;
 
     const hydrateRemote = async () => {
-      const snapshot = await pullCouplePortalSnapshot(cloudToken);
+      const snapshot = await pullCouplePortalSnapshot(cloudToken, venueSlug);
       if (!snapshot || cancelled) return;
       cloudHydratingRef.current = true;
       hydrateCouplePortalSnapshot(snapshot);
@@ -212,7 +238,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
       const activeEventId = event?.id || session?.eventId;
       if (!activeEventId) return;
       const snapshot = await buildCouplePortalSnapshot(activeEventId);
-      if (snapshot) await saveCouplePortalSnapshot(cloudToken, snapshot);
+      if (snapshot) await saveCouplePortalSnapshot(cloudToken, snapshot, venueSlug);
     };
 
     void hydrateRemote();
@@ -254,7 +280,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
     setSession(loadCoupleSession());
     setEvents(getCoupleEvents());
     try {
-      window.location.hash = `#/couples-portal?token=${encodeURIComponent(token)}`;
+      window.location.hash = `#/couples-portal?token=${encodeURIComponent(token)}${organizationSlug ? `&venue=${encodeURIComponent(organizationSlug)}` : ''}`;
     } catch {
       // ignore
     }
@@ -625,10 +651,22 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   };
 
   const handleCopyGuestLink = (token: string) => {
-    void navigator.clipboard?.writeText(buildGuestInviteUrl(token, event?.id)).then(
+    void navigator.clipboard?.writeText(buildGuestInviteUrl(token, event?.id, linkVenueSlug)).then(
       () => showToast('Guest invite link copied to clipboard.', 'success'),
       () => showToast('Could not copy — copy the link below.', 'warning'),
     );
+  };
+
+  const handleRotateGuestLink = (guestId: string, guestName: string) => {
+    if (!event) return;
+    const nextToken = rotateCoupleGuestToken(event.id, guestId);
+    if (!nextToken) {
+      showToast('This guest link could not be reissued.', 'warning');
+      return;
+    }
+    setGuestTick((tick) => tick + 1);
+    void navigator.clipboard?.writeText(buildGuestInviteUrl(nextToken, event.id, linkVenueSlug));
+    showToast(`A new guest invite link was created for ${guestName}. Guest RSVP history was preserved.`, 'success');
   };
 
   const handleImportGuests = (content: string) => {
@@ -747,7 +785,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   const orgId = (config as any)?.organizationId || '';
 
   const handleEmailCollaborator = (email: string, name: string, token: string) => {
-    const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
+    const url = buildCoupleInviteUrl(token, linkVenueSlug);
     const subject = 'Join our wedding planning portal';
     const body = `Hi ${name},\n\nYou've been invited! Open this link to get started:\n\n${url}\n\n— ${coupleName}`;
     void sendCoupleEmail(email, {
@@ -765,7 +803,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   };
 
   const handleEmailGuest = (email: string, name: string, token: string) => {
-    const url = `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(token)}&couple=${encodeURIComponent(event?.id || '')}`;
+    const url = buildGuestInviteUrl(token, event?.id, linkVenueSlug);
     const subject = `RSVP for ${coupleName}`;
     const body = `Hi ${name},\n\nYou've been invited! Please RSVP here:\n\n${url}\n\n— ${coupleName}`;
     void sendCoupleEmail(email, {
@@ -784,7 +822,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
 
   /** Send a gentle RSVP reminder to a guest who hasn't responded yet. */
   const handleRemindGuest = (email: string, name: string, token: string) => {
-    const url = `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(token)}&couple=${encodeURIComponent(event?.id || '')}`;
+    const url = buildGuestInviteUrl(token, event?.id, linkVenueSlug);
     const subject = `Friendly reminder: RSVP for ${coupleName}`;
     const body =
       `Hi ${name},\n\n` +
@@ -820,11 +858,35 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
   });
 
   const handleCopyInviteLink = (token: string) => {
-    const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
+    const url = buildCoupleInviteUrl(token, linkVenueSlug);
     void navigator.clipboard?.writeText(url).then(
       () => {},
       () => {},
     );
+  };
+
+  const handleRotateCoupleLink = () => {
+    if (!event) return;
+    const nextToken = rotateCoupleInviteToken(event.id);
+    if (!nextToken) {
+      showToast('This couple link could not be reissued because access has closed.', 'warning');
+      return;
+    }
+    refresh();
+    void navigator.clipboard?.writeText(buildCoupleInviteUrl(nextToken, linkVenueSlug));
+    showToast('A new couple invite link was created. Existing planning history was preserved.', 'success');
+  };
+
+  const handleRotateCollaboratorLink = (collaboratorId: string, collaboratorName: string) => {
+    if (!event) return;
+    const nextToken = rotateCoupleCollaboratorToken(event.id, collaboratorId);
+    if (!nextToken) {
+      showToast('This collaborator link could not be reissued because access has closed.', 'warning');
+      return;
+    }
+    refresh();
+    void navigator.clipboard?.writeText(buildCoupleInviteUrl(nextToken, linkVenueSlug));
+    showToast(`A new link was created for ${collaboratorName}. Their role and planning history were preserved.`, 'success');
   };
 
   // ── Render states ──────────────────────────────────────────────────────────
@@ -1117,10 +1179,20 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
             >
               <span>📋</span> Copy Portal Link
             </button>
+            {canManageCollaborators && (
+              <button
+                type="button"
+                onClick={handleRotateCoupleLink}
+                className="px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-sm transition-colors shadow-sm flex items-center gap-1.5"
+                title="Create a new couple link while preserving planning history"
+              >
+                <span>🔄</span> Reissue Link
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
-                const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(event.inviteToken)}`;
+                const url = buildCoupleInviteUrl(event.inviteToken, linkVenueSlug);
                 const subject = `Your Wedding Planning Portal — ${event.coupleName}`;
                 const body = `Hi ${event.coupleName},\n\nWe're so excited to work with you on your wedding!\n\nHere is your private link to access your Couples Portal, where you can design your floor layouts, manage your guest list & RSVPs, view wedding packages, and chat directly with our venue team:\n\n${url}\n\nWarm regards,\nThe Seven Paths Manor Team`;
                 window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -1843,6 +1915,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         className="px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-bold bg-white"
                         aria-label="Collaborator role"
                       >
+                        <option value="couple">Co-owner (Full couple access)</option>
                         <option value="planner">Planner (Can edit layouts/guests)</option>
                         <option value="family">Family (Can view & chat)</option>
                         <option value="vendor">Vendor (Can view & chat)</option>
@@ -1898,6 +1971,7 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                           className="text-xs font-bold px-2 py-1 border border-gray-300 rounded-lg bg-white"
                           aria-label={`Role for ${c.name}`}
                         >
+                          <option value="couple">Co-owner</option>
                           <option value="planner">Planner</option>
                           <option value="family">Family</option>
                           <option value="vendor">Vendor</option>
@@ -1915,6 +1989,16 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                             title="Copy collaborator invite link"
                           >
                             📋 Copy Link
+                          </button>
+                        )}
+                        {canManageCollaborators && (
+                          <button
+                            type="button"
+                            onClick={() => handleRotateCollaboratorLink(c.id, c.name)}
+                            className="text-xs font-bold text-amber-700 hover:underline"
+                            title="Create a new collaborator link while preserving their role and history"
+                          >
+                            Reissue
                           </button>
                         )}
                         {canManageCollaborators && c.email && (
@@ -3002,6 +3086,16 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                                 Copy link
                               </button>
                             )}
+                            {canManageGuests && g.token && (
+                              <button
+                                type="button"
+                                onClick={() => handleRotateGuestLink(g.id, g.name)}
+                                className="text-xs text-amber-700 hover:underline"
+                                title="Create a new link while preserving this guest's RSVP history"
+                              >
+                                Reissue link
+                              </button>
+                            )}
                             {canManageGuests && g.email && g.token && (
                               <button
                                 type="button"
@@ -3465,11 +3559,11 @@ export default function CouplesPortal({ coupleToken, onExitPortal }: CouplesPort
                         <input
                           type="number"
                           min={0}
-                          value={portalDraft.accessGracePeriodHours ?? 36}
+                          value={portalDraft.accessGracePeriodHours ?? 24}
                           onChange={(e) => {
                             const raw = e.target.value.trim();
                             const n = raw === '' ? 36 : Number(raw);
-                            setPortalDraft({ ...portalDraft, accessGracePeriodHours: Number.isNaN(n) || n < 0 ? 36 : n });
+                            setPortalDraft({ ...portalDraft, accessGracePeriodHours: Number.isNaN(n) || n < 0 ? 24 : n });
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         />

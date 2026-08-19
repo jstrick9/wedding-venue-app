@@ -7,6 +7,8 @@ export interface BackendAuthSession {
   accessToken: string;
   /** The user's active organization id (RLS scope) when known. */
   organizationId?: string;
+  /** Slug for the active venue organization, used in venue-specific routes. */
+  organizationSlug?: string;
   /** A global platform role, separate from the user's venue organization role. */
   platformRole?: PlatformRole;
 }
@@ -64,6 +66,7 @@ function hasPlatformAdminAuthority(platformRole?: PlatformRole): boolean {
 export async function signInWithSupabase(
   email: string,
   password: string,
+  requiredOrganizationId?: string,
 ): Promise<BackendAuthSession | null> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -75,14 +78,25 @@ export async function signInWithSupabase(
     .eq('id', data.user.id)
     .single();
 
-  const { data: membership } = await supabase
+  const membershipQuery = supabase
     .from('organization_memberships')
     .select('role,status,organization_id')
     .eq('user_id', data.user.id)
-    .eq('status', 'active')
-    .limit(1)
-    .maybeSingle();
+    .eq('status', 'active');
+  const { data: membership } = await (requiredOrganizationId
+    ? membershipQuery.eq('organization_id', requiredOrganizationId)
+    : membershipQuery.limit(1)
+  ).maybeSingle();
 
+  if (requiredOrganizationId && !membership) return null;
+
+  const { data: organization } = membership?.organization_id
+    ? await supabase
+      .from('organizations')
+      .select('slug')
+      .eq('id', membership.organization_id)
+      .maybeSingle()
+    : { data: null };
   const platformRole = await loadPlatformRole(data.user.id);
   const user = mapProfileToUser(
     {
@@ -97,11 +111,12 @@ export async function signInWithSupabase(
     user,
     accessToken: data.session.access_token,
     organizationId: membership?.organization_id,
+    organizationSlug: organization?.slug,
     platformRole,
   };
 }
 
-export async function restoreSupabaseSession(): Promise<BackendAuthSession | null> {
+export async function restoreSupabaseSession(requiredOrganizationId?: string): Promise<BackendAuthSession | null> {
   const supabase = getSupabaseClient();
   const { data } = await supabase.auth.getSession();
   const session = data.session;
@@ -113,14 +128,25 @@ export async function restoreSupabaseSession(): Promise<BackendAuthSession | nul
     .eq('id', session.user.id)
     .single();
 
-  const { data: membership } = await supabase
+  const membershipQuery = supabase
     .from('organization_memberships')
     .select('role,status,organization_id')
     .eq('user_id', session.user.id)
-    .eq('status', 'active')
-    .limit(1)
-    .maybeSingle();
+    .eq('status', 'active');
+  const { data: membership } = await (requiredOrganizationId
+    ? membershipQuery.eq('organization_id', requiredOrganizationId)
+    : membershipQuery.limit(1)
+  ).maybeSingle();
 
+  if (requiredOrganizationId && !membership) return null;
+
+  const { data: organization } = membership?.organization_id
+    ? await supabase
+      .from('organizations')
+      .select('slug')
+      .eq('id', membership.organization_id)
+      .maybeSingle()
+    : { data: null };
   const platformRole = await loadPlatformRole(session.user.id);
   return {
     user: mapProfileToUser(
@@ -133,6 +159,7 @@ export async function restoreSupabaseSession(): Promise<BackendAuthSession | nul
     ),
     accessToken: session.access_token,
     organizationId: membership?.organization_id,
+    organizationSlug: organization?.slug,
     platformRole,
   };
 }
@@ -194,7 +221,7 @@ export async function signUpWithSupabase({
 
   const { data: orgRow, error: orgLookupError } = await supabase
     .from('organizations')
-    .select('id')
+    .select('id,slug')
     .eq('owner_id', data.user.id)
     .maybeSingle();
   if (orgLookupError || !orgRow) {
@@ -217,6 +244,7 @@ export async function signUpWithSupabase({
     ),
     accessToken: data.session.access_token,
     organizationId: orgRow?.id,
+    organizationSlug: orgRow?.slug,
   };
   return session;
 }

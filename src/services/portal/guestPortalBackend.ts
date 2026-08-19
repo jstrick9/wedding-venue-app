@@ -25,6 +25,8 @@ export interface GuestPortalContext {
   eventName: string;
   /** Couple event id when the portal is accessed through a per-couple invite. */
   coupleEventId?: string;
+  /** Venue slug carried by new invite links for explicit tenant binding. */
+  venueSlug?: string;
 }
 
 export interface GuestPortalBackend {
@@ -61,7 +63,7 @@ export class SupabaseGuestPortalBackend implements GuestPortalBackend {
     const supabase = getSupabaseClient();
     const token = identifier.trim();
     if (context.coupleEventId && token.length >= 16 && isCoupleCloudEnabled()) {
-      const remote = await pullGuestPortalSnapshot(context.coupleEventId, token);
+      const remote = await pullGuestPortalSnapshot(context.coupleEventId, token, context.venueSlug);
       if (remote?.guest) {
         const g = remote.guest;
         return {
@@ -109,7 +111,7 @@ export class SupabaseGuestPortalBackend implements GuestPortalBackend {
 
   async submitRSVP(context: GuestPortalContext, submission: RSVPSubmission): Promise<boolean> {
     if (context.coupleEventId && submission.token && isCoupleCloudEnabled()) {
-      return submitGuestPortalRsvp(context.coupleEventId, submission.token, submission);
+      return submitGuestPortalRsvp(context.coupleEventId, submission.token, submission, context.venueSlug);
     }
     if (!isSupabaseConfigured()) return false;
     const supabase = getSupabaseClient();

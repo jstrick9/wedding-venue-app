@@ -11,6 +11,7 @@ import { getCoupleIdFromLocation } from './services/couples/coupleGuestService';
 import { ToastContainer, showToast } from './components/Toast';
 import { on } from './utils/appEvents';
 import { lazy } from 'react';
+import PlatformLoginScreen from './components/PlatformLoginScreen';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
 const CouplesPortal = lazy(() => import('./components/CouplesPortal'));
@@ -19,6 +20,7 @@ const ForcePasswordChange = lazy(() => import('./components/ForcePasswordChange'
 const AcceptInvite = lazy(() => import('./components/AcceptInvite').then((m) => ({ default: m.AcceptInvite })));
 const PlatformAdminPortal = lazy(() => import('./components/PlatformAdminPortal'));
 const VenueAdminOnboarding = lazy(() => import('./components/VenueAdminOnboarding'));
+const VenueLoginScreen = lazy(() => import('./components/VenueLoginScreen'));
 
 /**
  * Surfaces `spm_storage_error` events as toasts no matter which screen is
@@ -31,6 +33,15 @@ function getVenueAdminTokenFromLocation(location: Location = window.location): s
   const queryIndex = hash.indexOf('?');
   if (queryIndex < 0) return undefined;
   return new URLSearchParams(hash.slice(queryIndex + 1)).get('token') || undefined;
+}
+
+function getVenueSlugFromLocation(location: Location = window.location): string {
+  const hash = location.hash || '';
+  const [route, query] = hash.split('?');
+  const queryVenue = query ? new URLSearchParams(query).get('venue') : null;
+  if (queryVenue) return queryVenue.trim();
+  const prefix = '#/venue-login/';
+  return route.startsWith(prefix) ? decodeURIComponent(route.slice(prefix.length)).trim() : '';
 }
 
 function GlobalStorageErrorListener() {
@@ -46,7 +57,7 @@ function GlobalStorageErrorListener() {
 }
 
 function AppContent() {
-  const { user, continueAsGuest, isPlatformAdmin, registerWithInvite } = useAuth();
+  const { user, continueAsGuest, isPlatformAdmin, registerWithInvite, organizationSlug } = useAuth();
   const [hash, setHash] = useState(window.location.hash);
 
   useEffect(() => {
@@ -87,6 +98,14 @@ function AppContent() {
     );
   }
 
+  if (hash.startsWith('#/venue-login/')) {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <VenueLoginScreen slug={getVenueSlugFromLocation(window.location)} />
+      </Suspense>
+    );
+  }
+
   if (hash.startsWith('#/couples-portal')) {
     return (
       <Suspense
@@ -101,6 +120,7 @@ function AppContent() {
       >
         <CouplesPortal
           coupleToken={getCoupleTokenFromLocation(window.location)}
+          venueSlug={getVenueSlugFromLocation(window.location)}
           onExitPortal={() => {
             window.location.hash = '';
           }}
@@ -124,6 +144,7 @@ function AppContent() {
         <GuestPortal
           guestToken={getGuestPortalTokenFromLocation(window.location)}
           coupleEventId={getCoupleIdFromLocation(window.location)}
+          venueSlug={getVenueSlugFromLocation(window.location)}
           preview={new URLSearchParams(window.location.hash.split('?')[1] || '').get('preview') === '1'}
           onExitPortal={() => {
             window.location.hash = '';
@@ -133,8 +154,20 @@ function AppContent() {
     );
   }
 
+  if ((hash === '' || hash === '#/' || hash === '#/platform-login') && !user) {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <PlatformLoginScreen />
+      </Suspense>
+    );
+  }
+
   if (hash.startsWith('#/platform-admin') && !user) {
-    return <LoginScreen onContinueAsGuest={continueAsGuest} />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <PlatformLoginScreen />
+      </Suspense>
+    );
   }
 
   if (hash.startsWith('#/platform-admin') && user && !isPlatformAdmin) {
@@ -151,7 +184,11 @@ function AppContent() {
   }
 
   if (!user) {
-    return <LoginScreen onContinueAsGuest={continueAsGuest} />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <PlatformLoginScreen />
+      </Suspense>
+    );
   }
 
   // Force a password change before letting anyone past the login gate if the
@@ -169,7 +206,7 @@ function AppContent() {
   if (isPlatformAdmin && (hash === '' || hash === '#/' || hash.startsWith('#/platform-admin'))) {
     return (
       <Suspense fallback={<LoadingScreen />}>
-        <PlatformAdminPortal onOpenVenueWorkspace={() => { window.location.hash = '#/venue'; }} />
+        <PlatformAdminPortal onOpenVenueWorkspace={() => { window.location.hash = organizationSlug ? `#/venue-login/${encodeURIComponent(organizationSlug)}` : '#/venue'; }} />
       </Suspense>
     );
   }

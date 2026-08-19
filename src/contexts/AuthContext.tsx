@@ -16,6 +16,7 @@ import {
   verifyPassword,
 } from '../utils/auth';
 import type { PlatformRole } from '../services/platform/platformTypes';
+import { setActiveOrganizationSlug } from '../services/platform/organizationContext';
 import {
   restoreSupabaseSession,
   shouldUseSupabaseAuth,
@@ -36,6 +37,8 @@ interface AuthContextType {
   user: User | null;
   /** The user's active organization id (RLS scope), when on the Supabase backend. */
   organizationId: string | null;
+  /** Slug for the active venue organization, used by venue-specific login/link routes. */
+  organizationSlug: string | null;
   /** Global platform role, separate from the venue organization role. */
   platformRole: PlatformRole | null;
   /** True for platform_owner and platform_admin memberships. */
@@ -46,6 +49,7 @@ interface AuthContextType {
   isBasicUser: boolean;
   isGuest: boolean;
   login: (username: string, password: string) => Promise<boolean>;
+  loginForOrganization: (organizationId: string, username: string, password: string) => Promise<boolean>;
   /** Register a new account (Supabase backend). Returns an error message or null on success. */
   register: (params: AuthRegistrationParams) => Promise<string | null>;
   /** Register and accept an existing organization invitation without creating a new tenant. */
@@ -101,6 +105,7 @@ function buildGuestUser(): User {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [organizationSlug, setOrganizationSlug] = useState<string | null>(null);
   const [platformRole, setPlatformRole] = useState<PlatformRole | null>(null);
   const [initialized, setInitialized] = useState(false);
 
@@ -111,10 +116,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (session?.user) {
             setUser(session.user);
             setOrganizationId(session.organizationId ?? null);
+            setOrganizationSlug(session.organizationSlug ?? null);
+            setActiveOrganizationSlug(session.organizationSlug);
             setPlatformRole(session.platformRole ?? null);
           } else {
             clearSession();
             setOrganizationId(null);
+            setOrganizationSlug(null);
+            setActiveOrganizationSlug(null);
             setPlatformRole(null);
           }
         })
@@ -160,6 +169,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!session) return false;
       setUser(session.user);
       setOrganizationId(session.organizationId ?? null);
+      setOrganizationSlug(session.organizationSlug ?? null);
+      setActiveOrganizationSlug(session.organizationSlug);
       setPlatformRole(session.platformRole ?? null);
       return true;
     }
@@ -215,9 +226,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return true;
   };
 
+  const loginForOrganization: AuthContextType['loginForOrganization'] = async (organizationId, username, password) => {
+    if (!shouldUseSupabaseAuth()) return false;
+    const session = await signInWithSupabase(username, password, organizationId);
+    if (!session) return false;
+    setUser(session.user);
+    setOrganizationId(session.organizationId ?? null);
+    setOrganizationSlug(session.organizationSlug ?? null);
+    setActiveOrganizationSlug(session.organizationSlug);
+    setPlatformRole(session.platformRole ?? null);
+    return true;
+  };
+
   const logout = () => {
     setUser(null);
     setOrganizationId(null);
+    setOrganizationSlug(null);
+    setActiveOrganizationSlug(null);
     setPlatformRole(null);
     clearSession();
     if (shouldUseSupabaseAuth()) {
@@ -233,6 +258,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const session = await signUpWithSupabase({ email, password, fullName, organizationName });
       setUser(session.user);
       setOrganizationId(session.organizationId ?? null);
+      setOrganizationSlug(session.organizationSlug ?? null);
+      setActiveOrganizationSlug(session.organizationSlug);
       setPlatformRole(session.platformRole ?? null);
       return null;
     } catch (err) {
@@ -248,6 +275,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const session = await signUpOrganizationInvite({ email, password, fullName, inviteToken });
       setUser(session.user);
       setOrganizationId(session.organizationId ?? null);
+      setOrganizationSlug(session.organizationSlug ?? null);
+      setActiveOrganizationSlug(session.organizationSlug);
       setPlatformRole(session.platformRole ?? null);
       return null;
     } catch (err) {
@@ -415,6 +444,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       value={{
         user,
         organizationId,
+        organizationSlug,
         platformRole,
         isPlatformAdmin,
         isPlatformSupport,
@@ -422,6 +452,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isBasicUser,
         isGuest,
         login,
+        loginForOrganization,
         register,
         registerWithInvite,
         logout,

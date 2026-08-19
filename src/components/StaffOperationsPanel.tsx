@@ -11,7 +11,7 @@ import { emitDataChanged, on } from '../utils/appEvents';
 import { showToast } from './Toast';
 import { ConfirmDialog } from './ConfirmDialog';
 import { toLocalDatetimeInput, fromLocalDatetimeInput } from '../utils/dateTime';
-import { getCoupleEvents } from '../services/couples/coupleService';
+import { buildCoupleInviteUrl, getCoupleEvents } from '../services/couples/coupleService';
 import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { useTimeline } from '../hooks/useTimeline';
 import { getOperationsChecklistDefaults, getOperationalZoneDefaults } from './admin/OperationsSettingsManagement';
@@ -484,7 +484,7 @@ const StaffOperationsPanel: React.FC<Props> = ({
     const timelineEvents = timeline ? timeline.days.flatMap((d: any) => d.events) : [];
     const conflictingShiftsCount = shifts.filter((s) => isShiftConflicting(s)).length;
 
-    const portalLink = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(selectedCouple.inviteToken)}`;
+    const portalLink = buildCoupleInviteUrl(selectedCouple.inviteToken);
 
     return (
       <div className="space-y-6">

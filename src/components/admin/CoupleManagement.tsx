@@ -11,6 +11,8 @@ import {
   reviewCoupleLayout,
   buildEventDays,
   findCoupleEventById,
+  buildCoupleInviteUrl,
+  rotateCoupleInviteToken,
 } from '../../services/couples/coupleService';
 import {
   getCoupleMessages,
@@ -18,7 +20,7 @@ import {
   getUnreadCoupleMessageCounts,
   markCoupleChatRead,
 } from '../../services/couples/coupleChatService';
-import { getCoupleGuests, getCouplePortalConfig, setCouplePortalConfig } from '../../services/couples/coupleGuestService';
+import { buildGuestInviteUrl, getCoupleGuests, getCouplePortalConfig, rotateCoupleGuestToken, setCouplePortalConfig } from '../../services/couples/coupleGuestService';
 import { getCoupleRsvpSubmissions } from '../../services/couples/coupleRsvpService';
 import { getCoupleGuestEvents, getAssignedGuestCount, GUEST_EVENT_KIND_LABELS, ensureDerivedGuestEventsForCouple } from '../../services/couples/coupleGuestEventService';
 import { getGuestPortalConfig } from '../../utils/guestPortal';
@@ -110,14 +112,35 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   void pollTick; // re-render periodically so the unread badge stays current
   const unreadCounts = getUnreadCoupleMessageCounts(events.map((e) => e.id));
 
-  const portalUrl = (token: string) =>
-    `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}`;
+  const portalUrl = (token: string) => buildCoupleInviteUrl(token);
 
   const handleCopy = (token: string) => {
     void navigator.clipboard?.writeText(portalUrl(token)).then(
       () => onShowSuccess('Invitation link copied to clipboard.'),
       () => {},
     );
+  };
+
+  const handleReissueCouple = (event: CoupleEvent) => {
+    const nextToken = rotateCoupleInviteToken(event.id);
+    if (!nextToken) {
+      onShowSuccess('This couple link cannot be reissued because portal access has closed.');
+      return;
+    }
+    refresh();
+    void navigator.clipboard?.writeText(portalUrl(nextToken));
+    onShowSuccess('New couple invite link created; couple planning history was preserved.');
+  };
+
+  const handleReissueGuest = (event: CoupleEvent, guestId: string, guestName: string) => {
+    const nextToken = rotateCoupleGuestToken(event.id, guestId);
+    if (!nextToken) {
+      onShowSuccess('This guest link could not be reissued.');
+      return;
+    }
+    refresh();
+    void navigator.clipboard?.writeText(buildGuestInviteUrl(nextToken, event.id));
+    onShowSuccess(`New guest link created for ${guestName}; RSVP history was preserved.`);
   };
 
   const handleCreate = () => {
@@ -751,6 +774,9 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     <button type="button" onClick={() => handleCopy(ev.inviteToken)} className="text-xs text-[#4A1942] hover:underline" style={{ color: config.primaryColor || '#4A1942' }}>
                       Copy invite
                     </button>
+                    <button type="button" onClick={() => handleReissueCouple(ev)} className="text-xs text-amber-700 hover:underline" title="Create a new couple link while preserving planning history">
+                      Reissue invite
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -950,7 +976,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const url = `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(g.token!)}&couple=${encodeURIComponent(ev.id)}`;
+                                        const url = buildGuestInviteUrl(g.token!, ev.id);
                                         void navigator.clipboard?.writeText(url).then(
                                           () => onShowSuccess(`Guest invite link copied for ${g.name}.`),
                                           () => {},
@@ -961,6 +987,16 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                       title="Copy guest invite link"
                                     >
                                       📋
+                                    </button>
+                                  )}
+                                  {g.token && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReissueGuest(ev, g.id, g.name)}
+                                      className="text-xs text-amber-700 hover:underline"
+                                      title="Create a new guest link while preserving RSVP history"
+                                    >
+                                      Reissue
                                     </button>
                                   )}
                                 </span>

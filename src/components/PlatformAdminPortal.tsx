@@ -62,6 +62,15 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     }
   };
 
+  const buildVenueLoginUrl = (slug: string) => `${window.location.origin}${window.location.pathname}#/venue-login/${encodeURIComponent(slug)}`;
+
+  const copyVenueLogin = (slug: string) => {
+    void navigator.clipboard?.writeText(buildVenueLoginUrl(slug)).then(
+      () => showToast('Venue staff login link copied.', 'success'),
+      () => showToast('Copy failed. Open the venue URL from the browser address bar.', 'warning'),
+    );
+  };
+
   const copyInvite = () => {
     if (!result?.inviteUrl) return;
     void navigator.clipboard?.writeText(result.inviteUrl).then(
@@ -214,10 +223,14 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
                       <div>
                         <h3 className="text-sm font-bold text-gray-900">{organization.name}</h3>
                         <p className="mt-0.5 font-mono text-[11px] text-gray-500">{organization.slug}</p>
+                        <p className="mt-1 break-all text-[11px] text-indigo-700">{buildVenueLoginUrl(organization.slug)}</p>
                       </div>
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${organization.ownerId ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                        {organization.ownerId ? 'Admin claimed' : 'Awaiting admin'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${organization.ownerId ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {organization.ownerId ? 'Admin claimed' : 'Awaiting admin'}
+                        </span>
+                        <button type="button" onClick={() => copyVenueLogin(organization.slug)} className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-50">Copy staff login</button>
+                      </div>
                     </div>
                     <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
                       <span>Created: {new Date(organization.createdAt).toLocaleDateString()}</span>

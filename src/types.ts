@@ -918,7 +918,7 @@ export interface GuestPortalConfig {
   wayfindingPoints?: PortalWayfindingPoint[];
   /**
    * Hours after event-end date before the portal closes (B-06 fix).
-   * Defaults to 36 so EST venues don't lose access mid-event.
+   * Defaults to 24 so access closes on the calendar day after the event ends.
    */
   accessGracePeriodHours?: number;
   /**
@@ -940,6 +940,9 @@ export interface GuestPortalGuestRecord extends Guest {
   allowLodgingAccess?: boolean;
   /** Guest event ids this guest is invited to (per-guest itinerary). */
   guestEventIds?: string[];
+  tokenIssuedAt?: string;
+  tokenExpiresAt?: string;
+  tokenRevokedAt?: string;
 }
 
 // ── Couples / Events platform ────────────────────────────────────────────────
@@ -959,6 +962,9 @@ export interface CoupleCollaborator {
   role: CoupleCollaboratorRole;
   /** Opaque token used to access the couples portal for this collaborator. */
   inviteToken: string;
+  inviteIssuedAt?: string;
+  inviteExpiresAt?: string;
+  revokedAt?: string;
   accepted?: boolean;
   invitedAt: string;
 }
@@ -1010,6 +1016,10 @@ export interface CoupleEvent {
   coupleName: string;
   /** Token embedded in the venue→couple invitation link. */
   inviteToken: string;
+  /** When the current couple token was issued. */
+  inviteIssuedAt?: string;
+  /** Access closes at the end of the day after the final event day. */
+  inviteExpiresAt?: string;
   status: CoupleEventStatus;
   eventDate?: string;
   eventEndDate?: string;

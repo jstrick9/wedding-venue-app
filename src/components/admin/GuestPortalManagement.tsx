@@ -62,7 +62,7 @@ const EMPTY_CONFIG: GuestPortalConfig = {
   showLodging: false,
   scheduleItems: [],
   wayfindingPoints: [],
-  accessGracePeriodHours: 36,
+  accessGracePeriodHours: 24,
 };
 
 // ─── sub-components ──────────────────────────────────────────────────────────
@@ -392,7 +392,7 @@ export function GuestPortalManagement({
             min={0}
             max={168}
             className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-            value={cfg.accessGracePeriodHours ?? 36}
+            value={cfg.accessGracePeriodHours ?? 24}
             onChange={(e) =>
               update({ accessGracePeriodHours: Number(e.target.value) })
             }

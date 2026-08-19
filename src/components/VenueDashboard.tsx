@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useMemo, useState, useEffect } from 'react';
 import { VenueCalendar } from './VenueCalendar';
-import { getCoupleEvents } from '../services/couples/coupleService';
+import { buildCoupleInviteUrl, getCoupleEvents } from '../services/couples/coupleService';
 import { getCoupleSetupTasks } from '../services/couples/coupleSetupService';
 import { getCoupleGuestEvents, getAssignedGuestCount } from '../services/couples/coupleGuestEventService';
 import { getVenueCalendarEvents, recurringDatesForEvent } from '../services/calendar/venueCalendarService';
@@ -45,7 +45,7 @@ interface Props {
 const openCouplePortal = (id: string) => {
   const ev = getCoupleEvents().find((e) => e.id === id);
   if (!ev) return;
-  const url = `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(ev.inviteToken)}`;
+  const url = buildCoupleInviteUrl(ev.inviteToken);
   window.open(url, '_blank');
 };
 

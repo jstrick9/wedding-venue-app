@@ -24,6 +24,8 @@ import { removeVenueCalendarEventsForCouple } from '../calendar/venueCalendarSer
 import { findPackageAddOn } from './coupleAddOnService';
 import { emitDataChanged } from '../../utils/appEvents';
 import { createOpaqueToken } from '../../utils/secureTokens';
+import { calculatePortalExpiry, isPortalAccessActive } from './accessLifecycle';
+import { getActiveOrganizationSlug } from '../platform/organizationContext';
 
 const COUPLE_EVENTS_KEY = STORAGE_KEYS.COUPLE_EVENTS;
 const COUPLE_EVENTS_VERSION = 1;
@@ -125,6 +127,12 @@ function randomToken(prefix: string): string {
   return createOpaqueToken(prefix);
 }
 
+export function buildCoupleInviteUrl(token: string, venueSlug?: string): string {
+  const venue = venueSlug || getActiveOrganizationSlug();
+  const venueQuery = venue ? `&venue=${encodeURIComponent(venue)}` : '';
+  return `${window.location.origin}${window.location.pathname}#/couples-portal?token=${encodeURIComponent(token)}${venueQuery}`;
+}
+
 export function getCoupleEvents(): CoupleEvent[] {
   return loadVersionedStorage<CoupleEvent[]>({
     key: COUPLE_EVENTS_KEY,
@@ -149,10 +157,13 @@ export function createCoupleEvent(input: {
   availableSpaces?: string[];
   createdBy?: string;
 }): CoupleEvent {
+  const issuedAt = new Date().toISOString();
   const event: CoupleEvent = {
     id: createOpaqueToken('couple'),
     coupleName: input.coupleName.trim(),
     inviteToken: randomToken('cp'),
+    inviteIssuedAt: issuedAt,
+    inviteExpiresAt: calculatePortalExpiry(input.eventDate, input.eventEndDate, issuedAt),
     status: 'invited',
     eventDate: input.eventDate,
     eventEndDate: input.eventEndDate,
@@ -255,7 +266,15 @@ export function updateCoupleEvent(
   let updated: CoupleEvent | null = null;
   const next = getCoupleEvents().map((e) => {
     if (e.id !== id) return e;
-    updated = { ...e, ...patch, updatedAt: new Date().toISOString() };
+    const nextEvent = { ...e, ...patch, updatedAt: new Date().toISOString() };
+    if (patch.eventDate !== undefined || patch.eventEndDate !== undefined) {
+      nextEvent.inviteExpiresAt = calculatePortalExpiry(nextEvent.eventDate, nextEvent.eventEndDate, nextEvent.inviteIssuedAt || nextEvent.createdAt);
+      nextEvent.collaborators = nextEvent.collaborators.map((collaborator) => ({
+        ...collaborator,
+        inviteExpiresAt: nextEvent.inviteExpiresAt,
+      }));
+    }
+    updated = nextEvent;
     return updated;
   });
   saveCoupleEvents(next);
@@ -283,10 +302,51 @@ export function findCoupleEventById(id: string): CoupleEvent | undefined {
 export function findCoupleEventByInviteToken(token: string): CoupleEvent | undefined {
   if (!token) return undefined;
   const events = getCoupleEvents();
-  return (
-    events.find((e) => e.inviteToken === token) ||
-    events.find((e) => e.collaborators.some((c) => c.inviteToken === token))
-  );
+  return events.find((event) => {
+    if (event.inviteToken === token) return isPortalAccessActive(event.inviteExpiresAt);
+    const collaborator = event.collaborators.find((candidate) => candidate.inviteToken === token);
+    return !!collaborator && !collaborator.revokedAt && isPortalAccessActive(collaborator.inviteExpiresAt || event.inviteExpiresAt);
+  });
+}
+
+/** Rotate a couple's primary link without deleting event history, guests, RSVPs, or chat. */
+export function rotateCoupleInviteToken(eventId: string): string | null {
+  const current = findCoupleEventById(eventId);
+  if (!current || !isPortalAccessActive(current.inviteExpiresAt)) return null;
+  const nextToken = randomToken('cp');
+  const issuedAt = new Date().toISOString();
+  const next = getCoupleEvents().map((event) => event.id === eventId
+    ? {
+        ...event,
+        inviteToken: nextToken,
+        inviteIssuedAt: issuedAt,
+        collaborators: event.collaborators.map((collaborator) => collaborator.role === 'couple'
+          ? { ...collaborator, inviteToken: nextToken, inviteIssuedAt: issuedAt, inviteExpiresAt: event.inviteExpiresAt }
+          : collaborator),
+        updatedAt: issuedAt,
+      }
+    : event);
+  saveCoupleEvents(next);
+  return nextToken;
+}
+
+/** Rotate a collaborator link while preserving their role and couple data. */
+export function rotateCoupleCollaboratorToken(eventId: string, collaboratorId: string): string | null {
+  const event = findCoupleEventById(eventId);
+  if (!event || !isPortalAccessActive(event.inviteExpiresAt)) return null;
+  const nextToken = randomToken('cc');
+  const issuedAt = new Date().toISOString();
+  const next = getCoupleEvents().map((candidate) => candidate.id === eventId
+    ? {
+        ...candidate,
+        collaborators: candidate.collaborators.map((collaborator) => collaborator.id === collaboratorId
+          ? { ...collaborator, inviteToken: nextToken, inviteIssuedAt: issuedAt, inviteExpiresAt: candidate.inviteExpiresAt, revokedAt: undefined }
+          : collaborator),
+        updatedAt: issuedAt,
+      }
+    : candidate);
+  saveCoupleEvents(next);
+  return nextToken;
 }
 
 export function addCoupleCollaborator(
@@ -306,6 +366,8 @@ export function addCoupleCollaborator(
     email: input.email.trim(),
     role: input.role,
     inviteToken: randomToken('cc'),
+    inviteIssuedAt: new Date().toISOString(),
+    inviteExpiresAt: event.inviteExpiresAt,
     invitedAt: new Date().toISOString(),
   };
   updateCoupleEvent(eventId, {
@@ -382,6 +444,7 @@ export function resolveCoupleInviteToken(
   const events = getCoupleEvents();
   for (const event of events) {
     if (event.inviteToken === token) {
+      if (!isPortalAccessActive(event.inviteExpiresAt)) return null;
       // The couple invite token: the couple themselves. Create an implicit
       // collaborator if none exists yet.
       let owner = event.collaborators.find((c) => c.role === 'couple');
@@ -392,6 +455,8 @@ export function resolveCoupleInviteToken(
           email: '',
           role: 'couple',
           inviteToken: event.inviteToken,
+          inviteIssuedAt: event.inviteIssuedAt || event.createdAt,
+          inviteExpiresAt: event.inviteExpiresAt,
           accepted: true,
           invitedAt: event.createdAt,
         };
@@ -401,7 +466,9 @@ export function resolveCoupleInviteToken(
       return { event, collaborator: owner };
     }
     const collab = event.collaborators.find((c) => c.inviteToken === token);
-    if (collab) return { event, collaborator: collab };
+    if (collab && !collab.revokedAt && isPortalAccessActive(collab.inviteExpiresAt || event.inviteExpiresAt)) {
+      return { event, collaborator: collab };
+    }
   }
   return null;
 }

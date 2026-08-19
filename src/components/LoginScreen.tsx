@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth, type AuthRegistrationParams } from '../contexts/AuthContext';
-import { useBrandingConfig } from '../config';
+import { useBrandingConfig, type Config } from '../config';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { isUserLocked, MAX_FAILED_LOGINS } from '../utils/auth';
 import { getUsers } from '../hooks/useLayoutState';
@@ -14,9 +14,17 @@ export interface LoginScreenProps {
   allowAccountCreation?: boolean;
   /** Optional invite-aware registration handler for an existing tenant invite. */
   onRegister?: (params: AuthRegistrationParams) => Promise<string | null>;
+  /** Optional organization-scoped login handler for a venue login route. */
+  onLogin?: (username: string, password: string) => Promise<boolean>;
+  /** Hide planner/wedding guest entry points on platform and venue staff login pages. */
+  showPublicPortalLinks?: boolean;
+  /** Distinguishes neutral platform authentication from venue-staff authentication. */
+  loginScope?: 'platform' | 'venue';
+  /** Safe branding override for a public platform or venue login page. */
+  brandingOverride?: Config;
 }
 
-export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, onRegister }: LoginScreenProps) {
+export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, onRegister, onLogin, showPublicPortalLinks = true, loginScope = 'venue', brandingOverride }: LoginScreenProps) {
   const { login, register: authRegister, continueAsGuest } = useAuth();
   const register = onRegister || authRegister;
   const [username, setUsername] = useState('');
@@ -44,7 +52,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
   const [lockoutSecondsLeft, setLockoutSecondsLeft] = useState(0);
 
   const usernameInputRef = useRef<HTMLInputElement>(null);
-  const config = useBrandingConfig();
+  const localConfig = useBrandingConfig();
+  const config = brandingOverride || localConfig;
   const usingSupabaseAuth = shouldUseSupabaseAuth();
   const hasLocalAccounts = getUsers().length > 0;
   const showNoLocalAccountsHint = !usingSupabaseAuth && !hasLocalAccounts;
@@ -146,7 +155,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
 
     await new Promise((resolve) => setTimeout(resolve, 250));
 
-    const success = await login(username, password);
+    const success = await (onLogin ? onLogin(username, password) : login(username, password));
 
     if (success) {
       if (rememberMe) {
@@ -267,14 +276,18 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
             }`}>
               <p className="font-semibold">
                 {usingSupabaseAuth
-                  ? 'Secure venue sign-in is enabled.'
+                  ? loginScope === 'platform'
+                    ? 'Secure platform sign-in is enabled.'
+                    : 'Secure venue sign-in is enabled.'
                   : showNoLocalAccountsHint
                     ? 'Production access requires backend setup.'
                     : 'Local workspace sign-in is active.'}
               </p>
               <p className="mt-1 text-xs opacity-90">
                 {usingSupabaseAuth
-                  ? 'Venue teams and couples should sign in here to access protected planning tools.'
+                  ? loginScope === 'platform'
+                    ? 'Platform owners and platform administrators use this page to manage venue tenants.'
+                    : 'Venue administrators, managers, planners, and staff use this page for venue operations.'
                   : showNoLocalAccountsHint
                     ? 'Use Supabase auth for real production access, or provision accounts before publishing this workspace.'
                     : 'Best for demos, QA, and local planning workshops.'}
@@ -282,12 +295,20 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-              <p className="font-semibold text-gray-900">Choose your entry point</p>
-              <ul className="mt-2 space-y-1.5 text-xs text-gray-600">
-                <li>• <strong>Venue teams & couples:</strong> sign in to manage layouts, guests, vendors, and timelines.</li>
-                <li>• <strong>Planner guests:</strong> continue as a guest to review the workspace without full admin controls.</li>
-                <li>• <strong>Wedding guests:</strong> use the Guest Portal for RSVP, schedule, lodging, and directions.</li>
-              </ul>
+              <p className="font-semibold text-gray-900">{showPublicPortalLinks ? 'Choose your entry point' : loginScope === 'platform' ? 'Platform access' : 'Venue access'}</p>
+              {showPublicPortalLinks ? (
+                <ul className="mt-2 space-y-1.5 text-xs text-gray-600">
+                  <li>• <strong>Venue teams & couples:</strong> sign in to manage layouts, guests, vendors, and timelines.</li>
+                  <li>• <strong>Planner guests:</strong> continue as a guest to review the workspace without full admin controls.</li>
+                  <li>• <strong>Wedding guests:</strong> use the Guest Portal for RSVP, schedule, lodging, and directions.</li>
+                </ul>
+              ) : (
+                <p className="mt-2 text-xs text-gray-600">
+                  {loginScope === 'platform'
+                    ? 'This page is reserved for the platform administration team.'
+                    : 'This page is reserved for venue administrators and staff. Couples and wedding guests must use their invitation links.'}
+                </p>
+              )}
             </div>
           </div>
 
@@ -498,40 +519,46 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={handleGuestAccess}
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-            >
-              <span className="block text-sm font-semibold text-gray-800">Continue as Planner Guest</span>
-              <span className="mt-1 block text-xs text-gray-500">
-                Review the planning workspace without a full account sign-in.
-              </span>
-            </button>
+            {showPublicPortalLinks && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleGuestAccess}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <span className="block text-sm font-semibold text-gray-800">Continue as Planner Guest</span>
+                  <span className="mt-1 block text-xs text-gray-500">
+                    Review the planning workspace without a full account sign-in.
+                  </span>
+                </button>
 
-            <button
-              type="button"
-              onClick={handleOpenGuestPortal}
-              className="w-full rounded-xl border px-4 py-3 text-left transition-colors hover:shadow-sm"
-              style={{
-                borderColor: `${config.primaryColor || '#4A1942'}66`,
-                backgroundColor: `${config.primaryColor || '#4A1942'}15`,
-                color: config.primaryColor || '#4A1942',
-              }}
-            >
-              <span className="block text-sm font-semibold">💍 Open Wedding Guest Portal</span>
-              <span className="mt-1 block text-xs opacity-80">
-                RSVP, view the event schedule, check lodging, and get directions.
-              </span>
-            </button>
+                <button
+                  type="button"
+                  onClick={handleOpenGuestPortal}
+                  className="w-full rounded-xl border px-4 py-3 text-left transition-colors hover:shadow-sm"
+                  style={{
+                    borderColor: `${config.primaryColor || '#4A1942'}66`,
+                    backgroundColor: `${config.primaryColor || '#4A1942'}15`,
+                    color: config.primaryColor || '#4A1942',
+                  }}
+                >
+                  <span className="block text-sm font-semibold">💍 Open Wedding Guest Portal</span>
+                  <span className="mt-1 block text-xs opacity-80">
+                    RSVP, view the event schedule, check lodging, and get directions.
+                  </span>
+                </button>
+              </>
+            )}
           </div>
 
-          <div className="mt-3 text-xs text-gray-500 text-center">
-            <p>
-              Wedding guests should use the Guest Portal for RSVP, schedule,
-              lodging, and directions.
-            </p>
-          </div>
+          {showPublicPortalLinks && (
+            <div className="mt-3 text-xs text-gray-500 text-center">
+              <p>
+                Wedding guests should use the Guest Portal for RSVP, schedule,
+                lodging, and directions.
+              </p>
+            </div>
+          )}
 
           <div className="mt-6 text-center text-xs text-gray-500 space-y-1">
             <p>

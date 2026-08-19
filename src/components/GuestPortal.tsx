@@ -54,6 +54,7 @@ import {
 } from '../utils/guestPortal';
 import { verifySecret } from '../utils/auth';
 import { useBrandingConfig } from '../config';
+import { getPublicVenueBranding } from '../services/platform/publicVenueService';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../constants/storageVersions';
 import { saveVersionedStorage } from '../utils/storage';
@@ -73,6 +74,7 @@ import {
   setCoupleRsvpSubmissions,
 } from '../services/couples/coupleRsvpService';
 import { findCoupleEventById } from '../services/couples/coupleService';
+import { isPortalAccessActive } from '../services/couples/accessLifecycle';
 import {
   getVenueMapConfig,
   getVenueRules,
@@ -91,6 +93,7 @@ import {
 interface GuestPortalProps {
   guestToken?: string;
   coupleEventId?: string;
+  venueSlug?: string;
   onExitPortal: () => void;
   /** Read-only preview mode: renders the portal as a generic visitor without the
    *  sign-in gate and without creating a guest session. RSVP still requires a
@@ -107,9 +110,18 @@ interface PortalData {
   guestEvents: CoupleGuestEvent[];
 }
 
-const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, onExitPortal, preview = false }) => {
+const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, venueSlug, onExitPortal, preview = false }) => {
   const isPreview = preview;
-  const venueConfig = useBrandingConfig();
+  const localVenueConfig = useBrandingConfig();
+  const [publicVenueConfig, setPublicVenueConfig] = useState<typeof localVenueConfig | null>(null);
+  const venueConfig = publicVenueConfig || localVenueConfig;
+
+  useEffect(() => {
+    if (!venueSlug) return;
+    void getPublicVenueBranding(venueSlug).then((branding) => {
+      if (branding) setPublicVenueConfig(branding.config);
+    });
+  }, [venueSlug]);
   const [config, setConfig] = useState<GuestPortalConfig | null>(null);
   const [remoteCouple, setRemoteCouple] = useState<CoupleEvent | undefined>();
   const [portalData, setPortalData] = useState<PortalData>({
@@ -159,7 +171,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
     let cancelled = false;
 
     const hydrateGuest = async () => {
-      const remote = await pullGuestPortalSnapshot(coupleEventId, guestToken);
+      const remote = await pullGuestPortalSnapshot(coupleEventId, guestToken, venueSlug);
       if (!remote || cancelled || !remote.guest) return;
       const remoteEvent = remote.event?.find((candidate) => candidate.id === coupleEventId);
       const remoteConfig = remote.portalConfig?.[coupleEventId]
@@ -223,7 +235,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         // Auto-authenticate a guest who opened their invite link (guestToken) — the token
         // identifies them, so they shouldn't need to re-enter their name.
         const tokenGuest = guestToken
-          ? getCoupleGuests(coupleEventId || '').find((g) => g.token === guestToken)
+          ? getCoupleGuests(coupleEventId || '').find((g) => g.token === guestToken && isPortalAccessActive(g.tokenExpiresAt))
           : undefined;
         if (session || tokenGuest) {
           setIsAuthed(true);
@@ -453,6 +465,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
         ? await backend.findGuest({
             eventName: config.eventTitle,
             coupleEventId: isCouplePortal ? coupleEventId : undefined,
+            venueSlug,
           }, guestIdentifier)
         : findGuestInEvent(config.eventTitle, guestIdentifier)
     );
@@ -618,7 +631,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, on
       setPortalRSVPSubmissions(updatedSubmissions);
     }
     void getGuestPortalBackend()
-      .submitRSVP({ eventName, coupleEventId: isCouplePortal ? coupleEventId : undefined }, newSubmission)
+      .submitRSVP({ eventName, coupleEventId: isCouplePortal ? coupleEventId : undefined, venueSlug }, newSubmission)
       .then(() => setIsSubmittingRSVP(false))
       .catch(() => setIsSubmittingRSVP(false));
 

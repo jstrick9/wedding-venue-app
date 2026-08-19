@@ -48,12 +48,9 @@ export function normalizeEventKey(eventName: string): string {
  * Returns the UTC timestamp after which the guest portal should be considered
  * inaccessible.
  *
- * Default: midnight UTC at end of the event day PLUS a grace period so that
- * venues in time-zones behind UTC (e.g. EST = UTC-5) don't lose portal access
- * hours before their event physically ends.
- *
- * The grace period defaults to 36 hours but is overridable via
- * `config.accessGracePeriodHours` (set in the Admin → Guest Portal tab).
+ * Default: access remains available through the full calendar day after the
+ * event ends. A custom grace period remains supported for legacy venue settings.
+ * New portal configurations default to 24 hours/calendar-day-after behavior.
  */
 const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -124,7 +121,12 @@ export function getGuestPortalAccessEnd(
     const year = Number(dateOnlyMatch[1]);
     const monthIndex = Number(dateOnlyMatch[2]) - 1;
     const day = Number(dateOnlyMatch[3]);
-    // Start of the event date in UTC, then add grace period
+    // A 24-hour default means the entire next calendar day is available,
+    // ending at midnight after that day. Legacy/custom values retain their
+    // explicit hour-based behavior.
+    if (gracePeriodHours === 24) {
+      return new Date(Date.UTC(year, monthIndex, day + 2, 0, 0, 0, 0));
+    }
     const baseMs = Date.UTC(year, monthIndex, day, 0, 0, 0, 0);
     return new Date(baseMs + gracePeriodHours * 60 * 60 * 1000);
   }

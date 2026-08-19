@@ -2,16 +2,31 @@ import {
   GuestPortalGuestRecord,
   GuestPortalConfig,
   EventAnswer,
+  CoupleEvent,
 } from '../../types';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../../constants/storageVersions';
 import { loadVersionedStorage, saveVersionedStorage } from '../../utils/storage';
 import { createOpaqueToken } from '../../utils/secureTokens';
+import { calculatePortalExpiry } from './accessLifecycle';
+import { getActiveOrganizationSlug } from '../platform/organizationContext';
 
 const GUESTS_KEY = STORAGE_KEYS.COUPLE_GUESTS;
 const GUESTS_VERSION = STORAGE_VERSIONS.COUPLE_GUESTS;
 const CONFIG_KEY = STORAGE_KEYS.COUPLE_PORTAL_CONFIGS;
 const CONFIG_VERSION = STORAGE_VERSIONS.COUPLE_PORTAL_CONFIGS;
+
+function getCoupleEventExpiry(coupleEventId: string): string | undefined {
+  const events = loadVersionedStorage<CoupleEvent[]>({
+    key: STORAGE_KEYS.COUPLE_EVENTS,
+    defaultValue: [],
+    currentVersion: STORAGE_VERSIONS.COUPLE_EVENTS,
+    validate: (value): value is CoupleEvent[] => Array.isArray(value),
+    normalize: (value) => (Array.isArray(value) ? value : []),
+  });
+  const event = events.find((candidate) => candidate.id === coupleEventId);
+  return event?.inviteExpiresAt || calculatePortalExpiry(event?.eventDate, event?.eventEndDate);
+}
 
 function readGuests(): GuestPortalGuestRecord[] {
   return loadVersionedStorage<GuestPortalGuestRecord[]>({
@@ -53,9 +68,10 @@ export function getCoupleGuestsForBackup(): GuestPortalGuestRecord[] {
 }
 
 /** A guest invitation link that auto-identifies the guest in their couple's portal. */
-export function buildGuestInviteUrl(guestToken: string, coupleEventId?: string): string {
+export function buildGuestInviteUrl(guestToken: string, coupleEventId?: string, venueSlug?: string): string {
   const couple = coupleEventId ? `&couple=${encodeURIComponent(coupleEventId)}` : '';
-  return `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(guestToken)}${couple}`;
+  const venue = (venueSlug || getActiveOrganizationSlug()) ? `&venue=${encodeURIComponent(venueSlug || getActiveOrganizationSlug()!)}` : '';
+  return `${window.location.origin}${window.location.pathname}#/guest-portal?token=${encodeURIComponent(guestToken)}${couple}${venue}`;
 }
 
 /** Extract a couple event id from the guest-portal URL (?couple= in the hash). */
@@ -81,6 +97,8 @@ export function addCoupleGuest(
     eventName: coupleEventId,
     eventKey: coupleEventId,
     token: createOpaqueToken('guest'),
+    tokenIssuedAt: new Date().toISOString(),
+    tokenExpiresAt: getCoupleEventExpiry(coupleEventId),
     allowPortalAccess: true,
   };
   const all = readGuests();
@@ -98,6 +116,27 @@ export function updateCoupleGuest(
     g.id === guestId && guestBelongsToCouple(g, coupleEventId) ? { ...g, ...updates } : g,
   );
   writeGuests(all);
+}
+
+/** Rotate a guest link without deleting their guest record or RSVP history. */
+export function rotateCoupleGuestToken(coupleEventId: string, guestId: string): string | null {
+  const nextToken = createOpaqueToken('guest');
+  const issuedAt = new Date().toISOString();
+  let changed = false;
+  const all = readGuests().map((guest) => {
+    if (guest.id !== guestId || !guestBelongsToCouple(guest, coupleEventId)) return guest;
+    changed = true;
+    return {
+      ...guest,
+      token: nextToken,
+      tokenIssuedAt: issuedAt,
+      tokenExpiresAt: getCoupleEventExpiry(coupleEventId),
+      tokenRevokedAt: undefined,
+    };
+  });
+  if (!changed) return null;
+  writeGuests(all);
+  return nextToken;
 }
 
 export function removeCoupleGuest(coupleEventId: string, guestId: string): void {
@@ -174,6 +213,8 @@ export function importCoupleGuests(
       eventName: coupleEventId,
       eventKey: coupleEventId,
       token: createOpaqueToken('guest'),
+      tokenIssuedAt: new Date().toISOString(),
+      tokenExpiresAt: getCoupleEventExpiry(coupleEventId),
       allowPortalAccess: true,
     }));
   writeGuests([...existing, ...added]);
@@ -224,7 +265,7 @@ export function getCouplePortalConfig(
     mealOptions: venueConfig?.mealOptions,
     scheduleItems: venueConfig?.scheduleItems || [],
     wayfindingPoints: venueConfig?.wayfindingPoints || [],
-    accessGracePeriodHours: venueConfig?.accessGracePeriodHours ?? 36,
+    accessGracePeriodHours: venueConfig?.accessGracePeriodHours ?? 24,
   };
   writeConfigs({ ...configs, [coupleEventId]: base });
   return base;

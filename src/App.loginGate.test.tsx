@@ -7,7 +7,7 @@ describe('App login gate', () => {
     localStorage.removeItem('spm_session');
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: /seven paths manor/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /wedding venue intelligence platform/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(document.querySelector('input[type="password"]')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();

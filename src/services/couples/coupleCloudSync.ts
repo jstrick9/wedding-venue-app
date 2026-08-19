@@ -5,6 +5,7 @@ import { BACKUP_DOMAINS } from '../../utils/backupDomains';
 import { emitDataChanged } from '../../utils/appEvents';
 import { sha256Hex } from '../../utils/hash';
 import { findCoupleEventById, getCoupleEvents } from './coupleService';
+import { getCouplePortalExpiry } from './accessLifecycle';
 import { getCoupleGuests } from './coupleGuestService';
 
 export interface CoupleCloudContext {
@@ -101,13 +102,22 @@ export async function buildCouplePortalSnapshot(coupleEventId: string): Promise<
   // snapshot for the couple's link-management UI; public guest RPCs return only
   // the matching guest with its token removed.
   const guests = getCoupleGuests(coupleEventId);
+  const inviteExpiresAt = getCouplePortalExpiry(event);
   snapshot.coupleGuests = await Promise.all(
     guests.map(async (guest) => ({
       ...guest,
       tokenHash: guest.token ? await sha256Hex(guest.token) : undefined,
+      tokenExpiresAt: inviteExpiresAt || guest.tokenExpiresAt,
     })),
   );
-  snapshot.coupleEvents = [event];
+  snapshot.coupleEvents = [{
+    ...event,
+    inviteExpiresAt,
+    collaborators: (event.collaborators || []).map((collaborator) => ({
+      ...collaborator,
+      inviteExpiresAt: collaborator.inviteExpiresAt || inviteExpiresAt,
+    })),
+  }];
   return snapshot;
 }
 
@@ -161,19 +171,24 @@ export async function syncAllCouplePortalSnapshots(context: CoupleCloudContext):
   }
 }
 
-export async function pullCouplePortalSnapshot(token: string): Promise<CouplePortalSnapshot | null> {
+export async function pullCouplePortalSnapshot(token: string, venueSlug?: string): Promise<CouplePortalSnapshot | null> {
   if (!isCoupleCloudEnabled() || !token) return null;
-  const { data, error } = await getSupabaseClient().rpc('get_couple_portal_snapshot', { p_token: token });
+  const { data, error } = await getSupabaseClient().rpc(
+    venueSlug ? 'get_couple_portal_snapshot_for_venue' : 'get_couple_portal_snapshot',
+    venueSlug ? { p_venue_slug: venueSlug, p_token: token } : { p_token: token },
+  );
   if (error || !data?.ok || !data.payload) return null;
   return data.payload as CouplePortalSnapshot;
 }
 
-export async function saveCouplePortalSnapshot(token: string, payload: CouplePortalSnapshot): Promise<boolean> {
+export async function saveCouplePortalSnapshot(token: string, payload: CouplePortalSnapshot, venueSlug?: string): Promise<boolean> {
   if (!isCoupleCloudEnabled() || !token) return false;
-  const { data, error } = await getSupabaseClient().rpc('save_couple_portal_snapshot', {
-    p_token: token,
-    p_payload: payload,
-  });
+  const { data, error } = await getSupabaseClient().rpc(
+    venueSlug ? 'save_couple_portal_snapshot_for_venue' : 'save_couple_portal_snapshot',
+    venueSlug
+      ? { p_venue_slug: venueSlug, p_token: token, p_payload: payload }
+      : { p_token: token, p_payload: payload },
+  );
   return !error && Boolean(data?.ok);
 }
 
@@ -247,12 +262,15 @@ export interface GuestPortalCloudSnapshot {
 export async function pullGuestPortalSnapshot(
   coupleEventId: string,
   guestToken: string,
+  venueSlug?: string,
 ): Promise<GuestPortalCloudSnapshot | null> {
   if (!isCoupleCloudEnabled() || !coupleEventId || !guestToken) return null;
-  const { data, error } = await getSupabaseClient().rpc('get_guest_couple_portal_snapshot', {
-    p_couple_id: coupleEventId,
-    p_guest_token: guestToken,
-  });
+  const { data, error } = await getSupabaseClient().rpc(
+    venueSlug ? 'get_guest_couple_portal_snapshot_for_venue' : 'get_guest_couple_portal_snapshot',
+    venueSlug
+      ? { p_venue_slug: venueSlug, p_couple_id: coupleEventId, p_guest_token: guestToken }
+      : { p_couple_id: coupleEventId, p_guest_token: guestToken },
+  );
   if (error || !data?.ok) return null;
   return {
     coupleId: coupleEventId,
@@ -275,13 +293,15 @@ export async function submitGuestPortalRsvp(
   coupleEventId: string,
   guestToken: string,
   submission: RSVPSubmission,
+  venueSlug?: string,
 ): Promise<boolean> {
   if (!isCoupleCloudEnabled()) return false;
-  const { data, error } = await getSupabaseClient().rpc('submit_guest_couple_rsvp', {
-    p_couple_id: coupleEventId,
-    p_guest_token: guestToken,
-    p_submission: submission,
-  });
+  const { data, error } = await getSupabaseClient().rpc(
+    venueSlug ? 'submit_guest_couple_rsvp_for_venue' : 'submit_guest_couple_rsvp',
+    venueSlug
+      ? { p_venue_slug: venueSlug, p_couple_id: coupleEventId, p_guest_token: guestToken, p_submission: submission }
+      : { p_couple_id: coupleEventId, p_guest_token: guestToken, p_submission: submission },
+  );
   return !error && Boolean(data?.ok);
 }
 
