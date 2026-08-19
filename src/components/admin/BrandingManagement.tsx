@@ -9,6 +9,8 @@ import { LinenColor } from '../../data/venueData';
 import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
 import { deriveShades, getContrastRatio } from '../../utils/color';
 import { applyRootStyles } from '../../config';
+import { isSupabaseConfigured } from '../../services/backend/supabaseClient';
+import { uploadPublicBrandingAsset } from '../../services/platform/brandingAssetService';
 import type { AdminCommonProps } from './AdminTabTypes';
 
 const DEFAULT_LOADED_FONT_FAMILIES = new Set(['Inter', 'Playfair Display']);
@@ -72,6 +74,7 @@ export function BrandingManagement(props: AdminCommonProps) {
     directMessages,
     handlers,
     user,
+    organizationId,
     isAdmin,
     selectedMessageMasterUserId,
     setSelectedMessageMasterUserId,
@@ -314,6 +317,16 @@ export function BrandingManagement(props: AdminCommonProps) {
   const localLogoInputRef = React.useRef<HTMLInputElement>(null);
 
   const processLogoFile = (file: File, onComplete?: () => void) => {
+    if (organizationId && isSupabaseConfigured()) {
+      void uploadPublicBrandingAsset(file, { organizationId })
+        .then((logoUrl) => {
+          handleSaveConfig({ ...config, logoUrl });
+          showSuccess?.('Logo uploaded to public venue branding storage.');
+          onComplete?.();
+        })
+        .catch(() => showInfo?.('Upload failed', 'Could not upload the venue logo to Supabase Storage.', 'warning'));
+      return;
+    }
     if (typeof FileReader === 'undefined' || typeof window === 'undefined' || typeof window.FileReader !== 'function') {
       const fallbackUrl = `data:image/png;base64,mock_${file.name}`;
       handleSaveConfig({ ...config, logoUrl: fallbackUrl });
@@ -420,11 +433,11 @@ export function BrandingManagement(props: AdminCommonProps) {
               {/* Expand/Collapse All */}
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-500">
-                  {expandedSections.size} of 6 sections expanded
+                  {expandedSections.size} of 7 sections expanded
                 </div>
                 <button
                   onClick={() => {
-                    const allSections = ['logo', 'website', 'welcome', 'colors', 'typography', 'preview'];
+                    const allSections = ['logo', 'website', 'welcome', 'colors', 'login', 'typography', 'preview'];
                     if (expandedSections.size === allSections.length) {
                       setExpandedBrandingSections?.(new Set());
                     } else {
@@ -433,7 +446,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                   }}
                   className="px-4 py-2 bg-[#4A1942] text-white rounded-lg hover:bg-[#5c2a64] transition-colors text-sm font-medium shadow-sm"
                 >
-                  {expandedSections.size === 6 ? '▲ Collapse All' : '▼ Expand All'}
+                  {expandedSections.size === 7 ? '▲ Collapse All' : '▼ Expand All'}
                 </button>
               </div>
               
@@ -1262,6 +1275,67 @@ export function BrandingManagement(props: AdminCommonProps) {
                 )}
               </div>
               
+              {/* Login Experience */}
+              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-indigo-100">
+                <div className="bg-indigo-50 px-4 py-4 flex items-center justify-between cursor-pointer hover:bg-indigo-100 transition-colors" onClick={() => {
+                  setExpandedBrandingSections(prev => {
+                    const next = new Set(prev);
+                    if (next.has('login')) next.delete('login'); else next.add('login');
+                    return next;
+                  });
+                }}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-indigo-700 text-xl">{expandedSections.has('login') ? '▼' : '▶'}</span>
+                    <div className="w-10 h-10 rounded-lg bg-indigo-700 text-white flex items-center justify-center">🔐</div>
+                    <div><h3 className="font-bold text-lg text-gray-800">Login Page Experience</h3><p className="text-xs text-gray-500">Customize the background and message on your venue staff login.</p></div>
+                  </div>
+                </div>
+                {expandedSections.has('login') && (
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-gray-600 uppercase">Background mode</label>
+                        <select value={config.loginBackgroundType || 'gradient'} onChange={(e) => handleSaveConfig({ ...config, loginBackgroundType: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                          <option value="solid">Solid color</option><option value="gradient">Gradient</option><option value="pattern">Pattern</option><option value="animated">Animated gradient</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-600 uppercase">Animation</label>
+                        <select value={config.loginBackgroundAnimation || 'none'} onChange={(e) => handleSaveConfig({ ...config, loginBackgroundAnimation: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                          <option value="none">None</option><option value="drift">Slow drift</option><option value="shimmer">Soft shimmer</option><option value="float">Soft float</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-600 uppercase">Primary background</label>
+                        <input type="color" value={config.loginBackgroundColor || config.backgroundColor || '#f3f4f6'} onChange={(e) => handleSaveConfig({ ...config, loginBackgroundColor: e.target.value })} className="mt-1 h-10 w-full rounded-lg border border-gray-300" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-600 uppercase">Secondary background</label>
+                        <input type="color" value={config.loginBackgroundSecondaryColor || config.primaryLight || '#f8f5f7'} onChange={(e) => handleSaveConfig({ ...config, loginBackgroundSecondaryColor: e.target.value })} className="mt-1 h-10 w-full rounded-lg border border-gray-300" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-gray-600 uppercase">Pattern</label>
+                        <select value={config.loginBackgroundPattern || 'dots'} onChange={(e) => handleSaveConfig({ ...config, loginBackgroundPattern: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                          <option value="dots">Dots</option><option value="grid">Grid</option><option value="diagonal">Diagonal lines</option><option value="confetti">Confetti points</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-600 uppercase">White overlay opacity</label>
+                        <input type="range" min="0" max="0.8" step="0.05" value={config.loginBackgroundOverlayOpacity ?? 0} onChange={(e) => handleSaveConfig({ ...config, loginBackgroundOverlayOpacity: Number(e.target.value) })} className="mt-3 w-full" />
+                        <p className="text-xs text-gray-500">{Math.round((config.loginBackgroundOverlayOpacity || 0) * 100)}%</p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 uppercase">Login message</label>
+                      <textarea value={config.loginWelcomeMessage || ''} onChange={(e) => handleSaveConfig({ ...config, loginWelcomeMessage: e.target.value })} rows={2} placeholder="Welcome to our venue team workspace." className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">Animations automatically respect users who prefer reduced motion. The uploaded logo above is used on this login page instead of the fallback mark.</div>
+                  </div>
+                )}
+              </div>
+
               {/* Typography */}
               <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div 
