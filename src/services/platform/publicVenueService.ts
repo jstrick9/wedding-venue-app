@@ -5,6 +5,7 @@ import { defaultConfig } from '../../config';
 export interface PublicVenueBranding {
   organizationId: string;
   slug: string;
+  status: 'provisioning' | 'active' | 'suspended' | 'archived';
   config: Config;
 }
 
@@ -40,6 +41,7 @@ export async function getPublicVenueBranding(slug: string): Promise<PublicVenueB
   return {
     organizationId: String(data.organization_id),
     slug: String(data.slug || slug),
+    status: (data.status || 'active') as PublicVenueBranding['status'],
     config,
   };
 }

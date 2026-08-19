@@ -71,6 +71,7 @@ After migrations `0001` through `0005` are already applied, run these files in o
 ```text
 supabase/migrations/0006_platform_tenancy.sql
 supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql
+supabase/migrations/0008_platform_console_management.sql
 ```
 
 Run each once in Supabase SQL Editor or through the Supabase CLI. Do not rerun a partially successful migration without checking which objects were created.

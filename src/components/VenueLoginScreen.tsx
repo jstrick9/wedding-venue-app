@@ -40,6 +40,19 @@ export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
     );
   }
 
+  if (venue.status === 'suspended' || venue.status === 'archived') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-lg">
+          <div className="text-4xl">⛔</div>
+          <h1 className="mt-3 text-lg font-bold text-gray-900">Venue access is unavailable</h1>
+          <p className="mt-2 text-sm text-gray-600">{venue.config.venueName} is currently unavailable. Please contact the platform administrator.</p>
+          <button type="button" onClick={() => { window.location.hash = '#/platform-login'; }} className="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white">Platform login</button>
+        </div>
+      </div>
+    );
+  }
+
   if (user && organizationId === venue.organizationId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">

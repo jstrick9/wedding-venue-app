@@ -1,4 +1,5 @@
 export type PlatformRole = 'platform_owner' | 'platform_admin' | 'platform_support';
+export type OrganizationStatus = 'provisioning' | 'active' | 'suspended' | 'archived';
 
 export interface PlatformOrganizationAdmin {
   userId: string;
@@ -8,15 +9,51 @@ export interface PlatformOrganizationAdmin {
   status: string;
 }
 
+export interface PlatformPendingInvite {
+  id: string;
+  email: string;
+  expiresAt: string;
+  status: string;
+}
+
+export interface PlatformOrganizationMetrics {
+  id: string;
+  name: string;
+  slug: string;
+  status: OrganizationStatus;
+  createdAt: string;
+  adminCount: number;
+  coupleCount: number;
+  guestCount: number;
+  rsvpCount: number;
+  pendingInviteCount: number;
+}
+
+export interface PlatformConsoleMetrics {
+  totalVenues: number;
+  activeVenues: number;
+  suspendedVenues: number;
+  provisioningVenues: number;
+  pendingInvites: number;
+  activeAdmins: number;
+  totalCouples: number;
+  totalGuests: number;
+  totalRsvps: number;
+  venues: PlatformOrganizationMetrics[];
+}
+
 export interface PlatformOrganizationSummary {
   id: string;
   name: string;
   slug: string;
+  status: OrganizationStatus;
   ownerId?: string | null;
   supportEmail?: string | null;
   phone?: string | null;
   websiteUrl?: string | null;
+  suspensionReason?: string | null;
   createdAt: string;
   updatedAt: string;
   admins: PlatformOrganizationAdmin[];
+  pendingInvite?: PlatformPendingInvite;
 }

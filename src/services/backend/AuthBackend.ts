@@ -93,15 +93,18 @@ export async function signInWithSupabase(
   const { data: organization } = membership?.organization_id
     ? await supabase
       .from('organizations')
-      .select('slug')
+      .select('slug,status')
       .eq('id', membership.organization_id)
       .maybeSingle()
     : { data: null };
+  const organizationActive = !organization?.status || organization.status === 'active';
+  if (requiredOrganizationId && !organizationActive) return null;
+  const effectiveMembership = organizationActive ? membership : null;
   const platformRole = await loadPlatformRole(data.user.id);
   const user = mapProfileToUser(
     {
       ...profile,
-      app_role: hasPlatformAdminAuthority(platformRole) ? 'admin' : membership?.role,
+      app_role: hasPlatformAdminAuthority(platformRole) ? 'admin' : effectiveMembership?.role,
     },
     data.user.id,
     data.user.email || email,
@@ -110,8 +113,8 @@ export async function signInWithSupabase(
   return {
     user,
     accessToken: data.session.access_token,
-    organizationId: membership?.organization_id,
-    organizationSlug: organization?.slug,
+    organizationId: effectiveMembership?.organization_id,
+    organizationSlug: organizationActive ? organization?.slug : undefined,
     platformRole,
   };
 }
@@ -143,23 +146,26 @@ export async function restoreSupabaseSession(requiredOrganizationId?: string): P
   const { data: organization } = membership?.organization_id
     ? await supabase
       .from('organizations')
-      .select('slug')
+      .select('slug,status')
       .eq('id', membership.organization_id)
       .maybeSingle()
     : { data: null };
+  const organizationActive = !organization?.status || organization.status === 'active';
+  if (requiredOrganizationId && !organizationActive) return null;
+  const effectiveMembership = organizationActive ? membership : null;
   const platformRole = await loadPlatformRole(session.user.id);
   return {
     user: mapProfileToUser(
       {
         ...profile,
-        app_role: hasPlatformAdminAuthority(platformRole) ? 'admin' : membership?.role,
+        app_role: hasPlatformAdminAuthority(platformRole) ? 'admin' : effectiveMembership?.role,
       },
       session.user.id,
       session.user.email || '',
     ),
     accessToken: session.access_token,
-    organizationId: membership?.organization_id,
-    organizationSlug: organization?.slug,
+    organizationId: effectiveMembership?.organization_id,
+    organizationSlug: organizationActive ? organization?.slug : undefined,
     platformRole,
   };
 }

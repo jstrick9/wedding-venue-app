@@ -435,6 +435,8 @@ Review #176 added:
 
 - `supabase/migrations/0006_platform_tenancy.sql` with `platform_memberships`, nullable pre-onboarding organization owners, `venue_admin_invites`, platform metadata RLS, platform audit foundation, and RPCs for platform venue creation and managed-admin invite claiming;
 - `supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql` with safe public branding lookup by venue slug, venue-bound public RPC wrappers, and server-enforced expiration for couple/collaborator/guest links;
+- `supabase/migrations/0008_platform_console_management.sql` with immutable auto-generated slugs, provisioning/active/suspended tenant lifecycle, invite context/reissue/revocation, suspend/reactivate RPCs, and global/per-venue operational metrics;
+- `docs/platform/PLATFORM_CONSOLE_OPERATING_MODEL.md` and `docs/reviews/178-platform-console-management.md` with the researched admin-plane, tenant lifecycle, metrics, audit, and support-access operating model;
 - `src/services/platform/platformTypes.ts`, `platformAdminService.ts`, `publicVenueService.ts`, and `organizationContext.ts`;
 - `PlatformAdminPortal.tsx` at the root/`#/platform-admin` route;
 - `PlatformLoginScreen.tsx` at the neutral root/`#/platform-login` route;
@@ -462,7 +464,7 @@ Review #177 extends the platform layer with the user-approved venue/public bound
 - couple owners, venue administrators, and couples can reissue couple/collaborator/guest tokens without deleting history;
 - collaborator roles now allow an explicit `couple`/co-owner grant in addition to planner, family, and vendor.
 
-Files include `supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql`, `PlatformLoginScreen.tsx`, `VenueLoginScreen.tsx`, `publicVenueService.ts`, `organizationContext.ts`, access lifecycle helpers, and link rotation changes in couple services/portals. The existing Seven Paths Manor tenant should be preserved and assigned a stable slug such as `seven-paths-manor` after confirming uniqueness. Email confirmation, venue-specific timezone, MFA, transactional invite email, and live cross-tenant/RPC smoke tests remain follow-up gates.
+Files include `supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql`, `0008_platform_console_management.sql`, `PlatformLoginScreen.tsx`, `VenueLoginScreen.tsx`, `publicVenueService.ts`, `organizationContext.ts`, access lifecycle helpers, link rotation changes in couple services/portals, and `docs/platform/PLATFORM_CONSOLE_OPERATING_MODEL.md`. The existing Seven Paths Manor tenant should be preserved and assigned a stable slug such as `seven-paths-manor` after confirming uniqueness. Email confirmation, venue-specific timezone, MFA, transactional invite email, live cross-tenant/RPC smoke tests, and production break-glass support remain follow-up gates.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*
