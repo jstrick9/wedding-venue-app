@@ -43,7 +43,7 @@ export function getSpacingSettings(): SpacingSettings {
 
 export function setSpacingSettings(settings: SpacingSettings): void {
   localStorage.setItem(STORAGE_KEYS.SPACING_SETTINGS, JSON.stringify(settings));
-  emitDataChanged('spacing');
+  emitDataChanged('spacingSettings');
 }
 
 // Get/Set alignment settings
@@ -86,7 +86,7 @@ export function getChairSpecs(): ChairSpec[] {
 
 export function setChairSpecs(specs: ChairSpec[]): void {
   localStorage.setItem(STORAGE_KEYS.CHAIR_SPECS_PRIMARY, JSON.stringify(specs));
-  emitDataChanged('chairs');
+  emitDataChanged('chairSpecs');
 }
 
 // Default wall styles (for greenery/drapery walls)

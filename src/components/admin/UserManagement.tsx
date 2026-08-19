@@ -298,7 +298,7 @@ export function UserManagement(props: AdminCommonProps) {
     updateCoupleEvent(coupleId, { venueCoordinationBooked: !isBooked });
     setCoupleEventsList(getCoupleEvents());
     showSuccess('Updated Day of Coordination access for couple.');
-    emitDataChanged('couples');
+    emitDataChanged('coupleEvents');
   };
 
   const [showStaffEventMatrixModal, setShowStaffEventMatrixModal] = React.useState(false);

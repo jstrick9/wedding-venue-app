@@ -47,8 +47,10 @@ export function useLayoutBackendSync({
     if (!enabled || !context) return;
     try {
       await pullLayouts(context);
+      loadedRef.current = true;
       onLoaded?.();
     } catch (err) {
+      // Leave loadedRef false so a failed first pull can retry on the next mount.
       console.error('Failed to load layouts from backend:', err);
     }
   }, [enabled, context, onLoaded]);
@@ -62,9 +64,11 @@ export function useLayoutBackendSync({
     }
   }, [enabled, context]);
 
+  // Reset the loaded flag whenever the org/user context changes so a venue
+  // switch pulls that organization's layouts (P1-5).
   useEffect(() => {
-    if (!enabled || !context || loadedRef.current) return;
-    loadedRef.current = true;
+    if (!enabled || !context) return;
+    loadedRef.current = false;
     void loadFromBackend();
   }, [enabled, context, loadFromBackend]);
 

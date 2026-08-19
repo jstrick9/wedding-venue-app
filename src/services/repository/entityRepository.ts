@@ -1,6 +1,7 @@
 import { getPlatformProvider, type PlatformProvider } from '../platform';
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { BACKUP_DOMAINS } from '../../utils/backupDomains';
+import { emitDataChanged, type DataChangedType } from '../../utils/appEvents';
 
 /**
  * Generic org-scoped entity repository.
@@ -111,10 +112,21 @@ export class SupabaseEntityRepository implements EntityRepository {
       .eq('organization_id', context.organizationId);
     if (error) throw error;
 
+    // Write every row and emit a typed event per domain so active React state
+    // hydrates from the freshly-pulled values without a page reload (P1-2).
+    const emitted = new Set<string>();
     for (const row of data || []) {
       const def = BACKUP_DOMAINS.find((d) => d.key === row.domain);
-      if (def) def.write(row.payload);
+      if (!def) continue;
+      def.write(row.payload);
+      if (!emitted.has(def.key)) {
+        emitted.add(def.key);
+        emitDataChanged(def.key as DataChangedType);
+      }
     }
+    // An empty (or missing) remote result must replace local state, so emit a
+    // full refresh signal even when nothing was pulled (P1-5).
+    emitDataChanged('all');
   }
 }
 

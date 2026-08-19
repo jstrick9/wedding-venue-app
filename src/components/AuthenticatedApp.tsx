@@ -891,7 +891,7 @@ export default function AuthenticatedApp() {
               map={getVenueMapConfig() || emptyVenueMapConfig()}
               venues={layoutState.venues}
               mapTitle={brandingConfig.venueName || 'Venue Map'}
-              onSave={(next) => { saveVenueMapConfig(next); emitDataChanged('venue-map'); }}
+              onSave={(next) => { saveVenueMapConfig(next); emitDataChanged('venueMapConfigs'); }}
               onClose={leaveVenueMap}
               onDirtyChange={setVenueMapDirty}
             />

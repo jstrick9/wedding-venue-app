@@ -21,28 +21,81 @@
  * extensions, etc.) keep working during incremental migration.
  */
 
-/** Reasons a `spm_data_changed` event may fire. Keep in sync with persistence helpers. */
+/**
+ * Reasons a `spm_data_changed` event may fire.
+ *
+ * This is a strict union of the canonical persistence domains from the backup /
+ * entity registry (`src/utils/backupDomains.ts`) plus the two control values
+ * (`all`, `backend_hydrated`). Keeping it strict means the typed event bus can no
+ * longer carry an arbitrary domain string that silently fails to match the
+ * backend pushDomain lookup — the class of split-brain bug where admin edits
+ * ("chairs", "spacing", "venue-map", "couples", "couple-chat") were emitted with
+ * names that did not match any registry key and were never mirrored to Supabase.
+ *
+ * If you add a new persistent domain, add it to `BACKUP_DOMAINS` AND to this
+ * union so the bus, the backup registry, and the entity repository stay aligned.
+ */
 export type DataChangedType =
   | 'all'
+  | 'backend_hydrated'
+  | 'config'
   | 'venues'
   | 'tableSpecs'
   | 'fixtureTypes'
   | 'guidelines'
   | 'templates'
-  | 'chairs'
-  | 'chairSpecs'
+  | 'users'
   | 'linenColors'
+  | 'chairSpecs'
   | 'wallStyles'
-  | 'spacing'
-  | 'alignment'
-  | 'indoorTemplates'
-  | 'outdoorTemplates'
+  | 'spacingSettings'
+  | 'alignmentSettings'
+  | 'indoorFeatureTemplates'
+  | 'outdoorFeatureTemplates'
+  | 'savedLayouts'
   | 'decorItems'
   | 'decorCategories'
   | 'decorArrangements'
   | 'decorPackages'
-  // Allow ad-hoc string types for future domains without breaking the build.
-  | (string & {});
+  | 'eventRoles'
+  | 'eventQuestions'
+  | 'eventAnswers'
+  | 'eventSubmissions'
+  | 'directMessages'
+  | 'coupleChatRead'
+  | 'communicationTemplates'
+  | 'operationsSettings'
+  | 'securitySettings'
+  | 'orgInvites'
+  | 'portalConfig'
+  | 'portalGuests'
+  | 'coupleEvents'
+  | 'coupleAnswers'
+  | 'coupleSubmissions'
+  | 'coupleMessages'
+  | 'coupleGuests'
+  | 'couplePortalConfigs'
+  | 'venueMapConfigs'
+  | 'venueRules'
+  | 'venueWeather'
+  | 'coupleChecklists'
+  | 'coupleVendors'
+  | 'coupleSetupTasks'
+  | 'weddingPackages'
+  | 'packageAddOns'
+  | 'coupleGuestEvents'
+  | 'venueCalendarEvents'
+  | 'rsvpSubmissions'
+  | 'staffTasks'
+  | 'staffAreas'
+  | 'staffShifts'
+  | 'vendors'
+  | 'vendorCategories'
+  | 'vendorPayments'
+  | 'timelines'
+  | 'rbacRoles'
+  | 'rbacGroups'
+  | 'rbacAudit';
 
 
 /** Payload for the `spm_storage_error` event emitted by the versioned storage layer. */

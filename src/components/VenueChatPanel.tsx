@@ -123,7 +123,7 @@ export function VenueChatPanel({
   const handleSelectCouple = (id: string) => {
     setSelectedCoupleId(id);
     markCoupleChatRead(id, 'venue');
-    emitDataChanged('couple-chat');
+    emitDataChanged('coupleMessages');
   };
 
   const handleSendCoupleMessage = (e: React.FormEvent) => {
@@ -138,7 +138,7 @@ export function VenueChatPanel({
     });
     setMessageText('');
     setShowQuickReplies(false);
-    emitDataChanged('couple-chat');
+    emitDataChanged('coupleMessages');
   };
 
   const openPortalUrl = (token?: string) => {
@@ -394,7 +394,7 @@ export function VenueChatPanel({
                           type="button"
                           onClick={() => {
                             markCoupleChatRead(selectedCouple.id, 'venue');
-                            emitDataChanged('couple-chat');
+                            emitDataChanged('coupleMessages');
                           }}
                           className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"
                         >

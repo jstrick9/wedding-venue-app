@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { BACKUP_DOMAINS } from './backupDomains';
+import { containsRedaction, countRedactedFields } from './backupSecrets';
 import type { BackupBundle, BackupImportReport, BackupPayload } from './backupTypes';
 import { emitDataChanged } from './appEvents';
 import { buildBackupBundle } from './backupExport';
@@ -71,6 +72,32 @@ export async function preflightBackupImport(
 
   const payload = bundle?.payload || {};
 
+  // Warn when the bundle contains redacted security material (it was exported
+  // with `buildRedactedExportBundle`), so users know accounts/tokens won't
+  // transfer and must be re-created.
+  const redactedDomainLabels: string[] = [];
+  for (const domain of BACKUP_DOMAINS) {
+    const incoming = payload[domain.key];
+    if (incoming === undefined) continue;
+    const redactedCount = countRedactedFields(incoming);
+    if (redactedCount > 0) {
+      redactedDomainLabels.push(
+        `${domain.label} (${redactedCount} field${redactedCount === 1 ? '' : 's'} redacted)`,
+      );
+    }
+  }
+  if (redactedDomainLabels.length > 0) {
+    warnings.push(
+      `This backup contains redacted security material in: ${redactedDomainLabels.join(
+        ', ',
+      )}. Accounts, portal passwords, and invite/guest tokens will NOT be restored and must be re-created.`,
+    );
+  }
+
+  // Redacted exports intentionally contain "[REDACTED]" markers in place of real
+  // security values, which would fail strict validators. Skip validation of any
+  // domain whose value carries redaction markers; a preflight warning already
+  // tells the user those fields are not transferable.
   const validateArray = <T>(
     label: string,
     value: unknown,
@@ -80,6 +107,7 @@ export async function preflightBackupImport(
     },
   ) => {
     if (!Array.isArray(value)) return;
+    if (containsRedaction(value)) return;
 
     value.forEach((item, index) => {
       const result = validator(item as T);
@@ -93,6 +121,11 @@ export async function preflightBackupImport(
       });
     });
   };
+
+  // Skip cross-reference checks too when the referenced domain is redacted,
+  // since redacted IDs/tokens can no longer be compared meaningfully.
+  const ref = <T extends unknown[]>(value: T | undefined): T =>
+    (containsRedaction(value) ? [] : value) as T;
 
   validateArray('Venue', payload.venues, validateVenue as any);
   validateArray('Table Spec', payload.tableSpecs, validateTableSpec as any);
@@ -115,28 +148,28 @@ export async function preflightBackupImport(
   // empty venues on load).
   pushReferenceIssues(
     validateTemplateReferences(
-      Array.isArray(payload.templates) ? (payload.templates as any[]) : [],
-      Array.isArray(payload.venues) ? (payload.venues as any[]) : [],
-      Array.isArray(payload.tableSpecs) ? (payload.tableSpecs as any[]) : [],
-      Array.isArray(payload.fixtureTypes) ? (payload.fixtureTypes as any[]) : [],
+      ref(Array.isArray(payload.templates) ? (payload.templates as any[]) : []),
+      ref(Array.isArray(payload.venues) ? (payload.venues as any[]) : []),
+      ref(Array.isArray(payload.tableSpecs) ? (payload.tableSpecs as any[]) : []),
+      ref(Array.isArray(payload.fixtureTypes) ? (payload.fixtureTypes as any[]) : []),
     ),
     errors,
     warnings,
   );
   pushReferenceIssues(
     validateVenueMasterLayoutReferences(
-      Array.isArray(payload.venues) ? (payload.venues as any[]) : [],
-      Array.isArray(payload.tableSpecs) ? (payload.tableSpecs as any[]) : [],
-      Array.isArray(payload.fixtureTypes) ? (payload.fixtureTypes as any[]) : [],
+      ref(Array.isArray(payload.venues) ? (payload.venues as any[]) : []),
+      ref(Array.isArray(payload.tableSpecs) ? (payload.tableSpecs as any[]) : []),
+      ref(Array.isArray(payload.fixtureTypes) ? (payload.fixtureTypes as any[]) : []),
     ),
     errors,
     warnings,
   );
   pushReferenceIssues(
     validateDecorReferences(
-      Array.isArray(payload.decorArrangements) ? (payload.decorArrangements as any[]) : [],
-      Array.isArray(payload.decorItems) ? (payload.decorItems as any[]) : [],
-      Array.isArray(payload.decorPackages) ? (payload.decorPackages as any[]) : [],
+      ref(Array.isArray(payload.decorArrangements) ? (payload.decorArrangements as any[]) : []),
+      ref(Array.isArray(payload.decorItems) ? (payload.decorItems as any[]) : []),
+      ref(Array.isArray(payload.decorPackages) ? (payload.decorPackages as any[]) : []),
     ),
     errors,
     warnings,
@@ -223,6 +256,11 @@ export function applyBackupPayload(
   for (const domain of BACKUP_DOMAINS) {
     const incoming = payload[domain.key];
     if (incoming === undefined) continue;
+
+    // Never let a redacted export overwrite live security material. If the
+    // incoming value (or any nested value) was redacted, skip the whole domain
+    // so we never clobber real passwords/tokens with "[REDACTED]".
+    if (containsRedaction(incoming)) continue;
 
     const value =
       mode === 'merge' ? mergeValue(domain.read(), incoming) : incoming;

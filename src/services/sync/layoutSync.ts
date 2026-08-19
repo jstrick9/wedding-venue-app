@@ -21,12 +21,11 @@ export function canSyncLayouts(organizationId: string | null | undefined): boole
 export async function pullLayouts(context: LayoutSyncContext): Promise<void> {
   const repo = getLayoutRepository();
   const remote = await repo.loadAll(context);
-  if (remote.length > 0) {
-    // Overwrite the local store with the backend's layouts so the UI reflects
-    // the shared source of truth.
-    const { setSavedLayouts } = await import('../../hooks/useLayoutState');
-    setSavedLayouts(remote);
-  }
+  // Always overwrite the local store with the backend's layouts — including an
+  // empty result — so the UI reflects the shared source of truth and stale local
+  // layouts are never retained when the server correctly has none (P1-5).
+  const { setSavedLayouts } = await import('../../hooks/useLayoutState');
+  setSavedLayouts(remote);
 }
 
 export async function pushLayouts(context: LayoutSyncContext): Promise<void> {

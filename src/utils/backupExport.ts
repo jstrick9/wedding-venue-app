@@ -1,4 +1,5 @@
 import { BACKUP_DOMAINS } from './backupDomains';
+import { redactValue } from './backupSecrets';
 import type { BackupBundle, BackupBundleSummary, BackupPayload } from './backupTypes';
 
 const BUNDLE_VERSION = 1;
@@ -62,11 +63,30 @@ export async function buildBackupBundle(actor?: {
   };
 }
 
+/**
+ * Build a bundle whose payload is redacted of security material and whose
+ * checksum is recomputed over the redacted payload. This is the only form that
+ * should ever be serialized to a file / shared with another device.
+ */
+export async function buildRedactedExportBundle(actor?: {
+  id?: string;
+  name?: string;
+}): Promise<BackupBundle> {
+  const full = await buildBackupBundle(actor);
+  const redactedPayload = redactValue(full.payload) as BackupPayload;
+  const payloadHash = await sha256(JSON.stringify(redactedPayload));
+  return {
+    ...full,
+    checksums: { payloadHash },
+    payload: redactedPayload,
+  };
+}
+
 export async function downloadBackupBundle(actor?: {
   id?: string;
   name?: string;
 }): Promise<void> {
-  const bundle = await buildBackupBundle(actor);
+  const bundle = await buildRedactedExportBundle(actor);
   const content = JSON.stringify(bundle, null, 2);
   const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);

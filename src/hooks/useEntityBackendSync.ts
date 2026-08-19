@@ -40,8 +40,10 @@ export function useEntityBackendSync({
     if (!enabled || !context) return;
     try {
       await pullEntities(context);
+      loadedRef.current = true;
       onLoaded?.();
     } catch (err) {
+      // Leave loadedRef false so a failed first pull can retry on the next mount.
       console.error('Failed to load entities from backend:', err);
     }
   }, [enabled, context, onLoaded]);
@@ -67,9 +69,12 @@ export function useEntityBackendSync({
     [enabled, context],
   );
 
+  // Reset the loaded flag whenever the org/user context changes so a venue
+  // switch pulls that organization's data (P1-5). When a new context is seen we
+  // also re-run the initial pull.
   useEffect(() => {
-    if (!enabled || !context || loadedRef.current) return;
-    loadedRef.current = true;
+    if (!enabled || !context) return;
+    loadedRef.current = false;
     void loadFromBackend();
   }, [enabled, context, loadFromBackend]);
 

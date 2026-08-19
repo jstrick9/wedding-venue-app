@@ -1,4 +1,5 @@
-import { emit } from './appEvents';
+import { emit, type DataChangedType } from './appEvents';
+import { BACKUP_DOMAINS } from './backupDomains';
 export interface VersionedStorageEnvelope<T> {
   version: number;
   savedAt: string;
@@ -18,6 +19,18 @@ interface LoadVersionedOptions<T> {
 }
 
 const BACKUP_PREFIX = 'spm_backup_';
+
+/**
+ * Map a storage key to its canonical domain key via the backup/entity registry.
+ * Falls back to 'all' when the key is not a known persistence domain, so the
+ * event bus never carries an arbitrary/untyped domain string.
+ */
+export function storageKeyToDomainKey(key: string): DataChangedType {
+  const def = BACKUP_DOMAINS.find(
+    (entry) => entry.storageKey === key || entry.key === key,
+  );
+  return (def ? def.key : 'all') as DataChangedType;
+}
 
 function isEnvelope(value: unknown): value is VersionedStorageEnvelope<unknown> {
   return Boolean(
@@ -72,10 +85,11 @@ export function saveVersionedStorage<T>(
       // React-facing event synchronously from that getter causes setState-during
       // render warnings. The backend/couple bridges only need eventual delivery.
       const notify = () => {
-        // The storage key is intentionally carried as the event type. The
-        // backend repository resolves it to its domain key, while local
-        // consumers can continue to handle the existing named event types.
-        emit('spm_data_changed', { type: key });
+        // Resolve the storage key to its canonical domain key so the typed
+        // event bus always carries a registry-aligned type. Previously the raw
+        // storage key (e.g. "spm_chair_specs") was emitted, which never matched
+        // the backend pushDomain lookup and silently skipped cloud sync.
+        emit('spm_data_changed', { type: storageKeyToDomainKey(key) });
       };
       if (typeof queueMicrotask === 'function') queueMicrotask(notify);
       else setTimeout(notify, 0);
