@@ -43,7 +43,9 @@ vi.mock('../backend/supabaseClient', () => {
 import {
   createVenueOrganization,
   getPlatformConsoleMetrics,
+  listPlatformAuditLogs,
   listPlatformOrganizations,
+  updateVenueOrganization,
 } from './platformAdminService';
 
 describe('platformAdminService', () => {
@@ -143,5 +145,98 @@ describe('platformAdminService', () => {
       latitude: 1,
       longitude: 2,
     })).rejects.toThrow();
+  });
+
+  it('updates a venue through update_venue_organization and sanitizes the website', async () => {
+    rpcResults['update_venue_organization'] = {
+      data: { ok: true, organization_id: 'org1', organization_name: 'Seven Paths Manor', organization_slug: 'seven-paths', status: 'active' },
+      error: null,
+    };
+
+    const result = await updateVenueOrganization({
+      organizationId: 'org1',
+      name: 'Seven Paths Manor',
+      status: 'active',
+      addressLine1: '100 Manor Rd',
+      city: 'Charlotte',
+      stateRegion: 'NC',
+      postalCode: '28202',
+      country: 'US',
+      primaryContactName: 'Ada',
+      primaryContactPhone: '704-555-0100',
+      primaryContactEmail: 'ada@sevenpaths.com',
+      websiteUrl: 'sevenpathsmanor.com',
+      latitude: 35.2,
+      longitude: -80.8,
+    });
+
+    expect(result.organizationSlug).toBe('seven-paths');
+    expect(result.status).toBe('active');
+    expect(rpcCalls[0].fn).toBe('update_venue_organization');
+    expect(rpcCalls[0].args.p_organization_id).toBe('org1');
+    expect(rpcCalls[0].args.p_website_url).toMatch(/^https:\/\/sevenpathsmanor\.com\/?$/);
+    expect(rpcCalls[0].args).not.toHaveProperty('p_slug');
+  });
+
+  it('rejects a javascript: website before calling the update RPC', async () => {
+    await expect(updateVenueOrganization({
+      organizationId: 'org1',
+      name: 'Seven Paths Manor',
+      status: 'active',
+      addressLine1: '100 Manor Rd',
+      city: 'Charlotte',
+      stateRegion: 'NC',
+      postalCode: '28202',
+      country: 'US',
+      primaryContactName: 'Ada',
+      primaryContactPhone: '704-555-0100',
+      primaryContactEmail: 'ada@sevenpaths.com',
+      websiteUrl: 'javascript:alert(1)',
+    })).rejects.toThrow(/website url/i);
+    expect(rpcCalls).toHaveLength(0);
+  });
+
+  it('propagates an RPC-level failure from venue update', async () => {
+    rpcResults['update_venue_organization'] = { data: { ok: false, error: 'forbidden' }, error: null };
+    await expect(updateVenueOrganization({
+      organizationId: 'org1',
+      name: 'Seven Paths Manor',
+      status: 'active',
+      addressLine1: '100 Manor Rd',
+      city: 'Charlotte',
+      stateRegion: 'NC',
+      postalCode: '28202',
+      country: 'US',
+      primaryContactName: 'Ada',
+      primaryContactPhone: '704-555-0100',
+      primaryContactEmail: 'ada@sevenpaths.com',
+    })).rejects.toThrow('forbidden');
+  });
+
+  it('maps platform audit log rows into camelCase entries', async () => {
+    tableResults['platform_audit_logs'] = {
+      data: [{
+        id: 'log-1',
+        platform_user_id: 'u1',
+        organization_id: 'org1',
+        action: 'venue_updated',
+        target_type: 'organization',
+        target_id: 'org1',
+        reason: null,
+        metadata: { status: 'active' },
+        created_at: '2026-08-19T12:00:00.000Z',
+      }],
+      error: null,
+    };
+
+    const logs = await listPlatformAuditLogs(20);
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({
+      id: 'log-1',
+      platformUserId: 'u1',
+      organizationId: 'org1',
+      action: 'venue_updated',
+      targetType: 'organization',
+    });
   });
 });

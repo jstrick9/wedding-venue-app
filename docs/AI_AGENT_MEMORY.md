@@ -525,5 +525,17 @@ See `docs/reviews/182-deferred-p0-p1-2026-08-19.md`.
 
 **Rule going forward:** treat #182 + §9.12–9.13 as current truth. Do not claim console metrics or server guest mode are live until migration `0011` is applied and smoke-tested.
 
+### 9.14 Platform console rebuild (Review #183, 2026-08-19)
+
+See `docs/reviews/183-platform-console-rebuild-2026-08-19.md`.
+
+The platform admin portal is no longer a single long page. It is a sidebar console with hash areas (`#/platform-admin`, `/venues`, `/venues/<id>`, `/map`, `/onboard`, `/branding`, `/chat`, `/audit`). Platform admins can edit venue identity, address/contact, website, and lifecycle status after create via `update_venue_organization` (migration `0012`). The slug stays immutable. Address changes re-geocode; unchanged addresses keep existing coordinates. The directory searches name/slug/city/state/country/contact and filters by status and region. Back from detail restores the in-memory filter. Unsafe website URLs are rejected by `sanitizeHref` before the RPC.
+
+**Still deferred:** Phase 3 venue-intelligence features; N-3 hash-only snapshot tokens; remaining `@ts-nocheck` on 24 large components; 5 skipped UI/smoke tests; live RLS smoke test.
+
+**Verified gates (HEAD at #183):** typecheck/lint:events/lint pass; unused-locals pass; full suite **799 passed / 5 skipped**; single-file build 2,095.60 kB / 485.59 kB gzip; split build green; `npm audit --omit=dev` 0 vulnerabilities.
+
+**Rule going forward:** treat #183 + §9.12–9.14 as current truth. Apply migrations `0001`–`0012` and smoke-test venue edit + audit before calling the console rebuild live.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

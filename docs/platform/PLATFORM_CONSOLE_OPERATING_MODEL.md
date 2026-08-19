@@ -1,6 +1,6 @@
 # Platform Console Operating Model
 
-**Status:** Review #178 design and implementation baseline
+**Status:** Review #183 implementation — sidebar console, venue edit, search/filter, audit view
 
 ## Purpose
 
@@ -116,8 +116,13 @@ Implemented in the repository:
 - managed-admin invite reissue/revocation RPCs;
 - tenant suspension/reactivation RPCs;
 - executive global/per-venue operational metrics RPC;
-- Platform Console cards, directory metrics, invite controls, and suspend/reactivate controls;
-- existing platform audit-log foundation.
+- **sidebar Platform Console** with hash areas: Overview, Venues, Map, Onboard, Branding, Chat, Audit;
+- searchable/filterable venue directory (name, slug, city, state, country, contact; status + region filters);
+- **post-create venue detail/edit** (`update_venue_organization`, migration `0012`) for identity, address/contact, website, coordinates, and lifecycle status — slug remains immutable; address changes re-geocode;
+- platform branding and public-branding asset storage;
+- one platform↔venue chat thread per tenant;
+- venue address/contact validation and geocoded point/density/region maps;
+- platform audit-log foundation plus an Audit console table.
 
 Still required before production:
 
@@ -127,11 +132,7 @@ Still required before production:
 - real activity timestamps and structured server-side request logs;
 - a formal break-glass support-session workflow;
 - retention/export/deletion workflows;
-- billing/subscription metrics if monetization is introduced;
-- global platform branding and public-branding asset storage;
-- one platform↔venue thread per tenant, accessible to platform admins and active venue members;
-- venue address/contact validation and geocoded point data;
-- point map, density map, region/choropleth-style view, and table alternative.
+- billing/subscription metrics if monetization is introduced.
 
 ## Venue geocoding and mapping
 

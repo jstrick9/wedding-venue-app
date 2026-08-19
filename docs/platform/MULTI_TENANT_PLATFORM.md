@@ -73,6 +73,9 @@ supabase/migrations/0006_platform_tenancy.sql
 supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql
 supabase/migrations/0008_platform_console_management.sql
 supabase/migrations/0009_platform_branding_chat_and_venue_location.sql
+supabase/migrations/0010_guest_rsvp_hardening_org_data_and_chat.sql
+supabase/migrations/0011_couple_workspace_projection.sql
+supabase/migrations/0012_update_venue_organization.sql
 ```
 
 Run each once in Supabase SQL Editor or through the Supabase CLI. Do not rerun a partially successful migration without checking which objects were created.

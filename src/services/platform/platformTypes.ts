@@ -42,6 +42,18 @@ export interface PlatformConsoleMetrics {
   venues: PlatformOrganizationMetrics[];
 }
 
+export interface PlatformAuditLogEntry {
+  id: string;
+  platformUserId: string;
+  organizationId: string | null;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface PlatformOrganizationSummary {
   id: string;
   name: string;

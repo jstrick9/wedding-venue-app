@@ -1,6 +1,9 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { createOpaqueToken } from '../../utils/secureTokens';
+import { sanitizeHref } from '../../utils/safeUrl';
 import type {
+  OrganizationStatus,
+  PlatformAuditLogEntry,
   PlatformConsoleMetrics,
   PlatformOrganizationSummary,
 } from './platformTypes';
@@ -258,6 +261,85 @@ export async function reactivateVenueOrganization(organizationId: string): Promi
   });
   if (error) throw error;
   if (!data?.ok) throw new Error(String(data?.error || 'Could not reactivate the venue.'));
+}
+
+export interface UpdateVenueOrganizationInput {
+  organizationId: string;
+  name: string;
+  status: OrganizationStatus;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  stateRegion: string;
+  postalCode: string;
+  country: string;
+  primaryContactName: string;
+  primaryContactPhone: string;
+  primaryContactEmail: string;
+  supportEmail?: string;
+  phone?: string;
+  websiteUrl?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  suspensionReason?: string;
+}
+
+export async function updateVenueOrganization(
+  input: UpdateVenueOrganizationInput,
+): Promise<{ organizationId: string; organizationName: string; organizationSlug: string; status: OrganizationStatus }> {
+  const rawWebsite = (input.websiteUrl || '').trim();
+  const website = rawWebsite ? sanitizeHref(rawWebsite) : '';
+  if (rawWebsite && !website) {
+    throw new Error('Website URL must use http, https, mailto, or tel.');
+  }
+  const { data, error } = await requireSupabase().rpc('update_venue_organization', {
+    p_organization_id: input.organizationId,
+    p_name: input.name.trim(),
+    p_status: input.status,
+    p_address_line1: input.addressLine1.trim(),
+    p_address_line2: input.addressLine2?.trim() || '',
+    p_city: input.city.trim(),
+    p_state_region: input.stateRegion.trim(),
+    p_postal_code: input.postalCode.trim(),
+    p_country: input.country.trim() || 'US',
+    p_primary_contact_name: input.primaryContactName.trim(),
+    p_primary_contact_phone: input.primaryContactPhone.trim(),
+    p_primary_contact_email: input.primaryContactEmail.trim().toLowerCase(),
+    p_support_email: input.supportEmail?.trim().toLowerCase() || '',
+    p_phone: input.phone?.trim() || '',
+    p_website_url: website,
+    p_latitude: input.latitude ?? null,
+    p_longitude: input.longitude ?? null,
+    p_suspension_reason: input.suspensionReason?.trim() || null,
+  });
+  if (error) throw error;
+  if (!data?.ok) throw new Error(String(data?.error || 'Could not update the venue organization.'));
+  return {
+    organizationId: String(data.organization_id),
+    organizationName: String(data.organization_name),
+    organizationSlug: String(data.organization_slug),
+    status: String(data.status || input.status) as OrganizationStatus,
+  };
+}
+
+export async function listPlatformAuditLogs(limit = 100): Promise<PlatformAuditLogEntry[]> {
+  const { data, error } = await requireSupabase()
+    .from('platform_audit_logs')
+    .select('id,platform_user_id,organization_id,action,target_type,target_id,reason,metadata,created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []).map((row) => ({
+    id: String(row.id),
+    platformUserId: String(row.platform_user_id),
+    organizationId: row.organization_id ? String(row.organization_id) : null,
+    action: String(row.action),
+    targetType: String(row.target_type),
+    targetId: row.target_id ? String(row.target_id) : null,
+    reason: row.reason ? String(row.reason) : null,
+    metadata: (row.metadata && typeof row.metadata === 'object' ? row.metadata : {}) as Record<string, unknown>,
+    createdAt: String(row.created_at),
+  }));
 }
 
 export async function acceptVenueAdminInvite(token: string): Promise<{ organizationId: string; organizationName: string; organizationSlug?: string }> {
