@@ -436,7 +436,9 @@ Review #176 added:
 - `supabase/migrations/0006_platform_tenancy.sql` with `platform_memberships`, nullable pre-onboarding organization owners, `venue_admin_invites`, platform metadata RLS, platform audit foundation, and RPCs for platform venue creation and managed-admin invite claiming;
 - `supabase/migrations/0007_public_venue_branding_and_access_lifecycle.sql` with safe public branding lookup by venue slug, venue-bound public RPC wrappers, and server-enforced expiration for couple/collaborator/guest links;
 - `supabase/migrations/0008_platform_console_management.sql` with immutable auto-generated slugs, provisioning/active/suspended tenant lifecycle, invite context/reissue/revocation, suspend/reactivate RPCs, and global/per-venue operational metrics;
-- `docs/platform/PLATFORM_CONSOLE_OPERATING_MODEL.md` and `docs/reviews/178-platform-console-management.md` with the researched admin-plane, tenant lifecycle, metrics, audit, and support-access operating model;
+- `supabase/migrations/0009_platform_branding_chat_and_venue_location.sql` with dedicated platform branding, public branding storage, platform↔venue chat, required venue address/contact/location fields, and geocode cache;
+- `supabase/functions/geocode-venue/index.ts` as a server-side, cached, low-rate Nominatim integration;
+- `docs/platform/PLATFORM_CONSOLE_OPERATING_MODEL.md` and `docs/reviews/178-platform-console-management.md` with the researched admin-plane, tenant lifecycle, metrics, map, branding, chat, audit, and support-access operating model;
 - `src/services/platform/platformTypes.ts`, `platformAdminService.ts`, `publicVenueService.ts`, and `organizationContext.ts`;
 - `PlatformAdminPortal.tsx` at the root/`#/platform-admin` route;
 - `PlatformLoginScreen.tsx` at the neutral root/`#/platform-login` route;

@@ -137,7 +137,7 @@ The current setup runbooks are:
 
 Short version:
 1. Create/configure the Supabase project and Vercel environment variables.
-2. Apply migrations `0001` through `0008` in order. Migrations `0006`–`0008` add the platform-control layer, venue-specific branding, portal access lifecycle, immutable slugs, invite management, suspension, and metrics.
+2. Apply migrations `0001` through `0009` in order. Migrations `0006`–`0009` add the platform-control layer, venue-specific branding, portal access lifecycle, immutable slugs, invite management, suspension, metrics, platform branding/chat, required venue contact/location, and geocoding cache.
 3. Bootstrap the first `platform_owner` once in Supabase SQL Editor using the operator's Auth user id/email.
 4. Sign in at the root application URL to open the Platform Admin Console.
 5. Create a venue organization and copy its one-time managed-admin setup link.
