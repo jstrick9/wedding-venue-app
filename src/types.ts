@@ -719,6 +719,14 @@ export interface Config {
   fontFamily: string;
   headingFontFamily: string;
   welcomeLogoUrl?: string;
+  /** Public login-page background customization. */
+  loginBackgroundType?: 'solid' | 'gradient' | 'pattern' | 'animated';
+  loginBackgroundColor?: string;
+  loginBackgroundSecondaryColor?: string;
+  loginBackgroundPattern?: 'dots' | 'grid' | 'diagonal' | 'confetti';
+  loginBackgroundAnimation?: 'none' | 'drift' | 'shimmer' | 'float';
+  loginBackgroundOverlayOpacity?: number;
+  loginWelcomeMessage?: string;
   welcomeTitle?: string;
   showWelcomeByDefault?: boolean;
   welcomeFeatures?: string[];
