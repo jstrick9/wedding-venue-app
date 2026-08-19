@@ -8,6 +8,17 @@ import type {
 export interface CreateVenueOrganizationInput {
   name: string;
   adminEmail: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  stateRegion: string;
+  postalCode: string;
+  country: string;
+  primaryContactName: string;
+  primaryContactPhone: string;
+  primaryContactEmail: string;
+  latitude: number;
+  longitude: number;
   expiresAt?: string;
 }
 
@@ -49,7 +60,7 @@ export async function listPlatformOrganizations(): Promise<PlatformOrganizationS
   const [organizationsResult, membershipsResult, profilesResult, invitesResult] = await Promise.all([
     supabase
       .from('organizations')
-      .select('id,name,slug,status,owner_id,support_email,phone,website_url,suspension_reason,created_at,updated_at')
+      .select('id,name,slug,status,owner_id,support_email,phone,website_url,address_line1,address_line2,city,state_region,postal_code,country,primary_contact_name,primary_contact_phone,primary_contact_email,latitude,longitude,suspension_reason,created_at,updated_at')
       .order('created_at', { ascending: true }),
     supabase
       .from('organization_memberships')
@@ -94,6 +105,17 @@ export async function listPlatformOrganizations(): Promise<PlatformOrganizationS
     supportEmail: organization.support_email,
     phone: organization.phone,
     websiteUrl: organization.website_url,
+    addressLine1: organization.address_line1,
+    addressLine2: organization.address_line2,
+    city: organization.city,
+    stateRegion: organization.state_region,
+    postalCode: organization.postal_code,
+    country: organization.country,
+    primaryContactName: organization.primary_contact_name,
+    primaryContactPhone: organization.primary_contact_phone,
+    primaryContactEmail: organization.primary_contact_email,
+    latitude: organization.latitude,
+    longitude: organization.longitude,
     suspensionReason: organization.suspension_reason,
     createdAt: organization.created_at,
     updatedAt: organization.updated_at,
@@ -152,13 +174,22 @@ export async function createVenueOrganization(
   const token = createOpaqueToken('va');
   const expiresAt = input.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await supabase.rpc('create_venue_organization', {
+  const { data, error } = await supabase.rpc('create_venue_organization_v2', {
     p_name: input.name.trim(),
-    // The database now generates and freezes the slug from the venue name.
-    p_slug: '',
     p_admin_email: input.adminEmail.trim().toLowerCase(),
     p_admin_token: token,
     p_expires_at: expiresAt,
+    p_address_line1: input.addressLine1.trim(),
+    p_address_line2: input.addressLine2?.trim() || '',
+    p_city: input.city.trim(),
+    p_state_region: input.stateRegion.trim(),
+    p_postal_code: input.postalCode.trim(),
+    p_country: input.country.trim() || 'US',
+    p_primary_contact_name: input.primaryContactName.trim(),
+    p_primary_contact_phone: input.primaryContactPhone.trim(),
+    p_primary_contact_email: input.primaryContactEmail.trim().toLowerCase(),
+    p_latitude: input.latitude,
+    p_longitude: input.longitude,
   });
 
   if (error) throw error;

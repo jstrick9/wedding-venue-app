@@ -51,6 +51,17 @@ export interface PlatformOrganizationSummary {
   supportEmail?: string | null;
   phone?: string | null;
   websiteUrl?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  stateRegion?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  primaryContactName?: string | null;
+  primaryContactPhone?: string | null;
+  primaryContactEmail?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   suspensionReason?: string | null;
   createdAt: string;
   updatedAt: string;
