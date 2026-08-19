@@ -98,6 +98,9 @@ const layoutStateMockFactory = () => ({
   },
   guests: [],
   selectedId: null,
+  warnings: [],
+  layoutDirty: false,
+  markLayoutClean: vi.fn(),
   setSelectedId: vi.fn(),
   setOnVenueChange: vi.fn(),
   changeVenue: vi.fn(),
@@ -141,9 +144,11 @@ vi.mock('./hooks/useLayoutState', () => ({
 vi.mock('./contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'test', username: 'testadmin', role: 'admin', name: 'Test Admin', isActive: true, createdAt: new Date().toISOString() },
+    organizationId: null,
     isAdmin: true,
     isBasicUser: false,
     isGuest: false,
+    isPlatformAdmin: false,
     login: vi.fn(),
     logout: vi.fn(),
     continueAsGuest: vi.fn(),
@@ -151,8 +156,13 @@ vi.mock('./contexts/AuthContext', () => ({
     updateUser: vi.fn(),
     deleteUser: vi.fn(),
     getAllUsers: vi.fn(() => []),
+    refreshSession: vi.fn(),
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock('./components/VenueDashboard', () => ({
+  VenueDashboard: () => <div data-testid="dashboard-stub" />,
 }));
 
 vi.mock('./utils/collisionDetection', () => ({
@@ -160,24 +170,41 @@ vi.mock('./utils/collisionDetection', () => ({
   checkFixtureCollision: () => ({ collides: false }),
 }));
 
+const mockConfig = {
+  primaryColor: '#4A1942',
+  primaryDark: '#3d1a45',
+  primaryLight: '#6f2a67',
+  accentColor: '#C0C0C0',
+  backgroundColor: '#f8f8f8',
+  textColor: '#111111',
+  headerTextColor: '#ffffff',
+  bodyTextColor: '#111111',
+  accentTextColor: '#4A1942',
+  fontFamily: 'Inter, sans-serif',
+  headingFontFamily: 'Playfair Display, serif',
+  showWelcomeByDefault: false,
+};
 vi.mock('./config', () => ({
-  getConfig: () => ({
-    primaryColor: '#4A1942',
-    primaryDark: '#3d1a45',
-    primaryLight: '#6f2a67',
-    accentColor: '#C0C0C0',
-    backgroundColor: '#f8f8f8',
-    textColor: '#111111',
-    headerTextColor: '#ffffff',
-    bodyTextColor: '#111111',
-    accentTextColor: '#4A1942',
-    fontFamily: 'Inter, sans-serif',
-    headingFontFamily: 'Playfair Display, serif',
-    showWelcomeByDefault: false,
-  }),
+  getConfig: () => mockConfig,
+  useBrandingConfig: () => mockConfig,
 }));
 
-import App from './App';
+import AuthenticatedApp from './components/AuthenticatedApp';
+import { ModalProvider } from './contexts/ModalContext';
+import { STORAGE_KEYS } from './constants/storageKeys';
+
+function renderStudio() {
+  window.location.hash = '#/studio';
+  localStorage.setItem(
+    STORAGE_KEYS.UI_PREFS,
+    JSON.stringify({ snapToGrid: true, gridSize: 5, showGrid: false, sidebarCollapsed: false, sidebarWidth: 280, gridContrast: 0.45 }),
+  );
+  return render(
+    <ModalProvider>
+      <AuthenticatedApp />
+    </ModalProvider>,
+  );
+}
 
 describe('App grid/snap + authoritative collision integration', () => {
   beforeEach(() => {
@@ -185,15 +212,16 @@ describe('App grid/snap + authoritative collision integration', () => {
     updateTableMock.mockReset();
     checkTableCollisionMock.mockReset();
     showToastMock.mockReset();
+    localStorage.clear();
   });
 
-  it.skip('blocks drag+snap placement on collision and shows non-blocking toast', async () => {
+  it('blocks drag+snap placement on collision and shows non-blocking toast', async () => {
     checkTableCollisionMock.mockReturnValue({ collides: true, details: 'blocked by spacing' });
     const user = userEvent.setup();
-    render(<App />);
+    renderStudio();
 
-    await user.click(screen.getByText('start-drag-table'));
-    await user.click(screen.getByText('drop-item'));
+    await user.click(await screen.findByText('start-drag-table'));
+    await user.click(await screen.findByText('drop-item'));
 
     expect(addTableMock).not.toHaveBeenCalled();
     expect(showToastMock).toHaveBeenCalledWith('blocked by spacing', 'warning');
@@ -203,24 +231,24 @@ describe('App grid/snap + authoritative collision integration', () => {
     expect(firstArg.y).toBe(10);
   });
 
-  it.skip('blocks click-to-place on collision and shows toast', async () => {
+  it('blocks click-to-place on collision and shows toast', async () => {
     checkTableCollisionMock.mockReturnValue({ collides: true, details: 'cannot place here' });
     const user = userEvent.setup();
-    render(<App />);
+    renderStudio();
 
-    await user.click(screen.getByText('start-drag-table'));
-    await user.click(screen.getByText('click-place-item'));
+    await user.click(await screen.findByText('start-drag-table'));
+    await user.click(await screen.findByText('click-place-item'));
 
     expect(addTableMock).not.toHaveBeenCalled();
     expect(showToastMock).toHaveBeenCalledWith('cannot place here', 'warning');
   });
 
-  it.skip('blocks properties x/y table edits on collision', async () => {
+  it('blocks properties x/y table edits on collision', async () => {
     checkTableCollisionMock.mockReturnValue({ collides: true, details: 'collision from properties' });
     const user = userEvent.setup();
-    render(<App />);
+    renderStudio();
 
-    await user.click(screen.getByText('properties-move-table'));
+    await user.click(await screen.findByText('properties-move-table'));
 
     expect(updateTableMock).not.toHaveBeenCalled();
     expect(showToastMock).toHaveBeenCalledWith('collision from properties', 'warning');

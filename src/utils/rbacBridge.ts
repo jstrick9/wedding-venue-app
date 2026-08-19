@@ -1,35 +1,30 @@
 import type { User, UserPermissions } from '../types';
 import { PERMISSIONS } from '../constants/permissions';
+import { canonicalizeRoleId, DEFAULT_ROLES } from '../constants/rbacDefaults';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 /**
  * RBAC ↔ permission bridge.
  *
- * Reconciles the two RBAC systems:
- *  - System A (`permissions.ts`) enforces coarse `UserPermissions` flags +
- *    `User.role`.
- *  - System B (`useRBAC` + `PERMISSIONS`) is a granular role/permission
- *    registry edited in the Access Control panel.
+ * One authority: the granular `PERMISSIONS` / role registry. Coarse
+ * `UserPermissions` flags are derived from assigned roles (including
+ * inherited roles and Supabase app_role aliases). Explicit `user.permissions`
+ * still override the derived flags so an admin can hand-tune a single user.
  *
- * A user may have an assigned RBAC role (`user.assignedRoles`). This bridge
- * derives the coarse `UserPermissions` flags from that role's granular
- * permissions (including inherited permissions), so granular toggles in the
- * Access Control panel actually take effect at the enforcement layer.
- *
- * Explicit `user.permissions` always win over role-derived defaults, so admins
- * can still hand-tune a user.
+ * Users with no assigned role keep the legacy `User.role` short-circuit
+ * behavior in `permissions.ts`.
  */
 
 interface RbacRole {
   id: string;
   permissions: string[];
   inheritsFrom?: string[];
+  isImmutable?: boolean;
 }
 
-const ROLES_KEY = 'spm_rbac_roles';
-
-function readRoles(): RbacRole[] {
+function readStoredRoles(): RbacRole[] {
   try {
-    const raw = localStorage.getItem(ROLES_KEY);
+    const raw = localStorage.getItem(STORAGE_KEYS.RBAC_ROLES);
     const roles = raw ? JSON.parse(raw) : [];
     return Array.isArray(roles) ? (roles as RbacRole[]) : [];
   } catch {
@@ -37,14 +32,36 @@ function readRoles(): RbacRole[] {
   }
 }
 
-/** All granular permission ids for a role, including inherited roles. */
+/** Merge stored roles on top of the canonical system defaults. */
+export function readMergedRoles(): RbacRole[] {
+  const merged: RbacRole[] = DEFAULT_ROLES.map((role) => ({
+    id: role.id,
+    permissions: [...role.permissions],
+    inheritsFrom: role.inheritsFrom,
+    isImmutable: role.isImmutable,
+  }));
+  for (const stored of readStoredRoles()) {
+    const index = merged.findIndex((role) => role.id === stored.id);
+    if (index < 0) {
+      merged.push(stored);
+      continue;
+    }
+    if (merged[index].isImmutable) continue;
+    merged[index] = stored;
+  }
+  return merged;
+}
+
+/** All granular permission ids for a role, including inherited roles. Cycle-safe. */
 export function getRolePermissionIds(roleId: string): string[] {
-  const roles = readRoles();
+  const roles = readMergedRoles();
   const collected = new Set<string>();
   const visit = (id: string) => {
-    const role = roles.find((r) => r.id === id);
-    if (!role || collected.has(`role:${id}`)) return;
-    collected.add(`role:${id}`);
+    const canonical = canonicalizeRoleId(id);
+    if (collected.has(`role:${canonical}`)) return;
+    collected.add(`role:${canonical}`);
+    const role = roles.find((r) => r.id === canonical);
+    if (!role) return;
     (role.inheritsFrom || []).forEach(visit);
     role.permissions.forEach((p) => collected.add(p));
   };
@@ -64,15 +81,16 @@ export function getUserPermissionIds(user: User | null | undefined): string[] {
   return Array.from(ids);
 }
 
+export function userHasAssignedRoles(user: User | null | undefined): boolean {
+  return Boolean(user?.assignedRoles && user.assignedRoles.length > 0);
+}
+
 /**
  * Resolve the effective coarse permission flags for a user.
  *
  * When a user has an assigned RBAC role, that role is authoritative for the
- * mapped flags: a mapped permission present in the role grants the flag, and a
- * mapped permission absent from the role denies it (so removing a permission in
- * the Access Control panel actually revokes it). Explicit `user.permissions`
- * always override role-derived values. Users without an assigned role keep the
- * legacy default behavior (only explicit permissions apply).
+ * mapped flags. Explicit `user.permissions` always override role-derived
+ * values. Users without an assigned role keep the legacy default behavior.
  */
 export function resolveUserPermissions(user: User | null | undefined): UserPermissions {
   const explicit = user?.permissions || {};
@@ -82,33 +100,21 @@ export function resolveUserPermissions(user: User | null | undefined): UserPermi
   const ids = getUserPermissionIds(user);
   const idSet = new Set(ids);
 
-  // Start with every mapped flag denied, then grant those present in the role.
   const derived: UserPermissions = {
     canViewLayout: idSet.has('layout.canvas.view'),
     canEditLayout: idSet.has('layout.canvas.edit'),
     canManageGuests: idSet.has('guests.manage'),
     canPrint: idSet.has('export.print'),
-    canExport: idSet.has('export.download'),
+    canExport: idSet.has('export.download') || idSet.has('export.share'),
     canCreateTemplates: idSet.has('templates.create'),
     canEditTemplates: idSet.has('templates.manage'),
-    canDeleteTemplates: idSet.has('templates.delete'),
+    canDeleteTemplates: idSet.has('templates.manage'),
     canInviteUsers: idSet.has('admin.users.manage') || idSet.has('admin.users.invite'),
     canViewAllLayouts: idSet.has('layout.view.all'),
   };
 
-  // Admin/staff roles implicitly grant broad access via their hierarchy.
-  if (idSet.has('admin.panel.access')) {
-    derived.canEditLayout = true;
-    derived.canManageGuests = true;
-    derived.canPrint = true;
-    derived.canExport = true;
-    derived.canViewLayout = true;
-  }
-  if (idSet.has('staff.operations.access')) {
-    derived.canManageGuests = true;
-  }
-
-  // Explicit user.permissions override role-derived values.
+  // Explicit user.permissions override role-derived values. Admin/staff
+  // hierarchy no longer silently re-grants flags that were revoked on the role.
   return { ...derived, ...explicit };
 }
 

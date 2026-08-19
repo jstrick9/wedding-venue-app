@@ -62,16 +62,33 @@ describe('rbacBridge', () => {
     expect(resolveUserPermissions(user).canViewLayout).toBe(true);
   });
 
-  it('admin/panel-access role implicitly grants broad flags', () => {
+  it('does not implicitly re-grant flags from admin.panel.access (role is authoritative)', () => {
     seedRoles([
-      { id: 'admin', permissions: ['admin.panel.access', 'layout.canvas.view'] },
+      { id: 'limited-admin', permissions: ['admin.panel.access', 'layout.canvas.view'] },
     ]);
-    const user = makeUser({ assignedRoles: ['admin'] });
+    const user = makeUser({ assignedRoles: ['limited-admin'] });
     const perms = resolveUserPermissions(user);
-    expect(perms.canEditLayout).toBe(true);
-    expect(perms.canManageGuests).toBe(true);
-    expect(perms.canPrint).toBe(true);
-    expect(perms.canExport).toBe(true);
+    expect(perms.canViewLayout).toBe(true);
+    expect(perms.canEditLayout).toBe(false);
+    expect(perms.canManageGuests).toBe(false);
+    expect(perms.canPrint).toBe(false);
+  });
+
+  it('aliases a Supabase owner role onto master-admin defaults', () => {
+    const user = makeUser({ assignedRoles: ['owner'] });
+    expect(getRolePermissionIds('owner')).toContain('admin.panel.access');
+    expect(resolveUserPermissions(user).canEditLayout).toBe(true);
+    expect(hasGranularPermission(user, 'admin.panel.access')).toBe(true);
+  });
+
+  it('does not recurse forever on cyclic role inheritance', () => {
+    seedRoles([
+      { id: 'cycle-a', permissions: ['layout.canvas.view'], inheritsFrom: ['cycle-b'] },
+      { id: 'cycle-b', permissions: ['export.print'], inheritsFrom: ['cycle-a'] },
+    ]);
+    const ids = getRolePermissionIds('cycle-a');
+    expect(ids).toContain('layout.canvas.view');
+    expect(ids).toContain('export.print');
   });
 
   it('explicit user.permissions override role-derived flags', () => {

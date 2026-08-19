@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { FixtureType, TableSpec, User } from '../types';
 import {
   canAccessAdminPanel,
   canAccessOperationsPanel,
   canEditLayout,
   canManageGuests,
+  canViewLayout,
   canMoveFixture,
   canPlaceFixtureType,
   canSeeFixtureType,
@@ -64,6 +65,10 @@ const tableSpec: TableSpec = {
 } as TableSpec;
 
 describe('permissions policy', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('identifies admin/staff/guest users correctly', () => {
     expect(isAdminUser(createUser({ role: 'admin' }))).toBe(true);
     expect(isStaffUser(createUser({ role: 'staff' }))).toBe(true);
@@ -114,5 +119,27 @@ describe('permissions policy', () => {
     const basic = createUser({ role: 'basic' });
     expect(canEditLayout(basic)).toBe(true);
     expect(tableSpec.name).toBe('Table');
+  });
+
+  it('honors granular revocation on an assigned admin role', () => {
+    localStorage.setItem(
+      'spm_rbac_roles',
+      JSON.stringify([
+        { id: 'restricted-admin', permissions: ['admin.panel.access', 'layout.canvas.view'] },
+      ]),
+    );
+    const admin = createUser({ role: 'admin', assignedRoles: ['restricted-admin'] });
+    expect(canAccessAdminPanel(admin)).toBe(true);
+    expect(canViewLayout(admin)).toBe(true);
+    expect(canEditLayout(admin)).toBe(false);
+    expect(canManageGuests(admin)).toBe(false);
+    expect(canAccessOperationsPanel(admin)).toBe(true);
+  });
+
+  it('maps a cloud owner assigned role to full admin authority', () => {
+    const owner = createUser({ role: 'admin', assignedRoles: ['owner'] });
+    expect(canAccessAdminPanel(owner)).toBe(true);
+    expect(canEditLayout(owner)).toBe(true);
+    expect(canManageGuests(owner)).toBe(true);
   });
 });

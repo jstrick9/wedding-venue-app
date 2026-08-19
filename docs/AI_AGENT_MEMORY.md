@@ -506,7 +506,24 @@ The P0 + P1 remediation roadmap (and the highest-value new findings + P2 config)
 
 **Deferred (documented):** Phase 3 features; **P0-2/N-4/P1-9 couple→org_data/relational projection** (console couple/guest/rsvp metrics still read 0 until it exists — largest remaining "cloud honesty" item); P1-7 RBAC unification; P1-11 invite-acceptance AuthContext refresh; `@ts-nocheck` removal; 11 skipped tests; browser E2E/axe. **N-3** (tokens at rest in couple snapshot payload) was deliberately NOT changed to hash-only because the couple portal's guest-management UI needs the raw guest token after hydration — mitigations remain (RPCs strip tokens, `tokenHash` stored, RLS-restricted, exports redacted).
 
-**Verified gates (HEAD):** typecheck/lint:events/lint pass; unused-locals pass; full suite passes (~758+); single-file build 2,075.74 kB / 481.28 kB gzip; split build green; `npm audit --omit=dev` 0 vulnerabilities.
+**Verified gates (HEAD at #181):** typecheck/lint:events/lint pass; unused-locals pass; full suite **760 passed / 11 skipped**; single-file build 2,075.74 kB / 481.28 kB gzip; split build green; `npm audit --omit=dev` 0 vulnerabilities.
+
+### 9.13 Deferred P0/P1 items (Review #182, 2026-08-19)
+
+See `docs/reviews/182-deferred-p0-p1-2026-08-19.md`.
+
+**Done & tested:**
+- **P0-2 / N-4 / P1-9 couple projection** — `coupleProjection.ts` + migration `0011` (`sync_couple_projection`, source-id columns, metrics that understand raw-array `org_data` payloads). Entity sync flushes couple domains and the relational projection after couple writes. Guest tokens are hashed in `guests.portal_token_hash`. Console couple/guest/RSVP metrics will populate once a venue has projected data. SQL reviewed; live RPC still needs a project.
+- **P1-7 RBAC unification** — one authority (granular roles). Defaults live in `rbacDefaults.ts` and are merged in `rbacBridge`. Supabase `owner`/`planner` alias to `master-admin`/`manager`. Admin/staff `User.role` short-circuits no longer bypass a revoked assigned-role permission. Inheritance is cycle-safe. Unregistered permission ids were added; unknown ids cannot be attached to a role.
+- **P1-11 invite AuthContext refresh** — `refreshSession()` + `AcceptInvite` calls it on success.
+- **P1-10** — persistent `sr-only` file inputs in AdminPanel/MultiImageUpload; `sanitizeHref()` on vendor/dashboard links.
+- Re-enabled collision, password-reset completion, table↔room assignment, and PropertiesPanel seating tests.
+
+**Still deferred:** Phase 3 venue-intelligence features; N-3 hash-only snapshot tokens (couple UI needs raw tokens); remaining `@ts-nocheck` on 24 large components; 5 skipped UI/smoke tests; live RLS smoke test.
+
+**Verified gates (HEAD at #182):** typecheck/lint:events/lint pass; unused-locals pass; full suite **784 passed / 5 skipped**; single-file build 2,078.22 kB / 482.00 kB gzip; split build green; `npm audit --omit=dev` 0 vulnerabilities.
+
+**Rule going forward:** treat #182 + §9.12–9.13 as current truth. Do not claim console metrics or server guest mode are live until migration `0011` is applied and smoke-tested.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*

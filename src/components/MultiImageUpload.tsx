@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import SafeImage from './SafeImage';
 import { showToast } from './Toast';
 import { uploadImage } from '../services/storage/imageStorage';
@@ -34,42 +34,40 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
   const { organizationId: authOrgId } = useAuth();
   const effectiveOrgId = organizationId || authOrgId || undefined;
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleImageUpload = () => {
     if (images.length >= maxImages) {
       showToast(`Maximum ${maxImages} images allowed`, 'warning');
       return;
     }
+    fileInputRef.current?.click();
+  };
 
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
 
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image must be less than 5MB', 'warning');
+      return;
+    }
 
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('Image must be less than 5MB', 'warning');
-        return;
-      }
-
-      try {
-        const url = await uploadImage(file, {
-          bucket: 'venue-images',
-          organizationId: effectiveOrgId,
-        });
-        const newImage: ImageItem = {
-          id: `img-${Date.now()}`,
-          url,
-          label: `Image ${images.length + 1}`,
-        };
-        onChange([...images, newImage]);
-      } catch (err) {
-        showToast(`Could not upload image: ${err instanceof Error ? err.message : 'unknown error'}`, 'warning');
-      }
-    };
-
-    input.click();
+    try {
+      const url = await uploadImage(file, {
+        bucket: 'venue-images',
+        organizationId: effectiveOrgId,
+      });
+      const newImage: ImageItem = {
+        id: `img-${Date.now()}`,
+        url,
+        label: `Image ${images.length + 1}`,
+      };
+      onChange([...images, newImage]);
+    } catch (err) {
+      showToast(`Could not upload image: ${err instanceof Error ? err.message : 'unknown error'}`, 'warning');
+    }
   };
 
   const handleRemoveImage = (id: string) => {
@@ -132,6 +130,18 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
 
         {isExpanded && (
           <div className="mt-3 space-y-3">
+            <input
+              id="multi-image-upload"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              aria-label="Upload gallery image"
+              onChange={(e) => {
+                e.stopPropagation();
+                void handleFileChange(e);
+              }}
+            />
             <button
               type="button"
               onClick={(e) => {

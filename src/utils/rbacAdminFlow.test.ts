@@ -32,10 +32,11 @@ describe('access control (venue admin)', () => {
     const { resolveUserPermissions } = await import('./rbacBridge');
     const user = { id: 'u1', role: 'staff', assignedRoles: ['coordinator'] } as any;
     const perms = resolveUserPermissions(user);
-    // admin.panel.access grants the coarse editing/manage flags.
-    expect(perms.canEditLayout).toBe(true);
-    expect(perms.canManageGuests).toBe(true);
-    expect(perms.canViewLayout).toBe(true);
+    // Granular roles are authoritative: admin.panel.access does not silently
+    // re-grant layout/guest flags that were not assigned.
+    expect(perms.canEditLayout).toBe(false);
+    expect(perms.canManageGuests).toBe(false);
+    expect(perms.canViewLayout).toBe(false);
   });
 
   it('an unknown/removed role resolves to no permissions (fail-closed)', async () => {

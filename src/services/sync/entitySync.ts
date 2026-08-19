@@ -6,6 +6,7 @@ import {
   pullAllCouplePortalSnapshotsForVenue,
   syncAllCouplePortalSnapshots,
 } from '../couples/coupleCloudSync';
+import { syncCoupleRelationalProjection } from '../couples/coupleProjection';
 import { emitDataChanged } from '../../utils/appEvents';
 
 /**
@@ -31,6 +32,7 @@ export async function pushEntities(context: EntitySyncContext): Promise<void> {
   await repo.pushAll(context);
   if (repo.provider === 'supabase') {
     await syncAllCouplePortalSnapshots(context);
+    await syncCoupleRelationalProjection(context);
   }
 }
 
@@ -45,5 +47,6 @@ export async function pushEntityDomain(
     (domain === 'all' || domain === 'coupleEvents' || domain === 'spm_couple_events' || domain.includes('couple'))
   ) {
     await syncAllCouplePortalSnapshots(context);
+    await syncCoupleRelationalProjection(context);
   }
 }

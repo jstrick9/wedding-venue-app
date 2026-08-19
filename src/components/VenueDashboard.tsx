@@ -12,6 +12,7 @@ import { getConfig, useBrandingConfig } from '../config';
 import { Card, Button, EmptyState } from './ui';
 import { on, emit } from '../utils/appEvents';
 import { VenueChatPanel } from './VenueChatPanel';
+import { sanitizeHref } from '../utils/safeUrl';
 
 type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'admin' | 'ops' | 'chat';
 
@@ -331,7 +332,7 @@ export function VenueDashboard(props: Props) {
                     <>
                       {config.supportEmail && <span className="text-gray-300">•</span>}
                       <a
-                        href={config.websiteUrl}
+                        href={sanitizeHref(config.websiteUrl) || undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:underline flex items-center gap-1 shrink-0 text-gray-600 font-medium"

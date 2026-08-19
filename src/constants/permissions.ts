@@ -29,6 +29,14 @@ export const PERMISSIONS: PermissionDefinition[] = [
     isLocked: true,
   },
   {
+    id: 'admin.users.invite',
+    label: 'Invite Users',
+    description: 'Can send organization invitations',
+    category: 'admin',
+    parentId: 'admin.users.manage',
+    level: 'sub-feature',
+  },
+  {
     id: 'admin.roles.manage',
     label: 'Manage Roles & Permissions',
     description: 'Can create and modify roles and permissions',
@@ -109,6 +117,14 @@ export const PERMISSIONS: PermissionDefinition[] = [
     description: 'Can undo and redo layout changes',
     category: 'layout',
     parentId: 'layout.canvas.edit',
+    level: 'sub-feature',
+  },
+  {
+    id: 'layout.view.all',
+    label: 'View All Layouts',
+    description: 'Can view layouts created by other users',
+    category: 'layout',
+    parentId: 'layout.canvas.view',
     level: 'sub-feature',
   },
 

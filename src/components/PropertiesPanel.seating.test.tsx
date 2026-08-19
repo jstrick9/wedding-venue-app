@@ -30,8 +30,21 @@ vi.mock('../data/venueData', () => ({
   ],
 }));
 
+vi.mock('../config', () => ({
+  getConfig: () => ({
+    primaryColor: '#4A1942',
+    primaryDark: '#3d1a45',
+    headerTextColor: '#ffffff',
+  }),
+  useBrandingConfig: () => ({
+    primaryColor: '#4A1942',
+    primaryDark: '#3d1a45',
+    headerTextColor: '#ffffff',
+  }),
+}));
+
 describe('PropertiesPanel seating types', () => {
-  it.skip('shows row count/spacing summary and updates chair count with seating defaults', () => {
+  it('shows row count/spacing summary and updates chair count with seating defaults', () => {
     const onUpdateTable = vi.fn();
 
     render(
@@ -66,9 +79,9 @@ describe('PropertiesPanel seating types', () => {
     expect(screen.getByText(/Rows:/i)).toBeInTheDocument();
     expect(screen.getByText(/Row Spacing:/i)).toBeInTheDocument();
     expect(screen.getByText(/Total Chairs:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Rows:\s*2/i)).toBeInTheDocument();
-    expect(screen.getByText(/Row Spacing:\s*3 ft/i)).toBeInTheDocument();
-    expect(screen.getByText(/Total Chairs:\s*8/i)).toBeInTheDocument();
+    expect(screen.getByText((_, node) => node?.textContent === 'Rows: 2')).toBeInTheDocument();
+    expect(screen.getByText((_, node) => node?.textContent === 'Row Spacing: 3 ft')).toBeInTheDocument();
+    expect(screen.getByText((_, node) => node?.textContent === 'Total Chairs: 8')).toBeInTheDocument();
 
     // Seating types should not show linen controls.
     expect(screen.queryByText(/Table Linen/i)).not.toBeInTheDocument();

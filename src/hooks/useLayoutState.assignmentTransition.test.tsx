@@ -27,8 +27,21 @@ vi.mock('../contexts/AuthContext', () => ({
 }));
 
 describe('useLayoutState assignment transitions table ↔ room fixture', () => {
-  it.skip('moves guest from table assignment to room fixture assignment', () => {
-    // Seed a room-style lodging fixture type for this test.
+  it('moves guest from table assignment to room fixture assignment', () => {
+    localStorage.setItem(
+      'spm_tableSpecs',
+      JSON.stringify([
+        {
+          id: 'round-6ft',
+          name: '60" Round',
+          shape: 'circle',
+          width: 6,
+          height: 6,
+          capacity: 8,
+          color: '#ffffff',
+        },
+      ]),
+    );
     localStorage.setItem(
       'spm_fixtureTypes',
       JSON.stringify([
@@ -54,11 +67,11 @@ describe('useLayoutState assignment transitions table ↔ room fixture', () => {
 
     act(() => {
       guestId = result.current.addGuest('Alice');
-      result.current.addTable('round-6', { x: 10, y: 10 });
+      result.current.addTable('round-6ft', { x: 10, y: 10 });
       result.current.addFixture('room-fixture-spec', { x: 20, y: 20 });
     });
 
-    const tableId = result.current.layout.tables.find(t => t.specId === 'round-6')?.id;
+    const tableId = result.current.layout.tables.find(t => t.specId === 'round-6ft')?.id;
     const roomFixtureId = result.current.layout.fixtures.find(f => f.specId === 'room-fixture-spec')?.id;
 
     expect(tableId).toBeTruthy();

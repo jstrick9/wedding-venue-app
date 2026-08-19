@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Role, PermissionGroup, AuditLogEntry, PermissionDefinition, DEFAULT_PERMISSION_GROUPS } from '../types/rbac';
 import { PERMISSIONS, getInheritedPermissions } from '../constants/permissions';
+import { DEFAULT_ROLES } from '../constants/rbacDefaults';
+import { isRegisteredPermission } from '../utils/rbacBridge';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 const ROLES_KEY = STORAGE_KEYS.RBAC_ROLES;
 const GROUPS_KEY = STORAGE_KEYS.RBAC_GROUPS;
@@ -19,112 +21,6 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
 function saveToStorage<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
-
-// Default system roles
-const DEFAULT_ROLES: Role[] = [
-  {
-    id: 'master-admin',
-    name: 'Master Admin',
-    description: 'Full system access - cannot be modified',
-    permissions: PERMISSIONS.map(p => p.id),
-    isSystem: true,
-    isImmutable: true,
-    hierarchy: 100,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'admin',
-    name: 'Admin',
-    description: 'Administrative access with most permissions',
-    permissions: PERMISSIONS.filter(p => !p.id.startsWith('admin.roles')).map(p => p.id),
-    isSystem: true,
-    hierarchy: 90,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'manager',
-    name: 'Manager',
-    description: 'Venue manager with full operational and layout access',
-    permissions: PERMISSIONS.filter(p => !p.id.startsWith('admin.')).map(p => p.id),
-    isSystem: true,
-    hierarchy: 70,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'basic',
-    name: 'Basic User',
-    description: 'Standard user with layout and guest management',
-    permissions: [
-      'layout.canvas.view',
-      'layout.canvas.edit',
-      'layout.canvas.delete',
-      'layout.canvas.duplicate',
-      'layout.undo.use',
-      'guests.view',
-      'guests.manage',
-      'guests.assign',
-      'guests.import',
-      'guests.export',
-      'decor.catalog.view',
-      'decor.designer.use',
-      'decor.designer.save',
-      'decor.apply',
-      'vendors.view',
-      'timeline.view',
-      'timeline.manage',
-      'communication.chat',
-      'portal.guest.view',
-      'export.print',
-      'export.share',
-      'templates.view',
-      'templates.use',
-      'submissions.submit',
-    ],
-    isSystem: true,
-    hierarchy: 50,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'staff',
-    name: 'Staff',
-    description: 'Staff member with operations access',
-    permissions: [
-      'layout.canvas.view',
-      'guests.view',
-      'timeline.view',
-      'timeline.manage',
-      'timeline.events.complete',
-      'communication.chat',
-      'staff.operations.access',
-      'staff.tasks.manage',
-      'staff.areas.manage',
-      'staff.shifts.manage',
-      'export.print',
-    ],
-    isSystem: true,
-    hierarchy: 40,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'guest',
-    name: 'Guest',
-    description: 'Guest portal access only',
-    permissions: [
-      'portal.guest.view',
-      'portal.rsvp.submit',
-      'portal.lodging.view',
-    ],
-    isSystem: true,
-    hierarchy: 10,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
 
 export function useRBAC() {
   const [roles, setRoles] = useState<Role[]>(() => {
@@ -272,6 +168,7 @@ export function useRBAC() {
     performedBy: string,
     performedByName: string
   ) => {
+    if (!isRegisteredPermission(permissionId)) return;
     setRoles(prev => prev.map(r => {
       if (r.id !== roleId || r.isImmutable) return r;
       if (r.permissions.includes(permissionId)) return r;

@@ -15,6 +15,7 @@ import {
   VendorCategoryDef,
 } from '../services/vendors/vendorCategoryService';
 import { useBrandingConfig } from '../config';
+import { sanitizeHref } from '../utils/safeUrl';
 
 interface VendorPanelProps {
   onClose: () => void;
@@ -260,9 +261,9 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
                     </div>
                   ) : null}
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                    {v.phone && <a href={`tel:${v.phone}`} className="hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>📞 {v.phone}</a>}
-                    {v.email && <a href={`mailto:${v.email}`} className="hover:underline" style={{ color: config.primaryColor || '#4A1942' }}>✉️</a>}
-                    {v.website && <a href={v.website} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: config.primaryColor || '#4A1942' }}>🌐</a>}
+                    {v.phone && sanitizeHref(`tel:${v.phone}`) && <a href={sanitizeHref(`tel:${v.phone}`)} className="hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>📞 {v.phone}</a>}
+                    {v.email && sanitizeHref(`mailto:${v.email}`) && <a href={sanitizeHref(`mailto:${v.email}`)} className="hover:underline" style={{ color: config.primaryColor || '#4A1942' }}>✉️</a>}
+                    {v.website && sanitizeHref(v.website) && <a href={sanitizeHref(v.website)} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: config.primaryColor || '#4A1942' }}>🌐</a>}
                   </div>
                   <div className="flex items-center gap-2 mt-3">
                     <button type="button" onClick={() => handleStartEdit(v)} className="text-xs text-gray-600 hover:underline">Edit</button>

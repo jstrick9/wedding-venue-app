@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { User, UserRole } from '../types';
 import { getUsers, setUsers } from '../hooks/useLayoutState';
 import {
@@ -71,6 +71,12 @@ interface AuthContextType {
    * Used by the forced "change your password on first login" gate.
    */
   changePassword: (userId: string, newPassword: string) => Promise<boolean>;
+  /**
+   * Re-read the active backend session (memberships, org, platform role).
+   * Call after accepting an invite so the new org membership takes effect
+   * without a full page reload (P1-11).
+   */
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -397,6 +403,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return getUsers();
   };
 
+  const refreshSession = useCallback(async (): Promise<void> => {
+    if (shouldUseSupabaseAuth()) {
+      const session = await restoreSupabaseSession();
+      if (session?.user) {
+        setUser(session.user);
+        setOrganizationId(session.organizationId ?? null);
+        setOrganizationSlug(session.organizationSlug ?? null);
+        setActiveOrganizationSlug(session.organizationSlug);
+        setPlatformRole(session.platformRole ?? null);
+      }
+      return;
+    }
+
+    const savedSession = loadSession();
+    if (!savedSession) return;
+    if (savedSession.isGuest) {
+      setUser(buildGuestUser());
+      return;
+    }
+    const users = getUsers();
+    const foundUser = users.find((u) => u.id === savedSession.userId);
+    if (foundUser && isSessionValidForUser(savedSession, foundUser as any)) {
+      setUser(foundUser);
+    }
+  }, []);
+
   const changePassword = async (
     userId: string,
     newPassword: string,
@@ -462,6 +494,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         deleteUser,
         getAllUsers,
         changePassword,
+        refreshSession,
       }}
     >
       {children}

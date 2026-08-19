@@ -143,11 +143,26 @@ export default function AuthenticatedApp() {
   const [showLayoutsHome, setShowLayoutsHome] = useState(false);
 
   // Local UI state
+  const initialUiPrefs = (() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.UI_PREFS);
+      return raw ? (JSON.parse(raw) as {
+        snapToGrid?: boolean;
+        gridSize?: number;
+        showGrid?: boolean;
+        gridContrast?: number;
+        sidebarWidth?: number;
+        sidebarCollapsed?: boolean;
+      }) : {};
+    } catch {
+      return {};
+    }
+  })();
   const [zoom, setZoom] = useState(1);
-  const [showGrid, setShowGrid] = useState(false);
-  const [gridSize, setGridSize] = useState(5);
-  const [gridContrast, setGridContrast] = useState(0.45);
-  const [snapToGrid, setSnapToGrid] = useState(false);
+  const [showGrid, setShowGrid] = useState(Boolean(initialUiPrefs.showGrid));
+  const [gridSize, setGridSize] = useState(typeof initialUiPrefs.gridSize === 'number' ? initialUiPrefs.gridSize : 5);
+  const [gridContrast, setGridContrast] = useState(typeof initialUiPrefs.gridContrast === 'number' ? initialUiPrefs.gridContrast : 0.45);
+  const [snapToGrid, setSnapToGrid] = useState(Boolean(initialUiPrefs.snapToGrid));
   const [showProperties, setShowProperties] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

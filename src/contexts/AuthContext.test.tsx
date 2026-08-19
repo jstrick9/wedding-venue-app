@@ -14,7 +14,7 @@ vi.mock('../hooks/useLayoutState', () => ({
 }));
 
 function TestConsumer() {
-  const { user, login, logout, continueAsGuest, createUser, updateUser, changePassword } = useAuth();
+  const { user, login, logout, continueAsGuest, createUser, updateUser, changePassword, refreshSession } = useAuth();
 
   return (
     <div>
@@ -67,6 +67,10 @@ function TestConsumer() {
         }
       >
         Rename User
+      </button>
+
+      <button type="button" onClick={() => void refreshSession()}>
+        Refresh Session
       </button>
     </div>
   );
@@ -267,6 +271,28 @@ describe('AuthContext', () => {
 
     expect((mockUsers[0] as any).sessionVersion).toBe(2);
     expect((mockUsers[0] as any).userStatus).toBe('suspended');
+  });
+
+  it('refreshSession re-reads the local user after a rename', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Login' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('current-user')).toHaveTextContent('Jane Doe');
+    });
+
+    mockUsers[0] = { ...mockUsers[0], name: 'Jane From Storage' };
+    await user.click(screen.getByRole('button', { name: 'Refresh Session' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('current-user')).toHaveTextContent('Jane From Storage');
+    });
   });
 
   it('does not bump sessionVersion for non-auth-sensitive updates', async () => {

@@ -1,5 +1,5 @@
 // src/components/AdminPanel.tsx - thin coordinator for extracted admin tab components.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
   Venue,
   TableSpec,
@@ -583,24 +583,26 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     return fieldErrors;
   };
 
+  const imageUploadInputRef = useRef<HTMLInputElement>(null);
+  const imageUploadCallbackRef = useRef<((dataUrl: string) => void) | null>(null);
+
   const handleImageUpload = (callback: (dataUrl: string) => void) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      if (file.size > 5 * 1024 * 1024) {
-        showInfo('File too large', 'Maximum image size is 5MB.', 'warning');
-        return;
-      }
-      // In Supabase mode the image is uploaded to the private bucket and the
-      // returned storage ref is stored; in local mode it stays a data URL.
-      void uploadImage(file, { bucket: 'venue-images', organizationId: organizationId || undefined })
-        .then((ref) => callback(ref))
-        .catch(() => showInfo('Upload failed', 'Could not upload the image.', 'warning'));
-    };
-    input.click();
+    imageUploadCallbackRef.current = callback;
+    imageUploadInputRef.current?.click();
+  };
+
+  const handleImageUploadChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const callback = imageUploadCallbackRef.current;
+    if (!file || !callback) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showInfo('File too large', 'Maximum image size is 5MB.', 'warning');
+      return;
+    }
+    void uploadImage(file, { bucket: 'venue-images', organizationId: organizationId || undefined })
+      .then((ref) => callback(ref))
+      .catch(() => showInfo('Upload failed', 'Could not upload the image.', 'warning'));
   };
 
   const handleCreateUser = async () => {
@@ -1353,6 +1355,16 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
             </div>
           </ModalDialog>
         )}
+
+        <input
+          id="admin-image-upload"
+          ref={imageUploadInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          aria-label="Upload admin image"
+          onChange={handleImageUploadChange}
+        />
 
         {successMessage && (
           <div className="absolute bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">

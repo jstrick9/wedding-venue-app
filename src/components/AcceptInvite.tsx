@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { acceptInvite } from '../services/org/inviteService';
 import { getConfig } from '../config';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AcceptInviteProps {
   token: string;
@@ -9,11 +10,12 @@ interface AcceptInviteProps {
 
 /**
  * Accept an organization invite by token. Requires the user to be signed in
- * (rendered only in the authenticated area). On success it clears the invite
- * hash and reloads the workspace so the new org membership is reflected.
+ * (rendered only in the authenticated area). On success it refreshes the
+ * AuthContext session so the new membership is reflected without a reload.
  */
 export function AcceptInvite({ token, onDone }: AcceptInviteProps) {
   const config = getConfig();
+  const { refreshSession } = useAuth();
   const [state, setState] = useState<'processing' | 'success' | 'error'>('processing');
   const [message, setMessage] = useState('Accepting invite…');
   const doneRef = useRef(false);
@@ -24,21 +26,27 @@ export function AcceptInvite({ token, onDone }: AcceptInviteProps) {
       const res = await acceptInvite(token);
       if (cancelled) return;
       if (res.ok) {
+        try {
+          await refreshSession();
+        } catch {
+          // Session refresh is best-effort; onDone still navigates home.
+        }
+        if (cancelled) return;
         setState('success');
-        setMessage('You have joined the workspace. Reloading…');
+        setMessage('You have joined the workspace.');
         setTimeout(() => {
           if (!cancelled && !doneRef.current) {
             doneRef.current = true;
             onDone();
           }
-        }, 1200);
+        }, 800);
       } else {
         setState('error');
         setMessage(res.error || 'Could not accept this invite.');
       }
     })();
     return () => { cancelled = true; };
-  }, [token, onDone]);
+  }, [token, onDone, refreshSession]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: config.backgroundColor }}>
