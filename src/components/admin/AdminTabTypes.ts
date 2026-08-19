@@ -81,6 +81,8 @@ export interface AdminCommonProps {
   directMessages: ReturnType<typeof useDirectMessages>;
   handlers: Record<string, unknown>;
   user: User | null;
+  /** Active Supabase organization scope, when cloud mode is enabled. */
+  organizationId?: string | null;
   isAdmin: boolean;
   selectedMessageMasterUserId: string;
   setSelectedMessageMasterUserId: Dispatch<SetStateAction<string>>;
