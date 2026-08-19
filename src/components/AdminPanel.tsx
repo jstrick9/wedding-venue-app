@@ -90,6 +90,7 @@ import { InviteMembers } from './admin/InviteMembers';
 import { CommunicationTemplatesManagement, getCommunicationTemplates } from './admin/CommunicationTemplatesManagement';
 import { OperationsSettingsManagement, getOperationsChecklistDefaults } from './admin/OperationsSettingsManagement';
 import { SecurityAuditManagement } from './admin/SecurityAuditManagement';
+import PlatformVenueChatPanel from './PlatformVenueChatPanel';
 import { uploadImage } from '../services/storage/imageStorage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
@@ -823,6 +824,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     directMessages,
     handlers: {},
     user,
+    organizationId,
     isAdmin,
     selectedMessageMasterUserId,
     setSelectedMessageMasterUserId,
@@ -1064,6 +1066,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
     { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'Branding, Access, & Configuration' },
     { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'Branding, Access, & Configuration' },
+    { id: 'platform-chat', label: '💬 Platform Chat', icon: '💬', Component: PlatformVenueChatPanel, props: {}, group: 'Branding, Access, & Configuration' },
     { id: 'communication-templates', label: '💬 Communication Templates', icon: '💬', Component: CommunicationTemplatesManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
     { id: 'operations-settings', label: '🛠️ Operations & Checklists', icon: '🛠️', Component: OperationsSettingsManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
 
