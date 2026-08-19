@@ -8,6 +8,39 @@ import PasswordReset from './PasswordReset';
 import Logo from './Logo';
 import { shouldUseSupabaseAuth } from '../services/backend/AuthBackend';
 
+function loginBackgroundStyle(config: Config): React.CSSProperties {
+  const primary = config.loginBackgroundColor || config.backgroundColor || '#f3f4f6';
+  const secondary = config.loginBackgroundSecondaryColor || config.primaryLight || '#f8f5f7';
+  const type = config.loginBackgroundType || 'gradient';
+  const pattern = config.loginBackgroundPattern || 'dots';
+  let backgroundImage = `linear-gradient(135deg, ${primary}, ${secondary})`;
+
+  if (type === 'solid') backgroundImage = 'none';
+  if (type === 'pattern') {
+    const patterns: Record<string, string> = {
+      dots: `radial-gradient(circle at 1px 1px, ${config.primaryColor || '#4A1942'}22 1px, transparent 0)`,
+      grid: `linear-gradient(${config.primaryColor || '#4A1942'}12 1px, transparent 1px), linear-gradient(90deg, ${config.primaryColor || '#4A1942'}12 1px, transparent 1px)`,
+      diagonal: `repeating-linear-gradient(135deg, ${config.primaryColor || '#4A1942'}12 0, ${config.primaryColor || '#4A1942'}12 1px, transparent 1px, transparent 12px)`,
+      confetti: `radial-gradient(circle at 20% 20%, ${config.accentColor || '#D4AF37'}55 0 2px, transparent 3px), radial-gradient(circle at 80% 35%, ${config.primaryColor || '#4A1942'}33 0 2px, transparent 3px), radial-gradient(circle at 35% 78%, ${config.primaryLight || '#6b2c5c'}55 0 2px, transparent 3px)`,
+    };
+    backgroundImage = `${patterns[pattern] || patterns.dots}, linear-gradient(135deg, ${primary}, ${secondary})`;
+  }
+  if (type === 'animated') {
+    backgroundImage = `linear-gradient(120deg, ${primary}, ${secondary}, ${config.primaryLight || secondary}, ${primary})`;
+  }
+
+  return {
+    backgroundColor: primary,
+    backgroundImage,
+    backgroundSize: type === 'pattern' ? (pattern === 'grid' ? '24px 24px, 24px 24px, cover' : '24px 24px, cover') : '300% 300%',
+  };
+}
+
+function loginBackgroundAnimationClass(config: Config): string {
+  if (config.loginBackgroundType !== 'animated') return '';
+  return `spm-login-animation-${config.loginBackgroundAnimation || 'drift'}`;
+}
+
 export interface LoginScreenProps {
   onContinueAsGuest?: () => void;
   /** Public sign-up is disabled for the multi-tenant cloud entry point. */
@@ -232,14 +265,20 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
 
   return (
     <div
-      className="min-h-screen flex px-4 py-8 overflow-y-auto"
+      className={`relative min-h-screen flex px-4 py-8 overflow-y-auto ${loginBackgroundAnimationClass(config)}`}
       style={{
-        backgroundColor: config.backgroundColor || '#f3f4f6',
+        ...loginBackgroundStyle(config),
         color: config.bodyTextColor || '#374151',
         fontFamily: config.fontFamily || 'Inter, system-ui, sans-serif',
       }}
     >
-      <div className="m-auto flex w-full max-w-md flex-col rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden max-h-screen">
+      {!!config.loginBackgroundOverlayOpacity && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ backgroundColor: `rgba(255,255,255,${Math.min(0.8, Math.max(0, config.loginBackgroundOverlayOpacity))})` }}
+        />
+      )}
+      <div className="relative z-10 m-auto flex w-full max-w-md flex-col rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden max-h-screen">
         <div
           className="px-6 py-8 text-white text-center shrink-0"
           style={{
@@ -263,6 +302,11 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
             Wedding Layout Planner
             {config.location ? ` • ${config.location}` : ''}
           </p>
+          {config.loginWelcomeMessage && (
+            <p className="mx-auto mt-3 max-w-sm rounded-lg bg-black/15 px-3 py-2 text-xs text-white/90">
+              {config.loginWelcomeMessage}
+            </p>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
