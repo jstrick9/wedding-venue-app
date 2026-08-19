@@ -13,7 +13,7 @@ function seedVendor() {
         category: 'florist',
         contactName: 'Jane',
         email: 'jane@florist.com',
-        phone: '555-0100',
+        phone: '704-555-0100',
         website: '',
         notes: 'Loves peonies',
         rating: 0,

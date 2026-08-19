@@ -48,9 +48,11 @@ describe('platform geocoding (N-5)', () => {
 
     expect(result.latitude).toBe(35.6);
     expect(result.longitude).toBe(-82.55);
+    expect(result.provider).toBe('geoapify');
     const [url, init] = fetchMock.mock.calls[0];
     expect(String(url)).toContain('/functions/v1/geocode-venue');
     expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer tok123' });
+    expect(JSON.parse(String((init as RequestInit).body))).toMatchObject({ action: 'verify', city: 'Asheville' });
   });
 
   it('throws a descriptive error when the Edge Function fails', async () => {
@@ -62,7 +64,7 @@ describe('platform geocoding (N-5)', () => {
     await expect(geocodeVenueAddress({
       addressLine1: '1',
       city: 'Nowhere',
-      stateRegion: 'XX',
+      stateRegion: 'NC',
       postalCode: '00000',
       country: 'US',
     })).rejects.toThrow('No matching location');

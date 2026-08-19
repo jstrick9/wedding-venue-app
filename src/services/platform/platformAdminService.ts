@@ -1,6 +1,6 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { createOpaqueToken } from '../../utils/secureTokens';
-import { sanitizeHref } from '../../utils/safeUrl';
+import { normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../../utils/contactQuality';
 import type {
   OrganizationStatus,
   PlatformAuditLogEntry,
@@ -176,10 +176,16 @@ export async function createVenueOrganization(
   const supabase = requireSupabase();
   const token = createOpaqueToken('va');
   const expiresAt = input.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const adminEmail = normalizeEmail(input.adminEmail, { required: true });
+  const contactEmail = normalizeEmail(input.primaryContactEmail, { required: true });
+  const contactPhone = normalizeUsPhone(input.primaryContactPhone, { required: true });
+  if (!adminEmail.ok) throw new Error(adminEmail.error);
+  if (!contactEmail.ok) throw new Error(contactEmail.error);
+  if (!contactPhone.ok) throw new Error(contactPhone.error);
 
   const { data, error } = await supabase.rpc('create_venue_organization_v2', {
     p_name: input.name.trim(),
-    p_admin_email: input.adminEmail.trim().toLowerCase(),
+    p_admin_email: adminEmail.value,
     p_admin_token: token,
     p_expires_at: expiresAt,
     p_address_line1: input.addressLine1.trim(),
@@ -189,8 +195,8 @@ export async function createVenueOrganization(
     p_postal_code: input.postalCode.trim(),
     p_country: input.country.trim() || 'US',
     p_primary_contact_name: input.primaryContactName.trim(),
-    p_primary_contact_phone: input.primaryContactPhone.trim(),
-    p_primary_contact_email: input.primaryContactEmail.trim().toLowerCase(),
+    p_primary_contact_phone: contactPhone.value,
+    p_primary_contact_email: contactEmail.value,
     p_latitude: input.latitude,
     p_longitude: input.longitude,
   });
@@ -287,11 +293,16 @@ export interface UpdateVenueOrganizationInput {
 export async function updateVenueOrganization(
   input: UpdateVenueOrganizationInput,
 ): Promise<{ organizationId: string; organizationName: string; organizationSlug: string; status: OrganizationStatus }> {
-  const rawWebsite = (input.websiteUrl || '').trim();
-  const website = rawWebsite ? sanitizeHref(rawWebsite) : '';
-  if (rawWebsite && !website) {
-    throw new Error('Website URL must use http, https, mailto, or tel.');
-  }
+  const website = normalizeWebsite(input.websiteUrl);
+  if (!website.ok) throw new Error(website.error || 'Website URL must be an http or https address.');
+  const contactEmail = normalizeEmail(input.primaryContactEmail, { required: true });
+  const contactPhone = normalizeUsPhone(input.primaryContactPhone, { required: true });
+  const supportEmail = normalizeEmail(input.supportEmail);
+  const venuePhone = normalizeUsPhone(input.phone);
+  if (!contactEmail.ok) throw new Error(contactEmail.error);
+  if (!contactPhone.ok) throw new Error(contactPhone.error);
+  if (!supportEmail.ok) throw new Error(supportEmail.error);
+  if (!venuePhone.ok) throw new Error(venuePhone.error);
   const { data, error } = await requireSupabase().rpc('update_venue_organization', {
     p_organization_id: input.organizationId,
     p_name: input.name.trim(),
@@ -303,11 +314,11 @@ export async function updateVenueOrganization(
     p_postal_code: input.postalCode.trim(),
     p_country: input.country.trim() || 'US',
     p_primary_contact_name: input.primaryContactName.trim(),
-    p_primary_contact_phone: input.primaryContactPhone.trim(),
-    p_primary_contact_email: input.primaryContactEmail.trim().toLowerCase(),
-    p_support_email: input.supportEmail?.trim().toLowerCase() || '',
-    p_phone: input.phone?.trim() || '',
-    p_website_url: website,
+    p_primary_contact_phone: contactPhone.value,
+    p_primary_contact_email: contactEmail.value,
+    p_support_email: supportEmail.value,
+    p_phone: venuePhone.value,
+    p_website_url: website.value,
     p_latitude: input.latitude ?? null,
     p_longitude: input.longitude ?? null,
     p_suspension_reason: input.suspensionReason?.trim() || null,

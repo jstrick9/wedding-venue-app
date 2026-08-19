@@ -16,6 +16,9 @@ import {
 import { getPlatformBranding, savePlatformBranding } from '../services/platform/platformBrandingService';
 import { uploadPublicBrandingAsset } from '../services/platform/brandingAssetService';
 import { geocodeVenueAddress } from '../services/platform/geocodingService';
+import AddressAutocomplete from './AddressAutocomplete';
+import { firstFieldError, normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../utils/contactQuality';
+
 import { defaultPlatformConfig } from './PlatformLoginScreen';
 import PlatformVenueChatPanel from './PlatformVenueChatPanel';
 import PlatformVenueMap from './PlatformVenueMap';
@@ -28,7 +31,7 @@ import type {
 import { showToast } from './Toast';
 import { buildPlatformConsoleHash, parsePlatformConsoleHash, type PlatformConsoleSection } from '../utils/platformConsoleRoute';
 import { filterPlatformVenues, listVenueRegions } from '../utils/platformVenueFilters';
-import { sanitizeHref } from '../utils/safeUrl';
+
 
 interface PlatformAdminPortalProps {
   onOpenVenueWorkspace: () => void;
@@ -86,17 +89,25 @@ function buildVenueLoginUrl(slug: string) {
   return `${window.location.origin}${window.location.pathname}#/venue-login/${encodeURIComponent(slug)}`;
 }
 
-function addressKey(value: {
+function streetAddressKey(value: {
   addressLine1?: string | null;
-  addressLine2?: string | null;
   city?: string | null;
   stateRegion?: string | null;
   postalCode?: string | null;
   country?: string | null;
 }) {
-  return [value.addressLine1, value.addressLine2, value.city, value.stateRegion, value.postalCode, value.country]
+  return [value.addressLine1, value.city, value.stateRegion, value.postalCode, value.country || 'US']
     .map((part) => (part || '').trim().toLowerCase())
     .join('|');
+}
+
+function hasCompleteStreetAddress(value: {
+  addressLine1?: string | null;
+  city?: string | null;
+  stateRegion?: string | null;
+  postalCode?: string | null;
+}) {
+  return Boolean(value.addressLine1?.trim() && value.city?.trim() && value.stateRegion?.trim() && value.postalCode?.trim());
 }
 
 export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAdminPortalProps) {
@@ -113,6 +124,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const [actionId, setActionId] = useState<string | null>(null);
   const [result, setResult] = useState<CreateVenueOrganizationResult | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [onboardVerified, setOnboardVerified] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [platformBranding, setPlatformBranding] = useState(defaultPlatformConfig);
   const [brandingSaving, setBrandingSaving] = useState(false);
@@ -186,8 +198,20 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
 
   const handleCreateVenue = async (event: FormEvent) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.adminEmail.trim() || !form.addressLine1.trim() || !form.city.trim() || !form.stateRegion.trim() || !form.postalCode.trim() || !form.primaryContactName.trim() || !form.primaryContactPhone.trim() || !form.primaryContactEmail.trim()) {
+    if (!form.name.trim() || !form.adminEmail.trim() || !form.primaryContactName.trim() || !form.primaryContactPhone.trim() || !form.primaryContactEmail.trim()) {
       setError('Venue name, complete address, and primary contact name, phone, and email are required.');
+      return;
+    }
+    if (!onboardVerified || !hasCompleteStreetAddress(form)) {
+      setError('Select a verified US street address from the suggestions so city, state, and ZIP cannot be mistyped.');
+      return;
+    }
+    const phone = normalizeUsPhone(form.primaryContactPhone, { required: true });
+    const email = normalizeEmail(form.primaryContactEmail, { required: true });
+    const adminEmail = normalizeEmail(form.adminEmail, { required: true });
+    const contactError = firstFieldError(phone, email, adminEmail);
+    if (contactError) {
+      setError(contactError);
       return;
     }
     setSaving(true);
@@ -195,11 +219,20 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     setResult(null);
     try {
       setGeocoding(true);
-      const coordinates = await geocodeVenueAddress(form);
+      const coordinates = await geocodeVenueAddress({ ...form, country: 'US' });
       setGeocoding(false);
-      const created = await createVenueOrganization({ ...form, latitude: coordinates.latitude, longitude: coordinates.longitude });
+      const created = await createVenueOrganization({
+        ...form,
+        country: 'US',
+        primaryContactPhone: phone.value,
+        primaryContactEmail: email.value,
+        adminEmail: adminEmail.value,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+      });
       setResult(created);
       setForm(EMPTY_FORM);
+      setOnboardVerified(false);
       await loadConsole();
       showToast(`Created ${created.organizationName}; its slug is ${created.organizationSlug}.`, 'success');
     } catch (err) {
@@ -227,10 +260,14 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
 
   const handleReissue = async (organization: PlatformOrganizationSummary) => {
     const email = organization.pendingInvite?.email || window.prompt('Email for the new managed-admin invitation:', '') || '';
-    if (!email.trim()) return;
+    const normalized = normalizeEmail(email, { required: true });
+    if (!normalized.ok) {
+      showToast(normalized.error || 'Enter a valid email address.', 'warning');
+      return;
+    }
     setActionId(organization.id);
     try {
-      const next = await reissueVenueAdminInvite(organization.id, email);
+      const next = await reissueVenueAdminInvite(organization.id, normalized.value);
       void navigator.clipboard?.writeText(next.inviteUrl);
       showToast('Old pending invite revoked; new setup link copied.', 'success');
       await loadConsole();
@@ -450,6 +487,8 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
             <OnboardVenueForm
               form={form}
               setForm={setForm}
+              verified={onboardVerified}
+              onVerifiedChange={setOnboardVerified}
               saving={saving}
               geocoding={geocoding}
               error={error}
@@ -687,8 +726,10 @@ function VenueDetail({
     suspensionReason: organization.suspensionReason || '',
   });
   const [saving, setSaving] = useState(false);
+  const [addressVerified, setAddressVerified] = useState(hasCompleteStreetAddress(organization));
 
   useEffect(() => {
+    setAddressVerified(hasCompleteStreetAddress(organization));
     setDraft({
       name: organization.name,
       status: organization.status,
@@ -714,19 +755,30 @@ function VenueDetail({
     try {
       let latitude = organization.latitude ?? null;
       let longitude = organization.longitude ?? null;
-      if (addressKey(draft) !== addressKey(organization)) {
-        const coordinates = await geocodeVenueAddress(draft);
+      const phone = normalizeUsPhone(draft.primaryContactPhone, { required: true });
+      const email = normalizeEmail(draft.primaryContactEmail, { required: true });
+      const supportEmail = normalizeEmail(draft.supportEmail);
+      const venuePhone = normalizeUsPhone(draft.phone);
+      const website = normalizeWebsite(draft.websiteUrl);
+      const contactError = firstFieldError(phone, email, supportEmail, venuePhone, website);
+      if (contactError) throw new Error(contactError);
+      if (streetAddressKey(draft) !== streetAddressKey(organization)) {
+        if (!addressVerified || !hasCompleteStreetAddress(draft)) {
+          throw new Error('Select a verified US street address from the suggestions.');
+        }
+        const coordinates = await geocodeVenueAddress({ ...draft, country: 'US' });
         latitude = coordinates.latitude;
         longitude = coordinates.longitude;
-      }
-      const websiteUrl = sanitizeHref(draft.websiteUrl);
-      if (draft.websiteUrl.trim() && !websiteUrl) {
-        throw new Error('Website URL must use http, https, mailto, or tel.');
       }
       await updateVenueOrganization({
         organizationId: organization.id,
         ...draft,
-        websiteUrl,
+        country: 'US',
+        primaryContactPhone: phone.value,
+        primaryContactEmail: email.value,
+        supportEmail: supportEmail.value,
+        phone: venuePhone.value,
+        websiteUrl: website.value,
         latitude,
         longitude,
       });
@@ -781,26 +833,25 @@ function VenueDetail({
               <option value="archived">Archived</option>
             </select>
           </label>
-          <label className="md:col-span-2 text-xs font-semibold text-gray-700">Address *<input value={draft.addressLine1} onChange={(event) => setDraft((current) => ({ ...current, addressLine1: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="md:col-span-2 text-xs font-semibold text-gray-700">Address line 2<input value={draft.addressLine2} onChange={(event) => setDraft((current) => ({ ...current, addressLine2: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">City *<input value={draft.city} onChange={(event) => setDraft((current) => ({ ...current, city: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">State/region *<input value={draft.stateRegion} onChange={(event) => setDraft((current) => ({ ...current, stateRegion: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">Postal code *<input value={draft.postalCode} onChange={(event) => setDraft((current) => ({ ...current, postalCode: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">Country
-            <select value={draft.country} onChange={(event) => setDraft((current) => ({ ...current, country: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-              <option value="US">United States</option>
-              <option value="CA">Canada</option>
-              <option value="GB">United Kingdom</option>
-              {draft.country && !['US', 'CA', 'GB'].includes(draft.country) && (
-                <option value={draft.country}>{draft.country}</option>
-              )}
-            </select>
-          </label>
+          <AddressAutocomplete
+            value={{
+              addressLine1: draft.addressLine1,
+              addressLine2: draft.addressLine2,
+              city: draft.city,
+              stateRegion: draft.stateRegion,
+              postalCode: draft.postalCode,
+              country: 'US',
+            }}
+            verified={addressVerified}
+            onVerifiedChange={setAddressVerified}
+            onChange={(next) => setDraft((current) => ({ ...current, ...next, country: 'US' }))}
+          />
+          <label className="text-xs font-semibold text-gray-700">Country<input value="United States" readOnly className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" /></label>
           <label className="text-xs font-semibold text-gray-700">Contact name *<input value={draft.primaryContactName} onChange={(event) => setDraft((current) => ({ ...current, primaryContactName: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">Contact phone *<input value={draft.primaryContactPhone} onChange={(event) => setDraft((current) => ({ ...current, primaryContactPhone: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+          <label className="text-xs font-semibold text-gray-700">Contact phone *<input type="tel" value={draft.primaryContactPhone} onChange={(event) => setDraft((current) => ({ ...current, primaryContactPhone: event.target.value }))} onBlur={(event) => { const next = normalizeUsPhone(event.target.value); if (next.ok) setDraft((current) => ({ ...current, primaryContactPhone: next.display })); }} placeholder="(555) 123-4567" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="md:col-span-2 text-xs font-semibold text-gray-700">Contact email *<input type="email" value={draft.primaryContactEmail} onChange={(event) => setDraft((current) => ({ ...current, primaryContactEmail: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="text-xs font-semibold text-gray-700">Support email<input type="email" value={draft.supportEmail} onChange={(event) => setDraft((current) => ({ ...current, supportEmail: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">Venue phone<input value={draft.phone} onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+          <label className="text-xs font-semibold text-gray-700">Venue phone<input type="tel" value={draft.phone} onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))} onBlur={(event) => { const next = normalizeUsPhone(event.target.value); if (next.ok) setDraft((current) => ({ ...current, phone: next.display })); }} placeholder="(555) 123-4567" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="md:col-span-2 text-xs font-semibold text-gray-700">Website<input value={draft.websiteUrl} onChange={(event) => setDraft((current) => ({ ...current, websiteUrl: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           {(draft.status === 'suspended' || draft.status === 'archived') && (
             <label className="md:col-span-2 text-xs font-semibold text-gray-700">Status reason<textarea value={draft.suspensionReason} onChange={(event) => setDraft((current) => ({ ...current, suspensionReason: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={2} /></label>
@@ -832,6 +883,8 @@ function VenueDetail({
 function OnboardVenueForm({
   form,
   setForm,
+  verified,
+  onVerifiedChange,
   saving,
   geocoding,
   error,
@@ -842,6 +895,8 @@ function OnboardVenueForm({
 }: {
   form: typeof EMPTY_FORM;
   setForm: (updater: (current: typeof EMPTY_FORM) => typeof EMPTY_FORM) => void;
+  verified: boolean;
+  onVerifiedChange: (verified: boolean) => void;
   saving: boolean;
   geocoding: boolean;
   error: string;
@@ -857,22 +912,19 @@ function OnboardVenueForm({
       <p className="mt-1 text-xs leading-relaxed text-gray-500">The venue slug is generated from the name and permanently frozen. The venue administrator creates their own password through the one-time setup link.</p>
       <form onSubmit={onSubmit} className="mt-4 space-y-3">
         <label className="block text-xs font-semibold text-gray-700">Venue name *<input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-        <label className="block text-xs font-semibold text-gray-700">Address *<input value={form.addressLine1} onChange={(event) => setForm((current) => ({ ...current, addressLine1: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-        <label className="block text-xs font-semibold text-gray-700">Address line 2<input value={form.addressLine2} onChange={(event) => setForm((current) => ({ ...current, addressLine2: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs font-semibold text-gray-700">City *<input value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">State/region *<input value={form.stateRegion} onChange={(event) => setForm((current) => ({ ...current, stateRegion: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs font-semibold text-gray-700">Postal code *<input value={form.postalCode} onChange={(event) => setForm((current) => ({ ...current, postalCode: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">Country<select value={form.country} onChange={(event) => setForm((current) => ({ ...current, country: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"><option value="US">United States</option><option value="CA">Canada</option><option value="GB">United Kingdom</option></select></label>
-        </div>
+        <AddressAutocomplete
+          value={form}
+          verified={verified}
+          onVerifiedChange={onVerifiedChange}
+          onChange={(next) => setForm((current) => ({ ...current, ...next, country: 'US' }))}
+        />
+        <label className="block text-xs font-semibold text-gray-700">Country<input value="United States" readOnly className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" /></label>
         <label className="block text-xs font-semibold text-gray-700">Contact name *<input value={form.primaryContactName} onChange={(event) => setForm((current) => ({ ...current, primaryContactName: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-        <label className="block text-xs font-semibold text-gray-700">Contact phone *<input type="tel" value={form.primaryContactPhone} onChange={(event) => setForm((current) => ({ ...current, primaryContactPhone: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+        <label className="block text-xs font-semibold text-gray-700">Contact phone *<input type="tel" value={form.primaryContactPhone} onChange={(event) => setForm((current) => ({ ...current, primaryContactPhone: event.target.value }))} onBlur={(event) => { const next = normalizeUsPhone(event.target.value); if (next.ok) setForm((current) => ({ ...current, primaryContactPhone: next.display })); }} placeholder="(555) 123-4567" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
         <label className="block text-xs font-semibold text-gray-700">Contact email *<input type="email" value={form.primaryContactEmail} onChange={(event) => setForm((current) => ({ ...current, primaryContactEmail: event.target.value, adminEmail: current.adminEmail || event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
         <label className="block text-xs font-semibold text-gray-700">First administrator email *<input type="email" value={form.adminEmail} onChange={(event) => setForm((current) => ({ ...current, adminEmail: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-        <p className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] text-indigo-800">The address is geocoded through the server-side Nominatim function and cached before the venue is created. {geocoding ? 'Locating venue…' : ''}</p>
-        <button type="submit" disabled={saving || geocoding} className="w-full rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60" style={{ backgroundColor: primaryColor }}>{geocoding ? 'Locating venue…' : saving ? 'Creating venue…' : 'Create Venue & Generate Admin Link'}</button>
+        <p className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] text-indigo-800">Choose a Geoapify street suggestion so city, state, and ZIP fill automatically. The server verifies the address and caches coordinates before the venue is created. {geocoding ? 'Verifying address…' : ''}</p>
+        <button type="submit" disabled={saving || geocoding} className="w-full rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60" style={{ backgroundColor: primaryColor }}>{geocoding ? 'Verifying address…' : saving ? 'Creating venue…' : 'Create Venue & Generate Admin Link'}</button>
       </form>
       {error && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
       {result && (

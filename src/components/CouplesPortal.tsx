@@ -90,6 +90,7 @@ import { sendCoupleEmail } from '../services/couples/coupleEmailService';
 import { CoupleLayoutEditor } from './CoupleLayoutEditor';
 import { VenueMapCanvas } from './VenueMapCanvas';
 import { LodgingAssignmentsModal } from './LodgingAssignmentsModal';
+import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
 
 // Safe formatters that never throw on malformed/incomplete date strings, so the
 // couple portal can't crash with "Invalid time value" from bad schedule/guest data.
@@ -458,13 +459,23 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       showToast('Enter a vendor name.', 'warning');
       return;
     }
+    const email = normalizeEmail(customVendor.email);
+    const phone = normalizeUsPhone(customVendor.phone);
+    if (!email.ok) {
+      showToast(email.error || "That email address isn't valid.", 'warning');
+      return;
+    }
+    if (!phone.ok) {
+      showToast(phone.error || 'Enter a 10-digit US phone number.', 'warning');
+      return;
+    }
     addCoupleVendor(event.id, {
       name: customVendor.name,
       category: customVendor.category,
       source: 'custom',
       contactName: customVendor.contactName,
-      email: customVendor.email,
-      phone: customVendor.phone,
+      email: email.value,
+      phone: phone.display,
       notes: customVendor.notes,
     });
     setCustomVendor({ name: '', category: 'other', contactName: '', email: '', phone: '', notes: '' });
@@ -576,21 +587,25 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
     setPkgTick((t) => t + 1);
   };
 
-  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-
   const handleAddGuest = () => {
     if (!event || !guestForm.name.trim()) {
       setGuestError('Please enter the guest’s name.');
       return;
     }
-    if (guestForm.email.trim() && !isValidEmail(guestForm.email)) {
-      setGuestError("That email address isn't valid.");
+    const email = normalizeEmail(guestForm.email);
+    const phone = normalizeUsPhone(guestForm.phone);
+    if (!email.ok) {
+      setGuestError(email.error || "That email address isn't valid.");
+      return;
+    }
+    if (!phone.ok) {
+      setGuestError(phone.error || 'Enter a 10-digit US phone number.');
       return;
     }
     addCoupleGuest(event.id, {
       name: guestForm.name,
-      email: guestForm.email,
-      phone: guestForm.phone,
+      email: email.value,
+      phone: phone.display,
     });
     setGuestForm({ name: '', email: '', phone: '' });
     setGuestError('');
@@ -603,14 +618,20 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       showToast('Please enter the guest’s name.', 'warning');
       return;
     }
-    if (editingGuest.email.trim() && !isValidEmail(editingGuest.email)) {
-      showToast("That email address isn't valid.", 'warning');
+    const email = normalizeEmail(editingGuest.email);
+    const phone = normalizeUsPhone(editingGuest.phone);
+    if (!email.ok) {
+      showToast(email.error || "That email address isn't valid.", 'warning');
+      return;
+    }
+    if (!phone.ok) {
+      showToast(phone.error || 'Enter a 10-digit US phone number.', 'warning');
       return;
     }
     updateCoupleGuest(event.id, editingGuest.id, {
       name: editingGuest.name.trim(),
-      email: editingGuest.email.trim(),
-      phone: editingGuest.phone.trim(),
+      email: email.value,
+      phone: phone.display,
       tableId: editingGuest.tableId?.trim() || undefined,
       roomId: editingGuest.roomId?.trim() || undefined,
     });
@@ -759,17 +780,18 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       setInviteError('Please provide a name and email.');
       return;
     }
-    if (!isValidEmail(inviteForm.email)) {
-      setInviteError("That email address isn't valid.");
+    const inviteEmail = normalizeEmail(inviteForm.email, { required: true });
+    if (!inviteEmail.ok) {
+      setInviteError(inviteEmail.error || "That email address isn't valid.");
       return;
     }
-    if (event.collaborators.some((c) => c.email.trim().toLowerCase() === inviteForm.email.trim().toLowerCase())) {
+    if (event.collaborators.some((c) => c.email.trim().toLowerCase() === inviteEmail.value)) {
       setInviteError('That email is already invited to this portal.');
       return;
     }
     const collab = addCoupleCollaborator(event.id, {
       name: inviteForm.name.trim(),
-      email: inviteForm.email.trim(),
+      email: inviteEmail.value,
       role: inviteForm.role,
     });
     if (collab) {

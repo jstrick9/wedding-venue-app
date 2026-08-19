@@ -4,6 +4,7 @@ import { showToast } from './Toast';
 import { Guest, PlacedFixture, PlacedTable, Venue, DEFAULT_MEAL_OPTIONS } from '../types';
 import { getFixtureTypes, getTableSpecs } from '../hooks/useLayoutState';
 import { getGuestPortalConfig } from '../utils/guestPortal';
+import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
 
 export interface GuestPanelProps {
   guests: Guest[];
@@ -488,11 +489,11 @@ export function GuestPanel({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-sm font-medium mb-1">Email</label>
-                        <input type="email" value={editingGuest.email || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { email: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                        <input type="email" value={editingGuest.email || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { email: e.target.value })} onBlur={(e) => { const next = normalizeEmail(e.target.value); if (next.ok) onUpdateGuest(editingGuest.id, { email: next.value }); else if (e.target.value.trim()) showToast(next.error || 'Enter a valid email address.', 'warning'); }} className="w-full px-3 py-2 border rounded-lg" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-1">Phone</label>
-                        <input value={editingGuest.phone || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { phone: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                        <input value={editingGuest.phone || ''} onChange={(e) => onUpdateGuest(editingGuest.id, { phone: e.target.value })} onBlur={(e) => { const next = normalizeUsPhone(e.target.value); if (next.ok) onUpdateGuest(editingGuest.id, { phone: next.display }); else if (e.target.value.trim()) showToast(next.error || 'Enter a 10-digit US phone number.', 'warning'); }} className="w-full px-3 py-2 border rounded-lg" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">

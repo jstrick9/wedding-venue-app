@@ -71,6 +71,7 @@ import { AdminDecorSection } from './AdminDecorSection';
 import { canAccessAdminPanel } from '../utils/permissions';
 import { useRBAC } from '../hooks/useRBAC';
 import { createPasswordRecord } from '../utils/auth';
+import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
 
 import { VenueManagement } from './admin/VenueManagement';
 import { SeatingAndLinensManagement } from './admin/SeatingAndLinensManagement';
@@ -549,6 +550,14 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
         if (Number.isNaN(selected.getTime()) || selected <= todayStart) errors.push('Event Date must be in the future for non-admin users.');
       }
     }
+    if (u.email?.trim()) {
+      const email = normalizeEmail(u.email);
+      if (!email.ok) errors.push(email.error || 'Enter a valid email address.');
+    }
+    if (u.contactPhoneNumber?.trim()) {
+      const phone = normalizeUsPhone(u.contactPhoneNumber);
+      if (!phone.ok) errors.push(phone.error || 'Enter a valid US phone number.');
+    }
     if ((u.preferredCommunication || []).includes('text') && u.phoneType !== 'Mobile') errors.push('Preferred Communication "Text" requires Phone Type to be Mobile.');
     if (u.allowSharedAccess) {
       const limit = Math.floor(Number(u.sharedUserLimit ?? 0));
@@ -574,6 +583,14 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
       if (!u.eventRole?.trim()) fieldErrors.eventRole = 'Event Role is required for non-admin users.';
       if (!u.eventName?.trim()) fieldErrors.eventName = 'Event Name is required for non-admin users.';
       if (!u.eventDate?.trim()) fieldErrors.eventDate = 'Event Date is required for non-admin users.';
+    }
+    if (u.email?.trim()) {
+      const email = normalizeEmail(u.email);
+      if (!email.ok) fieldErrors.email = email.error || 'Enter a valid email address.';
+    }
+    if (u.contactPhoneNumber?.trim()) {
+      const phone = normalizeUsPhone(u.contactPhoneNumber);
+      if (!phone.ok) fieldErrors.contactPhoneNumber = phone.error || 'Enter a valid US phone number.';
     }
     if ((u.preferredCommunication || []).includes('text') && u.phoneType !== 'Mobile') fieldErrors.preferredCommunication = 'Preferred Communication "Text" requires Phone Type to be Mobile.';
     if (u.allowSharedAccess) {
@@ -626,7 +643,18 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     setCreateUserFieldErrors({});
     const legacyRole = mapUserRoleToLegacyRole(normalizedDraft.userRole);
     const effectiveUsername = usernameFromEmail || normalizedDraft.username;
-    const created = await createUser(effectiveUsername, normalizedDraft.password || '', normalizedDraft.name || '', legacyRole, normalizedDraft.email || '');
+    const email = normalizeEmail(normalizedDraft.email, { required: true });
+    const phone = normalizeUsPhone(normalizedDraft.contactPhoneNumber, { required: normalizedDraft.userRole !== 'admin' });
+    if (!email.ok || !phone.ok) {
+      setCreateUserFieldErrors({
+        ...fieldErrors,
+        ...(email.ok ? {} : { email: email.error || 'Enter a valid email address.' }),
+        ...(phone.ok ? {} : { contactPhoneNumber: phone.error || 'Enter a valid US phone number.' }),
+      });
+      showInfo('Please review the user details', [email.error, phone.error].filter(Boolean).join('\n'), 'warning');
+      return;
+    }
+    const created = await createUser(effectiveUsername, normalizedDraft.password || '', normalizedDraft.name || '', legacyRole, email.value);
     if (!created) {
       showInfo('Unable to create user', 'The username or email may already exist.', 'warning');
       return;
@@ -647,7 +675,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
           sharedUserLimit: normalizedDraft.allowSharedAccess ? normalizedDraft.sharedUserLimit : 0,
           userStatus: normalizedDraft.userStatus || 'active',
           eventDate: normalizedDraft.eventDate || '',
-          phone: normalizedDraft.contactPhoneNumber || '',
+          phone: phone.value,
           jobTitle: normalizedDraft.eventRole || '',
           department: normalizedDraft.eventName || '',
         }

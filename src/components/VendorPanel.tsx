@@ -16,6 +16,7 @@ import {
 } from '../services/vendors/vendorCategoryService';
 import { useBrandingConfig } from '../config';
 import { sanitizeHref } from '../utils/safeUrl';
+import { normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../utils/contactQuality';
 
 interface VendorPanelProps {
   onClose: () => void;
@@ -100,7 +101,13 @@ export function VendorPanel({ onClose, inline = false }: VendorPanelProps) {
 
   const saveVendor = () => {
     if (!form.name.trim()) { showToast('Enter a vendor name.', 'warning'); return; }
-    const payload = { name: form.name, category: form.category, contactName: form.contactName, email: form.email, phone: form.phone, website: form.website, notes: form.notes, description: form.description, imageUrl: form.imageUrl, rating: form.rating, isPreferred: form.isPreferred };
+    const email = normalizeEmail(form.email);
+    const phone = normalizeUsPhone(form.phone);
+    const website = normalizeWebsite(form.website);
+    if (!email.ok) { showToast(email.error || 'Enter a valid email address.', 'warning'); return; }
+    if (!phone.ok) { showToast(phone.error || 'Enter a 10-digit US phone number.', 'warning'); return; }
+    if (!website.ok) { showToast(website.error || 'Website must be an http or https URL.', 'warning'); return; }
+    const payload = { name: form.name, category: form.category, contactName: form.contactName, email: email.value, phone: phone.display, website: website.value, notes: form.notes, description: form.description, imageUrl: form.imageUrl, rating: form.rating, isPreferred: form.isPreferred };
     if (editingVendor) { updateVendor(editingVendor.id, payload); showToast('Vendor updated.', 'success'); }
     else { addVendor(payload); showToast('Preferred vendor added.', 'success'); }
     setEditingVendor(null);

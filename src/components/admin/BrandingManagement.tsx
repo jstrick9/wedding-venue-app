@@ -12,6 +12,7 @@ import { applyRootStyles } from '../../config';
 import { isSupabaseConfigured } from '../../services/backend/supabaseClient';
 import { uploadPublicBrandingAsset } from '../../services/platform/brandingAssetService';
 import type { AdminCommonProps } from './AdminTabTypes';
+import { normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../../utils/contactQuality';
 
 const DEFAULT_LOADED_FONT_FAMILIES = new Set(['Inter', 'Playfair Display']);
 
@@ -314,6 +315,33 @@ export function BrandingManagement(props: AdminCommonProps) {
     applyRootStyles(updated);
   };
 
+  const commitContactField = (field: 'phone' | 'supportEmail' | 'websiteUrl', raw: string) => {
+    if (field === 'phone') {
+      const next = normalizeUsPhone(raw);
+      if (!next.ok) {
+        showInfo?.('Invalid phone number', next.error || 'Enter a 10-digit US phone number.', 'warning');
+        return;
+      }
+      handleSaveConfig({ ...config, phone: next.display || '' });
+      return;
+    }
+    if (field === 'supportEmail') {
+      const next = normalizeEmail(raw);
+      if (!next.ok) {
+        showInfo?.('Invalid email', next.error || 'Enter a valid email address.', 'warning');
+        return;
+      }
+      handleSaveConfig({ ...config, supportEmail: next.value });
+      return;
+    }
+    const next = normalizeWebsite(raw);
+    if (!next.ok) {
+      showInfo?.('Invalid website', next.error || 'Website must be an http or https URL.', 'warning');
+      return;
+    }
+    handleSaveConfig({ ...config, websiteUrl: next.value });
+  };
+
   const localLogoInputRef = React.useRef<HTMLInputElement>(null);
 
   const processLogoFile = (file: File, onComplete?: () => void) => {
@@ -602,6 +630,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                         type="tel"
                         value={config.phone || ''}
                         onChange={(e) => handleSaveConfig({ ...config, phone: e.target.value })}
+                        onBlur={(e) => commitContactField('phone', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#4A1942] focus:border-transparent transition-all"
                         placeholder="(555) 123-4567"
                       />
@@ -665,6 +694,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                         type="url"
                         value={config.websiteUrl}
                         onChange={(e) => handleSaveConfig({ ...config, websiteUrl: e.target.value })}
+                        onBlur={(e) => commitContactField('websiteUrl', e.target.value)}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg"
                         placeholder="https://www.yourwebsite.com"
                       />
@@ -683,6 +713,7 @@ export function BrandingManagement(props: AdminCommonProps) {
                         type="email"
                         value={config.supportEmail}
                         onChange={(e) => handleSaveConfig({ ...config, supportEmail: e.target.value })}
+                        onBlur={(e) => commitContactField('supportEmail', e.target.value)}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg"
                         placeholder="events@yourwebsite.com"
                       />

@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getConfig } from '../../config';
 import { createInvite } from '../../services/org/inviteService';
 import { showToast } from '../Toast';
+import { normalizeEmail } from '../../utils/contactQuality';
 
 const ROLES = [
   { id: 'admin', label: 'Admin' },
@@ -35,11 +36,12 @@ export function InviteMembers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = email.trim();
-    if (!trimmed) {
-      showToast('Please enter an email address.', 'warning');
+    const normalized = normalizeEmail(email, { required: true });
+    if (!normalized.ok) {
+      showToast(normalized.error || 'Please enter an email address.', 'warning');
       return;
     }
+    const trimmed = normalized.value;
     setIsSending(true);
     setResult(null);
     const res = await createInvite({

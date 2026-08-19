@@ -547,5 +547,17 @@ Staff auth chrome (platform login, venue login including loading/not-found/suspe
 
 **Rule going forward:** treat #184 + §9.12–9.15 as current truth. Apply migrations `0001`–`0013` before claiming new-venue login branding is live.
 
+### 9.16 Geoapify address quality and contact validation (Review #185, 2026-08-19)
+
+See `docs/reviews/185-geoapify-address-quality-2026-08-19.md`.
+
+Nominatim is gone. `geocode-venue` proxies Geoapify autocomplete, street verification, and map tiles. The API key is an Edge Function secret only. Platform onboard and venue detail fill city/state/ZIP from a selected US street suggestion and block save until that address is verified (or unchanged). The platform venue map uses Leaflet + Geoapify tiles when Supabase is configured. Shared `contactQuality` helpers enforce US NANP phones, email syntax, and http(s) websites on platform venue forms and other contact save paths. Venue-admin branding still uses a free-text location string; mailing address stays platform-only. Geoapify is not USPS CASS.
+
+**Still deferred:** Phase 3; N-3 hash-only snapshot tokens; remaining `@ts-nocheck`; 5 skipped tests; live RLS/Geoapify smoke.
+
+**Verified gates (HEAD at #185):** typecheck/lint:events/lint pass; unused-locals pass; full suite **820 passed / 5 skipped**; single-file build 2,279.36 kB / 541.77 kB gzip; split build green; `npm audit --omit=dev` 0 vulnerabilities.
+
+**Rule going forward:** treat #185 + §9.12–9.16 as current truth. Apply migrations `0001`–`0014` and set `GEOAPIFY_API_KEY` on the Edge Function before claiming address autocomplete is live.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

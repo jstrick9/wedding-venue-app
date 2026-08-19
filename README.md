@@ -35,14 +35,14 @@ audit.
     `suspended` / `archived`), managed venue-administrator onboarding invites, and
     audited platform actions;
   - cross-device couple/guest portal snapshots, platform↔venue chat, venue
-    address/contact + server-side geocoding (Nominatim) with caching and a rate
-    slot, and object storage for public branding.
-  - Migrations live in `supabase/migrations/` (`0001`–`0013`). Apply them in order
+    address/contact + server-side Geoapify autocomplete, verification, and map
+    tiles (API key never ships to the browser), and object storage for public branding.
+  - Migrations live in `supabase/migrations/` (`0001`–`0014`). Apply them in order
     and run a live RLS/onboarding smoke test before trusting cloud mode with real
     venue data. The geocode Edge Function requires
-    `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_APP_URL`, and `ALLOWED_ORIGIN`
-    as server secrets (the service-role key must never go into Vercel/client env or
-    GitHub).
+    `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_APP_URL`, `ALLOWED_ORIGIN`,
+    and `GEOAPIFY_API_KEY` as server secrets (the service-role and Geoapify keys
+    must never go into Vercel/client env or GitHub).
 
 > **Honesty boundary:** local mode is the exercised product mode today. In cloud
 > mode the catalog/design domains and couple/guest snapshots are mirrored, but not

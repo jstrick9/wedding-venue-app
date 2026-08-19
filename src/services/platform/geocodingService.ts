@@ -1,4 +1,6 @@
 import { getCurrentAccessToken, isSupabaseConfigured } from '../backend/supabaseClient';
+import { mapGeoapifyResult, type StandardizedAddress } from '../../utils/geoapifyAddress';
+import { normalizeUsPostalCode, normalizeUsState } from '../../utils/contactQuality';
 
 export interface VenueAddressInput {
   addressLine1: string;
@@ -13,29 +15,83 @@ export interface GeocodedAddress {
   latitude: number;
   longitude: number;
   displayName: string;
-  provider: 'nominatim';
+  provider: 'geoapify';
+  placeId?: string;
+  address?: StandardizedAddress;
 }
 
-export async function geocodeVenueAddress(address: VenueAddressInput): Promise<GeocodedAddress> {
+function requireSupabaseUrl(): string {
   if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+  return String(import.meta.env.VITE_SUPABASE_URL || '');
+}
+
+async function authorizedFetch(init: RequestInit): Promise<Response> {
   const accessToken = await getCurrentAccessToken();
-  if (!accessToken) throw new Error('Sign in as a platform administrator before geocoding a venue address.');
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/geocode-venue`;
-  const response = await fetch(url, {
-    method: 'POST',
+  if (!accessToken) throw new Error('Sign in as a platform administrator before looking up an address.');
+  const url = `${requireSupabaseUrl()}/functions/v1/geocode-venue`;
+  return fetch(url, {
+    ...init,
     headers: {
       Authorization: `Bearer ${accessToken}`,
       apikey: (import.meta.env.VITE_SUPABASE_ANON_KEY || ''),
       'Content-Type': 'application/json',
+      ...(init.headers || {}),
     },
-    body: JSON.stringify(address),
+  });
+}
+
+export async function autocompleteVenueAddress(text: string): Promise<StandardizedAddress[]> {
+  const query = text.trim();
+  if (query.length < 3) return [];
+  const response = await authorizedFetch({
+    method: 'POST',
+    body: JSON.stringify({ action: 'autocomplete', text: query }),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data?.ok) throw new Error(String(data?.error || 'Could not geocode this venue address.'));
+  if (!response.ok || !data?.ok) throw new Error(String(data?.error || 'Could not look up address suggestions.'));
+  return (Array.isArray(data.results) ? data.results : [])
+    .map((result: unknown) => mapGeoapifyResult(result as Parameters<typeof mapGeoapifyResult>[0]))
+    .filter((result: StandardizedAddress | null): result is StandardizedAddress => Boolean(result));
+}
+
+export async function geocodeVenueAddress(address: VenueAddressInput): Promise<GeocodedAddress> {
+  const state = normalizeUsState(address.stateRegion, { required: true });
+  const postal = normalizeUsPostalCode(address.postalCode, { required: true });
+  if (!state.ok) throw new Error(state.error);
+  if (!postal.ok) throw new Error(postal.error);
+  const response = await authorizedFetch({
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'verify',
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2,
+      city: address.city,
+      stateRegion: state.value,
+      postalCode: postal.value,
+      country: address.country || 'US',
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.ok) throw new Error(String(data?.error || 'Could not verify this venue address.'));
+  const mapped = mapGeoapifyResult(data.result) || undefined;
   return {
     latitude: Number(data.latitude),
     longitude: Number(data.longitude),
-    displayName: String(data.displayName || ''),
-    provider: 'nominatim',
+    displayName: String(data.displayName || mapped?.formatted || ''),
+    provider: 'geoapify',
+    placeId: data.placeId ? String(data.placeId) : mapped?.placeId,
+    address: mapped,
   };
+}
+
+export async function fetchGeoapifyTile(z: number, x: number, y: number, retina = false): Promise<Blob> {
+  const response = await authorizedFetch({
+    method: 'POST',
+    body: JSON.stringify({ action: 'tile', z, x, y, retina }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(String((data as { error?: string }).error || 'Could not load map tiles.'));
+  }
+  return response.blob();
 }

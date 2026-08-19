@@ -116,7 +116,7 @@ describe('platformAdminService', () => {
       postalCode: '28801',
       country: 'US',
       primaryContactName: 'Owner',
-      primaryContactPhone: '555-0100',
+      primaryContactPhone: '704-555-0100',
       primaryContactEmail: 'owner@hilltop.com',
       latitude: 35.6,
       longitude: -82.55,
@@ -140,7 +140,7 @@ describe('platformAdminService', () => {
       postalCode: '28801',
       country: 'US',
       primaryContactName: 'Owner',
-      primaryContactPhone: '555-0100',
+      primaryContactPhone: '704-555-0100',
       primaryContactEmail: 'owner@hilltop.com',
       latitude: 1,
       longitude: 2,
@@ -192,8 +192,24 @@ describe('platformAdminService', () => {
       primaryContactPhone: '704-555-0100',
       primaryContactEmail: 'ada@sevenpaths.com',
       websiteUrl: 'javascript:alert(1)',
-    })).rejects.toThrow(/website url/i);
+    })).rejects.toThrow(/website/i);
     expect(rpcCalls).toHaveLength(0);
+  });
+
+  it('rejects an invalid US phone before calling the update RPC', async () => {
+    await expect(updateVenueOrganization({
+      organizationId: 'org1',
+      name: 'Seven Paths Manor',
+      status: 'active',
+      addressLine1: '100 Manor Rd',
+      city: 'Charlotte',
+      stateRegion: 'NC',
+      postalCode: '28202',
+      country: 'US',
+      primaryContactName: 'Ada',
+      primaryContactPhone: '555-0100',
+      primaryContactEmail: 'ada@sevenpaths.com',
+    })).rejects.toThrow(/10-digit us phone/i);
   });
 
   it('propagates an RPC-level failure from venue update', async () => {

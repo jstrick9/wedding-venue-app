@@ -136,9 +136,7 @@ Still required before production:
 
 ## Venue geocoding and mapping
 
-The chosen provider is the open-source Nominatim service. The integration deliberately runs through the `geocode-venue` Supabase Edge Function, not from browser autocomplete. Results are cached in `venue_geocode_cache`, and the setup flow makes one request per venue address. Nominatim's public service has an absolute maximum of one request per second, requires a descriptive User-Agent/Referer, discourages heavy/bulk use, and requires OSM attribution. See the [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) and [structured search API](https://nominatim.org/release-docs/latest/api/Search/).
-
-For hundreds of venues, the platform should eventually run a controlled/hosted Nominatim instance or move to a commercial geocoder. The current public endpoint is appropriate only for deliberate, cached, low-rate setup operations, not continuous batch geocoding.
+Address autocomplete, verification, and platform map tiles use [Geoapify](https://apidocs.geoapify.com/). The browser never receives the API key: `geocode-venue` proxies autocomplete, verify, and tile requests after a platform-admin auth check. Verified US street suggestions fill city, state, and ZIP. Results are cached in `venue_geocode_cache` with `provider = geoapify`. Set the `GEOAPIFY_API_KEY` Edge Function secret in the live project. Map attribution: Powered by Geoapify | © OpenMapTiles © OpenStreetMap contributors. The in-venue floor-plan designer is unchanged.
 
 ## Branding and chat
 

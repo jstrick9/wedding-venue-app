@@ -82,6 +82,7 @@ import {
 } from '../services/wayfinding/venueWayfindingService';
 import { VenueMapCanvas } from './VenueMapCanvas';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
+import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
 import {
   guestCanAccessLodging,
   guestCanAccessPortal,
@@ -571,8 +572,14 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
     e.preventDefault();
     if (!rsvpForm.fullName.trim() || !rsvpForm.email.trim() || !identifiedGuest) return;
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rsvpForm.email.trim())) {
-      showToast('Please enter a valid email address.', 'warning');
+    const email = normalizeEmail(rsvpForm.email, { required: true });
+    const phone = normalizeUsPhone(rsvpForm.phone);
+    if (!email.ok) {
+      showToast(email.error || 'Please enter a valid email address.', 'warning');
+      return;
+    }
+    if (!phone.ok) {
+      showToast(phone.error || 'Enter a 10-digit US phone number.', 'warning');
       return;
     }
 
@@ -595,8 +602,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       eventName: isCouplePortal && coupleEventId ? coupleEventId : eventName,
       eventKey,
       fullName: rsvpForm.fullName.trim(),
-      email: rsvpForm.email.trim(),
-      phone: rsvpForm.phone.trim(),
+      email: email.value,
+      phone: phone.display,
       attending: rsvpForm.attending === 'yes',
       attendingDays: rsvpForm.attending === 'yes' ? rsvpForm.attendingDays : [],
       attendingEvents: rsvpForm.attending === 'yes' ? rsvpForm.attendingEvents : [],

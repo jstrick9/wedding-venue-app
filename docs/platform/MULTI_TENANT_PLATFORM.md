@@ -77,6 +77,7 @@ supabase/migrations/0010_guest_rsvp_hardening_org_data_and_chat.sql
 supabase/migrations/0011_couple_workspace_projection.sql
 supabase/migrations/0012_update_venue_organization.sql
 supabase/migrations/0013_public_login_branding_defaults.sql
+supabase/migrations/0014_geoapify_address_quality.sql
 ```
 
 Run each once in Supabase SQL Editor or through the Supabase CLI. Do not rerun a partially successful migration without checking which objects were created.
