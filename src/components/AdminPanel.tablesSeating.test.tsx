@@ -38,6 +38,7 @@ describe('AdminPanel Tables/Seating tab', () => {
       />,
     );
 
+    await user.click(screen.getByRole('button', { name: /Venues & Inventory/i }));
     // The merged "Tables, Chairs & Linens" tab opens the Tables/Seating sub-editor by default.
     const seatingTab = screen.getByRole('button', { name: /tables, chairs & linens/i });
     await user.click(seatingTab);
@@ -56,6 +57,7 @@ describe('AdminPanel Tables/Seating tab', () => {
       />,
     );
 
+    await user.click(screen.getByRole('button', { name: /Venues & Inventory/i }));
     await user.click(screen.getByRole('button', { name: /tables, chairs & linens/i }));
 
     // Sub-editor tabs are present (Spacing was moved out to Layout Content).
@@ -85,15 +87,13 @@ describe('AdminPanel Tables/Seating tab', () => {
       />,
     );
 
-    // Open the Layout Content category via the rail.
+    // Expand the Layout Content dropdown, then open Spacing.
     const layoutCategory = screen.getByRole('button', { name: /Layout Content/i });
     await user.click(layoutCategory);
+    await user.click(screen.getByRole('button', { name: 'Spacing' }));
 
-    // The pill (with aria-current="page") is the top-level Spacing nav; other
-    // "Spacing" buttons live inside the editor content itself.
     const spacingPill = screen.getAllByRole('button', { name: /Spacing/i }).find((b) => b.getAttribute('aria-current') === 'page');
     expect(spacingPill).toBeTruthy();
-    await user.click(spacingPill!);
     expect(screen.getAllByText(/spacing & collision settings/i).length).toBeGreaterThan(0);
   });
 });

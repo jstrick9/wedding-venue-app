@@ -104,6 +104,54 @@ const chairLayoutOptions: { id: RectangularChairLayout; name: string; descriptio
   { id: 'head-table', name: 'Head Table', description: 'Chairs on one side only (facing out)' },
 ];
 
+const ADMIN_NAV_GROUPS = [
+  {
+    label: 'Venues & Inventory',
+    icon: '🏛️',
+    description: 'Spaces, tables, chairs, linens, fixtures, walls, and decor.',
+    tabIds: ['venues', 'seating', 'structures', 'decor'],
+  },
+  {
+    label: 'Layout Content',
+    icon: '🎨',
+    description: 'Spacing rules, layout templates, and design guidelines.',
+    tabIds: ['spacing', 'templates', 'guidelines'],
+  },
+  {
+    label: 'Couples Portal',
+    icon: '💍',
+    description: 'Booked couples, packages, wayfinding, and event questions.',
+    tabIds: ['couples', 'packages', 'wayfinding', 'event-questions'],
+  },
+  {
+    label: 'Branding, Access, & Configuration',
+    icon: '⚙️',
+    description: 'Brand, users, access, invites, chat, templates, and checklists.',
+    tabIds: ['branding', 'users', 'access-control', 'invites', 'platform-chat', 'communication-templates', 'operations-settings'],
+  },
+  {
+    label: 'System & Backup',
+    icon: '💾',
+    description: 'Security audit log and workspace backup/restore.',
+    tabIds: ['security-audit', 'backup'],
+  },
+] as const;
+
+const ADMIN_TAB_GROUP: Record<string, string> = Object.fromEntries(
+  ADMIN_NAV_GROUPS.flatMap((group) => group.tabIds.map((id) => [id, group.label])),
+);
+
+function initialExpandedAdminGroups(): Set<string> {
+  try {
+    const fromHash = parseVenueAdminHash(window.location.hash);
+    const tab = fromHash || localStorage.getItem(STORAGE_KEYS.ADMIN_LAST_TAB) || 'overview';
+    const group = ADMIN_TAB_GROUP[tab];
+    return group ? new Set([group]) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
 export interface AdminPanelProps {
   onClose: () => void;
   currentLayout?: {
@@ -173,16 +221,35 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   );
 
   const [tabSearch, setTabSearch] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(initialExpandedAdminGroups);
 
   const goToTab = (id: string) => {
     setTabSearch('');
     setActiveTab(id);
+    const group = ADMIN_TAB_GROUP[id];
+    if (group) {
+      setExpandedGroups((prev) => {
+        const next = new Set(prev);
+        next.add(group);
+        return next;
+      });
+    }
     try {
       const next = buildVenueAdminHash(id);
       if ((window.location.hash || '') !== next) window.location.hash = next;
     } catch {
       // ignore
     }
+  };
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -358,6 +425,17 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     } catch {
       // ignore storage failures
     }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const group = ADMIN_TAB_GROUP[activeTab];
+    if (!group) return;
+    setExpandedGroups((prev) => {
+      if (prev.has(group)) return prev;
+      const next = new Set(prev);
+      next.add(group);
+      return next;
+    });
   }, [activeTab]);
 
   useEffect(() => {
@@ -1067,13 +1145,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   // Ordered admin categories (the group names shown in the category rail). The
   // venue does NOT configure the guest portal — that lives in the Couples Portal —
   // so there is no venue-side Guest Portal section here.
-  const CATEGORY_ORDER = [
-    { label: 'Venues & Inventory', icon: '🏛️' },
-    { label: 'Layout Content', icon: '🎨' },
-    { label: 'Couples Portal', icon: '💍' },
-    { label: 'Branding, Access, & Configuration', icon: '⚙️' },
-    { label: 'System & Backup', icon: '💾' },
-  ];
+  const CATEGORY_ORDER = ADMIN_NAV_GROUPS;
 
   const tabs: AdminTabDefinition[] = [
     // Venues & Inventory
@@ -1165,60 +1237,109 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'users', icon: '👥', label: 'Users', value: users.length, title: 'Switch to Users' },
   ];
 
+  const brand = config.primaryColor || '#4A1942';
+  const groupIsOpen = (label: string) => searching || expandedGroups.has(label);
+
   return (
     <div className={inline ? "relative w-full h-full flex overflow-hidden" : "fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4"} style={inline ? undefined : { zIndex: 10000 }}>
       <div className={inline ? "relative w-full h-full flex overflow-hidden" : "relative bg-white rounded-xl shadow-2xl w-full max-w-[96rem] h-[95vh] flex overflow-hidden"}>
-        <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-slate-900 text-white" aria-label="Admin sections">
-          <div className="border-b border-white/10 px-3 py-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Venue</p>
-            <h1 className="truncate text-sm font-bold">Admin console</h1>
+        <aside
+          className={`flex shrink-0 flex-col border-r border-slate-200 bg-slate-900 text-white ${sidebarCollapsed ? 'w-[72px]' : 'w-60'}`}
+          aria-label="Admin sections"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-4">
+            {!sidebarCollapsed && (
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Venue</p>
+                <h1 className="truncate text-sm font-bold" style={{ fontFamily: config.headingFontFamily }}>Admin console</h1>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((current) => !current)}
+              className="rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-white/10"
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? '▶' : '◀'}
+            </button>
           </div>
           <nav className="flex-1 space-y-3 overflow-y-auto p-2" aria-label="Admin categories">
             <button
               type="button"
               onClick={() => goToTab('overview')}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${isOverview ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-200 hover:bg-white/10'}`}
+              title="Overview"
+              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
+                isOverview ? 'font-semibold text-white' : 'text-slate-200 hover:bg-white/10'
+              } ${sidebarCollapsed ? 'justify-center' : ''}`}
+              style={isOverview ? { backgroundColor: brand } : undefined}
               aria-current={isOverview ? 'page' : undefined}
             >
               <span aria-hidden="true">📊</span>
-              <span>Overview</span>
+              {!sidebarCollapsed && <span>Overview</span>}
             </button>
-            {categories.map((cat) => (
-              <div key={cat.label}>
-                <button
-                  type="button"
-                  onClick={() => goToTab(cat.tabs[0]?.id || activeTab)}
-                  className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                    cat.label === activeCategory ? 'text-indigo-200' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span className="flex min-w-0 items-center gap-1">
-                    <span aria-hidden="true">{cat.icon}</span>
-                    <span>{cat.label}</span>
-                  </span>
-                  <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px]">{cat.tabs.length}</span>
-                </button>
-                <div className="mt-1 space-y-0.5">
-                  {cat.tabs.map((tab) => {
-                    const active = !isOverview && tab.id === activeTabConfig.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => goToTab(tab.id)}
-                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm ${
-                          active ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-200 hover:bg-white/10'
-                        }`}
-                        aria-current={active ? 'page' : undefined}
-                      >
-                        <span aria-hidden="true">{tab.icon}</span>
-                        <span className="truncate">{tab.label.replace(`${tab.icon} `, '')}</span>
-                      </button>
-                    );
-                  })}
+            {categories.map((cat) => {
+              const open = groupIsOpen(cat.label);
+              const groupActive = cat.label === activeCategory;
+              return (
+                <div key={cat.label}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (sidebarCollapsed) {
+                        setSidebarCollapsed(false);
+                        setExpandedGroups((prev) => {
+                          const next = new Set(prev);
+                          next.add(cat.label);
+                          return next;
+                        });
+                        return;
+                      }
+                      toggleGroup(cat.label);
+                    }}
+                    title={cat.description}
+                    aria-expanded={open}
+                    className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                      groupActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                    } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                    style={groupActive ? { color: brand } : undefined}
+                  >
+                    <span className="flex min-w-0 items-center gap-1">
+                      <span aria-hidden="true">{cat.icon}</span>
+                      {!sidebarCollapsed && <span>{cat.label}</span>}
+                    </span>
+                    {!sidebarCollapsed && (
+                      <span className="flex items-center gap-1">
+                        <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px]">{cat.tabs.length}</span>
+                        <span aria-hidden="true">{open ? '▼' : '▶'}</span>
+                      </span>
+                    )}
+                  </button>
+                  {open && !sidebarCollapsed && (
+                    <div className="mt-1 space-y-0.5">
+                      {cat.tabs.map((tab) => {
+                        const active = !isOverview && tab.id === activeTabConfig.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => goToTab(tab.id)}
+                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm ${
+                              active ? 'font-semibold text-white' : 'text-slate-200 hover:bg-white/10'
+                            }`}
+                            style={active ? { backgroundColor: brand } : undefined}
+                            aria-current={active ? 'page' : undefined}
+                          >
+                            <span aria-hidden="true">{tab.icon}</span>
+                            <span className="truncate">{tab.label.replace(`${tab.icon} `, '')}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
         </aside>
 
@@ -1316,7 +1437,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                       onClick={() => goToTab(kpi.id)}
                       title={kpi.title}
                       aria-label={`${kpi.label}: ${kpi.value}`}
-                      className="rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm hover:border-indigo-300"
+                      className="rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm hover:border-gray-400"
                     >
                       <div className="text-xs font-semibold text-gray-500">{kpi.icon} {kpi.label}: <strong>{kpi.value}</strong></div>
                       <div className="mt-1 text-2xl font-extrabold text-gray-900">{kpi.value}</div>

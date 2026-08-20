@@ -40,6 +40,7 @@ describe('AdminPanel Fixtures per-item expand/collapse', () => {
       />,
     );
 
+    await user.click(screen.getByRole('button', { name: /Venues & Inventory/i }));
     await user.click(screen.getByRole('button', { name: /fixtures & walls/i }));
     // Defaults to the Fixtures sub-editor.
 

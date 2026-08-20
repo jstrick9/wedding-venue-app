@@ -595,5 +595,17 @@ with `#/admin` / `#/admin/<section>` hashes. KPI shortcut cards (`Venues:`,
 **Rule going forward:** treat #196 + §9.12–9.20 as current truth for venue Home
 sidebar and Admin navigation.
 
+### 9.21 Admin console sidebar dropdowns (Review #197, 2026-08-20)
+
+See `docs/reviews/197-admin-sidebar-brand-collapse-dropdowns-2026-08-20.md`.
+
+The venue Admin console sidebar stays a dark rail. Active items use
+`config.primaryColor`. The rail collapses to icons. The five categories are
+independent dropdowns that default closed; hover `title` describes the
+section; clicking a header only expands it.
+
+**Rule going forward:** treat #197 + §9.12–9.21 as current truth for Admin
+console navigation chrome.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

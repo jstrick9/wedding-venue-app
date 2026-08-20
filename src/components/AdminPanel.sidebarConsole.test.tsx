@@ -26,7 +26,7 @@ vi.mock('../contexts/AuthContext', () => ({
   }),
 }));
 
-describe('AdminPanel sidebar console (#196)', () => {
+describe('AdminPanel sidebar console', () => {
   beforeEach(() => {
     window.location.hash = '';
   });
@@ -48,19 +48,35 @@ describe('AdminPanel sidebar console (#196)', () => {
     expect(seatingBtn).toHaveAttribute('title', 'Switch to Tables & Seating');
   });
 
+  it('keeps the five sections collapsed until clicked and shows a hover description', () => {
+    render(<AdminPanel onClose={() => undefined} inline />);
+
+    expect(screen.queryByRole('button', { name: 'Venues' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Spacing' })).not.toBeInTheDocument();
+
+    const inventory = screen.getByRole('button', { name: /Venues & Inventory/i });
+    expect(inventory).toHaveAttribute('title', 'Spaces, tables, chairs, linens, fixtures, walls, and decor.');
+    expect(inventory).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(inventory);
+    expect(inventory).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Venues' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Spacing' })).not.toBeInTheDocument();
+  });
+
   it('writes #/admin/venues when the Venues sidebar item is opened', () => {
     render(<AdminPanel onClose={() => undefined} inline />);
+    fireEvent.click(screen.getByRole('button', { name: /Venues & Inventory/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Venues' }));
     expect(window.location.hash).toBe('#/admin/venues');
   });
 
-  it('opens Spacing with aria-current when Layout Content is clicked', () => {
+  it('expands Layout Content without navigating, then Spacing sets aria-current', () => {
     render(<AdminPanel onClose={() => undefined} inline />);
     fireEvent.click(screen.getByRole('button', { name: /Layout Content/i }));
-    const spacing = screen
-      .getAllByRole('button', { name: /Spacing/i })
-      .find((button) => button.getAttribute('aria-current') === 'page');
-    expect(spacing).toBeTruthy();
+    expect(window.location.hash === '' || window.location.hash === '#/admin').toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Spacing' }));
+    expect(screen.getByRole('button', { name: 'Spacing' }).getAttribute('aria-current')).toBe('page');
     expect(window.location.hash).toBe('#/admin/spacing');
   });
 
@@ -69,5 +85,12 @@ describe('AdminPanel sidebar console (#196)', () => {
     render(<AdminPanel onClose={() => undefined} inline />);
     expect(screen.queryByRole('button', { name: /Venues:/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Branding' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('collapses the sidebar to an icon rail', () => {
+    render(<AdminPanel onClose={() => undefined} inline />);
+    fireEvent.click(screen.getByRole('button', { name: /collapse sidebar/i }));
+    expect(screen.queryByText('Admin console')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeInTheDocument();
   });
 });
