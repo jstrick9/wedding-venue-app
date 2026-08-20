@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **GitHub Edge Function deploy (#187, 2026-08-19)** — `Deploy Edge Functions` Action uploads `geocode-venue` / `send-email` from `main` (or Run workflow). Operator sets `SUPABASE_ACCESS_TOKEN` + `SUPABASE_PROJECT_ID` in GitHub secrets (browser). Full report: **`docs/reviews/187-github-edge-function-deploy-2026-08-19.md`**.
 - ✅ **Live geocode unblock (#186, 2026-08-19)** — clearer “deploy geocode-venue + set GEOAPIFY_API_KEY” error instead of raw Failed to fetch; Edge Function CORS reflects Origin; click-by-click secret/deploy steps. Full report: **`docs/reviews/186-geocode-venue-live-unblock-2026-08-19.md`**.
 - ✅ **Geoapify address quality + contact validation (#185, 2026-08-19)** — Nominatim replaced by Geoapify autocomplete/verify/tiles (server proxy, key never in the browser); city/state/ZIP fill from a verified US street; shared US phone/email/website checks. Migration `0014`. Full suite: **820 passed / 5 skipped**. Full report: **`docs/reviews/185-geoapify-address-quality-2026-08-19.md`**. AI-agent memory §9.16 updated.
 - ✅ **Login screens tied to branding (#184, 2026-08-19)** — staff auth chrome uses branding; new venues default to charcoal/white/gray until they save branding; platform login stays navy; semantic status colors kept. Migration `0013`. Full suite: **807 passed / 5 skipped**. Full report: **`docs/reviews/184-login-branding-2026-08-19.md`**. AI-agent memory §9.15 updated.

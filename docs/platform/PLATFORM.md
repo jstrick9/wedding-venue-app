@@ -77,19 +77,13 @@ Street autocomplete, verification, and platform map tiles use the
 `geocode-venue` Edge Function. The Geoapify key must **not** go in Vercel.
 
 1. Dashboard → **Edge Functions → Secrets** → add `GEOAPIFY_API_KEY`.
-2. Deploy from the repo:
-
-```bash
-npx supabase login
-npx supabase link --project-ref <your-project-ref>
-npx supabase secrets set GEOAPIFY_API_KEY=your-geoapify-key
-npx supabase functions deploy geocode-venue
-```
-
+2. Deploy from GitHub (no local CLI): add repository secrets
+   `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_ID`, then run
+   **Actions → Deploy Edge Functions**. Click-by-click steps live in
+   `docs/platform/MULTI_TENANT_PLATFORM.md`.
 3. Apply migration `0014_geoapify_address_quality.sql` if it is not already applied.
 
-A missing function shows in the browser as **Failed to fetch**. Click-by-click
-steps live in `docs/platform/MULTI_TENANT_PLATFORM.md`.
+A missing function shows in the browser as **Failed to fetch**.
 
 ## Step 5 — (Optional) Transactional email
 

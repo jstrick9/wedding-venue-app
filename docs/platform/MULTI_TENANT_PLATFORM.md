@@ -187,23 +187,25 @@ You do **not** put `GEOAPIFY_API_KEY` in Vercel or `.env` used by Vite.
    - **Value:** the Geoapify API key from the Geoapify dashboard (API Keys).
 4. Save. Secrets are live immediately; you do not need to redeploy just to change the value.
 
-### 2. Deploy the function (required once after Review #185)
+### 2. Deploy Edge Functions from GitHub (no local machine)
 
-Dashboard deploy is awkward for this repo. Use the CLI from a machine that has
-the repo:
+The app host (Vercel) deploys the UI from `main`. Supabase Edge Functions are a
+separate runtime. This repo’s **Deploy Edge Functions** GitHub Action uploads
+`supabase/functions/*` (including `geocode-venue` and `send-email`) whenever
+those files change on `main`, or when you click **Run workflow**.
 
-```bash
-npx supabase login
-npx supabase link --project-ref YOUR_PROJECT_REF
-npx supabase secrets set GEOAPIFY_API_KEY=paste-the-key-here
-npx supabase functions deploy geocode-venue
-```
+One-time browser setup (do not paste these values into chat or Vercel):
 
-`YOUR_PROJECT_REF` is the subdomain of the project URL:
-`https://abcdefghij.supabase.co` → `abcdefghij`.
+1. Create a Supabase access token: [Account → Access Tokens](https://supabase.com/dashboard/account/tokens) → **Generate new token** → name it `GitHub Actions`. Copy it once.
+2. Copy your project ref: the subdomain of the project URL
+   (`https://abcdefghij.supabase.co` → `abcdefghij`). Also on **Project Settings → General → Reference ID**.
+3. In GitHub: this repo → **Settings → Secrets and variables → Actions → New repository secret**. Add both:
+   - `SUPABASE_ACCESS_TOKEN` = the token from step 1
+   - `SUPABASE_PROJECT_ID` = the project ref from step 2
+4. GitHub → **Actions → Deploy Edge Functions → Run workflow → Run workflow**.
+5. Confirm the run is green, then Supabase → **Edge Functions** lists `geocode-venue` with today’s deploy time.
 
-Confirm it exists: Dashboard → **Edge Functions** should list `geocode-venue`.
-Open it and check the latest deploy is after 2026-08-19.
+Later function edits on `main` deploy automatically. Changing `GEOAPIFY_API_KEY` in the Supabase secret store does not require a redeploy.
 
 ### 3. Apply SQL
 

@@ -58,5 +58,6 @@ Platform code lives under:
 - `src/services/repository/` — data-persistence seam (local + Supabase providers)
 - `src/services/storage/` — object storage service
 
-Never commit real credentials. Configure Supabase, email, and deployment secrets
-through your hosting provider or the Supabase CLI.
+Never commit real credentials. Put `GEOAPIFY_API_KEY` only in Supabase Edge
+Function secrets. Put the GitHub Action token/project ref only in GitHub
+Actions secrets. Never put service-role or Geoapify keys in Vercel.

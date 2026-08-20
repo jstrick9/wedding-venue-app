@@ -563,5 +563,11 @@ See `docs/reviews/186-geocode-venue-live-unblock-2026-08-19.md`. Browser `Failed
 
 **Rule going forward:** treat #186 + §9.12–9.17 as current truth. Apply migrations `0001`–`0014`, deploy `geocode-venue`, and set `GEOAPIFY_API_KEY` before claiming address autocomplete is live.
 
+### 9.18 GitHub deploys Edge Functions (Review #187, 2026-08-19)
+
+See `docs/reviews/187-github-edge-function-deploy-2026-08-19.md`. `.github/workflows/deploy-edge-functions.yml` deploys all `supabase/functions` on `main` (function-path changes) and via **Run workflow**. Requires GitHub secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_ID`. Vercel still does not deploy Deno functions.
+
+**Rule going forward:** treat #187 + §9.12–9.18 as current truth. After the two GitHub secrets exist, run the Action once, then address autocomplete is live if `GEOAPIFY_API_KEY` is already set.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
