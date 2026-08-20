@@ -34,20 +34,38 @@ jobs:
       - name: Require GitHub Actions secrets
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_PROJECT_ID" ]; then
-            echo "::error::Add repository secrets SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_ID under GitHub → Settings → Secrets and variables → Actions. Create the access token at https://supabase.com/dashboard/account/tokens (browser). Project ID is the subdomain of your Supabase URL (https://abcdefghij.supabase.co → abcdefghij)."
+            echo "::error::Add repository secrets SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_ID under GitHub → Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if echo "$SUPABASE_ACCESS_TOKEN" | grep -Eq '^(eyJ|sb_|sbp_)'; then
+            echo "::error::SUPABASE_ACCESS_TOKEN looks like a project API key or JWT. Use an Account Access Token from https://supabase.com/dashboard/account/tokens, not Project Settings → API."
+            exit 1
+          fi
+          if echo "$SUPABASE_PROJECT_ID" | grep -Eq '^[0-9a-fA-F-]{36}$'; then
+            echo "::error::SUPABASE_PROJECT_ID looks like a UUID. Use Project Settings → General → Reference ID (the subdomain of https://xxxx.supabase.co), not the organization UUID."
             exit 1
           fi
 
-      - name: Verify token can administer the project
+      - name: List project refs this token can see
+        continue-on-error: true
         run: |
-          set -euo pipefail
-          HTTP=$(curl -sS -o /tmp/supabase-project.json -w "%{http_code}" \
+          HTTP=$(curl -sS -o /tmp/supabase-projects.json -w "%{http_code}" \
             -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
-            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}")
-          if [ "$HTTP" != "200" ]; then
-            echo "::error::Supabase Management API returned HTTP ${HTTP} for project ${SUPABASE_PROJECT_ID}. SUPABASE_ACCESS_TOKEN must be an Account Access Token from https://supabase.com/dashboard/account/tokens, created while signed in as an Owner or Administrator of that project. Do not use the project's anon, publishable, or service_role API keys. SUPABASE_PROJECT_ID must be Project Settings → General → Reference ID."
-            python3 -c 'import json; print(json.load(open("/tmp/supabase-project.json")).get("message","(no message)"))' || true
-            exit 1
+            "https://api.supabase.com/v1/projects")
+          echo "GET /v1/projects -> HTTP ${HTTP}"
+          if [ "$HTTP" = "200" ]; then
+            python3 - <<'PY'
+          import json, os
+          data = json.load(open("/tmp/supabase-projects.json"))
+          wanted = os.environ["SUPABASE_PROJECT_ID"]
+          refs = []
+          for project in data if isinstance(data, list) else []:
+              refs.append(str(project.get("ref") or project.get("id") or ""))
+          print("Token can see refs:", ", ".join(refs) or "(none)")
+          print("Configured SUPABASE_PROJECT_ID is in that list:", wanted in refs)
+          PY
+          else
+            echo "Could not list projects (fine-grained tokens often lack projects_read). Continuing to deploy."
           fi
 
       - name: Deploy all Edge Functions

@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Deploy preflight too strict (#189, 2026-08-20)** — removed `GET /v1/projects/{ref}` (needs `project_admin_read`, blocked deploy). Action deploys directly. Full report: **`docs/reviews/189-deploy-preflight-too-strict-2026-08-20.md`**.
 - ✅ **Deploy Action 403 vs Node 20 (#188, 2026-08-20)** — Node 20 line is a warning; live failure was Management API 403. Workflow uses Node 24 actions + token/project preflight. Full report: **`docs/reviews/188-edge-function-deploy-403-2026-08-20.md`**.
 - ✅ **GitHub Edge Function deploy (#187, 2026-08-19)** — `Deploy Edge Functions` Action uploads `geocode-venue` / `send-email` from `main` (or Run workflow). Operator sets `SUPABASE_ACCESS_TOKEN` + `SUPABASE_PROJECT_ID` in GitHub secrets (browser). Full report: **`docs/reviews/187-github-edge-function-deploy-2026-08-19.md`**.
 - ✅ **Live geocode unblock (#186, 2026-08-19)** — clearer “deploy geocode-venue + set GEOAPIFY_API_KEY” error instead of raw Failed to fetch; Edge Function CORS reflects Origin; click-by-click secret/deploy steps. Full report: **`docs/reviews/186-geocode-venue-live-unblock-2026-08-19.md`**.
