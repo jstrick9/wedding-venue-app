@@ -19,7 +19,16 @@ If the banner mentions missing tables, apply `0009`–`0014` in the SQL Editor.
 
 ## 3. Validation
 
-Re-run against HEAD after this change.
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | Pass |
+| `npm run lint:events` | Pass |
+| `npm run lint` | Pass (0 errors / 47 pre-existing warnings) |
+| Strict unused-locals scan | Pass |
+| `npx vitest run` | **825 passed / 5 skipped** |
+| `npm run build` | Pass — 2,281.39 kB / 542.70 kB gzip |
+| `npm run build:split` | Pass |
+| `npm audit --omit=dev` | 0 vulnerabilities |
 
 ---
 
