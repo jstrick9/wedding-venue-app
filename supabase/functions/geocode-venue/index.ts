@@ -1,18 +1,26 @@
 // Supabase Edge Function: geocode-venue
 // Server-side Geoapify proxy for address autocomplete, verification, and map tiles.
 // The API key never ships to the browser.
+//
+// Required secret: GEOAPIFY_API_KEY
+// Default secrets already provided by Supabase: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// CORS reflects the request Origin so a mismatched ALLOWED_ORIGIN cannot hide errors
+// behind the browser's "Failed to fetch".
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
-const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') || '*';
-const corsHeaders = {
-  'Access-Control-Allow-Origin': allowedOrigin,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+function corsHeadersFor(request: Request): Record<string, string> {
+  const origin = request.headers.get('Origin') || '*';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    Vary: 'Origin',
+  };
+}
 
-function json(body: unknown, status = 200) {
+function jsonWith(corsHeaders: Record<string, string>, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
@@ -46,7 +54,10 @@ function isVerifiedStreetAddress(result: Record<string, unknown> | null | undefi
   return confidence >= 0.6;
 }
 
-async function requirePlatformAdmin(request: Request) {
+async function requirePlatformAdmin(
+  request: Request,
+  json: (body: unknown, status?: number) => Response,
+) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceRoleKey) throw json({ error: 'Geocoding service is not configured.' }, 500);
@@ -71,11 +82,14 @@ async function requirePlatformAdmin(request: Request) {
 }
 
 serve(async (request) => {
+  const corsHeaders = corsHeadersFor(request);
+  const json = (body: unknown, status = 200) => jsonWith(corsHeaders, body, status);
+
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   try {
-    const { adminClient, apiKey } = await requirePlatformAdmin(request);
+    const { adminClient, apiKey } = await requirePlatformAdmin(request, json);
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     const action = normalize(body?.action || 'verify') || 'verify';
 
@@ -190,6 +204,6 @@ serve(async (request) => {
     });
   } catch (error) {
     if (error instanceof Response) return error;
-    return json({ error: error instanceof Error ? error.message : 'Geocoding failed.' }, 500);
+    return jsonWith(corsHeaders, { error: error instanceof Error ? error.message : 'Geocoding failed.' }, 500);
   }
 });

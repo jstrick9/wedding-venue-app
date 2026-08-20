@@ -45,11 +45,12 @@ live RLS / Geoapify smoke (no project in this workspace).
 
 ## 2. Live follow-up
 
-After this ships, in the Supabase project:
+After this ships, in the Supabase project (click-by-click in
+`docs/platform/MULTI_TENANT_PLATFORM.md` → “Geoapify address lookup”):
 
 1. Apply migrations `0001`–`0014`.
-2. Set Edge Function secret `GEOAPIFY_API_KEY` (restrict the key in the Geoapify dashboard).
-3. Redeploy `geocode-venue`.
+2. Dashboard → **Edge Functions → Secrets** → add `GEOAPIFY_API_KEY` (never Vercel / Vite).
+3. `npx supabase functions deploy geocode-venue` so the live function is the Geoapify proxy. A missing function shows as browser **Failed to fetch**.
 4. Smoke: onboard a venue by picking a suggestion — city/state/ZIP fill, platform map shows a tile pin, platform login stays navy, new-venue login stays charcoal until branding is saved.
 
 ---

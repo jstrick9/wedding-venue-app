@@ -557,7 +557,11 @@ Nominatim is gone. `geocode-venue` proxies Geoapify autocomplete, street verific
 
 **Verified gates (HEAD at #185):** typecheck/lint:events/lint pass; unused-locals pass; full suite **820 passed / 5 skipped**; single-file build 2,279.36 kB / 541.77 kB gzip; split build green; `npm audit --omit=dev` 0 vulnerabilities.
 
-**Rule going forward:** treat #185 + §9.12–9.16 as current truth. Apply migrations `0001`–`0014` and set `GEOAPIFY_API_KEY` on the Edge Function before claiming address autocomplete is live.
+### 9.17 Live geocode unblock (Review #186, 2026-08-19)
+
+See `docs/reviews/186-geocode-venue-live-unblock-2026-08-19.md`. Browser `Failed to fetch` on street typeahead means the `geocode-venue` function never returned a CORS response — deploy it, then set `GEOAPIFY_API_KEY` under Edge Functions → Secrets (never Vercel). Client now translates that network error; the function reflects `Origin`.
+
+**Rule going forward:** treat #186 + §9.12–9.17 as current truth. Apply migrations `0001`–`0014`, deploy `geocode-venue`, and set `GEOAPIFY_API_KEY` before claiming address autocomplete is live.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*

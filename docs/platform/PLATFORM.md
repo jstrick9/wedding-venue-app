@@ -71,7 +71,27 @@ npx supabase db push
    ```
 4. For the first platform owner, create or confirm the Auth user in Supabase and run the one-time `platform_owner` bootstrap SQL in `docs/platform/MULTI_TENANT_PLATFORM.md`. Platform administrators then use the Platform Admin Console to create venue organizations. Cloud venue users are invitation-only; venue administrators claim a one-time setup link and create their own Auth account.
 
-## Step 4 — (Optional) Transactional email
+## Step 4 — Geoapify address lookup (required for platform onboard / venue detail)
+
+Street autocomplete, verification, and platform map tiles use the
+`geocode-venue` Edge Function. The Geoapify key must **not** go in Vercel.
+
+1. Dashboard → **Edge Functions → Secrets** → add `GEOAPIFY_API_KEY`.
+2. Deploy from the repo:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+npx supabase secrets set GEOAPIFY_API_KEY=your-geoapify-key
+npx supabase functions deploy geocode-venue
+```
+
+3. Apply migration `0014_geoapify_address_quality.sql` if it is not already applied.
+
+A missing function shows in the browser as **Failed to fetch**. Click-by-click
+steps live in `docs/platform/MULTI_TENANT_PLATFORM.md`.
+
+## Step 5 — (Optional) Transactional email
 
 Email (invitations, RSVP confirmations, staff notifications) uses a Supabase
 **Edge Function** that sends via **Resend**.

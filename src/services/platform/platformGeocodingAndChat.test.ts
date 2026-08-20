@@ -69,6 +69,18 @@ describe('platform geocoding (N-5)', () => {
       country: 'US',
     })).rejects.toThrow('No matching location');
   });
+
+  it('explains a browser network failure instead of raw Failed to fetch', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+    await expect(geocodeVenueAddress({
+      addressLine1: '1 Ridge Rd',
+      city: 'Asheville',
+      stateRegion: 'NC',
+      postalCode: '28801',
+      country: 'US',
+    })).rejects.toThrow(/geocode-venue Edge Function/i);
+  });
 });
 
 describe('platform chat (N-6/N-7)', () => {

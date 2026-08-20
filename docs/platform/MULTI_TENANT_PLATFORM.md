@@ -167,6 +167,64 @@ The legacy local User Management form still represents local browser records. It
 - MFA is intentionally deferred until after the first working platform-owner/venue-admin flow, but should be required before production platform operations.
 - Email-confirmation onboarding needs a pending-confirmation UX before production. The current invite sign-up path expects an immediate Supabase session during the initial test flow.
 
+## Geoapify address lookup (required for Venue Detail / Onboard)
+
+Street autocomplete talks to the `geocode-venue` Edge Function. The browser never
+receives the Geoapify key. A red **Failed to fetch** (or the clearer “Could not
+reach the address service”) means the function is missing, not deployed, or
+blocked — setting the secret alone is not enough.
+
+### 1. Set the secret (Dashboard)
+
+You do **not** put `GEOAPIFY_API_KEY` in Vercel or `.env` used by Vite.
+
+1. Open your Supabase project.
+2. Left sidebar → **Edge Functions** → **Secrets**
+   (direct: `https://supabase.com/dashboard/project/_/functions/secrets` — pick the project if prompted).
+   Alternate path: **Project Settings → Edge Functions → Add new secret**.
+3. Add:
+   - **Name:** `GEOAPIFY_API_KEY`
+   - **Value:** the Geoapify API key from the Geoapify dashboard (API Keys).
+4. Save. Secrets are live immediately; you do not need to redeploy just to change the value.
+
+### 2. Deploy the function (required once after Review #185)
+
+Dashboard deploy is awkward for this repo. Use the CLI from a machine that has
+the repo:
+
+```bash
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase secrets set GEOAPIFY_API_KEY=paste-the-key-here
+npx supabase functions deploy geocode-venue
+```
+
+`YOUR_PROJECT_REF` is the subdomain of the project URL:
+`https://abcdefghij.supabase.co` → `abcdefghij`.
+
+Confirm it exists: Dashboard → **Edge Functions** should list `geocode-venue`.
+Open it and check the latest deploy is after 2026-08-19.
+
+### 3. Apply SQL
+
+In SQL Editor, run `supabase/migrations/0014_geoapify_address_quality.sql` if
+it has not been applied yet (after `0001`–`0013`).
+
+### 4. Smoke
+
+Hard-refresh the platform console, open a venue, type at least 3 characters of a
+US street. Suggestions should appear. After you pick one, city/state/ZIP fill
+and stay read-only.
+
+If you still see an error:
+
+| Message | Meaning |
+|---|---|
+| Could not reach the address service / Failed to fetch | Function not deployed, or the browser never got a CORS response |
+| Geoapify is not configured | Secret name is wrong or not saved |
+| Platform administrator access required | Signed-in user is not an active `platform_owner` / `platform_admin` |
+| Sign in as a platform administrator | No Supabase session on this tab |
+
 ## Live smoke test
 
 ### Platform owner
