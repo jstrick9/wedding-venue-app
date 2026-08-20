@@ -70,5 +70,8 @@ jobs:
             echo "Could not list projects (fine-grained tokens often lack projects_read). Continuing to deploy."
           fi
 
-      - name: Deploy all Edge Functions
-        run: supabase functions deploy --use-api --project-ref "$SUPABASE_PROJECT_ID"
+      - name: Deploy geocode-venue
+        run: supabase functions deploy geocode-venue --use-api --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Deploy send-email
+        run: supabase functions deploy send-email --use-api --project-ref "$SUPABASE_PROJECT_ID"

@@ -112,7 +112,7 @@ function renderEmail(purpose: EmailPurpose, templateData: Record<string, unknown
       if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for guest invite email.');
       const subject = `RSVP for ${eventName}`;
       const text = `Hi ${recipientName},\n\nYou've been invited to ${eventName}. Please RSVP here: ${inviteUrl}`;
-      const html = renderShell('You're invited', `
+      const html = renderShell("You're invited", `
         <p>Hi ${recipientName},</p>
         <p>You've been invited to <strong>${eventName}</strong>!</p>
         <p><a href="${inviteUrl}" style="background:#4A1942;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;display:inline-block;">View invitation &amp; RSVP</a></p>
