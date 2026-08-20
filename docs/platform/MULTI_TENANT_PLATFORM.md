@@ -209,7 +209,7 @@ The yellow **Node.js 20 is deprecated** line is a warning, not the failure.
 
 If the create-token screen has permission checkboxes, a **classic / personal** token with no scopes is simplest (it inherits Owner access). For a fine-grained token, `GET /v1/projects/{ref}` needs `project_admin_read` and is **not** required to deploy. The Action no longer uses that endpoint.
 
-- Token: [Account → Access Tokens](https://supabase.com/dashboard/account/tokens) as **Owner**. Not Project Settings → API.
+- Token: [Account → Access Tokens](https://supabase.com/dashboard/account/tokens) as **Owner**. These start with `sbp_`. Not Project Settings → API (`eyJ…`, `sb_publishable_…`, `sb_secret_…`).
 - Fine-grained minimum for deploy: **Edge Functions write** (`edge_functions_write`). Optional: **Projects read** so the Action can print whether the ref matches.
 - `SUPABASE_PROJECT_ID`: **Project Settings → General → Reference ID** (subdomain of `https://….supabase.co`), not an organization UUID.
 - After replacing a secret: **Actions → Deploy Edge Functions → Run workflow**.

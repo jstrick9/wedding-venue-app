@@ -37,8 +37,10 @@ jobs:
             echo "::error::Add repository secrets SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_ID under GitHub → Settings → Secrets and variables → Actions."
             exit 1
           fi
-          if echo "$SUPABASE_ACCESS_TOKEN" | grep -Eq '^(eyJ|sb_|sbp_)'; then
-            echo "::error::SUPABASE_ACCESS_TOKEN looks like a project API key or JWT. Use an Account Access Token from https://supabase.com/dashboard/account/tokens, not Project Settings → API."
+          # Account access tokens are sbp_... Project keys are eyJ... (legacy JWT),
+          # sb_publishable_..., or sb_secret_...
+          if echo "$SUPABASE_ACCESS_TOKEN" | grep -Eq '^(eyJ|sb_publishable_|sb_secret_)'; then
+            echo "::error::SUPABASE_ACCESS_TOKEN looks like a project API key or JWT. Use an Account Access Token from https://supabase.com/dashboard/account/tokens (they start with sbp_). Do not use Project Settings → API keys."
             exit 1
           fi
           if echo "$SUPABASE_PROJECT_ID" | grep -Eq '^[0-9a-fA-F-]{36}$'; then
