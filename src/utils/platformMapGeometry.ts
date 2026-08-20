@@ -1,3 +1,23 @@
+export function parseMapCoordinate(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const numeric = typeof value === 'number' ? value : Number(String(value).trim());
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+export function parseMapPoint(value: { latitude?: unknown; longitude?: unknown }): { latitude: number; longitude: number } | null {
+  const latitude = parseMapCoordinate(value.latitude);
+  const longitude = parseMapCoordinate(value.longitude);
+  if (latitude == null || longitude == null) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  return { latitude, longitude };
+}
+
+export function formatMapCoordinates(value: { latitude?: unknown; longitude?: unknown }): string {
+  const point = parseMapPoint(value);
+  if (!point) return 'Pending';
+  return `${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}`;
+}
+
 export function markerColor(status: string): string {
   if (status === 'suspended') return '#dc2626';
   if (status === 'provisioning') return '#d97706';

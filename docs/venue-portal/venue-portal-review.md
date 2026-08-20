@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Platform map NaN LatLng (#192, 2026-08-20)** — Leaflet `(NaN, NaN)` on the network map: strict coordinate parse, explicit map height, wait for container size. Full report: **`docs/reviews/192-platform-map-nan-latlng-2026-08-20.md`**.
 - ✅ **send-email bundle apostrophe (#191, 2026-08-20)** — `'You're invited'` broke `--use-api` deploy; quote fixed; functions deploy separately.
 - ✅ **Accept sbp_ account tokens (#190, 2026-08-20)** — Account Access Tokens start with `sbp_`; the Action wrongly rejected them as project keys.
 - ✅ **Deploy preflight too strict (#189, 2026-08-20)** — removed `GET /v1/projects/{ref}` (needs `project_admin_read`, blocked deploy). Action deploys directly. Full report: **`docs/reviews/189-deploy-preflight-too-strict-2026-08-20.md`**.
