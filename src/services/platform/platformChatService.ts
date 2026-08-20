@@ -1,4 +1,5 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
+import { describeUnknownError } from '../../utils/unknownError';
 
 export interface PlatformVenueMessage {
   id: string;
@@ -26,13 +27,14 @@ function mapMessage(row: Record<string, unknown>): PlatformVenueMessage {
 }
 
 export async function listPlatformVenueMessages(organizationId: string): Promise<PlatformVenueMessage[]> {
+  if (!organizationId) return [];
   const { data, error } = await requireSupabase()
     .from('platform_venue_messages')
     .select('id,organization_id,sender_user_id,sender_side,body,created_at')
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: true })
     .limit(200);
-  if (error) throw error;
+  if (error) throw new Error(describeUnknownError(error, 'Could not load platform chat.'));
   return (data || []).map((row) => mapMessage(row as Record<string, unknown>));
 }
 
@@ -45,7 +47,7 @@ export async function sendPlatformVenueMessage(organizationId: string, body: str
     .insert({ organization_id: organizationId, sender_user_id: userData.user.id, sender_side: senderSide, body: body.trim() })
     .select('id,organization_id,sender_user_id,sender_side,body,created_at')
     .single();
-  if (error) throw error;
+  if (error) throw new Error(describeUnknownError(error, 'Could not send platform message.'));
   return mapMessage(data as Record<string, unknown>);
 }
 

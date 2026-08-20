@@ -24,7 +24,7 @@ vi.mock('../backend/supabaseClient', () => {
 });
 
 import { geocodeVenueAddress } from './geocodingService';
-import { sendPlatformVenueMessage } from './platformChatService';
+import { listPlatformVenueMessages, sendPlatformVenueMessage } from './platformChatService';
 
 describe('platform geocoding (N-5)', () => {
   beforeEach(() => {
@@ -86,6 +86,10 @@ describe('platform geocoding (N-5)', () => {
 describe('platform chat (N-6/N-7)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('does not query chat when no organization is selected', async () => {
+    await expect(listPlatformVenueMessages('')).resolves.toEqual([]);
   });
 
   it('inserts a scoped message with the signed-in user as sender', async () => {

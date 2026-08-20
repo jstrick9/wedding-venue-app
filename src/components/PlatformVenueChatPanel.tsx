@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { listPlatformVenueMessages, savePlatformChatReadMarker, sendPlatformVenueMessage, subscribeToPlatformVenueMessages, type PlatformVenueMessage } from '../services/platform/platformChatService';
+import { describeUnknownError } from '../utils/unknownError';
 
 interface PlatformVenueChatPanelProps {
   organizationId?: string;
@@ -18,11 +19,18 @@ export default function PlatformVenueChatPanel({ organizationId, organizationNam
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
+    if (!effectiveOrganizationId) {
+      setMessages([]);
+      setError('');
+      setLoading(false);
+      return;
+    }
     try {
+      setError('');
       setMessages(await listPlatformVenueMessages(effectiveOrganizationId));
-      await savePlatformChatReadMarker(effectiveOrganizationId);
+      void savePlatformChatReadMarker(effectiveOrganizationId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load platform chat.');
+      setError(describeUnknownError(err, 'Could not load platform chat.'));
     } finally {
       setLoading(false);
     }
@@ -30,6 +38,7 @@ export default function PlatformVenueChatPanel({ organizationId, organizationNam
 
   useEffect(() => {
     void load();
+    if (!effectiveOrganizationId) return;
     let unsubscribe = () => {};
     try {
       unsubscribe = subscribeToPlatformVenueMessages(effectiveOrganizationId, (message) => {
@@ -54,7 +63,7 @@ export default function PlatformVenueChatPanel({ organizationId, organizationNam
       setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
       setDraft('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send platform message.');
+      setError(describeUnknownError(err, 'Could not send platform message.'));
     }
   };
 

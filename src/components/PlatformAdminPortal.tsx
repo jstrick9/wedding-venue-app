@@ -163,6 +163,11 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
 
   useEffect(() => { void loadConsole(); }, [loadConsole]);
 
+  useEffect(() => {
+    if (route.section !== 'chat' || chatOrganizationId || organizations.length === 0) return;
+    setChatOrganizationId(organizations[0].id);
+  }, [route.section, chatOrganizationId, organizations]);
+
   const regions = useMemo(() => listVenueRegions(organizations), [organizations]);
   const filteredVenues = useMemo(
     () => filterPlatformVenues(organizations, { query, status: statusFilter, region: regionFilter }),
