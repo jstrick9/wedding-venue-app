@@ -90,7 +90,17 @@ describe('AdminPanel sidebar console', () => {
   it('collapses the sidebar to an icon rail', () => {
     render(<AdminPanel onClose={() => undefined} inline />);
     fireEvent.click(screen.getByRole('button', { name: /collapse sidebar/i }));
-    expect(screen.queryByText('Admin console')).not.toBeInTheDocument();
+    expect(screen.queryByText('Seven Paths Manor')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeInTheDocument();
+  });
+
+  it('uses Home branding chrome, mouse-hold resize, and ← Home close', () => {
+    render(<AdminPanel onClose={() => undefined} inline />);
+    expect(screen.getByText('Seven Paths Manor')).toBeInTheDocument();
+    expect(screen.getByTitle('Email: weddings@sevenpathsmanor.com')).toBeInTheDocument();
+    expect(screen.getByTitle('Website: https://www.sevenpathsmanor.com')).toBeInTheDocument();
+    expect(screen.getByTitle('Hold mouse button and drag to resize sidebar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /return to Home/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /return to Dashboard/i })).not.toBeInTheDocument();
   });
 });

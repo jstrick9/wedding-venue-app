@@ -11,6 +11,7 @@ describe('loginHashAfterLogout', () => {
   });
 
   it('returns venue staff to that venue login when a slug is known', () => {
+    expect(loginHashAfterLogout('#/home', 'seven-paths-manor')).toBe('#/venue-login/seven-paths-manor');
     expect(loginHashAfterLogout('#/dashboard', 'seven-paths-manor')).toBe('#/venue-login/seven-paths-manor');
     expect(loginHashAfterLogout('#/studio', 'hilltop-barn')).toBe('#/venue-login/hilltop-barn');
     expect(loginHashAfterLogout('#/admin', 'hilltop-barn')).toBe('#/venue-login/hilltop-barn');

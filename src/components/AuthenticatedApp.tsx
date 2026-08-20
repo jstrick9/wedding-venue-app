@@ -44,6 +44,7 @@ import { getVenueMapConfig, saveVenueMapConfig, emptyVenueMapConfig } from '../s
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { computeSpaceSeating } from '../utils/spaceSeating';
 import { emit, emitDataChanged, on, type UndoSnapshot } from '../utils/appEvents';
+import { VENUE_HOME_HASH, needsVenueHomeHashRewrite } from '../utils/venueHomeRoute';
 import { useModals } from '../contexts/ModalContext';
 
 // ─── Lazy-loaded modal / portal components ───────────────────────────────────
@@ -113,16 +114,19 @@ export default function AuthenticatedApp() {
 
   const { modals, editingArrangementId, setEditingArrangementId, open, close, closeAll } = useModals();
 
-  // Route support: `#/admin` opens the admin destination; `#/studio` opens the
-  // layout studio. Reading the initial hash and listening for changes keeps the
-  // browser URL in sync with the active view.
+  // Route support: `#/home` is the venue workspace; leftover `#/dashboard`,
+  // `#/venue`, empty, and `#/` rewrite to Home. `#/admin` and `#/studio` stay
+  // dedicated destinations. Reading the hash keeps the URL in sync with view.
   useEffect(() => {
     const applyHash = () => {
       const h = window.location.hash || '';
       if (h.startsWith('#/admin')) setView('admin');
       else if (h.startsWith('#/studio')) setView('studio');
       else if (h.startsWith('#/venuemap')) setView('venuemap');
-      else if (h.startsWith('#/dashboard') || h === '') setView('dashboard');
+      else if (h.startsWith('#/home') || needsVenueHomeHashRewrite(h)) {
+        if (needsVenueHomeHashRewrite(h)) window.location.hash = VENUE_HOME_HASH;
+        setView('dashboard');
+      }
     };
     applyHash();
     window.addEventListener('hashchange', applyHash);
@@ -540,25 +544,25 @@ export default function AuthenticatedApp() {
     const offs = [
       on('spm_open_vendors', () => {
         closeAll();
-        window.location.hash = '#/dashboard';
+        window.location.hash = VENUE_HOME_HASH;
         setView('dashboard');
         emit('spm_dashboard_open_section', 'vendors');
       }),
       on('spm_open_timeline', () => {
         closeAll();
-        window.location.hash = '#/dashboard';
+        window.location.hash = VENUE_HOME_HASH;
         setView('dashboard');
         emit('spm_dashboard_open_section', 'timeline');
       }),
       on('spm_open_ops', () => {
         closeAll();
-        window.location.hash = '#/dashboard';
+        window.location.hash = VENUE_HOME_HASH;
         setView('dashboard');
         emit('spm_dashboard_open_section', 'ops');
       }),
       on('spm_open_chat', () => {
         closeAll();
-        window.location.hash = '#/dashboard';
+        window.location.hash = VENUE_HOME_HASH;
         setView('dashboard');
         emit('spm_dashboard_open_section', 'chat');
       }),
@@ -873,7 +877,7 @@ export default function AuthenticatedApp() {
           {canOpenAdminPanel ? (
             <AdminPanel
               inline
-              onClose={() => { window.location.hash = '#/dashboard'; setView('dashboard'); }}
+              onClose={() => { window.location.hash = VENUE_HOME_HASH; setView('dashboard'); }}
               currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }}
               onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }}
               onOpenVenueMap={() => { window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }}
@@ -946,17 +950,17 @@ export default function AuthenticatedApp() {
           }
         }}
         onOpenOperations={() => {
-          window.location.hash = '#/dashboard';
+          window.location.hash = VENUE_HOME_HASH;
           setView('dashboard');
           emit('spm_dashboard_open_section', 'ops');
         }}
         onOpenVendors={() => {
-          window.location.hash = '#/dashboard';
+          window.location.hash = VENUE_HOME_HASH;
           setView('dashboard');
           emit('spm_dashboard_open_section', 'vendors');
         }}
         onOpenTimeline={() => {
-          window.location.hash = '#/dashboard';
+          window.location.hash = VENUE_HOME_HASH;
           setView('dashboard');
           emit('spm_dashboard_open_section', 'timeline');
         }}
@@ -968,7 +972,7 @@ export default function AuthenticatedApp() {
             <StaffOperationsPanel
               inline
               onClose={() => {
-                window.location.hash = '#/dashboard';
+                window.location.hash = VENUE_HOME_HASH;
                 setView('dashboard');
                 emit('spm_dashboard_go_home');
               }}
@@ -985,7 +989,7 @@ export default function AuthenticatedApp() {
           <VendorPanel
             inline
             onClose={() => {
-              window.location.hash = '#/dashboard';
+              window.location.hash = VENUE_HOME_HASH;
               setView('dashboard');
               emit('spm_dashboard_go_home');
             }}
@@ -995,7 +999,7 @@ export default function AuthenticatedApp() {
           <TimelinePanel
             inline
             onClose={() => {
-              window.location.hash = '#/dashboard';
+              window.location.hash = VENUE_HOME_HASH;
               setView('dashboard');
               emit('spm_dashboard_go_home');
             }}
@@ -1011,12 +1015,12 @@ export default function AuthenticatedApp() {
         <Header
           currentVenue={layoutState.currentVenue} venues={selectableVenues} selectedVenueCategories={selectedVenueCategories} onChangeVenueCategories={setSelectedVenueCategories} onChangeVenue={handleVenueChange}
           onSaveLayout={() => handleSaveLayoutWithSync(`${layoutState.currentVenue.name} Layout`)} onSaveLayoutOverwrite={handleSaveLayoutOverwriteWithSync} onSaveMasterLayout={isAdmin ? handleSaveMasterLayout : undefined} onClearMasterLayout={isAdmin ? () => { layoutState.clearMasterLayout(); showToast('Master layout cleared.', 'success'); } : undefined} onPrint={() => open('print')}
-          onShowTemplates={() => open('templates')} onShowSpacesLayouts={() => setShowLayoutsHome(true)} onOpenVenueMap={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/venuemap'; setView('venuemap'); }) : undefined} onShowAdmin={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/admin'; setView('admin'); }) : undefined} onShowDashboard={() => guardStudioLeave(() => { closeAll(); window.location.hash = '#/dashboard'; setView('dashboard'); })} onLogout={() => guardStudioLeave(logout)} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
+          onShowTemplates={() => open('templates')} onShowSpacesLayouts={() => setShowLayoutsHome(true)} onOpenVenueMap={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/venuemap'; setView('venuemap'); }) : undefined} onShowAdmin={canOpenAdminPanel ? () => guardStudioLeave(() => { closeAll(); window.location.hash = '#/admin'; setView('admin'); }) : undefined} onShowDashboard={() => guardStudioLeave(() => { closeAll(); window.location.hash = VENUE_HOME_HASH; setView('dashboard'); })} onLogout={() => guardStudioLeave(logout)} userName={user.name} isAdmin={isAdmin} isStaff={isStaff}
           onOpenOperations={
             canOpenOperationsPanel
               ? () => guardStudioLeave(() => {
                   closeAll();
-                  window.location.hash = '#/dashboard';
+                  window.location.hash = VENUE_HOME_HASH;
                   setView('dashboard');
                   emit('spm_dashboard_open_section', 'ops');
                 })
@@ -1140,7 +1144,7 @@ export default function AuthenticatedApp() {
             <StaffOperationsPanel
               onClose={() => {
                 close('operations');
-                window.location.hash = '#/dashboard';
+                window.location.hash = VENUE_HOME_HASH;
                 setView('dashboard');
                 emit('spm_dashboard_go_home');
               }}
@@ -1156,7 +1160,7 @@ export default function AuthenticatedApp() {
             <VendorPanel
               onClose={() => {
                 close('vendors');
-                window.location.hash = '#/dashboard';
+                window.location.hash = VENUE_HOME_HASH;
                 setView('dashboard');
                 emit('spm_dashboard_go_home');
               }}
@@ -1166,7 +1170,7 @@ export default function AuthenticatedApp() {
             <TimelinePanel
               onClose={() => {
                 close('timeline');
-                window.location.hash = '#/dashboard';
+                window.location.hash = VENUE_HOME_HASH;
                 setView('dashboard');
                 emit('spm_dashboard_go_home');
               }}
@@ -1228,7 +1232,7 @@ export default function AuthenticatedApp() {
             </CenteredModal>
           )}
           {showDecorDesigner && <DecorDesigner onClose={() => close('decorDesigner')} onSave={(a) => { const currentArrangements = layoutState.getDecorArrangements(); const nextArrangements = currentArrangements.find(x => x.id === a.id) ? currentArrangements.map(x => x.id === a.id ? a : x) : [...currentArrangements, a]; layoutState.setDecorArrangements(nextArrangements); close('decorDesigner'); }} initialArrangement={editingArrangementId ? layoutState.getDecorArrangements().find(a => a.id === editingArrangementId) : null} />}
-          {showAdmin && <AdminPanel onClose={() => { close('admin'); window.location.hash = '#/dashboard'; setView('dashboard'); layoutState.refreshVenues(); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
+          {showAdmin && <AdminPanel onClose={() => { close('admin'); window.location.hash = VENUE_HOME_HASH; setView('dashboard'); layoutState.refreshVenues(); }} currentLayout={{ tables: layoutState.layout.tables, fixtures: layoutState.layout.fixtures, venueId: layoutState.currentVenue.id, category: layoutState.currentVenue.category }} onLoadTemplateForEdit={(t) => { if (t.venueId !== layoutState.currentVenue.id) layoutState.changeVenue(t.venueId); layoutState.loadTemplate(t); layoutState.markLayoutClean(); handleResetView(); }} onOpenVenueMap={() => { close('admin'); window.location.hash = '#/venuemap'; setView('venuemap'); closeAll(); }} />}
           {showOverview && (
             <EventOverview
               guests={layoutState.guests}
@@ -1239,7 +1243,7 @@ export default function AuthenticatedApp() {
               venueName={layoutState.currentVenue.name}
               onOpenVendors={() => {
                 close('overview');
-                window.location.hash = '#/dashboard';
+                window.location.hash = VENUE_HOME_HASH;
                 setView('dashboard');
                 emit('spm_dashboard_open_section', 'vendors');
               }}

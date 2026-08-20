@@ -20,6 +20,7 @@ export function loginHashAfterLogout(hash = '', organizationSlug?: string | null
 
   const venueWorkspace =
     route === '#/venue' ||
+    route.startsWith('#/home') ||
     route.startsWith('#/dashboard') ||
     route.startsWith('#/studio') ||
     route.startsWith('#/admin') ||

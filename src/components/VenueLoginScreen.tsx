@@ -119,7 +119,7 @@ export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
         title={`You are signed in to ${venue.config.venueName}`}
         body="Continue to the venue-managed workspace."
         actionLabel="Open Venue Workspace →"
-        onAction={() => { window.location.hash = '#/venue'; }}
+        onAction={() => { window.location.hash = '#/home'; }}
         secondary={{ label: 'Sign out', onClick: logout }}
       />
     );

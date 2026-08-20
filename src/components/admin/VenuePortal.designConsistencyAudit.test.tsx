@@ -369,6 +369,7 @@ describe('Venue Portal Design Consistency & Navigation Audit (#164)', () => {
     // Verify Venue Map and Spaces & Layouts buttons on left side of Header
     expect(screen.getByRole('button', { name: /Spaces & Layouts/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Venue Map/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /return to Home/i })).toBeInTheDocument();
 
     // Open administrative Menu
     const menuBtn = screen.getByRole('button', { name: /menu/i });

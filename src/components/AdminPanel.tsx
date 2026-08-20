@@ -1,5 +1,5 @@
 // src/components/AdminPanel.tsx - thin coordinator for extracted admin tab components.
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   Venue,
   TableSpec,
@@ -97,6 +97,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
 import type { AdminCommonProps, AdminDialogOptions, AdminTabDefinition } from './admin/AdminTabTypes';
 import { buildVenueAdminHash, parseVenueAdminHash } from '../utils/venueAdminRoute';
+import { sanitizeHref } from '../utils/safeUrl';
 
 const chairLayoutOptions: { id: RectangularChairLayout; name: string; description: string }[] = [
   { id: 'all-sides', name: 'All Sides', description: 'Chairs on all 4 sides' },
@@ -222,7 +223,35 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
 
   const [tabSearch, setTabSearch] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(260);
+  const [isResizing, setIsResizing] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(initialExpandedAdminGroups);
+
+  const handleSidebarMouseDown = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      if (e.clientX < 120) {
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+        setSidebarWidth(Math.max(200, Math.min(450, e.clientX)));
+      }
+    };
+    const handleMouseUp = () => setIsResizing(false);
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const goToTab = (id: string) => {
     setTabSearch('');
@@ -1244,25 +1273,113 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     <div className={inline ? "relative w-full h-full flex overflow-hidden" : "fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4"} style={inline ? undefined : { zIndex: 10000 }}>
       <div className={inline ? "relative w-full h-full flex overflow-hidden" : "relative bg-white rounded-xl shadow-2xl w-full max-w-[96rem] h-[95vh] flex overflow-hidden"}>
         <aside
-          className={`flex shrink-0 flex-col border-r border-slate-200 bg-slate-900 text-white ${sidebarCollapsed ? 'w-[72px]' : 'w-60'}`}
+          className="relative flex shrink-0 select-none flex-col border-r border-gray-200 bg-white"
+          style={{
+            width: sidebarCollapsed ? 72 : sidebarWidth,
+            color: config.textColor,
+          }}
           aria-label="Admin sections"
         >
-          <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-4">
-            {!sidebarCollapsed && (
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Venue</p>
-                <h1 className="truncate text-sm font-bold" style={{ fontFamily: config.headingFontFamily }}>Admin console</h1>
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 bg-gray-50/70 p-3.5">
+            {sidebarCollapsed ? (
+              <div className="flex w-full flex-col items-center gap-2">
+                {config.logoUrl ? (
+                  <img
+                    src={config.logoUrl}
+                    alt={config.venueName}
+                    className="h-9 w-9 rounded-lg border border-gray-200 bg-white object-contain p-0.5 shadow-sm"
+                    title={config.venueName}
+                  />
+                ) : (
+                  <div
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-lg text-white shadow-sm"
+                    style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                    title={config.venueName}
+                  >
+                    🏛️
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(false)}
+                  className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-200"
+                  title="Expand sidebar"
+                  aria-label="Expand sidebar"
+                >
+                  ▶
+                </button>
+              </div>
+            ) : (
+              <div className="min-w-0 w-full space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    {config.logoUrl ? (
+                      <img
+                        src={config.logoUrl}
+                        alt={config.venueName}
+                        className="h-9 w-9 shrink-0 rounded-lg border border-gray-200 bg-white object-contain p-0.5 shadow-sm"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg text-white shadow-sm"
+                        style={{ backgroundColor: config.primaryColor || '#4A1942' }}
+                      >
+                        🏛️
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div
+                        className="truncate text-sm font-extrabold text-gray-900"
+                        style={{ fontFamily: config.headingFontFamily }}
+                      >
+                        {config.venueName || 'Seven Paths Manor'}
+                      </div>
+                      <div className="truncate text-[11px] font-medium text-gray-500">
+                        {config.tagline || 'Wedding Venue Intelligence'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="shrink-0 rounded p-1 text-gray-500 transition-colors hover:bg-gray-200"
+                    title="Collapse sidebar"
+                    aria-label="Collapse sidebar"
+                  >
+                    ◀
+                  </button>
+                </div>
+                {(config.supportEmail || config.websiteUrl) && (
+                  <div className="flex flex-wrap items-center gap-2.5 border-t border-gray-200/80 pt-2 text-xs text-gray-600">
+                    {config.supportEmail && (
+                      <a
+                        href={`mailto:${config.supportEmail}`}
+                        className="flex shrink-0 items-center gap-1 font-medium text-gray-600 hover:underline"
+                        title={`Email: ${config.supportEmail}`}
+                      >
+                        <span>✉️</span>
+                        <span>Email</span>
+                      </a>
+                    )}
+                    {config.websiteUrl && (
+                      <>
+                        {config.supportEmail && <span className="text-gray-300">•</span>}
+                        <a
+                          href={sanitizeHref(config.websiteUrl) || undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex shrink-0 items-center gap-1 font-medium text-gray-600 hover:underline"
+                          title={`Website: ${config.websiteUrl}`}
+                        >
+                          <span>🌐</span>
+                          <span>Website</span>
+                        </a>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => setSidebarCollapsed((current) => !current)}
-              className="rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-white/10"
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {sidebarCollapsed ? '▶' : '◀'}
-            </button>
           </div>
           <nav className="flex-1 space-y-3 overflow-y-auto p-2" aria-label="Admin categories">
             <button
@@ -1270,7 +1387,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
               onClick={() => goToTab('overview')}
               title="Overview"
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
-                isOverview ? 'font-semibold text-white' : 'text-slate-200 hover:bg-white/10'
+                isOverview ? 'font-bold text-white shadow-sm' : 'font-medium text-gray-700 hover:bg-gray-100'
               } ${sidebarCollapsed ? 'justify-center' : ''}`}
               style={isOverview ? { backgroundColor: brand } : undefined}
               aria-current={isOverview ? 'page' : undefined}
@@ -1300,7 +1417,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                     title={cat.description}
                     aria-expanded={open}
                     className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                      groupActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                      groupActive ? 'text-gray-900' : 'text-gray-500 hover:text-gray-800'
                     } ${sidebarCollapsed ? 'justify-center' : ''}`}
                     style={groupActive ? { color: brand } : undefined}
                   >
@@ -1310,7 +1427,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                     </span>
                     {!sidebarCollapsed && (
                       <span className="flex items-center gap-1">
-                        <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px]">{cat.tabs.length}</span>
+                        <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] text-gray-600">{cat.tabs.length}</span>
                         <span aria-hidden="true">{open ? '▼' : '▶'}</span>
                       </span>
                     )}
@@ -1325,7 +1442,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                             type="button"
                             onClick={() => goToTab(tab.id)}
                             className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm ${
-                              active ? 'font-semibold text-white' : 'text-slate-200 hover:bg-white/10'
+                              active ? 'font-semibold text-white shadow-sm' : 'text-gray-700 hover:bg-gray-100'
                             }`}
                             style={active ? { backgroundColor: brand } : undefined}
                             aria-current={active ? 'page' : undefined}
@@ -1341,6 +1458,14 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
               );
             })}
           </nav>
+          {!sidebarCollapsed && (
+            <div
+              onMouseDown={handleSidebarMouseDown}
+              className="absolute top-0 right-0 bottom-0 z-30 w-2 cursor-col-resize transition-colors hover:bg-[#4A1942]/30 active:bg-[#4A1942]"
+              style={{ backgroundColor: isResizing ? (config.primaryColor || '#4A1942') : undefined }}
+              title="Hold mouse button and drag to resize sidebar"
+            />
+          )}
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col bg-slate-50">
@@ -1405,11 +1530,11 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                 type="button"
                 onClick={onClose}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-800"
-                aria-label="Close admin panel"
-                title="Close and return to Dashboard"
+                aria-label="Close admin panel and return to Home"
+                title="Close and return to Home"
               >
                 <span>←</span>
-                <span>Dashboard</span>
+                <span>Home</span>
                 <span className="text-gray-400 font-normal ml-0.5">✕</span>
               </button>
             </div>

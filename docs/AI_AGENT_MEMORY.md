@@ -172,8 +172,10 @@ All modal overlays **must** prevent viewport cutoff on tall content (e.g. *"Spac
 - **Layout Tools (`Sidebar.tsx`)**: Has a clean `"Layout Tools"` header with collapse toggle (`◀` / `▶`) and zero branding clutter.
 
 ### 4.4 Landing Page Left Sidebar (`VenueDashboard.tsx`)
+- Canonical venue workspace URL is **`#/home`** (leftover `#/dashboard` / `#/venue` / empty rewrite on read). Internal view may still be `'dashboard'`.
 - Renders full Branding attributes at top: **Venue Logo, Venue Name, Tagline, clickable `✉️ Email` (`mailto:`), and `🌐 Website` (`https://`)**.
 - Supports collapse/expand (`◀` / `▶`) and **mouse-hold right border drag-resizing** between `200px` and `450px` width.
+- **Admin console sidebar** (`AdminPanel.tsx`) uses the same white branded rail and mouse-hold resize. Admin/Studio close controls are **`← Home`**.
 
 ### 4.5 Onboarding Notification Lifecycle (`FloorPlanCanvas.tsx`)
 - When a new user opens an empty canvas for the first time, display the `"Let's build your layout"` onboarding card.
@@ -217,13 +219,13 @@ All modal overlays **must** prevent viewport cutoff on tall content (e.g. *"Spac
   - **Full-Venue Map & Wayfinding (`VenueWayfindingManagement.tsx` & `VenueMapDesigner.tsx`)**: Building the full property map, drawing custom zones, and setting rain contingency backups.
   - **System & Backup (`BackupManagement.tsx`)**: Exporting complete JSON snapshots, roundtrip restore, and security audit logs.
 
-### 5.2 Persona 2: Venue Manager (`#/dashboard`, Ops & Admin)
+### 5.2 Persona 2: Venue Manager (`#/home`, Ops & Admin)
 - **Key Responsibility**: Executive multi-event coordination, BEO sheet oversight, staff scheduling, and revenue/package monitoring.
 - **Core Workflows**:
   - **Executive Dashboard (`VenueDashboard.tsx`)**: High-density 2-row toolbar, interactive KPI stat cards (`Spaces`, `Lodging`, `Vendors`, `Operations`, `Timeline`, `Chat`), and calendar shift view.
   - **BEO Sheet Rollup (`StaffOperationsPanel.tsx`)**: Exporting and printing (`🖨️ Print BEO`) Banquet Event Orders with complete room setups, timeline milestones, and vendor contacts.
 
-### 5.3 Persona 3: Venue Staff / Ops (`#/dashboard` -> `ops`)
+### 5.3 Persona 3: Venue Staff / Ops (`#/home` -> `ops`)
 - **Key Responsibility**: Day-of physical setup, inventory staging, table placement, and task completion.
 - **Core Workflows**:
   - **Operations Studio (`StaffOperationsPanel.tsx`)**: Pull lists for tables, chairs, and linens by room; setup checklists; and room turn-around guidelines.
@@ -251,7 +253,7 @@ All modal overlays **must** prevent viewport cutoff on tall content (e.g. *"Spac
 - **Core Workflows**:
   - **Responsive Guest Portal (`GuestPortal.tsx`)**: PIN/token sign-in, mobile RSVP submission, dietary selection, and property map viewing with `"Open in Maps"` GPS links.
 
-### 5.8 Persona 8: Preferred Vendor (`#/dashboard` -> `vendors`)
+### 5.8 Persona 8: Preferred Vendor (`#/home` -> `vendors`)
 - **Key Responsibility**: Delivering floral, DJ, catering, photography, or decor services in alignment with venue rules.
 - **Core Workflows**:
   - **Vendor Directory (`VendorPanel.tsx`)**: Filtering by category, viewing contact email (`✉️`) and website (`🌐`) links, rating badges, and print sheets.
@@ -606,6 +608,19 @@ section; clicking a header only expands it.
 
 **Rule going forward:** treat #197 + §9.12–9.21 as current truth for Admin
 console navigation chrome.
+
+### 9.22 Venue Home hash and Admin Home-chrome sidebar (Review #198, 2026-08-20)
+
+See `docs/reviews/198-venue-home-hash-and-admin-sidebar-chrome-2026-08-20.md`.
+
+The venue workspace URL is **`#/home`**. Writes never use `#/dashboard`.
+Leftover `#/dashboard`, `#/venue`, empty, and `#/` rewrite to `#/home`.
+Admin and Design Studio close with **`← Home`**. The Admin rail is the same
+white Home chrome (logo, name, tagline, Email/Website, brand active color,
+◀/▶, mouse-hold resize 200–450px). The five #197 dropdown groups remain.
+
+**Rule going forward:** treat #198 + §9.12–9.22 as current truth for venue
+Home navigation and Admin sidebar chrome.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*

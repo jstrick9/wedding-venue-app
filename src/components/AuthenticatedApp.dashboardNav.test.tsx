@@ -1,4 +1,6 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from '../App';
@@ -35,8 +37,21 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     );
   });
 
-  it('keeps user on #dashboard when clicking Vendors and closing Vendors returns to dashboard home', async () => {
+  it('rewrites leftover #/dashboard and #/venue hashes to #/home', async () => {
     window.location.hash = '#/dashboard';
+    const { unmount } = render(<App />);
+    expect(await screen.findByText(/Welcome back/i, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/home');
+    unmount();
+
+    window.location.hash = '#/venue';
+    render(<App />);
+    expect(await screen.findByText(/Welcome back/i, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(window.location.hash).toBe('#/home');
+  });
+
+  it('keeps user on #/home when clicking Vendors and closing Vendors returns to dashboard home', async () => {
+    window.location.hash = '#/home';
     render(<App />);
 
     // Verify on dashboard home
@@ -46,9 +61,9 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     const vendorBtn = screen.getByRole('button', { name: /vendor showcase/i });
     fireEvent.click(vendorBtn);
 
-    // Verify vendors panel opens inline and hash stays #/dashboard
+    // Verify vendors panel opens inline and hash stays #/home
     expect(await screen.findByRole('heading', { name: /preferred vendors/i })).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
 
     // Click Home button in sidebar to return to dashboard home
     const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
@@ -57,11 +72,11 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     // Verify user is back on dashboard home and did not jump to #/studio
     expect(screen.queryByRole('heading', { name: /preferred vendors/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
   });
 
-  it('keeps user on #dashboard when clicking Timeline Studio and closing returns to dashboard home', async () => {
-    window.location.hash = '#/dashboard';
+  it('keeps user on #/home when clicking Timeline Studio and closing returns to dashboard home', async () => {
+    window.location.hash = '#/home';
     render(<App />);
 
     expect(await screen.findByText(/Welcome back/i, {}, { timeout: 4000 })).toBeInTheDocument();
@@ -70,18 +85,18 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     fireEvent.click(timelineBtn);
 
     expect(await screen.findByRole('heading', { name: /wedding timeline/i })).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
 
     const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
     fireEvent.click(homeBtn);
 
     expect(screen.queryByRole('heading', { name: /wedding timeline/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
   });
 
-  it('keeps user on #dashboard when clicking Operations Studio and closing returns to dashboard home', async () => {
-    window.location.hash = '#/dashboard';
+  it('keeps user on #/home when clicking Operations Studio and closing returns to dashboard home', async () => {
+    window.location.hash = '#/home';
     render(<App />);
 
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
@@ -90,18 +105,18 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     fireEvent.click(opsBtn);
 
     expect(await screen.findByRole('heading', { name: /staff & operations/i })).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
 
     const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
     fireEvent.click(homeBtn);
 
     expect(screen.queryByRole('heading', { name: /staff & operations/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
   });
 
-  it('emits spm_open_timeline to navigate directly to #dashboard timeline section and close returns to home', async () => {
-    window.location.hash = '#/dashboard';
+  it('emits spm_open_timeline to navigate directly to #/home timeline section and close returns to home', async () => {
+    window.location.hash = '#/home';
     render(<App />);
 
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
@@ -111,18 +126,18 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     });
 
     expect(await screen.findByRole('heading', { name: /wedding timeline/i })).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
 
     const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
     fireEvent.click(homeBtn);
 
     expect(screen.queryByRole('heading', { name: /wedding timeline/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
   });
 
-  it('keeps user on #dashboard when clicking Portal Chat & DMs and close returns to home', async () => {
-    window.location.hash = '#/dashboard';
+  it('keeps user on #/home when clicking Portal Chat & DMs and close returns to home', async () => {
+    window.location.hash = '#/home';
     render(<App />);
 
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
@@ -133,7 +148,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(
       await screen.findByRole('heading', { name: /portal chat & direct messages/i })
     ).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
 
     const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
     fireEvent.click(homeBtn);
@@ -142,11 +157,11 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
       screen.queryByRole('heading', { name: /portal chat & direct messages/i })
     ).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
   });
 
-  it('emits spm_open_chat to navigate directly to #dashboard chat section', async () => {
-    window.location.hash = '#/dashboard';
+  it('emits spm_open_chat to navigate directly to #/home chat section', async () => {
+    window.location.hash = '#/home';
     render(<App />);
 
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
@@ -158,7 +173,7 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(
       await screen.findByRole('heading', { name: /portal chat & direct messages/i })
     ).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
 
     const homeBtn = screen.getAllByRole('button', { name: /home/i })[0];
     fireEvent.click(homeBtn);
@@ -167,11 +182,17 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
       screen.queryByRole('heading', { name: /portal chat & direct messages/i })
     ).not.toBeInTheDocument();
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/dashboard');
+    expect(window.location.hash).toBe('#/home');
   });
 
-  it('does not show a Header Menu or studio-specific layout actions on the dashboard', async () => {
-    window.location.hash = '#/dashboard';
+  it('never writes #/dashboard as a venue workspace destination', () => {
+    const source = readFileSync(resolve(__dirname, 'AuthenticatedApp.tsx'), 'utf8');
+    expect(source).not.toMatch(/window\.location\.hash = '#\/dashboard'/);
+    expect(source).toContain('window.location.hash = VENUE_HOME_HASH');
+  });
+
+  it('does not show a Header Menu or studio-specific layout actions on Home', async () => {
+    window.location.hash = '#/home';
     render(<App />);
 
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();

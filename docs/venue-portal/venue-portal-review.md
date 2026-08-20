@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue Home URL + Admin sidebar chrome (#198, 2026-08-20)** — workspace hash is `#/home` (leftover `#/dashboard`/`#/venue` rewrite); Admin and Design Studio return with `← Home`; Admin rail matches Home branding and mouse-hold resize while keeping #197 dropdown groups. Full report: **`docs/reviews/198-venue-home-hash-and-admin-sidebar-chrome-2026-08-20.md`**.
 - ✅ **Admin sidebar branding, collapse, and section dropdowns (#197, 2026-08-20)** — dark rail uses venue primary color; ◀/▶ icon collapse; five groups start collapsed with hover descriptions. Full report: **`docs/reviews/197-admin-sidebar-brand-collapse-dropdowns-2026-08-20.md`**.
 - ✅ **Venue dashboard Menu overlay + Admin sidebar console (#196, 2026-08-20)** — removed the landing-page hamburger that covered the sidebar on partial windows; Admin & System Settings is now a grouped left-sidebar console with Overview KPIs and `#/admin/…` section hashes. Full report: **`docs/reviews/196-venue-admin-sidebar-and-dashboard-menu-2026-08-20.md`**.
 - ✅ **Staff login “or” divider + branded tabs (#195, 2026-08-20)** — hide the unused or divider on platform/venue login; sign-out of the console returns to `#/platform-login`; browser tab title/favicon follow platform or venue branding. Full report: **`docs/reviews/195-login-or-divider-and-tab-branding-2026-08-20.md`**.
