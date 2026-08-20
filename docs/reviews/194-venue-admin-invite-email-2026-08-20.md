@@ -18,7 +18,16 @@ redeploy it. Verify the sending domain in Resend.
 
 ## 3. Validation
 
-Re-run against HEAD after this change.
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | Pass |
+| `npm run lint:events` | Pass |
+| `npm run lint` | Pass (0 errors / 47 pre-existing warnings) |
+| Strict unused-locals scan | Pass |
+| `npx vitest run` | **828 passed / 5 skipped** |
+| `npm run build` | Pass — 2,285.57 kB / 544.07 kB gzip |
+| `npm run build:split` | Pass |
+| `npm audit --omit=dev` | 0 vulnerabilities |
 
 ---
 
