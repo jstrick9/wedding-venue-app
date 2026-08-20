@@ -170,17 +170,17 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     expect(window.location.hash).toBe('#/dashboard');
   });
 
-  it('hides studio-specific menu items (Save Layout, Load Layout, Templates) from Header menu when on dashboard', async () => {
+  it('does not show a Header Menu or studio-specific layout actions on the dashboard', async () => {
     window.location.hash = '#/dashboard';
     render(<App />);
 
     expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
 
-    // Click menu button
-    const menuBtn = screen.getByText('Menu').closest('button')!;
-    fireEvent.click(menuBtn);
+    // Landing sidebar stays on screen; the overlay ☰ Menu hamburger is gone.
+    expect(screen.queryByRole('button', { name: /toggle navigation menu/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Menu')).not.toBeInTheDocument();
 
-    // Vendors and Timeline should be in menu, but Save Layout and Load Layout should not be present
+    // Vendors and Timeline remain reachable from the dashboard; studio canvas actions do not.
     expect(screen.getAllByText(/vendors/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/timeline/i).length).toBeGreaterThan(0);
     expect(screen.queryByText('💾 Save Layout')).not.toBeInTheDocument();

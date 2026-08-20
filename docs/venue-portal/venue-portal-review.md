@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue dashboard Menu overlay + Admin sidebar console (#196, 2026-08-20)** — removed the landing-page hamburger that covered the sidebar on partial windows; Admin & System Settings is now a grouped left-sidebar console with Overview KPIs and `#/admin/…` section hashes. Full report: **`docs/reviews/196-venue-admin-sidebar-and-dashboard-menu-2026-08-20.md`**.
 - ✅ **Staff login “or” divider + branded tabs (#195, 2026-08-20)** — hide the unused or divider on platform/venue login; sign-out of the console returns to `#/platform-login`; browser tab title/favicon follow platform or venue branding. Full report: **`docs/reviews/195-login-or-divider-and-tab-branding-2026-08-20.md`**.
 - ✅ **Venue admin invite email (#194, 2026-08-20)** — onboard/reissue send Resend email; Branding customizes subject/body with merge tags. Full report: **`docs/reviews/194-venue-admin-invite-email-2026-08-20.md`**.
 - ✅ **Platform chat load error (#193, 2026-08-20)** — Chat queried an empty UUID then kept a stale generic error. Skip empty org, surface Postgrest messages, auto-select first venue. Full report: **`docs/reviews/193-platform-chat-load-error-2026-08-20.md`**.

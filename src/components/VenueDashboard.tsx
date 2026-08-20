@@ -60,8 +60,6 @@ const dayKey = (d: Date) => {
 export function VenueDashboard(props: Props) {
   const { isAdmin, isStaff, user } = props;
   const [section, setSection] = useState<Section>('home');
-  // Mobile drawer toggle for the left sidebar.
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [isResizing, setIsResizing] = useState(false);
@@ -202,10 +200,7 @@ export function VenueDashboard(props: Props) {
     })
     .map((i) => ({
       ...i,
-      action: () => {
-        setSidebarOpen(false); // close the mobile drawer on navigation
-        i.action();
-      },
+      action: i.action,
     }));
 
   const catChip = (cat: string) => {
@@ -225,22 +220,9 @@ export function VenueDashboard(props: Props) {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: config.backgroundColor || '#f3f4f6' }}>
-      {/* Mobile hamburger (top-left) */}
-      <button
-        type="button"
-        onClick={() => setSidebarOpen((v) => !v)}
-        className="lg:hidden fixed top-3 left-3 z-30 inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 shadow-sm"
-        aria-expanded={sidebarOpen}
-        aria-label="Toggle navigation menu"
-      >
-        ☰ <span className="hidden sm:inline">Menu</span>
-      </button>
-
-      {/* Persistent left sidebar — off-canvas on mobile, static on lg+ */}
+      {/* Persistent left sidebar — always on screen; collapse to icons instead of a hamburger overlay. */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-20 shrink-0 bg-white border-r border-gray-200 flex flex-col transition-transform lg:translate-x-0 relative select-none ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className="relative shrink-0 bg-white border-r border-gray-200 flex flex-col select-none"
         style={{
           width: sidebarCollapsed ? 72 : sidebarWidth,
           color: config.textColor,
@@ -412,18 +394,8 @@ export function VenueDashboard(props: Props) {
         )}
       </aside>
 
-      {/* Mobile overlay to dismiss the drawer */}
-      {sidebarOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation menu"
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-10 lg:hidden bg-black/30"
-        />
-      )}
-
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto p-5 lg:pl-5 pl-16">
+      <main className="flex-1 min-w-0 overflow-y-auto p-5">
         {section === 'home' && (
           <div className="space-y-5">
             <header

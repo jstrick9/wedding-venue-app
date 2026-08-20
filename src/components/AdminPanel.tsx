@@ -96,6 +96,7 @@ import { uploadImage } from '../services/storage/imageStorage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emitDataChanged, on } from '../utils/appEvents';
 import type { AdminCommonProps, AdminDialogOptions, AdminTabDefinition } from './admin/AdminTabTypes';
+import { buildVenueAdminHash, parseVenueAdminHash } from '../utils/venueAdminRoute';
 
 const chairLayoutOptions: { id: RectangularChairLayout; name: string; description: string }[] = [
   { id: 'all-sides', name: 'All Sides', description: 'Chairs on all 4 sides' },
@@ -162,22 +163,42 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const [activeTab, setActiveTab] = useState<string>(
     () => {
       try {
-        return localStorage.getItem(STORAGE_KEYS.ADMIN_LAST_TAB) || 'venues';
+        const fromHash = parseVenueAdminHash(window.location.hash);
+        if (fromHash) return fromHash;
+        return localStorage.getItem(STORAGE_KEYS.ADMIN_LAST_TAB) || 'overview';
       } catch {
-        return 'venues';
+        return 'overview';
       }
     },
   );
 
+  const [tabSearch, setTabSearch] = useState('');
+
+  const goToTab = (id: string) => {
+    setTabSearch('');
+    setActiveTab(id);
+    try {
+      const next = buildVenueAdminHash(id);
+      if ((window.location.hash || '') !== next) window.location.hash = next;
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     return on('spm_open_admin_tab', (detail) => {
-      if (detail) {
-        setActiveTab(detail);
-      }
+      if (detail) goToTab(detail);
     });
   }, []);
 
-  const [tabSearch, setTabSearch] = useState('');
+  useEffect(() => {
+    const onHash = () => {
+      const next = parseVenueAdminHash(window.location.hash);
+      if (next) setActiveTab(next);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
   const [venues, setVenuesState] = useState(() => getVenues());
   const [tableSpecs, setTableSpecsState] = useState(() => getTableSpecs());
   const [fixtureTypes, setFixtureTypesState] = useState(() => getFixtureTypes());
@@ -1094,7 +1115,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     // Branding, Access, & Configuration
     { id: 'branding', label: '🎨 Branding', icon: '🎨', Component: BrandingManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
     { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
-    { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => setActiveTab('venues') }, group: 'Branding, Access, & Configuration' },
+    { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => goToTab('overview') }, group: 'Branding, Access, & Configuration' },
     { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'Branding, Access, & Configuration' },
     { id: 'platform-chat', label: '💬 Platform Chat', icon: '💬', Component: PlatformVenueChatPanel, props: {}, group: 'Branding, Access, & Configuration' },
     { id: 'communication-templates', label: '💬 Communication Templates', icon: '💬', Component: CommunicationTemplatesManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
@@ -1116,235 +1137,199 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
   const filteredTabs = tabs.filter((tab) => {
     const q = tabSearch.trim().toLowerCase();
     if (!q) return true;
-    return `${tab.label} ${tab.id}`.toLowerCase().includes(q);
+    return `${tab.label} ${tab.id} ${tab.group}`.toLowerCase().includes(q);
   });
+  const isOverview = activeTab === 'overview' && !searching;
   const activeTabConfig =
-    tabs.find((tab) => tab.id === activeTab) ||
+    (!isOverview && tabs.find((tab) => tab.id === activeTab)) ||
     (searching ? filteredTabs[0] : undefined) ||
     tabs[0];
   const ActiveComponent = activeTabConfig.Component;
-  const activeCategory = activeTabConfig.group;
+  const activeCategory = isOverview ? '' : activeTabConfig.group;
 
   // Categories in fixed display order, each carrying its sections.
   const categories = CATEGORY_ORDER.map((c) => ({
     ...c,
     tabs: tabs.filter((t) => t.group === c.label),
-  }));
-  const activeCategoryTabs = searching
-    ? filteredTabs
-    : categories.find((c) => c.label === activeCategory)?.tabs || [];
+  })).map((c) => ({
+    ...c,
+    tabs: searching ? c.tabs.filter((t) => filteredTabs.some((ft) => ft.id === t.id)) : c.tabs,
+  })).filter((c) => c.tabs.length > 0);
+
+  const overviewKpis: { id: string; icon: string; label: string; value: number; title: string }[] = [
+    { id: 'venues', icon: '🏛️', label: 'Venues', value: venues.length, title: 'Switch to Venues' },
+    { id: 'seating', icon: '🪑', label: 'Seating', value: tableSpecs.length, title: 'Switch to Tables & Seating' },
+    { id: 'packages', icon: '🎁', label: 'Packages', value: getWeddingPackages().length, title: 'Switch to Packages' },
+    { id: 'couples', icon: '💍', label: 'Couples', value: getCoupleEvents().length, title: 'Switch to Couples' },
+    { id: 'templates', icon: '📋', label: 'Templates', value: templates.length, title: 'Switch to Templates' },
+    { id: 'users', icon: '👥', label: 'Users', value: users.length, title: 'Switch to Users' },
+  ];
 
   return (
-    <div className={inline ? "w-full h-full flex flex-col" : "fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4"} style={inline ? undefined : { zIndex: 10000 }}>
-      <div className={inline ? "w-full h-full flex flex-col" : "bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col overflow-hidden"}>
-        {/* Compact 2-Row Executive Admin Toolbar */}
-        <div className="px-4 py-2.5 bg-white border-b border-gray-200 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-            <h2 className="text-base font-bold text-gray-900 truncate" style={{ fontFamily: config.headingFontFamily }}>
-              ⚙️ Admin &amp; System Settings
-            </h2>
-            <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded-full font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Healthy
-            </span>
-            <span className="bg-purple-100 text-purple-800 text-[11px] px-2 py-0.5 rounded-full font-semibold">
-              LocalStorage
-            </span>
+    <div className={inline ? "relative w-full h-full flex overflow-hidden" : "fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4"} style={inline ? undefined : { zIndex: 10000 }}>
+      <div className={inline ? "relative w-full h-full flex overflow-hidden" : "relative bg-white rounded-xl shadow-2xl w-full max-w-[96rem] h-[95vh] flex overflow-hidden"}>
+        <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-slate-900 text-white" aria-label="Admin sections">
+          <div className="border-b border-white/10 px-3 py-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Venue</p>
+            <h1 className="truncate text-sm font-bold">Admin console</h1>
           </div>
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <nav className="flex-1 space-y-3 overflow-y-auto p-2" aria-label="Admin categories">
             <button
               type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('communication-templates'); }}
-              className="text-xs font-semibold text-gray-600 hover:text-gray-900 hover:underline"
-              style={{ color: config.primaryColor }}
+              onClick={() => goToTab('overview')}
+              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${isOverview ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-200 hover:bg-white/10'}`}
+              aria-current={isOverview ? 'page' : undefined}
             >
-              💬 Templates ({getCommunicationTemplates().length})
+              <span aria-hidden="true">📊</span>
+              <span>Overview</span>
             </button>
-            <span className="text-gray-300">|</span>
-            <button
-              type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('operations-settings'); }}
-              className="text-xs font-semibold text-gray-600 hover:text-gray-900 hover:underline"
-              style={{ color: config.primaryColor }}
-            >
-              🛠️ Checklists ({getOperationsChecklistDefaults().length})
-            </button>
-            <span className="text-gray-300">|</span>
-            <button
-              type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('security-audit'); }}
-              className="text-xs font-semibold text-gray-600 hover:text-gray-900 hover:underline"
-              style={{ color: config.primaryColor }}
-            >
-              🛡️ Security
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-800"
-              aria-label="Close admin panel"
-              title="Close and return to Dashboard"
-            >
-              <span>←</span>
-              <span>Dashboard</span>
-              <span className="text-gray-400 font-normal ml-0.5">✕</span>
-            </button>
-          </div>
-        </div>
+            {categories.map((cat) => (
+              <div key={cat.label}>
+                <button
+                  type="button"
+                  onClick={() => goToTab(cat.tabs[0]?.id || activeTab)}
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                    cat.label === activeCategory ? 'text-indigo-200' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-1">
+                    <span aria-hidden="true">{cat.icon}</span>
+                    <span>{cat.label}</span>
+                  </span>
+                  <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px]">{cat.tabs.length}</span>
+                </button>
+                <div className="mt-1 space-y-0.5">
+                  {cat.tabs.map((tab) => {
+                    const active = !isOverview && tab.id === activeTabConfig.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => goToTab(tab.id)}
+                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm ${
+                          active ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-200 hover:bg-white/10'
+                        }`}
+                        aria-current={active ? 'page' : undefined}
+                      >
+                        <span aria-hidden="true">{tab.icon}</span>
+                        <span className="truncate">{tab.label.replace(`${tab.icon} `, '')}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </aside>
 
-        {/* Row 2: Interactive Quick-Jump KPI Pills & Search Bar */}
-        <div className="px-4 py-2 bg-gray-50/70 border-b border-gray-200 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('venues'); }}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
-              title="Switch to Venues"
-            >
-              🏛️ Venues: <strong>{venues.length}</strong>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('seating'); }}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
-              title="Switch to Tables & Seating"
-            >
-              🪑 Seating: <strong>{tableSpecs.length}</strong>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('packages'); }}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
-              title="Switch to Packages"
-            >
-              🎁 Packages: <strong>{getWeddingPackages().length}</strong>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('couples'); }}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
-              title="Switch to Couples"
-            >
-              💍 Couples: <strong>{getCoupleEvents().length}</strong>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('templates'); }}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
-              title="Switch to Templates"
-            >
-              📋 Templates: <strong>{templates.length}</strong>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTabSearch(''); setActiveTab('users'); }}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors shadow-sm"
-              title="Switch to Users"
-            >
-              👥 Users: <strong>{users.length}</strong>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 min-w-[220px]">
-            <label htmlFor="admin-tab-search" className="sr-only">Find an admin section</label>
-            <div className="relative w-full">
-              <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-xs">🔍</span>
-              <input
-                id="admin-tab-search"
-                type="search"
-                value={tabSearch}
-                onChange={(e) => setTabSearch(e.target.value)}
-                placeholder="Quick find an admin setting..."
-                className="w-full pl-8 pr-3 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
-              />
-            </div>
-            {tabSearch && (
-              <span className="text-[11px] text-gray-500 whitespace-nowrap">
-                <strong>{filteredTabs.length}</strong> found
+        <div className="flex min-w-0 flex-1 flex-col bg-slate-50">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+              <h2 className="text-base font-bold text-gray-900 truncate" style={{ fontFamily: config.headingFontFamily }}>
+                ⚙️ Admin &amp; System Settings
+              </h2>
+              <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded-full font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Healthy
               </span>
+              <span className="bg-purple-100 text-purple-800 text-[11px] px-2 py-0.5 rounded-full font-semibold">
+                LocalStorage
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => goToTab('communication-templates')}
+                className="text-xs font-semibold hover:underline"
+                style={{ color: config.primaryColor }}
+              >
+                💬 Templates ({getCommunicationTemplates().length})
+              </button>
+              <span className="text-gray-300">|</span>
+              <button
+                type="button"
+                onClick={() => goToTab('operations-settings')}
+                className="text-xs font-semibold hover:underline"
+                style={{ color: config.primaryColor }}
+              >
+                🛠️ Checklists ({getOperationsChecklistDefaults().length})
+              </button>
+              <span className="text-gray-300">|</span>
+              <button
+                type="button"
+                onClick={() => goToTab('security-audit')}
+                className="text-xs font-semibold hover:underline"
+                style={{ color: config.primaryColor }}
+              >
+                🛡️ Security
+              </button>
+              <label htmlFor="admin-tab-search" className="sr-only">Find an admin section</label>
+              <div className="relative w-52">
+                <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-xs">🔍</span>
+                <input
+                  id="admin-tab-search"
+                  type="search"
+                  value={tabSearch}
+                  onChange={(e) => setTabSearch(e.target.value)}
+                  placeholder="Quick find an admin setting..."
+                  className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#4A1942]/20 focus:border-[#4A1942]"
+                />
+              </div>
+              {tabSearch && (
+                <span className="text-[11px] text-gray-500 whitespace-nowrap">
+                  <strong>{filteredTabs.length}</strong> found
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-800"
+                aria-label="Close admin panel"
+                title="Close and return to Dashboard"
+              >
+                <span>←</span>
+                <span>Dashboard</span>
+                <span className="text-gray-400 font-normal ml-0.5">✕</span>
+              </button>
+            </div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            {searching && filteredTabs.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500">
+                <div className="text-3xl mb-3">🔎</div>
+                <p className="text-lg font-semibold text-gray-700">No admin sections match &ldquo;{tabSearch}&rdquo;</p>
+                <p className="text-sm mt-1">Try a broader term like venue, guest, user, or branding.</p>
+              </div>
+            ) : isOverview ? (
+              <div className="space-y-5">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Admin overview</p>
+                  <h3 className="mt-1 text-lg font-bold text-gray-900">Venue configuration</h3>
+                  <p className="mt-1 text-sm text-gray-600">Use the sidebar to open a settings area, or jump from a count below.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                  {overviewKpis.map((kpi) => (
+                    <button
+                      key={kpi.id}
+                      type="button"
+                      onClick={() => goToTab(kpi.id)}
+                      title={kpi.title}
+                      aria-label={`${kpi.label}: ${kpi.value}`}
+                      className="rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm hover:border-indigo-300"
+                    >
+                      <div className="text-xs font-semibold text-gray-500">{kpi.icon} {kpi.label}: <strong>{kpi.value}</strong></div>
+                      <div className="mt-1 text-2xl font-extrabold text-gray-900">{kpi.value}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <ActiveComponent {...activeTabConfig.props} />
+              </div>
             )}
           </div>
-        </div>
-
-        {/* Row 3: Horizontal Category Groups Strip */}
-        {!searching && (
-          <nav aria-label="Admin categories" className="px-4 py-2 bg-white border-b border-gray-200 flex flex-wrap items-center gap-1.5">
-            {categories.map((cat) => {
-              const active = cat.label === activeCategory;
-              return (
-                <button
-                  key={cat.label}
-                  type="button"
-                  onClick={() => { setTabSearch(''); setActiveTab(cat.tabs[0]?.id || activeTab); }}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                    active
-                      ? 'shadow-sm border'
-                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
-                  }`}
-                  style={
-                    active
-                      ? {
-                          backgroundColor: `${config.primaryColor || '#4A1942'}15`,
-                          color: config.primaryColor || '#4A1942',
-                          borderColor: config.primaryColor || '#4A1942',
-                        }
-                      : undefined
-                  }
-                  aria-current={active ? 'page' : undefined}
-                >
-                  <span>{cat.icon}</span>
-                  <span>{cat.label}</span>
-                  <span
-                    className={`text-[10px] rounded-full px-1.5 py-0.2 font-bold ${!active ? 'bg-gray-200 text-gray-600' : ''}`}
-                    style={active ? { backgroundColor: config.primaryColor || '#4A1942', color: '#FFFFFF' } : undefined}
-                  >
-                    {cat.tabs.length}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
-        )}
-
-        {/* Row 4: Sub-Tab Pills for Selected Category (or Search Results) */}
-        <div className="px-4 py-2 bg-gray-50/80 border-b border-gray-200 flex flex-wrap gap-1.5 items-center">
-          {activeCategoryTabs.map((tab) => {
-            const active = tab.id === activeTabConfig.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                  !active ? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100' : ''
-                }`}
-                style={active ? { backgroundColor: config.primaryColor || '#4A1942', color: '#FFFFFF' } : undefined}
-                aria-current={active ? 'page' : undefined}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label.replace(`${tab.icon} `, '')}</span>
-              </button>
-            );
-          })}
-          {searching && (
-            <span className="text-xs text-gray-500 ml-auto font-medium">
-              Showing matching sections across all categories
-            </span>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
-          {filteredTabs.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500">
-              <div className="text-3xl mb-3">🔎</div>
-              <p className="text-lg font-semibold text-gray-700">No admin sections match &ldquo;{tabSearch}&rdquo;</p>
-              <p className="text-sm mt-1">Try a broader term like venue, guest, user, or branding.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <ActiveComponent {...activeTabConfig.props} />
-            </div>
-          )}
         </div>
 
         {dialog && (

@@ -72,6 +72,10 @@ beforeEach(() => {
   ensureCrypto();
   globalThis.localStorage.clear();
   globalThis.sessionStorage.clear();
+  // jsdom keeps location.hash across tests in a worker; admin routes must start clean.
+  if (typeof window !== 'undefined' && window.location.hash) {
+    window.location.hash = '';
+  }
 });
 
 afterEach(() => {

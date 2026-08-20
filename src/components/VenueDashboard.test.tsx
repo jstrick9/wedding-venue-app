@@ -59,6 +59,13 @@ describe('VenueDashboard', () => {
     expect(screen.getAllByText('Design Studio').length).toBeGreaterThan(0);
   });
 
+  it('does not render an overlay hamburger Menu over the landing sidebar', () => {
+    render(<VenueDashboard {...baseProps} />);
+    expect(screen.queryByRole('button', { name: /toggle navigation menu/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/close navigation menu/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /collapse sidebar/i })).toBeInTheDocument();
+  });
+
   it('switches to the calendar section', async () => {
     const user = userEvent.setup();
     render(<VenueDashboard {...baseProps} />);

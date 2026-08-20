@@ -938,7 +938,7 @@ export default function AuthenticatedApp() {
         canAdmin={canOpenAdminPanel}
         canOps={canOpenOperationsPanel}
         onOpenAdmin={(tab?: string) => {
-          window.location.hash = '#/admin';
+          window.location.hash = tab ? `#/admin/${tab}` : '#/admin';
           setView('admin');
           closeAll();
           if (tab) {

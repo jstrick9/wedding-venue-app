@@ -582,5 +582,18 @@ HTML shell default is the platform name, not Seven Paths Manor.
 **Rule going forward:** treat #195 + §9.12–9.19 as current truth for login chrome
 and tab identity.
 
+### 9.20 Venue admin sidebar console and landing sidebar (Review #196, 2026-08-20)
+
+See `docs/reviews/196-venue-admin-sidebar-and-dashboard-menu-2026-08-20.md`.
+
+`VenueDashboard` no longer renders an overlay **☰ Menu** hamburger; the landing
+sidebar is always on screen and collapses to icons. Venue Admin & System Settings
+(`AdminPanel`) is a grouped left-sidebar console (Overview + five categories)
+with `#/admin` / `#/admin/<section>` hashes. KPI shortcut cards (`Venues:`,
+`Seating:`) render on Overview only. Design Studio `Header.tsx` Menu is unchanged.
+
+**Rule going forward:** treat #196 + §9.12–9.20 as current truth for venue Home
+sidebar and Admin navigation.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
