@@ -29,6 +29,14 @@ import type {
   PlatformOrganizationSummary,
 } from '../services/platform/platformTypes';
 import { showToast } from './Toast';
+import { sendVenueAdminInviteEmail } from '../services/platform/venueAdminInviteMail';
+import { describeUnknownError } from '../utils/unknownError';
+import {
+  DEFAULT_VENUE_ADMIN_INVITE_BODY,
+  DEFAULT_VENUE_ADMIN_INVITE_SUBJECT,
+  applyVenueAdminInviteTemplate,
+  venueAdminInviteIncludesLink,
+} from '../utils/venueAdminInviteEmail';
 import { buildPlatformConsoleHash, parsePlatformConsoleHash, type PlatformConsoleSection } from '../utils/platformConsoleRoute';
 import { filterPlatformVenues, listVenueRegions } from '../utils/platformVenueFilters';
 
@@ -177,6 +185,10 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const activeNav = route.section === 'venue-detail' ? 'venues' : route.section;
 
   const handleSavePlatformBranding = async (next: typeof platformBranding) => {
+    if (!venueAdminInviteIncludesLink(next.venueAdminInviteBody)) {
+      showToast('Invite email body must include {inviteUrl}.', 'warning');
+      return;
+    }
     setBrandingSaving(true);
     try {
       await savePlatformBranding(next);
@@ -239,7 +251,21 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       setForm(EMPTY_FORM);
       setOnboardVerified(false);
       await loadConsole();
-      showToast(`Created ${created.organizationName}; its slug is ${created.organizationSlug}.`, 'success');
+      try {
+        await sendVenueAdminInviteEmail({
+          to: adminEmail.value,
+          organizationId: created.organizationId,
+          organizationName: created.organizationName,
+          inviteUrl: created.inviteUrl,
+          expiresAt: created.expiresAt,
+          platformName: platformBranding.venueName,
+          subject: platformBranding.venueAdminInviteSubject,
+          body: platformBranding.venueAdminInviteBody,
+        });
+        showToast(`Created ${created.organizationName}. Invite email sent to ${adminEmail.value}.`, 'success');
+      } catch (emailErr) {
+        showToast(`Created ${created.organizationName}, but the invite email was not sent: ${describeUnknownError(emailErr, 'email failed')}. Copy the setup link. Set RESEND_API_KEY and EMAIL_FROM on the send-email Edge Function.`, 'warning');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the venue organization.');
     } finally {
@@ -965,6 +991,17 @@ function BrandingSection({
           <label className="block text-xs font-semibold text-gray-700">Platform name<input value={platformBranding.venueName} onChange={(event) => setPlatformBranding({ ...platformBranding, venueName: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="block text-xs font-semibold text-gray-700">Tagline<input value={platformBranding.tagline} onChange={(event) => setPlatformBranding({ ...platformBranding, tagline: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="block text-xs font-semibold text-gray-700">Login welcome message<textarea value={platformBranding.loginWelcomeMessage || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, loginWelcomeMessage: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={2} /></label>
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
+            <p className="text-xs font-bold text-indigo-950">Venue administrator invite email</p>
+            <p className="mt-1 text-[11px] text-indigo-800">Sent when you onboard a venue or reissue an invite. Use {'{venueName}'}, {'{inviteUrl}'}, {'{adminEmail}'}, {'{expiresAt}'}, {'{platformName}'}.</p>
+            <label className="mt-2 block text-xs font-semibold text-gray-700">Subject<input value={platformBranding.venueAdminInviteSubject || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, venueAdminInviteSubject: event.target.value })} placeholder={DEFAULT_VENUE_ADMIN_INVITE_SUBJECT} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+            <label className="mt-2 block text-xs font-semibold text-gray-700">Body<textarea value={platformBranding.venueAdminInviteBody || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, venueAdminInviteBody: event.target.value })} placeholder={DEFAULT_VENUE_ADMIN_INVITE_BODY} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs" rows={8} /></label>
+            {!venueAdminInviteIncludesLink(platformBranding.venueAdminInviteBody) && (
+              <p className="mt-2 text-[11px] font-semibold text-red-700">Template must include {'{inviteUrl}'} so the administrator can open the setup link.</p>
+            )}
+            <p className="mt-2 text-[11px] font-semibold text-gray-600">Preview</p>
+            <pre className="mt-1 whitespace-pre-wrap rounded-lg border border-white bg-white px-3 py-2 text-[11px] text-gray-700">{applyVenueAdminInviteTemplate(platformBranding.venueAdminInviteSubject, platformBranding.venueAdminInviteBody, { venueName: 'Hilltop Barn', inviteUrl: 'https://your-app/#/venue-onboarding?token=example', adminEmail: 'owner@example.com', expiresAt: 'in 7 days', platformName: platformBranding.venueName || 'Platform' }).subject + '\n\n' + applyVenueAdminInviteTemplate(platformBranding.venueAdminInviteSubject, platformBranding.venueAdminInviteBody, { venueName: 'Hilltop Barn', inviteUrl: 'https://your-app/#/venue-onboarding?token=example', adminEmail: 'owner@example.com', expiresAt: 'in 7 days', platformName: platformBranding.venueName || 'Platform' }).body}</pre>
+          </div>
           <div className="flex items-center gap-3">
             <input id="platform-logo-upload" type="file" accept="image/*" className="sr-only" onChange={(event) => void onLogo(event)} />
             <label htmlFor="platform-logo-upload" className="cursor-pointer rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-800">Upload platform logo</label>

@@ -2,6 +2,7 @@ import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
 export type EmailPurpose =
   | 'invitation'
+  | 'venue_admin_invite'
   | 'password_reset'
   | 'rsvp_confirmation'
   | 'staff_notification';

@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue admin invite email (#194, 2026-08-20)** — onboard/reissue send Resend email; Branding customizes subject/body with merge tags. Full report: **`docs/reviews/194-venue-admin-invite-email-2026-08-20.md`**.
 - ✅ **Platform chat load error (#193, 2026-08-20)** — Chat queried an empty UUID then kept a stale generic error. Skip empty org, surface Postgrest messages, auto-select first venue. Full report: **`docs/reviews/193-platform-chat-load-error-2026-08-20.md`**.
 - ✅ **Platform map NaN LatLng (#192, 2026-08-20)** — Leaflet `(NaN, NaN)` on the network map: strict coordinate parse, explicit map height, wait for container size. Full report: **`docs/reviews/192-platform-map-nan-latlng-2026-08-20.md`**.
 - ✅ **send-email bundle apostrophe (#191, 2026-08-20)** — `'You're invited'` broke `--use-api` deploy; quote fixed; functions deploy separately.

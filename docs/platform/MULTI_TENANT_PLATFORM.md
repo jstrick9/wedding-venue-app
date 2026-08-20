@@ -167,6 +167,23 @@ The legacy local User Management form still represents local browser records. It
 - MFA is intentionally deferred until after the first working platform-owner/venue-admin flow, but should be required before production platform operations.
 - Email-confirmation onboarding needs a pending-confirmation UX before production. The current invite sign-up path expects an immediate Supabase session during the initial test flow.
 
+## Venue administrator invite email
+
+Onboard and Reissue now send email through the `send-email` Edge Function
+(Resend). The setup link is still shown/copied if email fails.
+
+One-time secrets (Supabase → Edge Functions → Secrets):
+
+- `RESEND_API_KEY` from [resend.com](https://resend.com)
+- `EMAIL_FROM` e.g. `Venue Platform <invites@your-verified-domain.com>`
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (usually already present)
+
+Then redeploy `send-email` (GitHub → Actions → Deploy Edge Functions).
+
+Customize subject and body under **Platform → Branding**. Merge tags:
+`{venueName}`, `{inviteUrl}`, `{adminEmail}`, `{expiresAt}`, `{platformName}`.
+The body must include `{inviteUrl}`.
+
 ## Geoapify address lookup (required for Venue Detail / Onboard)
 
 Street autocomplete talks to the `geocode-venue` Edge Function. The browser never

@@ -133,6 +133,8 @@ export function mergePlatformLoginBranding(partial?: Partial<Config> | null): Co
     headerTextColor: firstColor(partial?.headerTextColor, DEFAULT_PLATFORM_LOGIN_CONFIG.headerTextColor),
     bodyTextColor: firstColor(partial?.bodyTextColor, DEFAULT_PLATFORM_LOGIN_CONFIG.bodyTextColor),
     accentTextColor: firstColor(partial?.accentTextColor, DEFAULT_PLATFORM_LOGIN_CONFIG.accentTextColor),
+    venueAdminInviteSubject: String(partial?.venueAdminInviteSubject || ''),
+    venueAdminInviteBody: String(partial?.venueAdminInviteBody || ''),
   };
 }
 

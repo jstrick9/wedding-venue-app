@@ -727,6 +727,9 @@ export interface Config {
   loginBackgroundAnimation?: 'none' | 'drift' | 'shimmer' | 'float';
   loginBackgroundOverlayOpacity?: number;
   loginWelcomeMessage?: string;
+  /** Platform-admin venue-administrator invite email (plain text + merge tags). */
+  venueAdminInviteSubject?: string;
+  venueAdminInviteBody?: string;
   welcomeTitle?: string;
   showWelcomeByDefault?: boolean;
   welcomeFeatures?: string[];

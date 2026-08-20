@@ -5,14 +5,13 @@
 //   EMAIL_FROM
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
-// Optional secrets:
-//   ALLOWED_ORIGIN=https://your-app.example.com
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
 type EmailPurpose =
   | 'invitation'
+  | 'venue_admin_invite'
   | 'guest_invite'
   | 'guest_reminder'
   | 'password_reset'
@@ -35,14 +34,17 @@ interface RenderedEmail {
   text: string;
 }
 
-const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') || '*';
-const corsHeaders = {
-  'Access-Control-Allow-Origin': allowedOrigin,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+function corsHeadersFor(request: Request): Record<string, string> {
+  const origin = request.headers.get('Origin') || '*';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    Vary: 'Origin',
+  };
+}
 
-const PURPOSE_ROLES: Record<EmailPurpose, AppRole[]> = {
+const PURPOSE_ROLES: Record<Exclude<EmailPurpose, 'venue_admin_invite'>, AppRole[]> = {
   invitation: ['owner', 'admin', 'planner'],
   guest_invite: ['owner', 'admin', 'planner'],
   guest_reminder: ['owner', 'admin', 'planner'],
@@ -54,7 +56,7 @@ const PURPOSE_ROLES: Record<EmailPurpose, AppRole[]> = {
 const RATE_LIMIT_WINDOW_MINUTES = 60;
 const RATE_LIMIT_MAX_PER_USER_ORG = 100;
 
-function json(body: unknown, status = 200) {
+function jsonWith(corsHeaders: Record<string, string>, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -89,20 +91,38 @@ function renderShell(title: string, body: string): string {
   `;
 }
 
+function renderPlainTemplate(templateData: Record<string, unknown> | undefined): RenderedEmail {
+  const subject = getString(templateData, 'subject').trim();
+  const text = getString(templateData, 'body').trim();
+  const inviteUrl = getString(templateData, 'inviteUrl').trim();
+  if (!subject || !text) throw new Error('Invite email subject and body are required.');
+  if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for venue administrator invite.');
+  const escapedBody = escapeHtml(text);
+  const escapedUrl = escapeHtml(inviteUrl);
+  const linked = escapedUrl ? escapedBody.split(escapedUrl).join(`<a href="${escapedUrl}">${escapedUrl}</a>`) : escapedBody;
+  return {
+    subject,
+    text,
+    html: renderShell(subject, `<div>${linked.replace(/\n/g, '<br/>')}</div>`),
+  };
+}
+
 function renderEmail(purpose: EmailPurpose, templateData: Record<string, unknown> | undefined): RenderedEmail {
   const recipientName = escapeHtml(getString(templateData, 'recipientName', 'there'));
   const organizationName = escapeHtml(getString(templateData, 'organizationName', 'your venue team'));
   const eventName = escapeHtml(getString(templateData, 'eventName', 'your event'));
 
   switch (purpose) {
+    case 'venue_admin_invite':
+      return renderPlainTemplate(templateData);
     case 'invitation': {
       const inviteUrl = escapeHtml(getString(templateData, 'inviteUrl'));
       if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for invitation email.');
-      const subject = `You're invited to ${organizationName}`;
-      const text = `Hi ${recipientName},\n\nYou've been invited to collaborate in ${organizationName}. Open: ${inviteUrl}`;
-      const html = renderShell("You're invited", `
+      const subject = `You are invited to ${organizationName}`;
+      const text = `Hi ${recipientName},\n\nYou have been invited to collaborate in ${organizationName}. Open: ${inviteUrl}`;
+      const html = renderShell('You are invited', `
         <p>Hi ${recipientName},</p>
-        <p>You've been invited to collaborate in <strong>${organizationName}</strong>.</p>
+        <p>You have been invited to collaborate in <strong>${organizationName}</strong>.</p>
         <p><a href="${inviteUrl}" style="background:#4A1942;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;display:inline-block;">Open invitation</a></p>
       `);
       return { subject, text, html };
@@ -111,10 +131,10 @@ function renderEmail(purpose: EmailPurpose, templateData: Record<string, unknown
       const inviteUrl = escapeHtml(getString(templateData, 'inviteUrl'));
       if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for guest invite email.');
       const subject = `RSVP for ${eventName}`;
-      const text = `Hi ${recipientName},\n\nYou've been invited to ${eventName}. Please RSVP here: ${inviteUrl}`;
-      const html = renderShell("You're invited", `
+      const text = `Hi ${recipientName},\n\nYou have been invited to ${eventName}. Please RSVP here: ${inviteUrl}`;
+      const html = renderShell('You are invited', `
         <p>Hi ${recipientName},</p>
-        <p>You've been invited to <strong>${eventName}</strong>!</p>
+        <p>You have been invited to <strong>${eventName}</strong>!</p>
         <p><a href="${inviteUrl}" style="background:#4A1942;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;display:inline-block;">View invitation &amp; RSVP</a></p>
       `);
       return { subject, text, html };
@@ -123,10 +143,10 @@ function renderEmail(purpose: EmailPurpose, templateData: Record<string, unknown
       const inviteUrl = escapeHtml(getString(templateData, 'inviteUrl'));
       if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for guest reminder email.');
       const subject = `Friendly reminder: RSVP for ${eventName}`;
-      const text = `Hi ${recipientName},\n\nWe'd love to know if you can make it to ${eventName}. Please RSVP here: ${inviteUrl}`;
+      const text = `Hi ${recipientName},\n\nWe would love to know if you can make it to ${eventName}. Please RSVP here: ${inviteUrl}`;
       const html = renderShell('RSVP reminder', `
         <p>Hi ${recipientName},</p>
-        <p>We'd love to know if you can make it to <strong>${eventName}</strong>!</p>
+        <p>We would love to know if you can make it to <strong>${eventName}</strong>!</p>
         <p><a href="${inviteUrl}" style="background:#4A1942;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;display:inline-block;">RSVP now</a></p>
       `);
       return { subject, text, html };
@@ -187,13 +207,11 @@ async function ensureRateLimit(supabase: ReturnType<typeof createClient>, organi
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  const corsHeaders = corsHeadersFor(req);
+  const json = (body: unknown, status = 200) => jsonWith(corsHeaders, body, status);
 
-  if (req.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -201,7 +219,7 @@ serve(async (req) => {
   const emailFrom = Deno.env.get('EMAIL_FROM');
 
   if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !emailFrom) {
-    return json({ error: 'Email service is not configured.' }, 500);
+    return json({ error: 'Email service is not configured. Set RESEND_API_KEY and EMAIL_FROM Edge Function secrets.' }, 500);
   }
 
   const authHeader = req.headers.get('Authorization') || '';
@@ -229,25 +247,29 @@ serve(async (req) => {
     return json({ error: 'Missing required to, organizationId, or purpose.' }, 400);
   }
 
-  if (!Object.prototype.hasOwnProperty.call(PURPOSE_ROLES, payload.purpose)) {
-    return json({ error: 'Unsupported email purpose.' }, 400);
-  }
-
-  const { data: membership, error: membershipError } = await supabase
-    .from('organization_memberships')
-    .select('role,status')
-    .eq('organization_id', payload.organizationId)
-    .eq('user_id', userData.user.id)
-    .eq('status', 'active')
-    .single();
-
-  if (membershipError || !membership) {
-    return json({ error: 'Forbidden' }, 403);
-  }
-
-  const allowedRoles = PURPOSE_ROLES[payload.purpose];
-  if (!allowedRoles.includes(membership.role as AppRole)) {
-    return json({ error: 'Insufficient role for this email purpose.' }, 403);
+  if (payload.purpose === 'venue_admin_invite') {
+    const { data: platformRole } = await supabase
+      .from('platform_memberships')
+      .select('role,status')
+      .eq('user_id', userData.user.id)
+      .eq('status', 'active')
+      .in('role', ['platform_owner', 'platform_admin'])
+      .maybeSingle();
+    if (!platformRole) return json({ error: 'Platform administrator access required to send venue invites.' }, 403);
+  } else {
+    const allowedRoles = PURPOSE_ROLES[payload.purpose as Exclude<EmailPurpose, 'venue_admin_invite'>];
+    if (!allowedRoles) return json({ error: 'Unsupported email purpose.' }, 400);
+    const { data: membership, error: membershipError } = await supabase
+      .from('organization_memberships')
+      .select('role,status')
+      .eq('organization_id', payload.organizationId)
+      .eq('user_id', userData.user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (membershipError || !membership) return json({ error: 'Forbidden' }, 403);
+    if (!allowedRoles.includes(membership.role as AppRole)) {
+      return json({ error: 'Insufficient role for this email purpose.' }, 403);
+    }
   }
 
   let rendered: RenderedEmail;
