@@ -149,6 +149,11 @@ describe('LoginScreen', () => {
     expect(screen.getByText('Password Reset Modal')).toBeInTheDocument();
   });
 
+  it('keeps the or divider when public portal links are shown', () => {
+    render(<LoginScreen />);
+    expect(screen.getByText(/^or$/i)).toBeInTheDocument();
+  });
+
   it('navigates to the wedding guest portal', async () => {
     const user = userEvent.setup();
 
@@ -201,5 +206,36 @@ describe('LoginScreen', () => {
     const signIn = screen.getByRole('button', { name: /sign in/i });
     expect(signIn).toHaveStyle({ backgroundColor: 'rgb(38, 53, 74)' });
     expect(signIn).not.toHaveStyle({ backgroundColor: 'rgb(74, 25, 66)' });
+    expect(screen.queryByText(/^or$/i)).not.toBeInTheDocument();
+  });
+
+  it('hides the or divider on venue staff login', () => {
+    render(
+      <LoginScreen
+        brandingOverride={{
+          venueName: 'Hilltop Barn',
+          tagline: '',
+          location: '',
+          websiteUrl: '',
+          supportEmail: '',
+          primaryColor: '#111827',
+          primaryDark: '#030712',
+          primaryLight: '#374151',
+          accentColor: '#6B7280',
+          backgroundColor: '#F9FAFB',
+          textColor: '#111827',
+          headerTextColor: '#FFFFFF',
+          bodyTextColor: '#374151',
+          accentTextColor: '#111827',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          headingFontFamily: 'Inter, system-ui, sans-serif',
+        }}
+        showPublicPortalLinks={false}
+        loginScope="venue"
+      />,
+    );
+
+    expect(screen.queryByText(/^or$/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue as planner guest/i })).not.toBeInTheDocument();
   });
 });

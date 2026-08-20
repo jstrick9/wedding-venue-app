@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { applyRootStyles } from '../config';
 import type { Config } from '../types';
+import { applyDocumentBranding } from './documentBranding';
 
 /** Charcoal / white / gray used when a venue has not saved branding yet. */
 export const NEUTRAL_LOGIN_CONFIG: Config = {
@@ -139,7 +140,13 @@ export function mergePlatformLoginBranding(partial?: Partial<Config> | null): Co
 }
 
 export function applyLoginBranding(config?: Partial<Config> | null): void {
-  applyRootStyles(mergeVenueLoginBranding(config));
+  const merged = mergeVenueLoginBranding(config);
+  applyRootStyles(merged);
+  applyDocumentBranding({
+    name: config?.venueName || merged.venueName,
+    logoUrl: config?.logoUrl || merged.logoUrl,
+    primaryColor: config?.primaryColor || merged.primaryColor,
+  });
 }
 
 export function loginBackgroundStyle(config?: Partial<Config> | null): CSSProperties {

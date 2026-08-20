@@ -39,6 +39,7 @@ import {
 } from '../utils/venueAdminInviteEmail';
 import { buildPlatformConsoleHash, parsePlatformConsoleHash, type PlatformConsoleSection } from '../utils/platformConsoleRoute';
 import { filterPlatformVenues, listVenueRegions } from '../utils/platformVenueFilters';
+import { applyDocumentBranding } from '../utils/documentBranding';
 
 
 interface PlatformAdminPortalProps {
@@ -170,6 +171,14 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   }, []);
 
   useEffect(() => { void loadConsole(); }, [loadConsole]);
+
+  useEffect(() => {
+    applyDocumentBranding({
+      name: platformBranding.venueName,
+      logoUrl: platformBranding.logoUrl,
+      primaryColor: platformBranding.primaryColor,
+    });
+  }, [platformBranding.venueName, platformBranding.logoUrl, platformBranding.primaryColor]);
 
   useEffect(() => {
     if (route.section !== 'chat' || chatOrganizationId || organizations.length === 0) return;

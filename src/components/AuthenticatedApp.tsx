@@ -18,6 +18,7 @@ import { CenteredModal } from './CenteredModal';
 import { buildMessageThreadId } from '../models/DirectMessage';
 import { useSubmissionWorkflow } from '../hooks/useSubmissionWorkflow';
 import { getConfig, useBrandingConfig } from '../config';
+import { applyDocumentBranding } from '../utils/documentBranding';
 import { checkTableCollision, checkFixtureCollision } from '../utils/collisionDetection';
 import { subscribeToCollaborationEvents } from '../utils/collaborationChannel';
 import {
@@ -756,12 +757,14 @@ export default function AuthenticatedApp() {
 
   useEffect(() => { rootStyles(brandingConfig); }, [brandingConfig]);
 
-  // Keep the browser tab title in sync with the configured venue name (branding).
+  // Keep the browser tab title and favicon in sync with venue branding.
   useEffect(() => {
-    document.title = brandingConfig.venueName
-      ? `${brandingConfig.venueName} | Wedding Layout Planner`
-      : 'Wedding Layout Planner';
-  }, [brandingConfig.venueName]);
+    applyDocumentBranding({
+      name: brandingConfig.venueName,
+      logoUrl: brandingConfig.logoUrl,
+      primaryColor: brandingConfig.primaryColor,
+    });
+  }, [brandingConfig.venueName, brandingConfig.logoUrl, brandingConfig.primaryColor]);
 
   // Warn before a browser refresh/close if the working layout has unsaved changes.
   useEffect(() => {

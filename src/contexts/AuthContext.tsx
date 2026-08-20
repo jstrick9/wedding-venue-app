@@ -25,6 +25,7 @@ import {
   signUpOrganizationInvite,
   signUpWithSupabase,
 } from '../services/backend/AuthBackend';
+import { loginHashAfterLogout } from '../utils/loginRoute';
 
 export interface AuthRegistrationParams {
   email: string;
@@ -245,6 +246,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = () => {
+    const nextHash = loginHashAfterLogout(window.location.hash, organizationSlug);
     setUser(null);
     setOrganizationId(null);
     setOrganizationSlug(null);
@@ -253,6 +255,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     clearSession();
     if (shouldUseSupabaseAuth()) {
       void signOutSupabase();
+    }
+    if ((window.location.hash || '') !== nextHash) {
+      window.location.hash = nextHash;
     }
   };
 

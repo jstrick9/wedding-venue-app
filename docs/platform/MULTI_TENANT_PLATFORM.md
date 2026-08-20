@@ -114,6 +114,8 @@ After the SQL runs:
 - The venue login resolves safe branding through the public branding RPC and only accepts an active membership in that organization.
 - Couples and wedding guests do not receive venue login controls. Their invite links open the appropriate public portal directly.
 - New couple and guest links carry the venue slug and are checked against the organization stored on the server snapshot. Legacy token-only links remain available for migration compatibility.
+- Browser tab title and favicon follow the active surface branding: platform console/login use **Platform → Branding** name and logo; venue staff, couples, and guest portals use that venue's name and logo. Signing out of the platform console returns to `#/platform-login` instead of leaving a leftover `#/platform-admin/…` hash.
+- Platform and venue staff login screens do not show the public “or / Continue as Planner Guest” divider.
 
 ## Portal access lifecycle and reissue
 

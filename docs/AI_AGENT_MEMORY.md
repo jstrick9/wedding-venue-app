@@ -569,5 +569,18 @@ See `docs/reviews/187-github-edge-function-deploy-2026-08-19.md`. `.github/workf
 
 **Rule going forward:** treat #187 + §9.12–9.18 as current truth. After the two GitHub secrets exist, run the Action once, then address autocomplete is live if `GEOAPIFY_API_KEY` is already set.
 
+### 9.19 Staff login chrome and branded browser tabs (Review #195, 2026-08-20)
+
+See `docs/reviews/195-login-or-divider-and-tab-branding-2026-08-20.md`.
+
+Platform and venue staff login no longer render the unused **or** divider. Signing
+out of the platform console navigates to `#/platform-login` instead of leaving
+`#/platform-admin/…`. Browser tab title and favicon come from the active surface
+branding (platform console name/logo; venue/couple/guest venue branding). The
+HTML shell default is the platform name, not Seven Paths Manor.
+
+**Rule going forward:** treat #195 + §9.12–9.19 as current truth for login chrome
+and tab identity.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

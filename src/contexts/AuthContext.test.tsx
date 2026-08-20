@@ -180,6 +180,7 @@ describe('AuthContext', () => {
 
   it('logout clears sessions', async () => {
     const user = userEvent.setup();
+    window.location.hash = '#/platform-admin/branding';
 
     render(
       <AuthProvider>
@@ -200,6 +201,7 @@ describe('AuthContext', () => {
 
     expect(localStorage.getItem('spm_session_v2')).toBeNull();
     expect(localStorage.getItem('spm_session')).toBeNull();
+    expect(window.location.hash).toBe('#/platform-login');
   });
 
   it('createUser stores a hashed-password user record', async () => {

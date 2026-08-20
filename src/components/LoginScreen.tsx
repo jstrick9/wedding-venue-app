@@ -467,11 +467,13 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
             </button>
           </form>
 
+          {(showPublicPortalLinks || (usingSupabaseAuth && allowAccountCreation) || showSignUp) && (
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-gray-200" />
             <span className="text-xs uppercase tracking-wide text-gray-400">or</span>
             <div className="h-px flex-1 bg-gray-200" />
           </div>
+          )}
 
           {showSignUp && (
             <form onSubmit={(e) => void handleSignUpSubmit(e)} className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">

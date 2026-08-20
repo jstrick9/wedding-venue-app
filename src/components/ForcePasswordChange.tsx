@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getConfig } from '../config';
 import { resolveLoginChrome } from '../utils/loginBranding';
+import { applyDocumentBranding } from '../utils/documentBranding';
 
 /**
  * Forced "change your password on first login" gate.
@@ -23,6 +24,14 @@ export default function ForcePasswordChange() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    applyDocumentBranding({
+      name: config.venueName,
+      logoUrl: config.logoUrl,
+      primaryColor: config.primaryColor,
+    });
+  }, [config.venueName, config.logoUrl, config.primaryColor]);
 
   if (!user) return null;
 

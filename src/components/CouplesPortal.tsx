@@ -71,6 +71,7 @@ import { getVenueVendors } from '../hooks/useVendors';
 import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import { useBrandingConfig } from '../config';
+import { applyDocumentBranding } from '../utils/documentBranding';
 import { getPublicVenueBranding } from '../services/platform/publicVenueService';
 import { getActiveOrganizationSlug } from '../services/platform/organizationContext';
 import { isPortalAccessActive } from '../services/couples/accessLifecycle';
@@ -137,6 +138,15 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       if (branding) setPublicVenueConfig(branding.config);
     });
   }, [venueSlug]);
+
+  useEffect(() => {
+    applyDocumentBranding({
+      name: config.venueName,
+      logoUrl: config.logoUrl,
+      primaryColor: config.primaryColor,
+      suffix: 'Couples Portal',
+    });
+  }, [config.venueName, config.logoUrl, config.primaryColor]);
   const [session, setSession] = useState(() => loadCoupleSession());
   const [events, setEvents] = useState<CoupleEvent[]>(() => getCoupleEvents());
   const [activeTab, setActiveTab] = useState<TabId>('overview');

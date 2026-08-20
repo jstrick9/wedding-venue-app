@@ -54,6 +54,7 @@ import {
 } from '../utils/guestPortal';
 import { verifySecret } from '../utils/auth';
 import { useBrandingConfig } from '../config';
+import { applyDocumentBranding } from '../utils/documentBranding';
 import { getPublicVenueBranding } from '../services/platform/publicVenueService';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../constants/storageVersions';
@@ -294,12 +295,15 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
   const eventEndDate = config?.eventEndDate ? new Date(config.eventEndDate) : null;
   const today = new Date();
 
-  // Browser tab title reflects the event (falls back to a generic label).
+  // Browser tab title and favicon follow venue branding (plus the event name).
   useEffect(() => {
-    document.title = config?.eventTitle
-      ? `${config.eventTitle} | Guest Portal`
-      : 'Wedding Guest Portal';
-  }, [config?.eventTitle]);
+    applyDocumentBranding({
+      name: venueConfig.venueName,
+      logoUrl: venueConfig.logoUrl,
+      primaryColor: venueConfig.primaryColor,
+      suffix: config?.eventTitle || 'Guest Portal',
+    });
+  }, [venueConfig.venueName, venueConfig.logoUrl, venueConfig.primaryColor, config?.eventTitle]);
 
   const isMultiDay = !!config?.isMultiDay && !!eventEndDate && !!eventStartDate;
 

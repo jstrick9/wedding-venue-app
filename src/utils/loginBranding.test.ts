@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PLATFORM_LOGIN_CONFIG,
   NEUTRAL_LOGIN_CONFIG,
+  applyLoginBranding,
   loginBackgroundStyle,
   mergePlatformLoginBranding,
   mergeVenueLoginBranding,
@@ -39,6 +40,16 @@ describe('login branding', () => {
     expect(venue.primaryColor).toBe('#111827');
     expect(venue.venueName).toBe('New Chapel');
     expect(JSON.stringify(venue)).not.toContain('#4A1942');
+  });
+
+  it('sets the browser tab from login branding instead of Seven Paths Manor', () => {
+    applyLoginBranding({
+      venueName: 'Platform Console',
+      logoUrl: '',
+      primaryColor: '#26354A',
+    });
+    expect(document.title).toBe('Platform Console');
+    expect(document.title).not.toContain('Seven Paths Manor');
   });
 
   it('builds a login background from branding instead of a hardcoded plum pattern', () => {
