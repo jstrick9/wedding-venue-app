@@ -205,6 +205,12 @@ One-time browser setup (do not paste these values into chat or Vercel):
 4. GitHub → **Actions → Deploy Edge Functions → Run workflow → Run workflow**.
 5. Confirm the run is green, then Supabase → **Edge Functions** lists `geocode-venue` with today’s deploy time.
 
+The yellow **Node.js 20 is deprecated** line is a warning, not the failure. A red **403 / necessary privileges** means the GitHub secret is the wrong kind of token or the wrong project:
+
+- Token must come from [Account → Access Tokens](https://supabase.com/dashboard/account/tokens) while signed in as the Supabase **Owner** or **Administrator**. It is not the project anon / publishable / service_role key from **Project Settings → API**.
+- `SUPABASE_PROJECT_ID` must be **Project Settings → General → Reference ID** (the subdomain of `https://….supabase.co`).
+- After replacing a secret, GitHub → **Actions → Deploy Edge Functions → Run workflow** again.
+
 Later function edits on `main` deploy automatically. Changing `GEOAPIFY_API_KEY` in the Supabase secret store does not require a redeploy.
 
 ### 3. Apply SQL

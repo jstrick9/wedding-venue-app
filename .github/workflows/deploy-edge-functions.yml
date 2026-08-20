@@ -19,10 +19,15 @@ jobs:
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: latest
 
@@ -33,5 +38,17 @@ jobs:
             exit 1
           fi
 
+      - name: Verify token can administer the project
+        run: |
+          set -euo pipefail
+          HTTP=$(curl -sS -o /tmp/supabase-project.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}")
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Supabase Management API returned HTTP ${HTTP} for project ${SUPABASE_PROJECT_ID}. SUPABASE_ACCESS_TOKEN must be an Account Access Token from https://supabase.com/dashboard/account/tokens, created while signed in as an Owner or Administrator of that project. Do not use the project's anon, publishable, or service_role API keys. SUPABASE_PROJECT_ID must be Project Settings → General → Reference ID."
+            python3 -c 'import json; print(json.load(open("/tmp/supabase-project.json")).get("message","(no message)"))' || true
+            exit 1
+          fi
+
       - name: Deploy all Edge Functions
-        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID"
+        run: supabase functions deploy --use-api --project-ref "$SUPABASE_PROJECT_ID"
