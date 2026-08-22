@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Outlook SMTPS port 465 (#201, 2026-08-22)** — “Failed to send a request to the Edge Function” was a hung connect to blocked port 587. send-email now uses Outlook SMTPS on 465 with timeouts and always returns CORS JSON. Full report: **`docs/reviews/201-outlook-smtps-port-465-2026-08-22.md`**.
 - ✅ **Automatic Outlook SMTP + HTML invite (#200, 2026-08-22)** — fixed `DEFAULT_SMTP_USER` crash so invites send unattended; HTML “Set up your account” button; `Hello {first} {last},`; no auto-open Outlook; compose no longer shows `+` for spaces. Full report: **`docs/reviews/200-outlook-smtp-html-invite-2026-08-22.md`**.
 - ✅ **Outlook invite delivery (#199, 2026-08-21)** — unattended send from `wedding-vip@outlook.com` (Outlook SMTP) plus one-click Outlook compose / mailto when email is not configured. Full report: **`docs/reviews/199-outlook-invite-delivery-2026-08-21.md`**.
 - ✅ **Venue Home URL + Admin sidebar chrome (#198, 2026-08-20)** — workspace hash is `#/home` (leftover `#/dashboard`/`#/venue` rewrite); Admin and Design Studio return with `← Home`; Admin rail matches Home branding and mouse-hold resize while keeping #197 dropdown groups. Full report: **`docs/reviews/198-venue-home-hash-and-admin-sidebar-chrome-2026-08-20.md`**.

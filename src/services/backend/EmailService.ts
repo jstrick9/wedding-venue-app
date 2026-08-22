@@ -15,6 +15,8 @@ export interface SendTransactionalEmailParams {
   templateData?: Record<string, unknown>;
 }
 
+const SEND_EMAIL_TIMEOUT_MS = 25000;
+
 function errorFromUnknown(value: unknown): string {
   if (typeof value === 'string' && value.trim()) return value.trim();
   if (value && typeof value === 'object' && 'error' in value) {
@@ -22,6 +24,19 @@ function errorFromUnknown(value: unknown): string {
     if (typeof nested === 'string' && nested.trim()) return nested.trim();
   }
   return '';
+}
+
+export function describeEmailDeliveryFailure(error: unknown, data?: unknown): string {
+  const fromData = errorFromUnknown(data);
+  if (fromData) return fromData;
+  if (error && typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
+    const message = (error as { message: string }).message.trim();
+    if (/failed to send a request to the edge function/i.test(message)) {
+      return 'The send-email function did not respond. Supabase Edge blocks Outlook port 587, so invites now use SMTPS on port 465. Wait for Deploy Edge Functions, then reissue. If it still fails, open send-email logs.';
+    }
+    if (message) return message;
+  }
+  return 'Email delivery failed.';
 }
 
 async function describeFunctionError(error: unknown, data: unknown): Promise<string> {
@@ -38,12 +53,8 @@ async function describeFunctionError(error: unknown, data: unknown): Promise<str
         // ignore unreadable function error bodies
       }
     }
-    if ('message' in error && typeof (error as { message: unknown }).message === 'string') {
-      const message = (error as { message: string }).message.trim();
-      if (message) return message;
-    }
   }
-  return 'Email delivery failed.';
+  return describeEmailDeliveryFailure(error, data);
 }
 
 export async function sendTransactionalEmail(params: SendTransactionalEmailParams): Promise<void> {
@@ -51,14 +62,25 @@ export async function sendTransactionalEmail(params: SendTransactionalEmailParam
     throw new Error('Email delivery requires Supabase Edge Functions configuration.');
   }
 
-  const { data, error } = await getSupabaseClient().functions.invoke('send-email', {
-    body: params,
-  });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const invoked = getSupabaseClient().functions.invoke('send-email', { body: params });
+    const { data, error } = await Promise.race([
+      invoked,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error('The send-email function timed out after 25 seconds. Check send-email logs.'));
+        }, SEND_EMAIL_TIMEOUT_MS);
+      }),
+    ]);
 
-  if (error) throw new Error(await describeFunctionError(error, data));
-  const payloadError = errorFromUnknown(data);
-  if (payloadError && !(data && typeof data === 'object' && 'ok' in data && (data as { ok?: unknown }).ok === true)) {
-    throw new Error(payloadError);
+    if (error) throw new Error(await describeFunctionError(error, data));
+    const payloadError = errorFromUnknown(data);
+    if (payloadError && !(data && typeof data === 'object' && 'ok' in data && (data as { ok?: unknown }).ok === true)) {
+      throw new Error(payloadError);
+    }
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

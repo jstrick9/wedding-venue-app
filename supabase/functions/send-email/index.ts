@@ -7,15 +7,22 @@
 // Optional:
 //   SMTP_USER / SMTP_HOST / SMTP_PORT / EMAIL_FROM
 //   RESEND_API_KEY             used first when a custom domain is verified
+//
+// Supabase Edge / Deno Deploy blocks outbound SMTP on ports 25 and 587.
+// Outlook is sent over implicit TLS on port 465 only. denomailer is not used
+// because a hung 587 connect surfaces in the browser as
+// "Failed to send a request to the Edge Function".
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
 const DEFAULT_SMTP_USER = 'wedding-vip@outlook.com';
 const DEFAULT_SMTP_HOST = 'smtp-mail.outlook.com';
 const DEFAULT_FROM = 'Wedding VIP <wedding-vip@outlook.com>';
 const SETUP_ACCOUNT_BUTTON_LABEL = 'Set up your account';
+const SMTP_CONNECT_TIMEOUT_MS = 8000;
+const SMTP_COMMAND_TIMEOUT_MS = 8000;
+const SMTP_OVERALL_TIMEOUT_MS = 18000;
 
 type EmailPurpose =
   | 'invitation'
@@ -73,6 +80,11 @@ function jsonWith(corsHeaders: Record<string, string>, body: unknown, status = 2
 
 function sanitizeEmail(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function extractEmailAddress(value: string): string {
+  const angled = value.match(/<([^>]+)>/);
+  return sanitizeEmail(angled?.[1] || value);
 }
 
 function escapeHtml(value: unknown): string {
@@ -247,120 +259,134 @@ async function ensureRateLimit(supabase: ReturnType<typeof createClient>, organi
   }
 }
 
+function resolveSmtpPort(raw: string): number {
+  const parsed = Number(raw || '465');
+  if (!Number.isFinite(parsed) || parsed === 25 || parsed === 587) return 465;
+  return parsed;
+}
+
 serve(async (req) => {
   const corsHeaders = corsHeadersFor(req);
   const json = (body: unknown, status = 200) => jsonWith(corsHeaders, body, status);
 
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
-  const smtpUser = Deno.env.get('SMTP_USER') || DEFAULT_SMTP_USER;
-  const smtpPass = Deno.env.get('SMTP_PASS') || '';
-  const smtpHost = Deno.env.get('SMTP_HOST') || DEFAULT_SMTP_HOST;
-  const smtpPort = Number(Deno.env.get('SMTP_PORT') || '587');
-  const emailFrom = Deno.env.get('EMAIL_FROM') || DEFAULT_FROM;
-  const canResend = Boolean(resendApiKey);
-  const canSmtp = Boolean(smtpUser && smtpPass);
-
-  if (!supabaseUrl || !serviceRoleKey || (!canResend && !canSmtp)) {
-    return json({ error: 'Email service is not configured. Set SMTP_PASS for Outlook (wedding-vip@outlook.com) or RESEND_API_KEY + EMAIL_FROM.' }, 500);
-  }
-
-  const authHeader = req.headers.get('Authorization') || '';
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-
-  const { data: userData, error: userError } = await supabase.auth.getUser(
-    authHeader.replace(/^Bearer\s+/i, ''),
-  );
-
-  if (userError || !userData.user) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  let payload: SendEmailRequest;
   try {
-    payload = (await req.json()) as SendEmailRequest;
-  } catch {
-    return json({ error: 'Invalid JSON request body.' }, 400);
-  }
+    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+    if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  const to = sanitizeEmail(payload.to || '');
-  if (!to || !payload.organizationId || !payload.purpose) {
-    return json({ error: 'Missing required to, organizationId, or purpose.' }, 400);
-  }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
+    const smtpUser = Deno.env.get('SMTP_USER') || DEFAULT_SMTP_USER;
+    const smtpPass = Deno.env.get('SMTP_PASS') || '';
+    const smtpHost = Deno.env.get('SMTP_HOST') || DEFAULT_SMTP_HOST;
+    const smtpPort = resolveSmtpPort(Deno.env.get('SMTP_PORT') || '465');
+    const emailFrom = Deno.env.get('EMAIL_FROM') || DEFAULT_FROM;
+    const canResend = Boolean(resendApiKey);
+    const canSmtp = Boolean(smtpUser && smtpPass);
 
-  if (payload.purpose === 'venue_admin_invite') {
-    const { data: platformRole } = await supabase
-      .from('platform_memberships')
-      .select('role,status')
-      .eq('user_id', userData.user.id)
-      .eq('status', 'active')
-      .in('role', ['platform_owner', 'platform_admin'])
-      .maybeSingle();
-    if (!platformRole) return json({ error: 'Platform administrator access required to send venue invites.' }, 403);
-  } else {
-    const allowedRoles = PURPOSE_ROLES[payload.purpose as Exclude<EmailPurpose, 'venue_admin_invite'>];
-    if (!allowedRoles) return json({ error: 'Unsupported email purpose.' }, 400);
-    const { data: membership, error: membershipError } = await supabase
-      .from('organization_memberships')
-      .select('role,status')
-      .eq('organization_id', payload.organizationId)
-      .eq('user_id', userData.user.id)
-      .eq('status', 'active')
-      .maybeSingle();
-    if (membershipError || !membership) return json({ error: 'Forbidden' }, 403);
-    if (!allowedRoles.includes(membership.role as AppRole)) {
-      return json({ error: 'Insufficient role for this email purpose.' }, 403);
+    if (!supabaseUrl || !serviceRoleKey || (!canResend && !canSmtp)) {
+      return json({ error: 'Email service is not configured. Set SMTP_PASS for Outlook (wedding-vip@outlook.com) or RESEND_API_KEY + EMAIL_FROM.' }, 500);
     }
-  }
 
-  let rendered: RenderedEmail;
-  try {
-    await ensureRateLimit(supabase, payload.organizationId, userData.user.id);
-    rendered = renderEmail(payload.purpose, payload.templateData);
-  } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Unable to prepare email.' }, 400);
-  }
+    const authHeader = req.headers.get('Authorization') || '';
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-  const delivery = await deliverRenderedEmail({
-    canResend,
-    resendApiKey,
-    canSmtp,
-    smtpHost,
-    smtpPort,
-    smtpUser,
-    smtpPass,
-    emailFrom,
-    to,
-    rendered,
-  });
+    const { data: userData, error: userError } = await supabase.auth.getUser(
+      authHeader.replace(/^Bearer\s+/i, ''),
+    );
 
-  await supabase.from('audit_logs').insert({
-    organization_id: payload.organizationId,
-    event_id: payload.eventId ?? null,
-    actor_id: userData.user.id,
-    action: delivery.ok ? `email.${payload.purpose}.sent` : `email.${payload.purpose}.failed`,
-    entity_type: 'email',
-    after_data: {
+    if (userError || !userData.user) {
+      return json({ error: 'Unauthorized' }, 401);
+    }
+
+    let payload: SendEmailRequest;
+    try {
+      payload = (await req.json()) as SendEmailRequest;
+    } catch {
+      return json({ error: 'Invalid JSON request body.' }, 400);
+    }
+
+    const to = sanitizeEmail(payload.to || '');
+    if (!to || !payload.organizationId || !payload.purpose) {
+      return json({ error: 'Missing required to, organizationId, or purpose.' }, 400);
+    }
+
+    if (payload.purpose === 'venue_admin_invite') {
+      const { data: platformRole } = await supabase
+        .from('platform_memberships')
+        .select('role,status')
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .in('role', ['platform_owner', 'platform_admin'])
+        .maybeSingle();
+      if (!platformRole) return json({ error: 'Platform administrator access required to send venue invites.' }, 403);
+    } else {
+      const allowedRoles = PURPOSE_ROLES[payload.purpose as Exclude<EmailPurpose, 'venue_admin_invite'>];
+      if (!allowedRoles) return json({ error: 'Unsupported email purpose.' }, 400);
+      const { data: membership, error: membershipError } = await supabase
+        .from('organization_memberships')
+        .select('role,status')
+        .eq('organization_id', payload.organizationId)
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (membershipError || !membership) return json({ error: 'Forbidden' }, 403);
+      if (!allowedRoles.includes(membership.role as AppRole)) {
+        return json({ error: 'Insufficient role for this email purpose.' }, 403);
+      }
+    }
+
+    let rendered: RenderedEmail;
+    try {
+      await ensureRateLimit(supabase, payload.organizationId, userData.user.id);
+      rendered = renderEmail(payload.purpose, payload.templateData);
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : 'Unable to prepare email.' }, 400);
+    }
+
+    const delivery = await deliverRenderedEmail({
+      canResend,
+      resendApiKey,
+      canSmtp,
+      smtpHost,
+      smtpPort,
+      smtpUser,
+      smtpPass,
+      emailFrom,
       to,
-      subject: rendered.subject,
-      purpose: payload.purpose,
-      provider: delivery.provider,
-      providerStatus: delivery.status,
-      providerResponse: delivery.details,
-    },
-  });
+      rendered,
+    });
 
-  if (!delivery.ok) {
-    return json({ error: 'Email provider rejected request.', details: delivery.details }, 502);
+    const { error: auditError } = await supabase.from('audit_logs').insert({
+      organization_id: payload.organizationId,
+      event_id: payload.eventId ?? null,
+      actor_id: userData.user.id,
+      action: delivery.ok ? `email.${payload.purpose}.sent` : `email.${payload.purpose}.failed`,
+      entity_type: 'email',
+      after_data: {
+        to,
+        subject: rendered.subject,
+        purpose: payload.purpose,
+        provider: delivery.provider,
+        providerStatus: delivery.status,
+        providerResponse: delivery.details,
+      },
+    });
+    if (auditError) console.error('send-email audit_logs insert failed', auditError.message);
+
+    if (!delivery.ok) {
+      const detailError = delivery.details && typeof delivery.details === 'object' && delivery.details !== null && 'error' in delivery.details
+        ? String((delivery.details as { error?: unknown }).error || '').trim()
+        : '';
+      return json({ error: detailError || 'Email provider rejected request.', details: delivery.details }, 502);
+    }
+
+    return json({ ok: true, provider: delivery.provider, details: delivery.details });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'send-email failed.' }, 500);
   }
-
-  return json({ ok: true, provider: delivery.provider, details: delivery.details });
 });
 
 async function sendViaResend(resendApiKey: string, emailFrom: string, to: string, rendered: RenderedEmail) {
@@ -382,45 +408,124 @@ async function sendViaResend(resendApiKey: string, emailFrom: string, to: string
   return { ok: resendResponse.ok, status: resendResponse.status, details: resendBody };
 }
 
-async function sendViaOutlookSmtpOnce(opts: {
-  smtpHost: string;
-  smtpPort: number;
-  implicitTls: boolean;
-  smtpUser: string;
-  smtpPass: string;
-  emailFrom: string;
-  to: string;
-  rendered: RenderedEmail;
-}) {
-  const client = new SMTPClient({
-    connection: {
-      hostname: opts.smtpHost,
-      port: opts.smtpPort,
-      tls: opts.implicitTls,
-      auth: {
-        username: opts.smtpUser,
-        password: opts.smtpPass,
-      },
-    },
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
   });
-  try {
-    await client.send({
-      from: opts.emailFrom,
-      to: opts.to,
-      subject: opts.rendered.subject,
-      content: opts.rendered.text,
-      html: opts.rendered.html,
-    });
-    return {
-      ok: true as const,
-      status: 250,
-      details: { provider: 'outlook-smtp', host: opts.smtpHost, port: opts.smtpPort },
-    };
-  } finally {
+}
+
+function toBase64(value: string): string {
+  return btoa(unescape(encodeURIComponent(value)));
+}
+
+function buildRfc822(opts: { from: string; to: string; subject: string; text: string; html: string }): string {
+  const boundary = `wvip-${crypto.randomUUID()}`;
+  const headers = [
+    `From: ${opts.from}`,
+    `To: ${opts.to}`,
+    `Subject: ${opts.subject}`,
+    `Date: ${new Date().toUTCString()}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+  ];
+  const body = [
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="utf-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    opts.text.replace(/\r?\n/g, '\r\n'),
+    `--${boundary}`,
+    'Content-Type: text/html; charset="utf-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    opts.html.replace(/\r?\n/g, '\r\n'),
+    `--${boundary}--`,
+    '',
+  ].join('\r\n');
+  return `${headers.join('\r\n')}\r\n\r\n${body}`;
+}
+
+function dotStuff(message: string): string {
+  return message
+    .replace(/\r?\n/g, '\r\n')
+    .split('\r\n')
+    .map((line) => (line.startsWith('.') ? `.${line}` : line))
+    .join('\r\n');
+}
+
+class SmtpClient {
+  private leftover = '';
+  constructor(private conn: Deno.Conn) {}
+
+  static async connect(hostname: string, port: number): Promise<SmtpClient> {
+    const conn = await withTimeout(
+      Deno.connectTls({ hostname, port }),
+      SMTP_CONNECT_TIMEOUT_MS,
+      `TLS connect ${hostname}:${port}`,
+    );
+    const client = new SmtpClient(conn);
+    const greeting = await client.readResponse();
+    if (greeting.code !== 220) throw new Error(`SMTP greeting failed (${greeting.code}): ${greeting.text}`);
+    return client;
+  }
+
+  async writeLine(line: string): Promise<void> {
+    const payload = new TextEncoder().encode(`${line}\r\n`);
+    let offset = 0;
+    while (offset < payload.length) {
+      const written = await this.conn.write(payload.subarray(offset));
+      offset += written;
+    }
+  }
+
+  async readResponse(): Promise<{ code: number; text: string }> {
+    const decoder = new TextDecoder();
+    const lines: string[] = [];
+    while (true) {
+      if (!this.leftover.includes('\n')) {
+        const chunk = new Uint8Array(1024);
+        const n = await withTimeout(this.conn.read(chunk), SMTP_COMMAND_TIMEOUT_MS, 'SMTP read');
+        if (n === null) throw new Error('SMTP connection closed');
+        this.leftover += decoder.decode(chunk.subarray(0, n));
+        continue;
+      }
+      const newline = this.leftover.indexOf('\n');
+      const raw = this.leftover.slice(0, newline).replace(/\r$/, '');
+      this.leftover = this.leftover.slice(newline + 1);
+      if (!raw) continue;
+      lines.push(raw);
+      if (/^\d{3} /.test(raw)) {
+        return { code: Number(raw.slice(0, 3)), text: lines.join('\n') };
+      }
+    }
+  }
+
+  async command(line: string, expected: number | number[]): Promise<{ code: number; text: string }> {
+    await this.writeLine(line);
+    const response = await this.readResponse();
+    const allowed = Array.isArray(expected) ? expected : [expected];
+    if (!allowed.includes(response.code)) {
+      throw new Error(`SMTP ${line.split(' ')[0]} failed (${response.code}): ${response.text}`);
+    }
+    return response;
+  }
+
+  async close(): Promise<void> {
     try {
-      await client.close();
+      await this.writeLine('QUIT');
     } catch {
-      // ignore close errors after a send failure
+      // ignore
+    }
+    try {
+      this.conn.close();
+    } catch {
+      // ignore
     }
   }
 }
@@ -434,21 +539,38 @@ async function sendViaOutlookSmtp(opts: {
   to: string;
   rendered: RenderedEmail;
 }) {
-  const attempts = [{ port: opts.smtpPort, implicitTls: opts.smtpPort === 465 }];
-  if (opts.smtpPort === 587) attempts.push({ port: 465, implicitTls: true });
-  let lastError: unknown;
-  for (const attempt of attempts) {
+  const send = async () => {
+    console.log('send-email: Outlook SMTPS', { host: opts.smtpHost, port: opts.smtpPort, user: opts.smtpUser });
+    const client = await SmtpClient.connect(opts.smtpHost, opts.smtpPort);
     try {
-      return await sendViaOutlookSmtpOnce({
-        ...opts,
-        smtpPort: attempt.port,
-        implicitTls: attempt.implicitTls,
-      });
-    } catch (error) {
-      lastError = error;
+      await client.command(`EHLO weddingvip`, 250);
+      await client.command('AUTH LOGIN', 334);
+      await client.command(toBase64(opts.smtpUser), 334);
+      await client.command(toBase64(opts.smtpPass), 235);
+      await client.command(`MAIL FROM:<${extractEmailAddress(opts.emailFrom)}>`, 250);
+      await client.command(`RCPT TO:<${opts.to}>`, [250, 251]);
+      await client.command('DATA', 354);
+      const rfc822 = dotStuff(buildRfc822({
+        from: opts.emailFrom,
+        to: opts.to,
+        subject: opts.rendered.subject,
+        text: opts.rendered.text,
+        html: opts.rendered.html,
+      }));
+      await client.writeLine(`${rfc822}\r\n.`);
+      const dataResult = await client.readResponse();
+      if (dataResult.code !== 250) throw new Error(`SMTP DATA failed (${dataResult.code}): ${dataResult.text}`);
+      return {
+        ok: true as const,
+        status: 250,
+        details: { provider: 'outlook-smtp', host: opts.smtpHost, port: opts.smtpPort },
+      };
+    } finally {
+      await client.close();
     }
-  }
-  throw lastError instanceof Error ? lastError : new Error('Outlook SMTP failed');
+  };
+
+  return withTimeout(send(), SMTP_OVERALL_TIMEOUT_MS, `Outlook SMTPS ${opts.smtpHost}:${opts.smtpPort}`);
 }
 
 async function deliverRenderedEmail(opts: {
@@ -493,7 +615,12 @@ async function deliverRenderedEmail(opts: {
       });
       return { ok: smtp.ok, provider: 'outlook-smtp', status: smtp.status, details: smtp.details };
     } catch (error) {
-      last = { ok: false, provider: 'outlook-smtp', status: 502, details: { error: error instanceof Error ? error.message : 'Outlook SMTP failed' } };
+      last = {
+        ok: false,
+        provider: 'outlook-smtp',
+        status: 502,
+        details: { error: error instanceof Error ? error.message : 'Outlook SMTP failed' },
+      };
     }
   }
 

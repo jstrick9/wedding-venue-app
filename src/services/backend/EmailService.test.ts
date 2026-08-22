@@ -8,7 +8,7 @@ vi.mock('./supabaseClient', () => ({
   isSupabaseConfigured: () => configuredMock(),
 }));
 
-import { sendTransactionalEmail } from './EmailService';
+import { describeEmailDeliveryFailure, sendTransactionalEmail } from './EmailService';
 
 describe('sendTransactionalEmail', () => {
   beforeEach(() => {
@@ -35,5 +35,9 @@ describe('sendTransactionalEmail', () => {
       purpose: 'venue_admin_invite',
       organizationId: 'org9',
     })).rejects.toThrow(/SMTP_PASS/);
+  });
+
+  it('explains a browser fetch failure instead of repeating the generic invoke message', () => {
+    expect(describeEmailDeliveryFailure({ message: 'Failed to send a request to the Edge Function' })).toMatch(/port 465/i);
   });
 });

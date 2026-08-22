@@ -650,5 +650,17 @@ first and last name.
 **Rule going forward:** treat #200 + §9.12–9.24 as current truth for invite
 email delivery.
 
+### 9.25 Outlook SMTPS on port 465 (Review #201, 2026-08-22)
+
+See `docs/reviews/201-outlook-smtps-port-465-2026-08-22.md`.
+
+Supabase Edge blocks outbound ports **25** and **587**. A 587 Outlook SMTP
+connect hangs and the browser reports `Failed to send a request to the Edge
+Function`. `send-email` now uses implicit TLS on **port 465**, has hard
+timeouts, and never throws an uncaught handler error.
+
+**Rule going forward:** treat #201 + §9.12–9.25 as current truth for invite
+email delivery. Do not send from Edge Functions on port 587.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
