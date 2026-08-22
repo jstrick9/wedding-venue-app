@@ -6,7 +6,7 @@ vi.mock('../backend/EmailService', () => ({
   sendTransactionalEmail: (...args: unknown[]) => sendMock(...args),
 }));
 
-import { sendVenueAdminInviteEmail } from './venueAdminInviteMail';
+import { deliverVenueAdminInvite, sendVenueAdminInviteEmail } from './venueAdminInviteMail';
 
 describe('sendVenueAdminInviteEmail', () => {
   beforeEach(() => {
@@ -41,5 +41,26 @@ describe('sendVenueAdminInviteEmail', () => {
       body: 'Hello with no link',
     })).rejects.toThrow(/inviteUrl/i);
     expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it('opens Outlook compose when transactional send fails', async () => {
+    sendMock.mockRejectedValueOnce(new Error('Email service is not configured'));
+    const popup = { closed: false } as Window;
+    const open = vi.fn(() => popup);
+    vi.stubGlobal('open', open);
+    const result = await deliverVenueAdminInvite({
+      to: 'owner@hilltop.com',
+      organizationId: 'org9',
+      organizationName: 'Hilltop Barn',
+      inviteUrl: 'https://app.example/#/venue-onboarding?token=abc',
+    });
+    expect(result).toBe('outlook');
+    expect(open).toHaveBeenCalledTimes(1);
+    const firstCall = open.mock.calls[0] as unknown as [string, string, string];
+    const href = String(firstCall[0]);
+    expect(href.startsWith('https://outlook.live.com/mail/0/deeplink/compose?')).toBe(true);
+    expect(href).toContain(encodeURIComponent('owner@hilltop.com'));
+    expect(href).toContain(encodeURIComponent('#/venue-onboarding?token=abc'));
+    vi.unstubAllGlobals();
   });
 });

@@ -29,8 +29,8 @@ import type {
   PlatformOrganizationSummary,
 } from '../services/platform/platformTypes';
 import { showToast } from './Toast';
-import { sendVenueAdminInviteEmail } from '../services/platform/venueAdminInviteMail';
-import { describeUnknownError } from '../utils/unknownError';
+import { buildVenueAdminInviteCompose, deliverVenueAdminInvite } from '../services/platform/venueAdminInviteMail';
+import { OUTLOOK_INVITE_FROM, openOutlookInviteCompose, type InviteComposeMessage } from '../utils/inviteCompose';
 import {
   DEFAULT_VENUE_ADMIN_INVITE_BODY,
   DEFAULT_VENUE_ADMIN_INVITE_SUBJECT,
@@ -132,6 +132,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [result, setResult] = useState<CreateVenueOrganizationResult | null>(null);
+  const [inviteCompose, setInviteCompose] = useState<InviteComposeMessage | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [onboardVerified, setOnboardVerified] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
@@ -243,6 +244,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     setSaving(true);
     setError('');
     setResult(null);
+    setInviteCompose(null);
     try {
       setGeocoding(true);
       const coordinates = await geocodeVenueAddress({ ...form, country: 'US' });
@@ -260,20 +262,23 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       setForm(EMPTY_FORM);
       setOnboardVerified(false);
       await loadConsole();
-      try {
-        await sendVenueAdminInviteEmail({
-          to: adminEmail.value,
-          organizationId: created.organizationId,
-          organizationName: created.organizationName,
-          inviteUrl: created.inviteUrl,
-          expiresAt: created.expiresAt,
-          platformName: platformBranding.venueName,
-          subject: platformBranding.venueAdminInviteSubject,
-          body: platformBranding.venueAdminInviteBody,
-        });
-        showToast(`Created ${created.organizationName}. Invite email sent to ${adminEmail.value}.`, 'success');
-      } catch (emailErr) {
-        showToast(`Created ${created.organizationName}, but the invite email was not sent: ${describeUnknownError(emailErr, 'email failed')}. Copy the setup link. Set RESEND_API_KEY and EMAIL_FROM on the send-email Edge Function.`, 'warning');
+      const composeInput = {
+        to: adminEmail.value,
+        organizationId: created.organizationId,
+        organizationName: created.organizationName,
+        inviteUrl: created.inviteUrl,
+        expiresAt: created.expiresAt,
+        platformName: platformBranding.venueName,
+        subject: platformBranding.venueAdminInviteSubject,
+        body: platformBranding.venueAdminInviteBody,
+      };
+      const compose = buildVenueAdminInviteCompose(composeInput);
+      setInviteCompose(compose);
+      const delivered = await deliverVenueAdminInvite(composeInput);
+      if (delivered === 'sent') {
+        showToast(`Created ${created.organizationName}. Invite emailed from ${OUTLOOK_INVITE_FROM} to ${adminEmail.value}.`, 'success');
+      } else {
+        showToast(`Created ${created.organizationName}. Opened Outlook to send the invite from ${OUTLOOK_INVITE_FROM}. You can also copy the setup link.`, 'info');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the venue organization.');
@@ -309,7 +314,23 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     try {
       const next = await reissueVenueAdminInvite(organization.id, normalized.value);
       void navigator.clipboard?.writeText(next.inviteUrl);
-      showToast('Old pending invite revoked; new setup link copied.', 'success');
+      const composeInput = {
+        to: normalized.value,
+        organizationId: organization.id,
+        organizationName: organization.name,
+        inviteUrl: next.inviteUrl,
+        expiresAt: next.expiresAt,
+        platformName: platformBranding.venueName,
+        subject: platformBranding.venueAdminInviteSubject,
+        body: platformBranding.venueAdminInviteBody,
+      };
+      setInviteCompose(buildVenueAdminInviteCompose(composeInput));
+      const delivered = await deliverVenueAdminInvite(composeInput);
+      if (delivered === 'sent') {
+        showToast('Old pending invite revoked; new setup link copied and emailed from Outlook.', 'success');
+      } else {
+        showToast('Old pending invite revoked; setup link copied. Opened Outlook to send it.', 'info');
+      }
       await loadConsole();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not reissue the invite.', 'warning');
@@ -533,8 +554,13 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               geocoding={geocoding}
               error={error}
               result={result}
+              inviteCompose={inviteCompose}
               onSubmit={(event) => void handleCreateVenue(event)}
               onCopyInvite={copyInvite}
+              onOutlookInvite={() => {
+                if (!inviteCompose) return;
+                openOutlookInviteCompose(inviteCompose);
+              }}
               primaryColor={config.primaryColor || '#4A1942'}
             />
           )}
@@ -929,8 +955,10 @@ function OnboardVenueForm({
   geocoding,
   error,
   result,
+  inviteCompose,
   onSubmit,
   onCopyInvite,
+  onOutlookInvite,
   primaryColor,
 }: {
   form: typeof EMPTY_FORM;
@@ -941,8 +969,10 @@ function OnboardVenueForm({
   geocoding: boolean;
   error: string;
   result: CreateVenueOrganizationResult | null;
+  inviteCompose: InviteComposeMessage | null;
   onSubmit: (event: FormEvent) => void;
   onCopyInvite: () => void;
+  onOutlookInvite: () => void;
   primaryColor: string;
 }) {
   return (
@@ -970,7 +1000,14 @@ function OnboardVenueForm({
       {result && (
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-sm font-bold text-emerald-900">Venue created: {result.organizationSlug}</p>
-          <button type="button" onClick={onCopyInvite} className="mt-3 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800">Copy setup link</button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={onCopyInvite} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800">Copy setup link</button>
+            {inviteCompose && (
+              <button type="button" onClick={onOutlookInvite} className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-100">
+                Send with Outlook ({OUTLOOK_INVITE_FROM})
+              </button>
+            )}
+          </div>
           <p className="mt-2 break-all rounded-lg border border-emerald-200 bg-white px-3 py-2 font-mono text-[11px] text-gray-700">{result.inviteUrl}</p>
         </div>
       )}

@@ -622,5 +622,18 @@ white Home chrome (logo, name, tagline, Email/Website, brand active color,
 **Rule going forward:** treat #198 + §9.12–9.22 as current truth for venue
 Home navigation and Admin sidebar chrome.
 
+### 9.23 Outlook invite delivery without a custom domain (Review #199, 2026-08-21)
+
+See `docs/reviews/199-outlook-invite-delivery-2026-08-21.md`.
+
+Venue-admin and staff invites send unattended from **wedding-vip@outlook.com**
+via Outlook SMTP (`SMTP_PASS` on `send-email`). If SMTP/Resend is not
+configured, onboard/reissue opens Outlook.com compose (`outlook.live.com`)
+and falls back to `mailto:`. Resend remains optional for after
+weddingvip.com is verified.
+
+**Rule going forward:** treat #199 + §9.12–9.23 as current truth for invite
+email delivery.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

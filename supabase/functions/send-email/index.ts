@@ -215,11 +215,17 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const resendApiKey = Deno.env.get('RESEND_API_KEY');
-  const emailFrom = Deno.env.get('EMAIL_FROM');
+  const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
+  const smtpUser = Deno.env.get('SMTP_USER') || DEFAULT_SMTP_USER;
+  const smtpPass = Deno.env.get('SMTP_PASS') || '';
+  const smtpHost = Deno.env.get('SMTP_HOST') || DEFAULT_SMTP_HOST;
+  const smtpPort = Number(Deno.env.get('SMTP_PORT') || '587');
+  const emailFrom = Deno.env.get('EMAIL_FROM') || DEFAULT_FROM;
+  const canResend = Boolean(resendApiKey);
+  const canSmtp = Boolean(smtpUser && smtpPass);
 
-  if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !emailFrom) {
-    return json({ error: 'Email service is not configured. Set RESEND_API_KEY and EMAIL_FROM Edge Function secrets.' }, 500);
+  if (!supabaseUrl || !serviceRoleKey || (!canResend && !canSmtp)) {
+    return json({ error: 'Email service is not configured. Set SMTP_PASS for Outlook (wedding-vip@outlook.com) or RESEND_API_KEY + EMAIL_FROM.' }, 500);
   }
 
   const authHeader = req.headers.get('Authorization') || '';
@@ -280,6 +286,43 @@ serve(async (req) => {
     return json({ error: error instanceof Error ? error.message : 'Unable to prepare email.' }, 400);
   }
 
+  const delivery = await deliverRenderedEmail({
+    canResend,
+    resendApiKey,
+    canSmtp,
+    smtpHost,
+    smtpPort,
+    smtpUser,
+    smtpPass,
+    emailFrom,
+    to,
+    rendered,
+  });
+
+  await supabase.from('audit_logs').insert({
+    organization_id: payload.organizationId,
+    event_id: payload.eventId ?? null,
+    actor_id: userData.user.id,
+    action: delivery.ok ? `email.${payload.purpose}.sent` : `email.${payload.purpose}.failed`,
+    entity_type: 'email',
+    after_data: {
+      to,
+      subject: rendered.subject,
+      purpose: payload.purpose,
+      provider: delivery.provider,
+      providerStatus: delivery.status,
+      providerResponse: delivery.details,
+    },
+  });
+
+  if (!delivery.ok) {
+    return json({ error: 'Email provider rejected request.', details: delivery.details }, 502);
+  }
+
+  return json({ ok: true, provider: delivery.provider, details: delivery.details });
+});
+
+async function sendViaResend(resendApiKey: string, emailFrom: string, to: string, rendered: RenderedEmail) {
   const resendResponse = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -294,27 +337,94 @@ serve(async (req) => {
       text: rendered.text,
     }),
   });
-
   const resendBody = await resendResponse.json().catch(() => ({}));
+  return { ok: resendResponse.ok, status: resendResponse.status, details: resendBody };
+}
 
-  await supabase.from('audit_logs').insert({
-    organization_id: payload.organizationId,
-    event_id: payload.eventId ?? null,
-    actor_id: userData.user.id,
-    action: resendResponse.ok ? `email.${payload.purpose}.sent` : `email.${payload.purpose}.failed`,
-    entity_type: 'email',
-    after_data: {
-      to,
-      subject: rendered.subject,
-      purpose: payload.purpose,
-      providerStatus: resendResponse.status,
-      providerResponse: resendBody,
+async function sendViaOutlookSmtp(opts: {
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  emailFrom: string;
+  to: string;
+  rendered: RenderedEmail;
+}) {
+  const implicitTls = opts.smtpPort === 465;
+  const client = new SMTPClient({
+    connection: {
+      hostname: opts.smtpHost,
+      port: opts.smtpPort,
+      tls: implicitTls,
+      auth: {
+        username: opts.smtpUser,
+        password: opts.smtpPass,
+      },
     },
   });
+  try {
+    await client.send({
+      from: opts.emailFrom,
+      to: opts.to,
+      subject: opts.rendered.subject,
+      content: opts.rendered.text,
+      html: opts.rendered.html,
+    });
+    return { ok: true as const, status: 250, details: { provider: 'outlook-smtp', host: opts.smtpHost } };
+  } finally {
+    try {
+      await client.close();
+    } catch {
+      // ignore close errors after a send failure
+    }
+  }
+}
 
-  if (!resendResponse.ok) {
-    return json({ error: 'Email provider rejected request.', details: resendBody }, 502);
+async function deliverRenderedEmail(opts: {
+  canResend: boolean;
+  resendApiKey: string;
+  canSmtp: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  emailFrom: string;
+  to: string;
+  rendered: RenderedEmail;
+}): Promise<{ ok: boolean; provider: string; status: number; details: unknown }> {
+  let last: { ok: boolean; provider: string; status: number; details: unknown } = {
+    ok: false,
+    provider: 'none',
+    status: 500,
+    details: { error: 'No email provider configured.' },
+  };
+
+  if (opts.canResend) {
+    try {
+      const resend = await sendViaResend(opts.resendApiKey, opts.emailFrom, opts.to, opts.rendered);
+      last = { ok: resend.ok, provider: 'resend', status: resend.status, details: resend.details };
+      if (resend.ok) return last;
+    } catch (error) {
+      last = { ok: false, provider: 'resend', status: 502, details: { error: error instanceof Error ? error.message : 'Resend failed' } };
+    }
   }
 
-  return json({ ok: true, provider: resendBody });
-});
+  if (opts.canSmtp) {
+    try {
+      const smtp = await sendViaOutlookSmtp({
+        smtpHost: opts.smtpHost,
+        smtpPort: opts.smtpPort,
+        smtpUser: opts.smtpUser,
+        smtpPass: opts.smtpPass,
+        emailFrom: opts.emailFrom,
+        to: opts.to,
+        rendered: opts.rendered,
+      });
+      return { ok: smtp.ok, provider: 'outlook-smtp', status: smtp.status, details: smtp.details };
+    } catch (error) {
+      last = { ok: false, provider: 'outlook-smtp', status: 502, details: { error: error instanceof Error ? error.message : 'Outlook SMTP failed' } };
+    }
+  }
+
+  return last;
+}

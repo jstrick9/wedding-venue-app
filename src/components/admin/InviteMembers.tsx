@@ -4,6 +4,7 @@ import { getConfig } from '../../config';
 import { createInvite } from '../../services/org/inviteService';
 import { showToast } from '../Toast';
 import { normalizeEmail } from '../../utils/contactQuality';
+import { OUTLOOK_INVITE_FROM, openOutlookInviteCompose } from '../../utils/inviteCompose';
 
 const ROLES = [
   { id: 'admin', label: 'Admin' },
@@ -24,7 +25,7 @@ export function InviteMembers() {
   const [role, setRole] = useState<'admin' | 'planner' | 'staff'>('staff');
   const [inviteeName, setInviteeName] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [result, setResult] = useState<{ inviteUrl?: string } | null>(null);
+  const [result, setResult] = useState<{ inviteUrl?: string; compose?: { to: string; subject: string; body: string } | null } | null>(null);
 
   if (!isAdmin || !organizationId || !user) {
     return (
@@ -58,11 +59,29 @@ export function InviteMembers() {
       showToast(res.error || 'Could not send the invite.', 'warning');
       return;
     }
-    if (res.error) showToast(res.error, 'info');
-    showToast(`Invitation sent to ${trimmed}.`, 'success');
+    const compose = res.inviteUrl
+      ? {
+          to: trimmed,
+          subject: `You are invited to ${config.venueName || 'the venue workspace'}`,
+          body: [
+            `Hello${inviteeName.trim() ? ` ${inviteeName.trim()}` : ''},`,
+            '',
+            `You have been invited to join ${config.venueName || 'the venue workspace'} as ${role}.`,
+            '',
+            'Open this link to accept:',
+            res.inviteUrl,
+          ].join('\n'),
+        }
+      : null;
+    if (res.error && compose) {
+      openOutlookInviteCompose(compose);
+      showToast(`${res.error} Opened Outlook to send from ${OUTLOOK_INVITE_FROM}.`, 'info');
+    } else {
+      showToast(`Invitation sent to ${trimmed}.`, 'success');
+    }
     setEmail('');
     setInviteeName('');
-    setResult(res);
+    setResult({ ...res, compose });
   };
 
   return (
@@ -147,6 +166,15 @@ export function InviteMembers() {
               📋 Copy
             </button>
           </div>
+          {result.compose ? (
+            <button
+              type="button"
+              onClick={() => openOutlookInviteCompose(result.compose!)}
+              className="mt-2 rounded-lg border border-green-300 bg-white px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100"
+            >
+              Send with Outlook ({OUTLOOK_INVITE_FROM})
+            </button>
+          ) : null}
           <p className="text-xs break-all mt-1">{result.inviteUrl}</p>
         </div>
       )}
