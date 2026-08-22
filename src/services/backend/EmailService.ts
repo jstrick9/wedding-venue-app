@@ -32,7 +32,7 @@ export function describeEmailDeliveryFailure(error: unknown, data?: unknown): st
   if (error && typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
     const message = (error as { message: string }).message.trim();
     if (/failed to send a request to the edge function/i.test(message)) {
-      return 'The send-email function did not respond. Connect Outlook in Platform Console → Email (SMTP ports are blocked on Supabase Edge).';
+      return 'The send-email function did not respond. Use Send with Outlook or copy the link.';
     }
     if (message) return message;
   }

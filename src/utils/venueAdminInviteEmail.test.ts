@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyContactGreeting,
   applyVenueAdminInviteTemplate,
+  buildVenueAdminInviteHtml,
   DEFAULT_VENUE_ADMIN_INVITE_BODY,
   ensureInviteUrlInPlainText,
   formatContactGreeting,
@@ -38,5 +39,9 @@ describe('venueAdminInviteEmail', () => {
     expect(joinContactName('Joshua', 'Strickland')).toBe('Joshua Strickland');
     expect(splitContactName('Joshua Strickland')).toEqual({ firstName: 'Joshua', lastName: 'Strickland' });
     expect(ensureInviteUrlInPlainText('Hello Joshua,', 'https://example/invite')).toContain(VENUE_ADMIN_SETUP_BUTTON_LABEL);
+    const html = buildVenueAdminInviteHtml('Hello Joshua Strickland,\n\nClaim the venue.', 'https://example/invite', 'Invite');
+    expect(html).toContain(VENUE_ADMIN_SETUP_BUTTON_LABEL);
+    expect(html).toContain('href="https://example/invite"');
+    expect(html).not.toMatch(/>https:\/\/example\/invite</);
   });
 });

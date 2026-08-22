@@ -4,7 +4,8 @@ import { getConfig } from '../../config';
 import { createInvite } from '../../services/org/inviteService';
 import { showToast } from '../Toast';
 import { normalizeEmail } from '../../utils/contactQuality';
-import { OUTLOOK_INVITE_FROM, openOutlookInviteCompose } from '../../utils/inviteCompose';
+import { OUTLOOK_INVITE_FROM, openOutlookInviteCompose, type InviteComposeMessage } from '../../utils/inviteCompose';
+import { buildHtmlInviteDocument, inviteEmlFilename } from '../../utils/htmlInviteEmail';
 
 const ROLES = [
   { id: 'admin', label: 'Admin' },
@@ -14,8 +15,8 @@ const ROLES = [
 
 /**
  * Invite a team member (staff/planner/admin) into the current organization.
- * Uses the platform invite service — sends an email via the send-email edge
- * function in Supabase mode, and simulates locally otherwise.
+ * Uses the platform invite service. The operator emails the HTML invite
+ * with Send with Outlook (ready-to-send .eml draft).
  */
 export function InviteMembers() {
   const { user, organizationId, isAdmin } = useAuth();
@@ -25,7 +26,7 @@ export function InviteMembers() {
   const [role, setRole] = useState<'admin' | 'planner' | 'staff'>('staff');
   const [inviteeName, setInviteeName] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [result, setResult] = useState<{ inviteUrl?: string; compose?: { to: string; subject: string; body: string } | null } | null>(null);
+  const [result, setResult] = useState<{ inviteUrl?: string; compose?: InviteComposeMessage | null } | null>(null);
 
   if (!isAdmin || !organizationId || !user) {
     return (
@@ -59,25 +60,30 @@ export function InviteMembers() {
       showToast(res.error || 'Could not send the invite.', 'warning');
       return;
     }
+    const greetingName = inviteeName.trim();
+    const subject = `You are invited to ${config.venueName || 'the venue workspace'}`;
+    const body = [
+      `Hello${greetingName ? ` ${greetingName}` : ''},`,
+      '',
+      `You have been invited to join ${config.venueName || 'the venue workspace'} as ${role}.`,
+      '',
+      'Use the button in this email to accept the invitation.',
+    ].join('\n');
     const compose = res.inviteUrl
       ? {
           to: trimmed,
-          subject: `You are invited to ${config.venueName || 'the venue workspace'}`,
-          body: [
-            `Hello${inviteeName.trim() ? ` ${inviteeName.trim()}` : ''},`,
-            '',
-            `You have been invited to join ${config.venueName || 'the venue workspace'} as ${role}.`,
-            '',
-            'Open this link to accept:',
-            res.inviteUrl,
-          ].join('\n'),
+          subject,
+          body: `${body}\n\nOpen invitation:\n${res.inviteUrl}`,
+          html: buildHtmlInviteDocument({
+            subject,
+            body,
+            buttonUrl: res.inviteUrl,
+            buttonLabel: 'Open invitation',
+          }),
+          filename: inviteEmlFilename(`invite-${config.venueName || 'venue'}`),
         }
       : null;
-    if (res.error) {
-      showToast(`${res.error} Use Send with Outlook or copy the invitation link.`, 'warning');
-    } else {
-      showToast(`Invitation sent to ${trimmed}.`, 'success');
-    }
+    showToast(`Invitation created for ${trimmed}. Click Send with Outlook to email the HTML invite.`, 'success');
     setEmail('');
     setInviteeName('');
     setResult({ ...res, compose });
@@ -92,7 +98,7 @@ export function InviteMembers() {
         </div>
         <p className="text-sm text-gray-500">
           Invite a planner, coordinator, or staff member to collaborate in this
-          workspace. They'll receive an email with a link to join.
+          workspace. Create the invitation, then send the HTML email from Outlook.
         </p>
       </div>
 
@@ -144,7 +150,7 @@ export function InviteMembers() {
           className="w-full rounded-lg text-white text-sm font-medium disabled:opacity-60 py-2.5"
           style={{ backgroundColor: config.primaryColor }}
         >
-          {isSending ? 'Sending invite…' : 'Send Invite'}
+          {isSending ? 'Creating invite…' : 'Create invitation'}
         </button>
       </form>
 
@@ -168,7 +174,10 @@ export function InviteMembers() {
           {result.compose ? (
             <button
               type="button"
-              onClick={() => openOutlookInviteCompose(result.compose!)}
+              onClick={() => {
+                openOutlookInviteCompose(result.compose!);
+                showToast('HTML invite downloaded. Open the .eml file in Outlook and click Send.', 'success');
+              }}
               className="mt-2 rounded-lg border border-green-300 bg-white px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100"
             >
               Send with Outlook ({OUTLOOK_INVITE_FROM})

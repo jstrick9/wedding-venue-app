@@ -3,13 +3,16 @@ import {
   OUTLOOK_INVITE_FROM,
   buildMailtoHref,
   buildOutlookComposeHref,
+  buildOutlookHtmlInviteEml,
   openOutlookInviteCompose,
 } from './inviteCompose';
 
 const message = {
   to: 'owner@hilltop.com',
   subject: 'You are invited to administer Hilltop Barn',
-  body: 'Open https://app.example/#/venue-onboarding?token=abc',
+  body: 'Hello Ada Lovelace,\n\nSet up your account:\nhttps://app.example/#/venue-onboarding?token=abc',
+  html: '<p>Hello Ada Lovelace,</p><a href="https://app.example/#/venue-onboarding?token=abc">Set up your account</a>',
+  filename: 'invite-hilltop-barn.eml',
 };
 
 describe('inviteCompose', () => {
@@ -38,33 +41,30 @@ describe('inviteCompose', () => {
     expect(parsed.searchParams.get('body')).toContain('#/venue-onboarding?token=abc');
   });
 
-  it('opens Outlook in a new tab when the popup is allowed', () => {
-    const popup = { closed: false } as Window;
-    const open = vi.fn(() => popup);
-    vi.stubGlobal('open', open);
-    expect(openOutlookInviteCompose(message)).toBe('outlook');
-    expect(open).toHaveBeenCalledWith(
-      buildOutlookComposeHref(message),
-      '_blank',
-      'noopener,noreferrer',
-    );
+  it('builds an unsent HTML eml with the invite button', () => {
+    const eml = buildOutlookHtmlInviteEml(message);
+    expect(eml).toContain('X-Unsent: 1');
+    expect(eml).toContain('Set up your account');
+    expect(eml).toContain('wedding-vip@outlook.com');
+    expect(eml).toContain('Content-Type: text/html; charset="UTF-8"');
   });
 
-  it('falls back to mailto when Outlook compose is blocked', () => {
-    vi.stubGlobal('open', vi.fn(() => null));
-    const assign = vi.fn();
-    const original = window.location.href;
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { href: original },
+  it('downloads the HTML Outlook draft when Send with Outlook is clicked', () => {
+    const click = vi.fn();
+    const remove = vi.fn();
+    vi.stubGlobal('URL', {
+      createObjectURL: () => 'blob:invite',
+      revokeObjectURL: vi.fn(),
     });
-    const loc = window.location as { href: string };
-    Object.defineProperty(loc, 'href', {
-      configurable: true,
-      set: assign,
-      get: () => original,
-    });
-    expect(openOutlookInviteCompose(message)).toBe('mailto');
-    expect(assign).toHaveBeenCalledWith(buildMailtoHref(message));
+    vi.spyOn(document, 'createElement').mockReturnValue({
+      href: '',
+      download: '',
+      rel: '',
+      click,
+      remove,
+    } as unknown as HTMLAnchorElement);
+    vi.spyOn(document.body, 'appendChild').mockImplementation((node) => node);
+    expect(openOutlookInviteCompose(message)).toBe('eml');
+    expect(click).toHaveBeenCalledTimes(1);
   });
 });

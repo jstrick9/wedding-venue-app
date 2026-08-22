@@ -5,7 +5,6 @@ export type PlatformConsoleSection =
   | 'map'
   | 'onboard'
   | 'branding'
-  | 'email'
   | 'chat'
   | 'audit';
 
@@ -20,7 +19,6 @@ const KNOWN: PlatformConsoleSection[] = [
   'map',
   'onboard',
   'branding',
-  'email',
   'chat',
   'audit',
 ];
@@ -38,6 +36,8 @@ export function parsePlatformConsoleHash(hash: string): PlatformConsoleRoute {
   if (parts[0] === 'venues' && parts[1]) {
     return { section: 'venue-detail', venueId: decodeURIComponent(parts[1]) };
   }
+
+  if (parts[0] === 'email') return { section: 'branding' };
 
   const section = parts[0] as PlatformConsoleSection;
   if (KNOWN.includes(section)) return { section };

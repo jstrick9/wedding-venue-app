@@ -1,3 +1,5 @@
+import { buildHtmlInviteDocument } from './htmlInviteEmail';
+
 export const VENUE_ADMIN_SETUP_BUTTON_LABEL = 'Set up your account';
 
 export const DEFAULT_VENUE_ADMIN_INVITE_SUBJECT = 'You are invited to administer {venueName}';
@@ -89,4 +91,13 @@ export function applyVenueAdminInviteTemplate(
 export function ensureInviteUrlInPlainText(body: string, inviteUrl: string): string {
   if (!inviteUrl || body.includes(inviteUrl)) return body;
   return `${body.trim()}\n\n${VENUE_ADMIN_SETUP_BUTTON_LABEL}:\n${inviteUrl}`;
+}
+
+export function buildVenueAdminInviteHtml(body: string, inviteUrl: string, subject: string): string {
+  return buildHtmlInviteDocument({
+    subject,
+    body,
+    buttonUrl: inviteUrl,
+    buttonLabel: VENUE_ADMIN_SETUP_BUTTON_LABEL,
+  });
 }

@@ -1,20 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { buildVenueAdminInviteCompose } from './venueAdminInviteMail';
+import { VENUE_ADMIN_SETUP_BUTTON_LABEL } from '../../utils/venueAdminInviteEmail';
 
-const sendMock = vi.fn();
-
-vi.mock('../backend/EmailService', () => ({
-  sendTransactionalEmail: (...args: unknown[]) => sendMock(...args),
-}));
-
-import { deliverVenueAdminInvite, sendVenueAdminInviteEmail } from './venueAdminInviteMail';
-
-describe('sendVenueAdminInviteEmail', () => {
-  beforeEach(() => {
-    sendMock.mockReset().mockResolvedValue(undefined);
-  });
-
-  it('sends a venue_admin_invite with a named greeting and no visible token in the template body', async () => {
-    await sendVenueAdminInviteEmail({
+describe('buildVenueAdminInviteCompose', () => {
+  it('builds HTML with a named greeting and a Set up your account button', () => {
+    const compose = buildVenueAdminInviteCompose({
       to: 'owner@hilltop.com',
       organizationId: 'org9',
       organizationName: 'Hilltop Barn',
@@ -24,21 +14,19 @@ describe('sendVenueAdminInviteEmail', () => {
       contactFirstName: 'Ada',
       contactLastName: 'Lovelace',
     });
-    expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
-      to: 'owner@hilltop.com',
-      purpose: 'venue_admin_invite',
-      organizationId: 'org9',
-    }));
-    const data = sendMock.mock.calls[0][0].templateData;
-    expect(data.body).toContain('Hello Ada Lovelace,');
-    expect(data.body).toContain('Hilltop Barn');
-    expect(data.inviteUrl).toBe('https://app.example/#/venue-onboarding?token=abc');
-    expect(data.contactFirstName).toBe('Ada');
-    expect(data.contactLastName).toBe('Lovelace');
+    expect(compose.to).toBe('owner@hilltop.com');
+    expect(compose.subject).toContain('Hilltop Barn');
+    expect(compose.body).toContain('Hello Ada Lovelace,');
+    expect(compose.body).toContain(VENUE_ADMIN_SETUP_BUTTON_LABEL);
+    expect(compose.html).toContain('Hello Ada Lovelace,');
+    expect(compose.html).toContain(VENUE_ADMIN_SETUP_BUTTON_LABEL);
+    expect(compose.html).toContain('href="https://app.example/#/venue-onboarding?token=abc"');
+    expect(compose.html).not.toMatch(/>https:\/\/app\.example\/#\/venue-onboarding\?token=abc</);
+    expect(compose.filename).toBe('invite-hilltop-barn.eml');
   });
 
-  it('still sends when a custom template omits {inviteUrl}', async () => {
-    await sendVenueAdminInviteEmail({
+  it('still injects the button when a custom template omits {inviteUrl}', () => {
+    const compose = buildVenueAdminInviteCompose({
       to: 'owner@hilltop.com',
       organizationId: 'org9',
       organizationName: 'Hilltop Barn',
@@ -47,21 +35,7 @@ describe('sendVenueAdminInviteEmail', () => {
       contactFirstName: 'Ada',
       contactLastName: 'Lovelace',
     });
-    expect(sendMock).toHaveBeenCalledTimes(1);
-    expect(sendMock.mock.calls[0][0].templateData.inviteUrl).toBe('https://app.example/invite');
-  });
-
-  it('does not open Outlook when transactional send fails', async () => {
-    sendMock.mockRejectedValueOnce(new Error('Email service is not configured'));
-    const open = vi.fn();
-    vi.stubGlobal('open', open);
-    await expect(deliverVenueAdminInvite({
-      to: 'owner@hilltop.com',
-      organizationId: 'org9',
-      organizationName: 'Hilltop Barn',
-      inviteUrl: 'https://app.example/#/venue-onboarding?token=abc',
-    })).rejects.toThrow(/not configured/i);
-    expect(open).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
+    expect(compose.html).toContain('href="https://app.example/invite"');
+    expect(compose.html).toContain(VENUE_ADMIN_SETUP_BUTTON_LABEL);
   });
 });

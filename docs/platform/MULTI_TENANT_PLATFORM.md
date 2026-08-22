@@ -171,20 +171,15 @@ The legacy local User Management form still represents local browser records. It
 
 ## Venue administrator invite email
 
-Onboard and Reissue now send email through the `send-email` Edge Function
-(Resend). The setup link is still shown/copied if email fails.
-
-One-time secrets (Supabase → Edge Functions → Secrets):
-
-- `RESEND_API_KEY` from [resend.com](https://resend.com)
-- `EMAIL_FROM` e.g. `Venue Platform <invites@your-verified-domain.com>`
-- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (usually already present)
-
-Then redeploy `send-email` (GitHub → Actions → Deploy Edge Functions).
+Onboard and Reissue create the setup link and show **Send with Outlook**.
+That downloads a ready-to-send HTML Outlook draft (`.eml`) from
+`wedding-vip@outlook.com` with a **Set up your account** button. Open the file
+in Outlook and click Send. Automatic Graph/SMTP send was removed.
 
 Customize subject and body under **Platform → Branding**. Merge tags:
-`{venueName}`, `{inviteUrl}`, `{adminEmail}`, `{expiresAt}`, `{platformName}`.
-The body must include `{inviteUrl}`.
+`{contactName}`, `{contactFirstName}`, `{contactLastName}`, `{venueName}`,
+`{adminEmail}`, `{expiresAt}`, `{platformName}`. The tokenized URL is the
+button href only.
 
 ## Geoapify address lookup (required for Venue Detail / Onboard)
 

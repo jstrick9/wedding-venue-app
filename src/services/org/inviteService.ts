@@ -1,6 +1,5 @@
 import { getPlatformProvider } from '../platform';
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
-import { sendTransactionalEmail, buildInvitationTemplateData } from '../backend/EmailService';
 import { createOpaqueToken } from '../../utils/secureTokens';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 
@@ -8,12 +7,12 @@ import { STORAGE_KEYS } from '../../constants/storageKeys';
  * Organization invite service.
  *
  * Owners/admins invite staff/planners into their organization. The invite is
- * persisted as a hashed token in `org_invites`, and an invitation email is sent
- * through the Supabase `send-email` edge function (Resend). Accepting the invite
- * calls the `accept_invite` RPC which creates an active membership.
+ * persisted as a hashed token in `org_invites`. The operator emails it with
+ * Send with Outlook (HTML .eml draft). Accepting the invite calls the
+ * `accept_invite` RPC which creates an active membership.
  *
- * Local mode: invites are recorded in localStorage and simulated (no email), so
- * the feature is still usable/testable without a backend.
+ * Local mode: invites are recorded in localStorage so the feature is still
+ * usable/testable without a backend.
  */
 
 export interface InviteParams {
@@ -84,23 +83,6 @@ export async function createInvite(params: InviteParams): Promise<InviteResult> 
 
   const base = params.appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
   const inviteUrl = `${base}#/accept-invite/${token}`;
-
-  try {
-    await sendTransactionalEmail({
-      to: params.email,
-      purpose: 'invitation',
-      organizationId: params.organizationId,
-      templateData: buildInvitationTemplateData({
-        recipientName: params.inviteeName || params.email,
-        organizationName: params.organizationName,
-        inviteUrl,
-      }),
-    });
-  } catch (err) {
-    // The invite is created even if email fails; surface the warning.
-    return { ok: true, inviteUrl, error: `Invite created but email failed: ${err instanceof Error ? err.message : 'unknown'}` };
-  }
-
   return { ok: true, inviteUrl };
 }
 

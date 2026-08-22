@@ -29,27 +29,17 @@ import type {
   PlatformOrganizationSummary,
 } from '../services/platform/platformTypes';
 import { showToast } from './Toast';
-import { buildVenueAdminInviteCompose, deliverVenueAdminInvite } from '../services/platform/venueAdminInviteMail';
+import { buildVenueAdminInviteCompose } from '../services/platform/venueAdminInviteMail';
 import { OUTLOOK_INVITE_FROM, openOutlookInviteCompose, type InviteComposeMessage } from '../utils/inviteCompose';
 import {
   DEFAULT_VENUE_ADMIN_INVITE_BODY,
   DEFAULT_VENUE_ADMIN_INVITE_SUBJECT,
+  VENUE_ADMIN_SETUP_BUTTON_LABEL,
   applyVenueAdminInviteTemplate,
   joinContactName,
   splitContactName,
 } from '../utils/venueAdminInviteEmail';
 import { buildPlatformConsoleHash, parsePlatformConsoleHash, type PlatformConsoleSection } from '../utils/platformConsoleRoute';
-import {
-  buildOutlookAuthorizeUrl,
-  clearOutlookOAuthSession,
-  createOutlookPkce,
-  outlookRedirectUri,
-  readOutlookOAuthCallback,
-  readOutlookOAuthSession,
-  saveOutlookOAuthSession,
-  stripOAuthSearch,
-} from '../utils/outlookOAuth';
-import { disconnectOutlook, exchangeOutlookAuthCode, getOutlookConnectionStatus } from '../services/platform/outlookMailService';
 import { filterPlatformVenues, listVenueRegions } from '../utils/platformVenueFilters';
 import { applyDocumentBranding } from '../utils/documentBranding';
 
@@ -77,7 +67,6 @@ const NAV: { id: PlatformConsoleSection; label: string; icon: string }[] = [
   { id: 'map', label: 'Map', icon: '🗺️' },
   { id: 'onboard', label: 'Onboard venue', icon: '➕' },
   { id: 'branding', label: 'Branding', icon: '🎨' },
-  { id: 'email', label: 'Email', icon: '✉️' },
   { id: 'chat', label: 'Chat', icon: '💬' },
   { id: 'audit', label: 'Audit', icon: '🛡️' },
 ];
@@ -151,7 +140,6 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const [onboardVerified, setOnboardVerified] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [platformBranding, setPlatformBranding] = useState(defaultPlatformConfig);
-  const [outlookStatus, setOutlookStatus] = useState<{ connected: boolean; email?: string; clientId?: string }>({ connected: false });
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [chatOrganizationId, setChatOrganizationId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -169,18 +157,16 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     setLoading(true);
     setError('');
     try {
-      const [nextOrganizations, nextMetrics, nextBranding, nextAudit, nextOutlook] = await Promise.all([
+      const [nextOrganizations, nextMetrics, nextBranding, nextAudit] = await Promise.all([
         listPlatformOrganizations(),
         getPlatformConsoleMetrics(),
         getPlatformBranding(),
         listPlatformAuditLogs(80).catch(() => [] as PlatformAuditLogEntry[]),
-        getOutlookConnectionStatus().catch(() => ({ connected: false })),
       ]);
       setOrganizations(nextOrganizations);
       setMetrics(nextMetrics);
       setPlatformBranding({ ...defaultPlatformConfig, ...nextBranding });
       setAuditLogs(nextAudit);
-      setOutlookStatus(nextOutlook);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load platform console data.');
     } finally {
@@ -190,36 +176,11 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
 
   useEffect(() => { void loadConsole(); }, [loadConsole]);
 
-  useEffect(() => {
-    const callback = readOutlookOAuthCallback(window.location.search);
-    if (!callback.code && !callback.error) return;
-    const session = readOutlookOAuthSession();
-    stripOAuthSearch();
-    if (callback.error) {
-      showToast(callback.error, 'warning');
-      clearOutlookOAuthSession();
-      return;
-    }
-    if (!session || !callback.code || session.state !== callback.state) {
-      showToast('Outlook sign-in could not be completed. Start Connect Outlook again.', 'warning');
-      clearOutlookOAuthSession();
-      return;
-    }
-    void exchangeOutlookAuthCode({
-      clientId: session.clientId,
-      code: callback.code,
-      verifier: session.verifier,
-      redirectUri: session.redirectUri,
-    }).then((result) => {
-      clearOutlookOAuthSession();
-      setOutlookStatus({ connected: true, email: result.email, clientId: session.clientId });
-      showToast(`Outlook connected as ${result.email || 'wedding-vip@outlook.com'}. Invites will send automatically.`, 'success');
-      window.location.hash = '#/platform-admin/email';
-    }).catch((err) => {
-      clearOutlookOAuthSession();
-      showToast(err instanceof Error ? err.message : 'Could not connect Outlook.', 'warning');
-    });
-  }, []);
+  const sendOutlookHtmlInvite = () => {
+    if (!inviteCompose) return;
+    openOutlookInviteCompose(inviteCompose);
+    showToast('HTML invite downloaded. Open the .eml file in Outlook as wedding-vip@outlook.com and click Send.', 'success');
+  };
 
   useEffect(() => {
     applyDocumentBranding({
@@ -321,13 +282,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       await loadConsole();
       const compose = buildVenueAdminInviteCompose(composeInput);
       setInviteCompose(compose);
-      try {
-        await deliverVenueAdminInvite(composeInput);
-        showToast(`Created ${created.organizationName}. Invite emailed from ${OUTLOOK_INVITE_FROM} to ${adminEmail.value}.`, 'success');
-      } catch (mailErr) {
-        const mailMessage = mailErr instanceof Error ? mailErr.message : 'Email delivery failed.';
-        showToast(`Created ${created.organizationName}, but the invite email did not send: ${mailMessage} Use Send with Outlook or copy the setup link.`, 'warning');
-      }
+      showToast(`Created ${created.organizationName}. Click Send with Outlook to email the HTML invite from ${OUTLOOK_INVITE_FROM}.`, 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the venue organization.');
     } finally {
@@ -376,13 +331,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
         contactLastName: contact.lastName,
       };
       setInviteCompose(buildVenueAdminInviteCompose(composeInput));
-      try {
-        await deliverVenueAdminInvite(composeInput);
-        showToast('Old pending invite revoked; new setup link copied and emailed from Outlook.', 'success');
-      } catch (mailErr) {
-        const mailMessage = mailErr instanceof Error ? mailErr.message : 'Email delivery failed.';
-        showToast(`Invite reissued and setup link copied, but the email did not send: ${mailMessage} Use Send with Outlook.`, 'warning');
-      }
+      showToast('Old pending invite revoked and setup link copied. Click Send with Outlook to email the HTML invite.', 'success');
       await loadConsole();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not reissue the invite.', 'warning');
@@ -586,10 +535,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
                 onSuspend={() => void handleSuspend(selectedVenue)}
                 onReactivate={() => void handleReactivate(selectedVenue)}
                 onSaved={loadConsole}
-                onOutlookInvite={() => {
-                  if (!inviteCompose) return;
-                  openOutlookInviteCompose(inviteCompose);
-                }}
+                onOutlookInvite={sendOutlookHtmlInvite}
               />
             ) : (
               <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
@@ -603,8 +549,6 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
 
           {route.section === 'onboard' && (
             <OnboardVenueForm
-              outlookConnected={outlookStatus.connected}
-              outlookEmail={outlookStatus.email}
               form={form}
               setForm={setForm}
               verified={onboardVerified}
@@ -616,18 +560,8 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               inviteCompose={inviteCompose}
               onSubmit={(event) => void handleCreateVenue(event)}
               onCopyInvite={copyInvite}
-              onOutlookInvite={() => {
-                if (!inviteCompose) return;
-                openOutlookInviteCompose(inviteCompose);
-              }}
+              onOutlookInvite={sendOutlookHtmlInvite}
               primaryColor={config.primaryColor || '#4A1942'}
-            />
-          )}
-
-          {route.section === 'email' && (
-            <OutlookEmailSection
-              status={outlookStatus}
-              onStatus={setOutlookStatus}
             />
           )}
 
@@ -1017,6 +951,7 @@ function VenueDetail({
             <button type="button" disabled={busy} onClick={onSuspend} className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60">Suspend venue access</button>
           )}
         </div>
+        {inviteCompose?.html && <InviteHtmlPreview html={inviteCompose.html} />}
       </section>
       <PlatformVenueChatPanel organizationId={organization.id} organizationName={organization.name} senderSide="platform" />
     </div>
@@ -1037,8 +972,6 @@ function OnboardVenueForm({
   onCopyInvite,
   onOutlookInvite,
   primaryColor,
-  outlookConnected,
-  outlookEmail,
 }: {
   form: typeof EMPTY_FORM;
   setForm: (updater: (current: typeof EMPTY_FORM) => typeof EMPTY_FORM) => void;
@@ -1053,25 +986,12 @@ function OnboardVenueForm({
   onCopyInvite: () => void;
   onOutlookInvite: () => void;
   primaryColor: string;
-  outlookConnected: boolean;
-  outlookEmail?: string;
 }) {
   return (
     <section className="mx-auto max-w-2xl rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Tenant onboarding</p>
       <h2 className="mt-1 text-lg font-bold text-gray-900">Create a venue organization</h2>
-      <p className="mt-1 text-xs leading-relaxed text-gray-500">The venue slug is generated from the name and permanently frozen. The venue administrator creates their own password through the one-time setup link.</p>
-      {!outlookConnected && (
-        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Automatic invite email is off until Outlook is connected.{' '}
-          <button type="button" onClick={() => { window.location.hash = '#/platform-admin/email'; }} className="font-bold underline">Connect wedding-vip@outlook.com</button>
-        </p>
-      )}
-      {outlookConnected && (
-        <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-          Invites will send automatically from {outlookEmail || 'wedding-vip@outlook.com'}.
-        </p>
-      )}
+      <p className="mt-1 text-xs leading-relaxed text-gray-500">The venue slug is generated from the name and permanently frozen. After create, click Send with Outlook to email the HTML invite with the Set up your account button.</p>
       <form onSubmit={onSubmit} className="mt-4 space-y-3">
         <label className="block text-xs font-semibold text-gray-700">Venue name *<input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
         <AddressAutocomplete
@@ -1103,6 +1023,7 @@ function OnboardVenueForm({
               </button>
             )}
           </div>
+          {inviteCompose?.html && <InviteHtmlPreview html={inviteCompose.html} />}
           <p className="mt-2 break-all rounded-lg border border-emerald-200 bg-white px-3 py-2 font-mono text-[11px] text-gray-700">{result.inviteUrl}</p>
         </div>
       )}
@@ -1111,94 +1032,14 @@ function OnboardVenueForm({
 }
 
 
-function OutlookEmailSection({
-  status,
-  onStatus,
-}: {
-  status: { connected: boolean; email?: string; clientId?: string };
-  onStatus: (next: { connected: boolean; email?: string; clientId?: string }) => void;
-}) {
-  const [clientId, setClientId] = useState(status.clientId || '');
-  const [busy, setBusy] = useState(false);
-  const redirectUri = outlookRedirectUri();
-
-  const connect = async () => {
-    const trimmed = clientId.trim();
-    if (!trimmed) {
-      showToast('Paste the Azure Application (client) ID first.', 'warning');
-      return;
-    }
-    setBusy(true);
-    try {
-      const pkce = await createOutlookPkce();
-      saveOutlookOAuthSession({
-        verifier: pkce.verifier,
-        state: pkce.state,
-        clientId: trimmed,
-        redirectUri,
-      });
-      window.location.assign(buildOutlookAuthorizeUrl({
-        clientId: trimmed,
-        redirectUri,
-        challenge: pkce.challenge,
-        state: pkce.state,
-      }));
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not start Outlook sign-in.', 'warning');
-      setBusy(false);
-    }
-  };
-
-  const disconnect = async () => {
-    setBusy(true);
-    try {
-      await disconnectOutlook();
-      onStatus({ connected: false, clientId: clientId.trim() || status.clientId });
-      showToast('Outlook disconnected. Invites will not send automatically.', 'info');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not disconnect Outlook.', 'warning');
-    } finally {
-      setBusy(false);
-    }
-  };
-
+function InviteHtmlPreview({ html }: { html: string }) {
   return (
-    <section className="mx-auto max-w-2xl space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Transactional email</p>
-      <h2 className="mt-1 text-lg font-bold text-gray-900">Connect Outlook</h2>
-      <p className="text-sm text-gray-600">
-        Supabase Edge cannot open Outlook SMTP ports, so invites send through Microsoft Graph as{' '}
-        <span className="font-semibold">wedding-vip@outlook.com</span>. Connect once, then onboard/reissue send automatically.
+    <div className="mt-3 overflow-hidden rounded-lg border border-emerald-200 bg-white">
+      <p className="border-b border-emerald-100 px-3 py-1.5 text-[11px] font-semibold text-emerald-900">
+        HTML invite preview — {VENUE_ADMIN_SETUP_BUTTON_LABEL} is the invite link
       </p>
-      <ol className="list-decimal space-y-1 pl-5 text-xs text-gray-700">
-        <li>Open <a className="font-semibold text-indigo-700 underline" href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noreferrer">Azure App registrations</a> and create <strong>Wedding VIP Invites</strong>.</li>
-        <li>Supported accounts: <strong>Personal Microsoft accounts only</strong> (or any org + personal).</li>
-        <li>Authentication → add a <strong>Single-page application</strong> redirect URI exactly: <code className="rounded bg-gray-100 px-1">{redirectUri}</code></li>
-        <li>Authentication → <strong>Allow public client flows = Yes</strong>.</li>
-        <li>API permissions → Microsoft Graph → Delegated → <strong>Mail.Send</strong> and <strong>User.Read</strong>.</li>
-        <li>Copy the Application (client) ID, paste it below, then connect and sign in as wedding-vip@outlook.com.</li>
-      </ol>
-      <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
-        <p className="text-xs font-semibold text-gray-700">Status</p>
-        <p className="mt-1 text-sm text-gray-800">
-          {status.connected ? `Connected as ${status.email || 'wedding-vip@outlook.com'}` : 'Not connected — invites will not send automatically.'}
-        </p>
-      </div>
-      <label className="block text-xs font-semibold text-gray-700">
-        Azure Application (client) ID
-        <input value={clientId} onChange={(event) => setClientId(event.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm" />
-      </label>
-      <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={busy} onClick={() => void connect()} className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">
-          {busy ? 'Working…' : 'Connect Outlook'}
-        </button>
-        {status.connected && (
-          <button type="button" disabled={busy} onClick={() => void disconnect()} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-60">
-            Disconnect
-          </button>
-        )}
-      </div>
-    </section>
+      <div className="max-h-72 overflow-auto bg-slate-50 p-2" dangerouslySetInnerHTML={{ __html: html }} />
+    </div>
   );
 }
 

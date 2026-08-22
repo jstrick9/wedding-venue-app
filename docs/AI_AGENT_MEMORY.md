@@ -674,5 +674,19 @@ Outlook in Platform Console → Email. Refresh tokens live in
 **Rule going forward:** treat #202 + §9.12–9.26 as current truth for invite
 email. Do not retry SMTP from Edge Functions.
 
+### 9.27 Manual HTML Outlook invites (Review #203, 2026-08-22)
+
+See `docs/reviews/203-manual-html-outlook-invite-2026-08-22.md`.
+
+Azure/Graph connect is not used. Venue-admin and staff invites are sent
+manually: **Send with Outlook** downloads an `X-Unsent` HTML `.eml` draft
+from `wedding-vip@outlook.com` with a **Set up your account** button. The
+tokenized URL is the button href only. Platform Console Email / Connect
+Outlook / Graph / SMTP send paths were removed. Outlook.com compose cannot
+render HTML, so the `.eml` draft is the HTML send path.
+
+**Rule going forward:** treat #203 + §9.12–9.27 as current truth for invite
+email. Do not re-add Azure Graph or Outlook SMTP from Edge Functions.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

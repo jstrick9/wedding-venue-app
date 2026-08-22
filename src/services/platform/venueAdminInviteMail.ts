@@ -1,9 +1,9 @@
-import { sendTransactionalEmail } from '../backend/EmailService';
 import {
   applyVenueAdminInviteTemplate,
+  buildVenueAdminInviteHtml,
   ensureInviteUrlInPlainText,
-  joinContactName,
 } from '../../utils/venueAdminInviteEmail';
+import { inviteEmlFilename } from '../../utils/htmlInviteEmail';
 import type { InviteComposeMessage } from '../../utils/inviteCompose';
 
 export interface SendVenueAdminInviteEmailInput {
@@ -33,31 +33,7 @@ export function buildVenueAdminInviteCompose(input: SendVenueAdminInviteEmailInp
     to: input.to,
     subject: applied.subject,
     body: ensureInviteUrlInPlainText(applied.body, input.inviteUrl),
+    html: buildVenueAdminInviteHtml(applied.body, input.inviteUrl, applied.subject),
+    filename: inviteEmlFilename(`invite-${input.organizationName}`),
   };
-}
-
-/** Send via the Edge Function (Outlook SMTP / Resend). Does not open Outlook. */
-export async function deliverVenueAdminInvite(input: SendVenueAdminInviteEmailInput): Promise<'sent'> {
-  await sendVenueAdminInviteEmail(input);
-  return 'sent';
-}
-
-export async function sendVenueAdminInviteEmail(input: SendVenueAdminInviteEmailInput): Promise<void> {
-  const applied = buildVenueAdminInviteCompose(input);
-  const contactName = joinContactName(input.contactFirstName, input.contactLastName);
-  await sendTransactionalEmail({
-    to: input.to,
-    purpose: 'venue_admin_invite',
-    organizationId: input.organizationId,
-    templateData: {
-      subject: applied.subject,
-      body: applied.body,
-      inviteUrl: input.inviteUrl,
-      organizationName: input.organizationName,
-      recipientName: contactName || input.to,
-      contactFirstName: (input.contactFirstName || '').trim(),
-      contactLastName: (input.contactLastName || '').trim(),
-      contactName,
-    },
-  });
 }
