@@ -25,11 +25,13 @@ describe('inviteCompose', () => {
     expect(href).toContain('token%3Dabc');
   });
 
-  it('builds an Outlook.com compose link for wedding-vip@outlook.com delivery', () => {
+  it('builds an Outlook.com compose link without plus-encoded spaces', () => {
     expect(OUTLOOK_INVITE_FROM).toBe('wedding-vip@outlook.com');
     const href = buildOutlookComposeHref(message);
     expect(href.startsWith('https://outlook.live.com/mail/0/deeplink/compose?')).toBe(true);
     expect(href).not.toContain('mail.google.com');
+    expect(href).toContain('You%20are%20invited');
+    expect(href).not.toContain('You+are+invited');
     const parsed = new URL(href);
     expect(parsed.searchParams.get('to')).toBe('owner@hilltop.com');
     expect(parsed.searchParams.get('subject')).toBe(message.subject);

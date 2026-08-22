@@ -1,13 +1,21 @@
 // Supabase Edge Function: send-email
 // Sends transactional emails from server-rendered templates only.
 // Required secrets:
-//   RESEND_API_KEY
-//   EMAIL_FROM
+//   SMTP_PASS                  Outlook App Password (unattended send)
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
+// Optional:
+//   SMTP_USER / SMTP_HOST / SMTP_PORT / EMAIL_FROM
+//   RESEND_API_KEY             used first when a custom domain is verified
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
+
+const DEFAULT_SMTP_USER = 'wedding-vip@outlook.com';
+const DEFAULT_SMTP_HOST = 'smtp-mail.outlook.com';
+const DEFAULT_FROM = 'Wedding VIP <wedding-vip@outlook.com>';
+const SETUP_ACCOUNT_BUTTON_LABEL = 'Set up your account';
 
 type EmailPurpose =
   | 'invitation'
@@ -91,19 +99,52 @@ function renderShell(title: string, body: string): string {
   `;
 }
 
-function renderPlainTemplate(templateData: Record<string, unknown> | undefined): RenderedEmail {
-  const subject = getString(templateData, 'subject').trim();
-  const text = getString(templateData, 'body').trim();
-  const inviteUrl = getString(templateData, 'inviteUrl').trim();
-  if (!subject || !text) throw new Error('Invite email subject and body are required.');
-  if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for venue administrator invite.');
-  const escapedBody = escapeHtml(text);
+function renderSetupAccountButton(inviteUrl: string): string {
+  return `<p style="margin:24px 0 8px;"><a href="${escapeHtml(inviteUrl)}" style="background:#4A1942;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:700;">${SETUP_ACCOUNT_BUTTON_LABEL}</a></p>`;
+}
+
+function joinContactName(firstName: string, lastName: string): string {
+  return [firstName, lastName].map((part) => part.trim()).filter(Boolean).join(' ');
+}
+
+function applyContactGreeting(body: string, firstName: string, lastName: string): string {
+  const name = joinContactName(firstName, lastName);
+  const greeting = name ? `Hello ${name},` : 'Hello,';
+  if (/^Hello\b[^\n]*,/m.test(body)) return body.replace(/^Hello\b[^\n]*,/m, greeting);
+  return `${greeting}\n\n${body.replace(/^\s+/, '')}`;
+}
+
+function injectSetupButton(htmlBody: string, inviteUrl: string): string {
+  const button = renderSetupAccountButton(inviteUrl);
   const escapedUrl = escapeHtml(inviteUrl);
-  const linked = escapedUrl ? escapedBody.split(escapedUrl).join(`<a href="${escapedUrl}">${escapedUrl}</a>`) : escapedBody;
+  const next = htmlBody.replace(/Open this one-time setup link to create your password and claim the venue:<br\s*\/?>/gi, '');
+  if (escapedUrl && next.includes(escapedUrl)) {
+    return next.split(escapedUrl).join(button);
+  }
+  const marker = 'claim the venue.';
+  const idx = next.toLowerCase().indexOf(marker);
+  if (idx >= 0) {
+    const end = idx + marker.length;
+    return `${next.slice(0, end)}${button}${next.slice(end)}`;
+  }
+  return `${next}${button}`;
+}
+
+function renderVenueAdminInvite(templateData: Record<string, unknown> | undefined): RenderedEmail {
+  const subject = getString(templateData, 'subject').trim();
+  const rawBody = getString(templateData, 'body').trim();
+  const inviteUrl = getString(templateData, 'inviteUrl').trim();
+  if (!subject || !rawBody) throw new Error('Invite email subject and body are required.');
+  if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for venue administrator invite.');
+  const firstName = getString(templateData, 'contactFirstName');
+  const lastName = getString(templateData, 'contactLastName');
+  const text = applyContactGreeting(rawBody, firstName, lastName);
+  const textWithLink = text.includes(inviteUrl) ? text : `${text}\n\n${SETUP_ACCOUNT_BUTTON_LABEL}:\n${inviteUrl}`;
+  const htmlBody = injectSetupButton(escapeHtml(text).replace(/\n/g, '<br/>'), inviteUrl);
   return {
     subject,
-    text,
-    html: renderShell(subject, `<div>${linked.replace(/\n/g, '<br/>')}</div>`),
+    text: textWithLink,
+    html: renderShell(subject, `<div>${htmlBody}</div>`),
   };
 }
 
@@ -114,7 +155,7 @@ function renderEmail(purpose: EmailPurpose, templateData: Record<string, unknown
 
   switch (purpose) {
     case 'venue_admin_invite':
-      return renderPlainTemplate(templateData);
+      return renderVenueAdminInvite(templateData);
     case 'invitation': {
       const inviteUrl = escapeHtml(getString(templateData, 'inviteUrl'));
       if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for invitation email.');
@@ -341,21 +382,21 @@ async function sendViaResend(resendApiKey: string, emailFrom: string, to: string
   return { ok: resendResponse.ok, status: resendResponse.status, details: resendBody };
 }
 
-async function sendViaOutlookSmtp(opts: {
+async function sendViaOutlookSmtpOnce(opts: {
   smtpHost: string;
   smtpPort: number;
+  implicitTls: boolean;
   smtpUser: string;
   smtpPass: string;
   emailFrom: string;
   to: string;
   rendered: RenderedEmail;
 }) {
-  const implicitTls = opts.smtpPort === 465;
   const client = new SMTPClient({
     connection: {
       hostname: opts.smtpHost,
       port: opts.smtpPort,
-      tls: implicitTls,
+      tls: opts.implicitTls,
       auth: {
         username: opts.smtpUser,
         password: opts.smtpPass,
@@ -370,7 +411,11 @@ async function sendViaOutlookSmtp(opts: {
       content: opts.rendered.text,
       html: opts.rendered.html,
     });
-    return { ok: true as const, status: 250, details: { provider: 'outlook-smtp', host: opts.smtpHost } };
+    return {
+      ok: true as const,
+      status: 250,
+      details: { provider: 'outlook-smtp', host: opts.smtpHost, port: opts.smtpPort },
+    };
   } finally {
     try {
       await client.close();
@@ -378,6 +423,32 @@ async function sendViaOutlookSmtp(opts: {
       // ignore close errors after a send failure
     }
   }
+}
+
+async function sendViaOutlookSmtp(opts: {
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  emailFrom: string;
+  to: string;
+  rendered: RenderedEmail;
+}) {
+  const attempts = [{ port: opts.smtpPort, implicitTls: opts.smtpPort === 465 }];
+  if (opts.smtpPort === 587) attempts.push({ port: 465, implicitTls: true });
+  let lastError: unknown;
+  for (const attempt of attempts) {
+    try {
+      return await sendViaOutlookSmtpOnce({
+        ...opts,
+        smtpPort: attempt.port,
+        implicitTls: attempt.implicitTls,
+      });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Outlook SMTP failed');
 }
 
 async function deliverRenderedEmail(opts: {

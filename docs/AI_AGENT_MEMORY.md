@@ -635,5 +635,20 @@ weddingvip.com is verified.
 **Rule going forward:** treat #199 + §9.12–9.23 as current truth for invite
 email delivery.
 
+### 9.24 Automatic Outlook SMTP and HTML invite format (Review #200, 2026-08-22)
+
+See `docs/reviews/200-outlook-smtp-html-invite-2026-08-22.md`.
+
+`send-email` now defines `DEFAULT_SMTP_USER` / `DEFAULT_SMTP_HOST` /
+`DEFAULT_FROM` and imports `SMTPClient`. A missing-constant crash was sending
+operators to Outlook.com compose (which displayed `+` instead of spaces).
+Venue-admin invites send unattended when `SMTP_PASS` is set. Failures are
+shown in a toast; Outlook compose is manual only. HTML uses a **Set up your
+account** button and greets `Hello {first} {last},`. Onboard/edit collect
+first and last name.
+
+**Rule going forward:** treat #200 + §9.12–9.24 as current truth for invite
+email delivery.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

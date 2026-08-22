@@ -73,9 +73,8 @@ export function InviteMembers() {
           ].join('\n'),
         }
       : null;
-    if (res.error && compose) {
-      openOutlookInviteCompose(compose);
-      showToast(`${res.error} Opened Outlook to send from ${OUTLOOK_INVITE_FROM}.`, 'info');
+    if (res.error) {
+      showToast(`${res.error} Use Send with Outlook or copy the invitation link.`, 'warning');
     } else {
       showToast(`Invitation sent to ${trimmed}.`, 'success');
     }

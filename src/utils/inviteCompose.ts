@@ -13,14 +13,18 @@ export function buildMailtoHref(message: InviteComposeMessage): string {
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(message.body)}`;
 }
 
-/** Outlook.com web compose for the personal wedding-vip@outlook.com mailbox. */
+/**
+ * Outlook.com web compose for the personal wedding-vip@outlook.com mailbox.
+ * Uses encodeURIComponent (spaces as %20). URLSearchParams would use +, and
+ * Outlook.com displays those plus signs literally.
+ */
 export function buildOutlookComposeHref(message: InviteComposeMessage): string {
-  const params = new URLSearchParams({
-    to: message.to.trim(),
-    subject: message.subject,
-    body: message.body,
-  });
-  return `https://outlook.live.com/mail/0/deeplink/compose?${params.toString()}`;
+  const params = [
+    `to=${encodeURIComponent(message.to.trim())}`,
+    `subject=${encodeURIComponent(message.subject)}`,
+    `body=${encodeURIComponent(message.body)}`,
+  ].join('&');
+  return `https://outlook.live.com/mail/0/deeplink/compose?${params}`;
 }
 
 /**

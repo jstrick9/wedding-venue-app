@@ -35,7 +35,8 @@ import {
   DEFAULT_VENUE_ADMIN_INVITE_BODY,
   DEFAULT_VENUE_ADMIN_INVITE_SUBJECT,
   applyVenueAdminInviteTemplate,
-  venueAdminInviteIncludesLink,
+  joinContactName,
+  splitContactName,
 } from '../utils/venueAdminInviteEmail';
 import { buildPlatformConsoleHash, parsePlatformConsoleHash, type PlatformConsoleSection } from '../utils/platformConsoleRoute';
 import { filterPlatformVenues, listVenueRegions } from '../utils/platformVenueFilters';
@@ -78,7 +79,8 @@ const EMPTY_FORM = {
   stateRegion: '',
   postalCode: '',
   country: 'US',
-  primaryContactName: '',
+  primaryContactFirstName: '',
+  primaryContactLastName: '',
   primaryContactPhone: '',
   primaryContactEmail: '',
 };
@@ -195,10 +197,6 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const activeNav = route.section === 'venue-detail' ? 'venues' : route.section;
 
   const handleSavePlatformBranding = async (next: typeof platformBranding) => {
-    if (!venueAdminInviteIncludesLink(next.venueAdminInviteBody)) {
-      showToast('Invite email body must include {inviteUrl}.', 'warning');
-      return;
-    }
     setBrandingSaving(true);
     try {
       await savePlatformBranding(next);
@@ -225,8 +223,8 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
 
   const handleCreateVenue = async (event: FormEvent) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.adminEmail.trim() || !form.primaryContactName.trim() || !form.primaryContactPhone.trim() || !form.primaryContactEmail.trim()) {
-      setError('Venue name, complete address, and primary contact name, phone, and email are required.');
+    if (!form.name.trim() || !form.adminEmail.trim() || !form.primaryContactFirstName.trim() || !form.primaryContactLastName.trim() || !form.primaryContactPhone.trim() || !form.primaryContactEmail.trim()) {
+      setError('Venue name, complete address, and primary contact first name, last name, phone, and email are required.');
       return;
     }
     if (!onboardVerified || !hasCompleteStreetAddress(form)) {
@@ -252,6 +250,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       const created = await createVenueOrganization({
         ...form,
         country: 'US',
+        primaryContactName: joinContactName(form.primaryContactFirstName, form.primaryContactLastName),
         primaryContactPhone: phone.value,
         primaryContactEmail: email.value,
         adminEmail: adminEmail.value,
@@ -259,9 +258,6 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
         longitude: coordinates.longitude,
       });
       setResult(created);
-      setForm(EMPTY_FORM);
-      setOnboardVerified(false);
-      await loadConsole();
       const composeInput = {
         to: adminEmail.value,
         organizationId: created.organizationId,
@@ -271,14 +267,20 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
         platformName: platformBranding.venueName,
         subject: platformBranding.venueAdminInviteSubject,
         body: platformBranding.venueAdminInviteBody,
+        contactFirstName: form.primaryContactFirstName,
+        contactLastName: form.primaryContactLastName,
       };
+      setForm(EMPTY_FORM);
+      setOnboardVerified(false);
+      await loadConsole();
       const compose = buildVenueAdminInviteCompose(composeInput);
       setInviteCompose(compose);
-      const delivered = await deliverVenueAdminInvite(composeInput);
-      if (delivered === 'sent') {
+      try {
+        await deliverVenueAdminInvite(composeInput);
         showToast(`Created ${created.organizationName}. Invite emailed from ${OUTLOOK_INVITE_FROM} to ${adminEmail.value}.`, 'success');
-      } else {
-        showToast(`Created ${created.organizationName}. Opened Outlook to send the invite from ${OUTLOOK_INVITE_FROM}. You can also copy the setup link.`, 'info');
+      } catch (mailErr) {
+        const mailMessage = mailErr instanceof Error ? mailErr.message : 'Email delivery failed.';
+        showToast(`Created ${created.organizationName}, but the invite email did not send: ${mailMessage} Use Send with Outlook or copy the setup link.`, 'warning');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the venue organization.');
@@ -314,6 +316,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     try {
       const next = await reissueVenueAdminInvite(organization.id, normalized.value);
       void navigator.clipboard?.writeText(next.inviteUrl);
+      const contact = splitContactName(organization.primaryContactName || '');
       const composeInput = {
         to: normalized.value,
         organizationId: organization.id,
@@ -323,13 +326,16 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
         platformName: platformBranding.venueName,
         subject: platformBranding.venueAdminInviteSubject,
         body: platformBranding.venueAdminInviteBody,
+        contactFirstName: contact.firstName,
+        contactLastName: contact.lastName,
       };
       setInviteCompose(buildVenueAdminInviteCompose(composeInput));
-      const delivered = await deliverVenueAdminInvite(composeInput);
-      if (delivered === 'sent') {
+      try {
+        await deliverVenueAdminInvite(composeInput);
         showToast('Old pending invite revoked; new setup link copied and emailed from Outlook.', 'success');
-      } else {
-        showToast('Old pending invite revoked; setup link copied. Opened Outlook to send it.', 'info');
+      } catch (mailErr) {
+        const mailMessage = mailErr instanceof Error ? mailErr.message : 'Email delivery failed.';
+        showToast(`Invite reissued and setup link copied, but the email did not send: ${mailMessage} Use Send with Outlook.`, 'warning');
       }
       await loadConsole();
     } catch (err) {
@@ -526,6 +532,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
                 organization={selectedVenue}
                 metric={metrics.venues.find((metric) => metric.id === selectedVenue.id)}
                 busy={actionId === selectedVenue.id}
+                inviteCompose={inviteCompose}
                 onBack={() => go('venues')}
                 onCopyLogin={copyVenueLogin}
                 onReissue={() => void handleReissue(selectedVenue)}
@@ -533,6 +540,10 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
                 onSuspend={() => void handleSuspend(selectedVenue)}
                 onReactivate={() => void handleReactivate(selectedVenue)}
                 onSaved={loadConsole}
+                onOutlookInvite={() => {
+                  if (!inviteCompose) return;
+                  openOutlookInviteCompose(inviteCompose);
+                }}
               />
             ) : (
               <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
@@ -762,10 +773,13 @@ function VenueDetail({
   onSuspend,
   onReactivate,
   onSaved,
+  inviteCompose,
+  onOutlookInvite,
 }: {
   organization: PlatformOrganizationSummary;
   metric?: PlatformConsoleMetrics['venues'][number];
   busy: boolean;
+  inviteCompose: InviteComposeMessage | null;
   onBack: () => void;
   onCopyLogin: (slug: string) => void;
   onReissue: () => void;
@@ -773,6 +787,7 @@ function VenueDetail({
   onSuspend: () => void;
   onReactivate: () => void;
   onSaved: () => Promise<void>;
+  onOutlookInvite: () => void;
 }) {
   const [draft, setDraft] = useState({
     name: organization.name,
@@ -783,7 +798,8 @@ function VenueDetail({
     stateRegion: organization.stateRegion || '',
     postalCode: organization.postalCode || '',
     country: organization.country || 'US',
-    primaryContactName: organization.primaryContactName || '',
+    primaryContactFirstName: splitContactName(organization.primaryContactName || '').firstName,
+    primaryContactLastName: splitContactName(organization.primaryContactName || '').lastName,
     primaryContactPhone: organization.primaryContactPhone || '',
     primaryContactEmail: organization.primaryContactEmail || '',
     supportEmail: organization.supportEmail || '',
@@ -805,7 +821,8 @@ function VenueDetail({
       stateRegion: organization.stateRegion || '',
       postalCode: organization.postalCode || '',
       country: organization.country || 'US',
-      primaryContactName: organization.primaryContactName || '',
+      primaryContactFirstName: splitContactName(organization.primaryContactName || '').firstName,
+      primaryContactLastName: splitContactName(organization.primaryContactName || '').lastName,
       primaryContactPhone: organization.primaryContactPhone || '',
       primaryContactEmail: organization.primaryContactEmail || '',
       supportEmail: organization.supportEmail || '',
@@ -840,6 +857,7 @@ function VenueDetail({
         organizationId: organization.id,
         ...draft,
         country: 'US',
+        primaryContactName: joinContactName(draft.primaryContactFirstName, draft.primaryContactLastName),
         primaryContactPhone: phone.value,
         primaryContactEmail: email.value,
         supportEmail: supportEmail.value,
@@ -913,7 +931,8 @@ function VenueDetail({
             onChange={(next) => setDraft((current) => ({ ...current, ...next, country: 'US' }))}
           />
           <label className="text-xs font-semibold text-gray-700">Country<input value="United States" readOnly className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" /></label>
-          <label className="text-xs font-semibold text-gray-700">Contact name *<input value={draft.primaryContactName} onChange={(event) => setDraft((current) => ({ ...current, primaryContactName: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+          <label className="text-xs font-semibold text-gray-700">Contact first name *<input value={draft.primaryContactFirstName} onChange={(event) => setDraft((current) => ({ ...current, primaryContactFirstName: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+          <label className="text-xs font-semibold text-gray-700">Contact last name *<input value={draft.primaryContactLastName} onChange={(event) => setDraft((current) => ({ ...current, primaryContactLastName: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="text-xs font-semibold text-gray-700">Contact phone *<input type="tel" value={draft.primaryContactPhone} onChange={(event) => setDraft((current) => ({ ...current, primaryContactPhone: event.target.value }))} onBlur={(event) => { const next = normalizeUsPhone(event.target.value); if (next.ok) setDraft((current) => ({ ...current, primaryContactPhone: next.display })); }} placeholder="(555) 123-4567" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="md:col-span-2 text-xs font-semibold text-gray-700">Contact email *<input type="email" value={draft.primaryContactEmail} onChange={(event) => setDraft((current) => ({ ...current, primaryContactEmail: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="text-xs font-semibold text-gray-700">Support email<input type="email" value={draft.supportEmail} onChange={(event) => setDraft((current) => ({ ...current, supportEmail: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
@@ -930,6 +949,9 @@ function VenueDetail({
             <>
               <span className="self-center text-xs text-gray-600">Pending admin: {organization.pendingInvite.email}</span>
               <button type="button" disabled={busy} onClick={onReissue} className="rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60">Reissue invite</button>
+              {inviteCompose && (
+                <button type="button" onClick={onOutlookInvite} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-800">Send with Outlook ({OUTLOOK_INVITE_FROM})</button>
+              )}
               <button type="button" disabled={busy} onClick={onRevoke} className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60">Revoke invite</button>
             </>
           )}
@@ -989,7 +1011,10 @@ function OnboardVenueForm({
           onChange={(next) => setForm((current) => ({ ...current, ...next, country: 'US' }))}
         />
         <label className="block text-xs font-semibold text-gray-700">Country<input value="United States" readOnly className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" /></label>
-        <label className="block text-xs font-semibold text-gray-700">Contact name *<input value={form.primaryContactName} onChange={(event) => setForm((current) => ({ ...current, primaryContactName: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs font-semibold text-gray-700">Contact first name *<input value={form.primaryContactFirstName} onChange={(event) => setForm((current) => ({ ...current, primaryContactFirstName: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+          <label className="block text-xs font-semibold text-gray-700">Contact last name *<input value={form.primaryContactLastName} onChange={(event) => setForm((current) => ({ ...current, primaryContactLastName: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
+        </div>
         <label className="block text-xs font-semibold text-gray-700">Contact phone *<input type="tel" value={form.primaryContactPhone} onChange={(event) => setForm((current) => ({ ...current, primaryContactPhone: event.target.value }))} onBlur={(event) => { const next = normalizeUsPhone(event.target.value); if (next.ok) setForm((current) => ({ ...current, primaryContactPhone: next.display })); }} placeholder="(555) 123-4567" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
         <label className="block text-xs font-semibold text-gray-700">Contact email *<input type="email" value={form.primaryContactEmail} onChange={(event) => setForm((current) => ({ ...current, primaryContactEmail: event.target.value, adminEmail: current.adminEmail || event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
         <label className="block text-xs font-semibold text-gray-700">First administrator email *<input type="email" value={form.adminEmail} onChange={(event) => setForm((current) => ({ ...current, adminEmail: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
@@ -1039,14 +1064,11 @@ function BrandingSection({
           <label className="block text-xs font-semibold text-gray-700">Login welcome message<textarea value={platformBranding.loginWelcomeMessage || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, loginWelcomeMessage: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={2} /></label>
           <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
             <p className="text-xs font-bold text-indigo-950">Venue administrator invite email</p>
-            <p className="mt-1 text-[11px] text-indigo-800">Sent when you onboard a venue or reissue an invite. Use {'{venueName}'}, {'{inviteUrl}'}, {'{adminEmail}'}, {'{expiresAt}'}, {'{platformName}'}.</p>
+            <p className="mt-1 text-[11px] text-indigo-800">Sent automatically via Outlook SMTP. HTML emails use a Set up your account button (the tokenized URL is not shown). Tags: {'{contactName}'}, {'{contactFirstName}'}, {'{contactLastName}'}, {'{venueName}'}, {'{adminEmail}'}, {'{expiresAt}'}, {'{platformName}'}.</p>
             <label className="mt-2 block text-xs font-semibold text-gray-700">Subject<input value={platformBranding.venueAdminInviteSubject || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, venueAdminInviteSubject: event.target.value })} placeholder={DEFAULT_VENUE_ADMIN_INVITE_SUBJECT} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
             <label className="mt-2 block text-xs font-semibold text-gray-700">Body<textarea value={platformBranding.venueAdminInviteBody || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, venueAdminInviteBody: event.target.value })} placeholder={DEFAULT_VENUE_ADMIN_INVITE_BODY} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs" rows={8} /></label>
-            {!venueAdminInviteIncludesLink(platformBranding.venueAdminInviteBody) && (
-              <p className="mt-2 text-[11px] font-semibold text-red-700">Template must include {'{inviteUrl}'} so the administrator can open the setup link.</p>
-            )}
             <p className="mt-2 text-[11px] font-semibold text-gray-600">Preview</p>
-            <pre className="mt-1 whitespace-pre-wrap rounded-lg border border-white bg-white px-3 py-2 text-[11px] text-gray-700">{applyVenueAdminInviteTemplate(platformBranding.venueAdminInviteSubject, platformBranding.venueAdminInviteBody, { venueName: 'Hilltop Barn', inviteUrl: 'https://your-app/#/venue-onboarding?token=example', adminEmail: 'owner@example.com', expiresAt: 'in 7 days', platformName: platformBranding.venueName || 'Platform' }).subject + '\n\n' + applyVenueAdminInviteTemplate(platformBranding.venueAdminInviteSubject, platformBranding.venueAdminInviteBody, { venueName: 'Hilltop Barn', inviteUrl: 'https://your-app/#/venue-onboarding?token=example', adminEmail: 'owner@example.com', expiresAt: 'in 7 days', platformName: platformBranding.venueName || 'Platform' }).body}</pre>
+            <pre className="mt-1 whitespace-pre-wrap rounded-lg border border-white bg-white px-3 py-2 text-[11px] text-gray-700">{applyVenueAdminInviteTemplate(platformBranding.venueAdminInviteSubject, platformBranding.venueAdminInviteBody, { venueName: 'Hilltop Barn', inviteUrl: 'https://your-app/#/venue-onboarding?token=example', adminEmail: 'owner@example.com', expiresAt: 'in 7 days', platformName: platformBranding.venueName || 'Platform', contactFirstName: 'Ada', contactLastName: 'Lovelace' }).subject + '\n\n' + applyVenueAdminInviteTemplate(platformBranding.venueAdminInviteSubject, platformBranding.venueAdminInviteBody, { venueName: 'Hilltop Barn', inviteUrl: 'https://your-app/#/venue-onboarding?token=example', adminEmail: 'owner@example.com', expiresAt: 'in 7 days', platformName: platformBranding.venueName || 'Platform', contactFirstName: 'Ada', contactLastName: 'Lovelace' }).body}</pre>
           </div>
           <div className="flex items-center gap-3">
             <input id="platform-logo-upload" type="file" accept="image/*" className="sr-only" onChange={(event) => void onLogo(event)} />

@@ -13,7 +13,7 @@ describe('sendVenueAdminInviteEmail', () => {
     sendMock.mockReset().mockResolvedValue(undefined);
   });
 
-  it('sends a venue_admin_invite with a filled template', async () => {
+  it('sends a venue_admin_invite with a named greeting and no visible token in the template body', async () => {
     await sendVenueAdminInviteEmail({
       to: 'owner@hilltop.com',
       organizationId: 'org9',
@@ -21,6 +21,8 @@ describe('sendVenueAdminInviteEmail', () => {
       inviteUrl: 'https://app.example/#/venue-onboarding?token=abc',
       expiresAt: '2026-08-27T00:00:00.000Z',
       platformName: 'Platform',
+      contactFirstName: 'Ada',
+      contactLastName: 'Lovelace',
     });
     expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
       to: 'owner@hilltop.com',
@@ -28,39 +30,38 @@ describe('sendVenueAdminInviteEmail', () => {
       organizationId: 'org9',
     }));
     const data = sendMock.mock.calls[0][0].templateData;
+    expect(data.body).toContain('Hello Ada Lovelace,');
     expect(data.body).toContain('Hilltop Barn');
-    expect(data.body).toContain('https://app.example/#/venue-onboarding?token=abc');
+    expect(data.inviteUrl).toBe('https://app.example/#/venue-onboarding?token=abc');
+    expect(data.contactFirstName).toBe('Ada');
+    expect(data.contactLastName).toBe('Lovelace');
   });
 
-  it('rejects a template that drops the invite URL', async () => {
-    await expect(sendVenueAdminInviteEmail({
+  it('still sends when a custom template omits {inviteUrl}', async () => {
+    await sendVenueAdminInviteEmail({
       to: 'owner@hilltop.com',
       organizationId: 'org9',
       organizationName: 'Hilltop Barn',
       inviteUrl: 'https://app.example/invite',
       body: 'Hello with no link',
-    })).rejects.toThrow(/inviteUrl/i);
-    expect(sendMock).not.toHaveBeenCalled();
+      contactFirstName: 'Ada',
+      contactLastName: 'Lovelace',
+    });
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock.mock.calls[0][0].templateData.inviteUrl).toBe('https://app.example/invite');
   });
 
-  it('opens Outlook compose when transactional send fails', async () => {
+  it('does not open Outlook when transactional send fails', async () => {
     sendMock.mockRejectedValueOnce(new Error('Email service is not configured'));
-    const popup = { closed: false } as Window;
-    const open = vi.fn(() => popup);
+    const open = vi.fn();
     vi.stubGlobal('open', open);
-    const result = await deliverVenueAdminInvite({
+    await expect(deliverVenueAdminInvite({
       to: 'owner@hilltop.com',
       organizationId: 'org9',
       organizationName: 'Hilltop Barn',
       inviteUrl: 'https://app.example/#/venue-onboarding?token=abc',
-    });
-    expect(result).toBe('outlook');
-    expect(open).toHaveBeenCalledTimes(1);
-    const firstCall = open.mock.calls[0] as unknown as [string, string, string];
-    const href = String(firstCall[0]);
-    expect(href.startsWith('https://outlook.live.com/mail/0/deeplink/compose?')).toBe(true);
-    expect(href).toContain(encodeURIComponent('owner@hilltop.com'));
-    expect(href).toContain(encodeURIComponent('#/venue-onboarding?token=abc'));
+    })).rejects.toThrow(/not configured/i);
+    expect(open).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 });

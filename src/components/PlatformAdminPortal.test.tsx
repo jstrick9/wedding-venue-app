@@ -212,6 +212,14 @@ describe('PlatformAdminPortal console', () => {
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
   });
 
+  it('collects contact first and last name on the onboard form', async () => {
+    window.location.hash = '#/platform-admin/onboard';
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+    expect(await screen.findByLabelText(/contact first name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/contact last name/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^contact name/i)).not.toBeInTheDocument();
+  });
+
   it('shows platform audit actions on the Audit screen', async () => {
     window.location.hash = '#/platform-admin/audit';
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
