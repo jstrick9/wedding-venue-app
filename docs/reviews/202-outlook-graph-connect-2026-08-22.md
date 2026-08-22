@@ -27,7 +27,16 @@ user JWT on a service-role client.
 
 ## 3. Validation
 
-Recorded after local CI gates.
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | Pass |
+| `npm run lint:events` | Pass |
+| `npm run lint` | Pass (0 errors / 47 pre-existing warnings) |
+| Strict unused-locals scan | Pass |
+| `npx vitest run` | **867 passed / 5 skipped** |
+| `npm run build` | Pass — 2,306.53 kB / 550.72 kB gzip |
+| `npm run build:split` | Pass |
+| `npm audit --omit=dev` | 0 vulnerabilities |
 
 ---
 
