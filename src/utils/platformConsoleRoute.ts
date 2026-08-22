@@ -5,6 +5,7 @@ export type PlatformConsoleSection =
   | 'map'
   | 'onboard'
   | 'branding'
+  | 'email'
   | 'chat'
   | 'audit';
 
@@ -19,6 +20,7 @@ const KNOWN: PlatformConsoleSection[] = [
   'map',
   'onboard',
   'branding',
+  'email',
   'chat',
   'audit',
 ];

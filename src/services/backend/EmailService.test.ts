@@ -38,6 +38,6 @@ describe('sendTransactionalEmail', () => {
   });
 
   it('explains a browser fetch failure instead of repeating the generic invoke message', () => {
-    expect(describeEmailDeliveryFailure({ message: 'Failed to send a request to the Edge Function' })).toMatch(/port 465/i);
+    expect(describeEmailDeliveryFailure({ message: 'Failed to send a request to the Edge Function' })).toMatch(/connect outlook/i);
   });
 });

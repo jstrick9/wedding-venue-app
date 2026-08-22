@@ -662,5 +662,17 @@ timeouts, and never throws an uncaught handler error.
 **Rule going forward:** treat #201 + §9.12–9.25 as current truth for invite
 email delivery. Do not send from Edge Functions on port 587.
 
+### 9.26 Microsoft Graph Outlook send (Review #202, 2026-08-22)
+
+See `docs/reviews/202-outlook-graph-connect-2026-08-22.md`.
+
+Supabase Edge cannot reach Outlook SMTP (587 blocked, 465 times out). Venue
+admin invites send through **Microsoft Graph** after a one-time Connect
+Outlook in Platform Console → Email. Refresh tokens live in
+`platform_mail_secrets` (migration `0015`, service-role only).
+
+**Rule going forward:** treat #202 + §9.12–9.26 as current truth for invite
+email. Do not retry SMTP from Edge Functions.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

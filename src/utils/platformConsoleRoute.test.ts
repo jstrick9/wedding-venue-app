@@ -26,6 +26,7 @@ describe('platform console hash routing', () => {
     expect(parsePlatformConsoleHash(buildPlatformConsoleHash('map'))).toEqual({ section: 'map' });
     expect(parsePlatformConsoleHash(buildPlatformConsoleHash('branding'))).toEqual({ section: 'branding' });
     expect(parsePlatformConsoleHash(buildPlatformConsoleHash('chat'))).toEqual({ section: 'chat' });
+    expect(parsePlatformConsoleHash(buildPlatformConsoleHash('email'))).toEqual({ section: 'email' });
   });
 
   it('strips query strings and falls back for unknown sections', () => {

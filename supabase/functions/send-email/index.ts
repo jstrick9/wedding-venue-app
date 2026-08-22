@@ -1,17 +1,15 @@
 // Supabase Edge Function: send-email
 // Sends transactional emails from server-rendered templates only.
 // Required secrets:
-//   SMTP_PASS                  Outlook App Password (unattended send)
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
 // Optional:
-//   SMTP_USER / SMTP_HOST / SMTP_PORT / EMAIL_FROM
-//   RESEND_API_KEY             used first when a custom domain is verified
+//   GRAPH_CLIENT_ID / GRAPH_REFRESH_TOKEN   fallback if migration 0015 is not applied
+//   RESEND_API_KEY
+//   SMTP_FORCE=1                            last-resort SMTPS 465 (usually blocked)
 //
-// Supabase Edge / Deno Deploy blocks outbound SMTP on ports 25 and 587.
-// Outlook is sent over implicit TLS on port 465 only. denomailer is not used
-// because a hung 587 connect surfaces in the browser as
-// "Failed to send a request to the Edge Function".
+// Supabase Edge cannot open Outlook SMTP (25/587 blocked, 465 times out).
+// Unattended send uses Microsoft Graph HTTPS after Connect Outlook.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
@@ -36,11 +34,16 @@ type EmailPurpose =
 type AppRole = 'owner' | 'admin' | 'planner' | 'couple' | 'staff' | 'guest';
 
 interface SendEmailRequest {
-  to: string;
-  purpose: EmailPurpose;
-  organizationId: string;
+  action?: 'outlook_exchange' | 'outlook_status' | 'outlook_disconnect';
+  to?: string;
+  purpose?: EmailPurpose;
+  organizationId?: string;
   eventId?: string;
   templateData?: Record<string, unknown>;
+  clientId?: string;
+  code?: string;
+  verifier?: string;
+  redirectUri?: string;
 }
 
 interface RenderedEmail {
@@ -281,19 +284,21 @@ serve(async (req) => {
     const smtpHost = Deno.env.get('SMTP_HOST') || DEFAULT_SMTP_HOST;
     const smtpPort = resolveSmtpPort(Deno.env.get('SMTP_PORT') || '465');
     const emailFrom = Deno.env.get('EMAIL_FROM') || DEFAULT_FROM;
+    const forceSmtp = Deno.env.get('SMTP_FORCE') === '1';
     const canResend = Boolean(resendApiKey);
-    const canSmtp = Boolean(smtpUser && smtpPass);
+    const canSmtp = forceSmtp && Boolean(smtpUser && smtpPass);
 
-    if (!supabaseUrl || !serviceRoleKey || (!canResend && !canSmtp)) {
-      return json({ error: 'Email service is not configured. Set SMTP_PASS for Outlook (wedding-vip@outlook.com) or RESEND_API_KEY + EMAIL_FROM.' }, 500);
+    if (!supabaseUrl || !serviceRoleKey) {
+      return json({ error: 'Email service is not configured.' }, 500);
     }
 
     const authHeader = req.headers.get('Authorization') || '';
+    const admin = createClient(supabaseUrl, serviceRoleKey);
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userError } = await supabase.auth.getUser(
+    const { data: userData, error: userError } = await admin.auth.getUser(
       authHeader.replace(/^Bearer\s+/i, ''),
     );
 
@@ -306,6 +311,37 @@ serve(async (req) => {
       payload = (await req.json()) as SendEmailRequest;
     } catch {
       return json({ error: 'Invalid JSON request body.' }, 400);
+    }
+
+    if (payload.action === 'outlook_exchange' || payload.action === 'outlook_status' || payload.action === 'outlook_disconnect') {
+      const { data: platformRole } = await admin
+        .from('platform_memberships')
+        .select('role,status')
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .in('role', ['platform_owner', 'platform_admin'])
+        .maybeSingle();
+      if (!platformRole) return json({ error: 'Platform administrator access required.' }, 403);
+      if (payload.action === 'outlook_status') {
+        const status = await loadOutlookStatus(admin);
+        return json({ ok: true, ...status });
+      }
+      if (payload.action === 'outlook_disconnect') {
+        const { error } = await admin.from('platform_mail_secrets').update({
+          refresh_token: null,
+          connected_email: null,
+          updated_at: new Date().toISOString(),
+          updated_by: userData.user.id,
+        }).eq('id', 'default');
+        if (error) return json({ error: error.message }, 400);
+        return json({ ok: true });
+      }
+      try {
+        const connected = await exchangeOutlookCode(admin, userData.user.id, payload);
+        return json({ ok: true, email: connected.email });
+      } catch (error) {
+        return json({ error: error instanceof Error ? error.message : 'Could not connect Outlook.' }, 400);
+      }
     }
 
     const to = sanitizeEmail(payload.to || '');
@@ -340,13 +376,14 @@ serve(async (req) => {
 
     let rendered: RenderedEmail;
     try {
-      await ensureRateLimit(supabase, payload.organizationId, userData.user.id);
+      await ensureRateLimit(admin, payload.organizationId, userData.user.id);
       rendered = renderEmail(payload.purpose, payload.templateData);
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Unable to prepare email.' }, 400);
     }
 
     const delivery = await deliverRenderedEmail({
+      admin,
       canResend,
       resendApiKey,
       canSmtp,
@@ -359,7 +396,7 @@ serve(async (req) => {
       rendered,
     });
 
-    const { error: auditError } = await supabase.from('audit_logs').insert({
+    const { error: auditError } = await admin.from('audit_logs').insert({
       organization_id: payload.organizationId,
       event_id: payload.eventId ?? null,
       actor_id: userData.user.id,
@@ -388,6 +425,144 @@ serve(async (req) => {
     return json({ error: error instanceof Error ? error.message : 'send-email failed.' }, 500);
   }
 });
+
+
+const GRAPH_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
+const GRAPH_SCOPES = 'offline_access Mail.Send User.Read';
+
+async function loadOutlookSecrets(admin: ReturnType<typeof createClient>): Promise<{ clientId: string; refreshToken: string; connectedEmail: string }> {
+  const envClient = Deno.env.get('GRAPH_CLIENT_ID') || '';
+  const envToken = Deno.env.get('GRAPH_REFRESH_TOKEN') || '';
+  const { data } = await admin.from('platform_mail_secrets').select('client_id, refresh_token, connected_email').eq('id', 'default').maybeSingle();
+  return {
+    clientId: String(data?.client_id || envClient || '').trim(),
+    refreshToken: String(data?.refresh_token || envToken || '').trim(),
+    connectedEmail: String(data?.connected_email || '').trim(),
+  };
+}
+
+async function loadOutlookStatus(admin: ReturnType<typeof createClient>) {
+  const secrets = await loadOutlookSecrets(admin);
+  return { connected: Boolean(secrets.refreshToken), email: secrets.connectedEmail || null, clientId: secrets.clientId || null };
+}
+
+async function persistOutlookSecrets(admin: ReturnType<typeof createClient>, userId: string, secrets: { clientId: string; refreshToken: string; connectedEmail: string }) {
+  const { error } = await admin.from('platform_mail_secrets').upsert({
+    id: 'default',
+    provider: 'microsoft_graph',
+    client_id: secrets.clientId,
+    refresh_token: secrets.refreshToken,
+    connected_email: secrets.connectedEmail,
+    updated_at: new Date().toISOString(),
+    updated_by: userId || null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function exchangeOutlookCode(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+  payload: SendEmailRequest,
+): Promise<{ email: string }> {
+  const clientId = String(payload.clientId || '').trim();
+  const code = String(payload.code || '').trim();
+  const verifier = String(payload.verifier || '').trim();
+  const redirectUri = String(payload.redirectUri || '').trim();
+  if (!clientId || !code || !verifier || !redirectUri) throw new Error('Missing Outlook OAuth client ID, code, verifier, or redirect URI.');
+  const body = new URLSearchParams({
+    client_id: clientId,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: verifier,
+    scope: GRAPH_SCOPES,
+  });
+  const tokenResponse = await fetch(GRAPH_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  const tokenPayload = await tokenResponse.json().catch(() => ({})) as Record<string, unknown>;
+  if (!tokenResponse.ok || !tokenPayload.refresh_token || !tokenPayload.access_token) {
+    throw new Error(String(tokenPayload.error_description || tokenPayload.error || 'Microsoft did not return Outlook tokens.'));
+  }
+  const meResponse = await fetch('https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName', {
+    headers: { Authorization: `Bearer ${String(tokenPayload.access_token)}` },
+  });
+  const me = await meResponse.json().catch(() => ({})) as Record<string, unknown>;
+  const email = String(me.mail || me.userPrincipalName || '').trim();
+  await persistOutlookSecrets(admin, userId, {
+    clientId,
+    refreshToken: String(tokenPayload.refresh_token),
+    connectedEmail: email,
+  });
+  return { email };
+}
+
+async function sendViaMicrosoftGraph(
+  admin: ReturnType<typeof createClient>,
+  to: string,
+  rendered: RenderedEmail,
+): Promise<{ ok: boolean; status: number; details: unknown }> {
+  const secrets = await loadOutlookSecrets(admin);
+  if (!secrets.clientId || !secrets.refreshToken) {
+    return {
+      ok: false,
+      status: 409,
+      details: { error: 'Outlook is not connected. Open Platform Console → Email and connect wedding-vip@outlook.com. Supabase Edge cannot use Outlook SMTP ports.' },
+    };
+  }
+  const tokenResponse = await fetch(GRAPH_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: secrets.clientId,
+      grant_type: 'refresh_token',
+      refresh_token: secrets.refreshToken,
+      scope: GRAPH_SCOPES,
+    }),
+  });
+  const tokenPayload = await tokenResponse.json().catch(() => ({})) as Record<string, unknown>;
+  if (!tokenResponse.ok || !tokenPayload.access_token) {
+    return {
+      ok: false,
+      status: tokenResponse.status || 401,
+      details: { error: String(tokenPayload.error_description || tokenPayload.error || 'Outlook connection expired. Reconnect Outlook in Platform Console → Email.') },
+    };
+  }
+  if (typeof tokenPayload.refresh_token === 'string' && tokenPayload.refresh_token.trim()) {
+    await persistOutlookSecrets(admin, '', {
+      clientId: secrets.clientId,
+      refreshToken: tokenPayload.refresh_token.trim(),
+      connectedEmail: secrets.connectedEmail,
+    }).catch((error) => console.error('send-email could not rotate Outlook refresh token', error));
+  }
+  const sendResponse = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${String(tokenPayload.access_token)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: {
+        subject: rendered.subject,
+        body: { contentType: 'HTML', content: rendered.html },
+        toRecipients: [{ emailAddress: { address: to } }],
+      },
+      saveToSentItems: true,
+    }),
+  });
+  if (sendResponse.status === 202 || sendResponse.ok) {
+    return { ok: true, status: sendResponse.status, details: { provider: 'microsoft-graph' } };
+  }
+  const sendBody = await sendResponse.json().catch(() => ({})) as Record<string, unknown>;
+  const graphError = sendBody.error && typeof sendBody.error === 'object' ? sendBody.error as Record<string, unknown> : sendBody;
+  return {
+    ok: false,
+    status: sendResponse.status,
+    details: { error: String(graphError.message || graphError.error || 'Microsoft Graph rejected the sendMail request.') },
+  };
+}
 
 async function sendViaResend(resendApiKey: string, emailFrom: string, to: string, rendered: RenderedEmail) {
   const resendResponse = await fetch('https://api.resend.com/emails', {
@@ -574,6 +749,7 @@ async function sendViaOutlookSmtp(opts: {
 }
 
 async function deliverRenderedEmail(opts: {
+  admin: ReturnType<typeof createClient>;
   canResend: boolean;
   resendApiKey: string;
   canSmtp: boolean;
@@ -589,8 +765,16 @@ async function deliverRenderedEmail(opts: {
     ok: false,
     provider: 'none',
     status: 500,
-    details: { error: 'No email provider configured.' },
+    details: { error: 'Outlook is not connected. Open Platform Console → Email and connect wedding-vip@outlook.com. Supabase Edge cannot use Outlook SMTP ports.' },
   };
+
+  try {
+    const graph = await sendViaMicrosoftGraph(opts.admin, opts.to, opts.rendered);
+    if (graph.ok) return { ok: true, provider: 'microsoft-graph', status: graph.status, details: graph.details };
+    last = { ok: false, provider: 'microsoft-graph', status: graph.status, details: graph.details };
+  } catch (error) {
+    last = { ok: false, provider: 'microsoft-graph', status: 502, details: { error: error instanceof Error ? error.message : 'Microsoft Graph failed' } };
+  }
 
   if (opts.canResend) {
     try {

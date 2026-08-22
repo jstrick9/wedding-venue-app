@@ -160,7 +160,7 @@ describe('PlatformAdminPortal console', () => {
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
 
     const nav = await screen.findByRole('navigation', { name: 'Platform console' });
-    for (const label of ['Overview', 'Venues', 'Map', 'Onboard venue', 'Branding', 'Chat', 'Audit']) {
+    for (const label of ['Overview', 'Venues', 'Map', 'Onboard venue', 'Branding', 'Email', 'Chat', 'Audit']) {
       expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument();
     }
     expect(screen.getByText(/venue intelligence platform console/i)).toBeInTheDocument();
