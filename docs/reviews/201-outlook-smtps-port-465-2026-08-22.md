@@ -34,7 +34,16 @@ now show the SMTP reply instead of a fetch failure.
 
 ## 4. Validation
 
-Recorded after local CI gates.
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | Pass |
+| `npm run lint:events` | Pass |
+| `npm run lint` | Pass (0 errors / 47 pre-existing warnings) |
+| Strict unused-locals scan | Pass |
+| `npx vitest run` | **862 passed / 5 skipped** |
+| `npm run build` | Pass — 2,298.67 kB / 548.54 kB gzip |
+| `npm run build:split` | Pass |
+| `npm audit --omit=dev` | 0 vulnerabilities |
 
 ---
 
