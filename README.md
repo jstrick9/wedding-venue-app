@@ -37,7 +37,7 @@ audit.
   - cross-device couple/guest portal snapshots, platform↔venue chat, venue
     address/contact + server-side Geoapify autocomplete, verification, and map
     tiles (API key never ships to the browser), and object storage for public branding.
-  - Migrations live in `supabase/migrations/` (`0001`–`0014`). Apply them in order
+  - Migrations live in `supabase/migrations/` (`0001`–`0015`). Apply them in order
     and run a live RLS/onboarding smoke test before trusting cloud mode with real
     venue data. The geocode Edge Function requires
     `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_APP_URL`, `ALLOWED_ORIGIN`,

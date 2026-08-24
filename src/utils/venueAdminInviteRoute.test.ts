@@ -78,7 +78,7 @@ describe('venueAdminInviteRoute', () => {
     expect(describeVenueAdminInviteError('expired')).toMatch(/expired/i);
     expect(describeVenueAdminInviteError('not_found')).toMatch(/reissue/i);
     expect(describeVenueAdminInviteError('missing')).toMatch(/missing/i);
-    expect(describeVenueAdminInviteError('invalid input syntax for type uuid: "(abc,def)"')).toMatch(/0016/);
+    expect(describeVenueAdminInviteError('invalid input syntax for type uuid: "(abc,def)"')).toMatch(/0015/);
   });
 
   it('shows the setup screen for path invites without a hash', () => {

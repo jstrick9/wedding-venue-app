@@ -1,5 +1,8 @@
 # Review #202 — Microsoft Graph Outlook send (SMTP is blocked)
 
+> **Superseded:** Graph send was removed in #203. The Graph migration file was
+> deleted in #208. Do not apply `0015_platform_outlook_graph.sql`.
+
 Reissue failed with `TLS connect smtp-mail.outlook.com:465 timed out after
 8000ms`. Port 587 is blocked on Supabase Edge; port 465 times out. Automatic
 Outlook SMTP from this runtime is not possible.

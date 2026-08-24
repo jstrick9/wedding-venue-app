@@ -231,7 +231,10 @@ Later function edits on `main` deploy automatically. Changing `GEOAPIFY_API_KEY`
 ### 3. Apply SQL
 
 In SQL Editor, run `supabase/migrations/0014_geoapify_address_quality.sql` if
-it has not been applied yet (after `0001`–`0013`).
+it has not been applied yet (after `0001`–`0013`). Then run
+`supabase/migrations/0015_reissue_claimed_venue_and_invite_lookup.sql` so
+venue-admin invite lookup and claimed-venue reissue work. Do not apply the
+removed Graph Outlook migration.
 
 ### 4. Smoke
 

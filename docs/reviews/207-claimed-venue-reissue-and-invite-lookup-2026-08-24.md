@@ -1,5 +1,9 @@
 # Review #207 — Claimed-venue reissue and invite lookup SQL
 
+> **Numbering update (#208):** this SQL is now
+> `supabase/migrations/0015_reissue_claimed_venue_and_invite_lookup.sql`.
+> Graph Outlook `0015` was removed. Apply **0015**, not 0016.
+
 The emailed `/i/<token>` link reached the setup page, then Postgres threw:
 
 `invalid input syntax for type uuid: "(<whole venue_admin_invites row>)"`

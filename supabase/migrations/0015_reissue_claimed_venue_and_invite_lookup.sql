@@ -1,4 +1,6 @@
--- Review #207: fix invite lookup and allow reissue on a claimed venue.
+-- Review #207 / #208: fix invite lookup and allow reissue on a claimed venue.
+-- Graph Outlook send (#202) is unused. This file occupies 0015 after that
+-- migration was removed. Drop leftover Graph artifacts if they were applied.
 --
 -- get_venue_admin_invite_context used `SELECT vai INTO invite_row`. PL/pgSQL
 -- assigned that composite to the first column (id uuid), which throws:
@@ -6,6 +8,11 @@
 --
 -- Reissue previously required organizations.owner_id IS NULL. Accept then
 -- rejected a claimed venue. Platform reissue now transfers managed ownership.
+
+drop function if exists public.get_platform_outlook_status();
+drop function if exists public.save_platform_outlook_connection(text, text, text);
+drop function if exists public.disconnect_platform_outlook();
+drop table if exists public.platform_mail_secrets;
 
 create or replace function public.get_venue_admin_invite_context(
   p_token text

@@ -669,7 +669,7 @@ See `docs/reviews/202-outlook-graph-connect-2026-08-22.md`.
 Supabase Edge cannot reach Outlook SMTP (587 blocked, 465 times out). Venue
 admin invites send through **Microsoft Graph** after a one-time Connect
 Outlook in Platform Console → Email. Refresh tokens live in
-`platform_mail_secrets` (migration `0015`, service-role only).
+`platform_mail_secrets` (historical Graph migration, removed in #208).
 
 **Rule going forward:** treat #202 + §9.12–9.26 as current truth for invite
 email. Do not retry SMTP from Edge Functions.
@@ -733,12 +733,23 @@ URLs. Do not put `?` or `#` in emailed setup links.
 See `docs/reviews/207-claimed-venue-reissue-and-invite-lookup-2026-08-24.md`.
 
 `get_venue_admin_invite_context` used `SELECT vai INTO invite_row`, which
-assigned the whole composite to `id uuid`. Apply migration **0016**. Reissue
-is allowed on claimed active/provisioning venues; accept transfers managed
-ownership to the invitee and demotes the previous owner membership to admin.
+assigned the whole composite to `id uuid`. Reissue is allowed on claimed
+active/provisioning venues; accept transfers managed ownership to the invitee
+and demotes the previous owner membership to admin. The SQL shipped as 0016
+in #207; #208 renumbered it to **0015** after Graph was removed.
 
-**Rule going forward:** treat #207 + §9.12–9.31 as current truth for venue-admin
-invite RPCs. Apply 0016 in the live project before claiming the lookup is fixed.
+### 9.32 Invite-lookup SQL is migration 0015 (Review #208, 2026-08-24)
+
+See `docs/reviews/208-renumber-invite-lookup-migration-2026-08-24.md`.
+
+Unused Graph Outlook migration `0015_platform_outlook_graph.sql` is deleted.
+Invite lookup / claimed-venue reissue is now
+`supabase/migrations/0015_reissue_claimed_venue_and_invite_lookup.sql`.
+That file also drops leftover Graph table/functions if they were applied.
+
+**Rule going forward:** treat #208 + §9.12–9.32 as current truth for venue-admin
+invite RPCs. Apply **0015** in the live project before claiming the lookup is
+fixed. There is no 0016.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*
