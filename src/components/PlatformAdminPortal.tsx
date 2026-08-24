@@ -310,7 +310,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   };
 
   const handleReissue = async (organization: PlatformOrganizationSummary) => {
-    if (organization.ownerId && !window.confirm(`${organization.name} already has an owner. Reissuing emails a new setup link. When that person accepts, they become the venue owner.`)) {
+    if (organization.ownerId && !window.confirm(`${organization.name} already has an owner. Reissuing emails a new setup link. The invitee will set a new password. When they accept, they become the venue owner. Existing events, layouts, guests, and team work stay with ${organization.name}.`)) {
       return;
     }
     const email = organization.pendingInvite?.email || window.prompt('Email for the new managed-admin invitation:', organization.primaryContactEmail || '') || '';

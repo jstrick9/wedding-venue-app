@@ -2,24 +2,23 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const lookupMock = vi.fn();
-const authState = {
-  user: {
-    id: 'platform-1',
-    email: 'punistricker@gmail.com',
-    name: 'Platform Admin',
-    username: 'punistricker@gmail.com',
-    role: 'admin',
-    password: '',
-    isActive: true,
-    createdAt: '2026-01-01',
-  },
-  loginForOrganization: vi.fn(),
-  hasPlatformSession: true,
-  logout: vi.fn(),
-};
 
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => authState,
+  useAuth: () => ({
+    user: {
+      id: 'platform-1',
+      email: 'punistricker@gmail.com',
+      name: 'Platform Admin',
+      username: 'punistricker@gmail.com',
+      role: 'admin',
+      password: '',
+      isActive: true,
+      createdAt: '2026-01-01',
+    },
+    loginForOrganization: vi.fn(),
+    hasPlatformSession: true,
+    logout: vi.fn(),
+  }),
 }));
 
 vi.mock('../services/platform/platformAdminService', () => ({
@@ -41,13 +40,13 @@ vi.mock('../services/platform/publicVenueService', () => ({
 
 import VenueAdminOnboarding from './VenueAdminOnboarding';
 
-describe('VenueAdminOnboarding session isolation', () => {
+describe('VenueAdminOnboarding venue-only claim', () => {
   beforeEach(() => {
     lookupMock.mockReset();
     sessionStorage.clear();
   });
 
-  it('shows the invited-email setup form even when a platform admin is signed in', async () => {
+  it('names the venue, requires a new password, and hides platform / existing-account chrome', async () => {
     lookupMock.mockResolvedValue({
       context: {
         organizationId: 'org-1',
@@ -62,13 +61,19 @@ describe('VenueAdminOnboarding session isolation', () => {
     render(<VenueAdminOnboarding token="va-abc123def4567890" />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/invited email address/i)).toHaveValue('stricklandjoshua01@gmail.com');
+      expect(screen.getByRole('heading', { name: /claim seven paths manor's venue workspace/i })).toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: /create venue administrator account/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in and claim venue/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /return to platform console/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/invited email address/i)).toHaveValue('stricklandjoshua01@gmail.com');
+    expect(screen.getByLabelText(/^new password$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/confirm new password/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /claim venue workspace/i })).toBeInTheDocument();
+    expect(screen.getByText(/existing events, layouts, guests, and team work stay with seven paths manor/i)).toBeInTheDocument();
+    expect(screen.queryByText(/venue setup uses the invited email/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/platform administration stays signed in separately/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/already created this venue account/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sign in and claim venue/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /return to platform console/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /return to platform login/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/sign out of the platform administrator account/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /sign out and continue as invited admin/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/platform administration stays signed in separately/i)).toBeInTheDocument();
   });
 });

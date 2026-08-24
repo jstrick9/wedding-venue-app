@@ -1,6 +1,7 @@
 import type { User, UserRole } from '../../types';
 import type { AuthSurface } from '../../utils/authSurface';
 import type { PlatformRole } from '../platform/platformTypes';
+import { claimVenueAdminAccount, isClaimFunctionMissingError } from '../platform/claimVenueAdminAccount';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
 export interface BackendAuthSession {
@@ -268,12 +269,48 @@ export interface VenueAdminInviteSignUpParams {
   inviteToken: string;
 }
 
-/**
- * Create the first managed administrator for a platform-created venue. Unlike
- * ordinary platform sign-up, this never creates a new organization; the
- * invitation claims the organization created by the platform administrator.
- */
-export async function signUpVenueAdminWithInvite({
+function alreadyRegisteredMessage(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /already registered|already been registered|user already exists|email_exists|already exists/i.test(message);
+}
+
+async function acceptVenueAdminInviteAsSignedIn(
+  inviteToken: string,
+  fullName: string,
+): Promise<BackendAuthSession> {
+  const supabase = getSupabaseClient('venue');
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  const email = userData.user?.email || '';
+  if (!userId) {
+    throw new Error('Venue administrator access was saved, but the session could not be restored.');
+  }
+  if (fullName.trim()) {
+    await supabase.from('profiles').update({ full_name: fullName.trim() }).eq('id', userId);
+  }
+
+  const { data: accepted, error: acceptError } = await supabase.rpc('accept_venue_admin_invite', {
+    p_token: inviteToken,
+  });
+  if (acceptError) throw acceptError;
+  if (!accepted?.ok) {
+    throw new Error(String(accepted?.error || 'The venue administrator invitation could not be accepted.'));
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  return {
+    user: mapProfileToUser(
+      { full_name: fullName, app_role: 'admin' },
+      userId,
+      email,
+    ),
+    accessToken: sessionData.session?.access_token || '',
+    organizationId: String(accepted.organization_id || ''),
+    organizationSlug: accepted.organization_slug ? String(accepted.organization_slug) : undefined,
+  };
+}
+
+async function signUpVenueAdminFallback({
   email,
   password,
   fullName,
@@ -289,18 +326,48 @@ export async function signUpVenueAdminWithInvite({
   if (!data.session || !data.user) {
     throw new Error('Account created but no session was returned. Email confirmation may be enabled; complete confirmation or use a test project with confirmation disabled.');
   }
+  return acceptVenueAdminInviteAsSignedIn(inviteToken, fullName);
+}
 
-  const { data: accepted, error: acceptError } = await supabase.rpc('accept_venue_admin_invite', {
-    p_token: inviteToken,
-  });
-  if (acceptError) throw acceptError;
-  if (!accepted?.ok) {
-    throw new Error(String(accepted?.error || 'The venue administrator invitation could not be accepted.'));
+/**
+ * Create or re-claim the managed administrator for a platform-created venue.
+ * A reissued invite sets a new password on the existing Auth user and then
+ * accepts the invite. The organization and its artifacts stay in place.
+ */
+export async function signUpVenueAdminWithInvite({
+  email,
+  password,
+  fullName,
+  inviteToken,
+}: VenueAdminInviteSignUpParams): Promise<BackendAuthSession> {
+  try {
+    const prepared = await claimVenueAdminAccount({
+      token: inviteToken,
+      password,
+      fullName,
+    });
+    const supabase = getSupabaseClient('venue');
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: prepared.email || email,
+      password,
+    });
+    if (error || !data.session || !data.user) {
+      throw new Error(error?.message || 'Could not sign in with the new venue password.');
+    }
+    return acceptVenueAdminInviteAsSignedIn(inviteToken, fullName);
+  } catch (error) {
+    if (!isClaimFunctionMissingError(error)) throw error;
+    try {
+      return await signUpVenueAdminFallback({ email, password, fullName, inviteToken });
+    } catch (fallbackError) {
+      if (alreadyRegisteredMessage(fallbackError)) {
+        throw new Error(
+          'This venue already has an administrator account. The claim-venue-admin function must be deployed so a reissued invite can set a new password without losing venue work.',
+        );
+      }
+      throw fallbackError;
+    }
   }
-
-  const session = await restoreSupabaseSession(undefined, 'venue');
-  if (!session) throw new Error('Venue administrator account was created, but the session could not be restored.');
-  return session;
 }
 
 export async function signUpOrganizationInvite({

@@ -1,0 +1,5 @@
+# Used by `supabase functions deploy`. Project ref is still passed with --project-ref.
+# Invitees hit claim-venue-admin with only the invite token (no signed-in JWT).
+
+[functions.claim-venue-admin]
+verify_jwt = false
