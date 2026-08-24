@@ -774,5 +774,19 @@ platform client. Do not copy one refresh token onto both surface clients.
 **Rule going forward:** treat #210 + §9.12–9.34 as current truth for
 platform RPCs after dual-session auth.
 
+### 9.35 Venue-only claim page and reissue password (Review #211, 2026-08-24)
+
+See `docs/reviews/211-venue-claim-page-and-reissue-password-2026-08-24.md`.
+
+The `/i/<token>` page is only for the invited venue. The heading is
+**Claim {venue}'s Venue Workspace**. There is no platform-session info
+box, no existing-account sign-in, and no return-to-platform link. A
+reissued invite requires a new password. `claim-venue-admin` updates the
+existing Auth user (or creates one) and accept keeps the same
+organization, so events, layouts, guests, and team work stay.
+
+**Rule going forward:** treat #211 + §9.12–9.35 as current truth for
+venue-admin setup. Deploy `claim-venue-admin` and still apply **0015**.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
