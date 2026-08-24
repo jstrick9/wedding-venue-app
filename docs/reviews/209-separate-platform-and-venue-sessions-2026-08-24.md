@@ -30,7 +30,16 @@ Migration **0015** is still required in the live SQL Editor for lookup/reissue.
 
 ## 3. Validation
 
-Recorded after the CI gates in this review.
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | Pass |
+| `npm run lint:events` | Pass |
+| `npm run lint` | 0 errors / 47 warnings |
+| Strict unused-locals scan | Clean (non-test; grep printed nothing) |
+| `npx vitest run` | **877 passed / 5 skipped** |
+| `npm run build` | Pass — **2,310.51 kB / 552.19 kB gzip** |
+| `npm run build:split` | Pass |
+| `npm audit --omit=dev` | 0 vulnerabilities |
 
 ---
 
