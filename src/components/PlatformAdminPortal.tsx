@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrandingConfig } from '../config';
 import {
@@ -29,6 +29,8 @@ import type {
   PlatformOrganizationSummary,
 } from '../services/platform/platformTypes';
 import { showToast } from './Toast';
+import { describeUnknownError } from '../utils/unknownError';
+import { withTimeout } from '../utils/withTimeout';
 import { buildVenueAdminInviteCompose, deliverVenueAdminInvite } from '../services/platform/venueAdminInviteMail';
 import type { InviteComposeMessage } from '../utils/inviteCompose';
 import {
@@ -174,6 +176,16 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   }, []);
 
   useEffect(() => { void loadConsole(); }, [loadConsole]);
+
+  const refreshVenuesAfterSave = useCallback(async () => {
+    try {
+      setOrganizations(await listPlatformOrganizations());
+    } catch {
+      // Keep the form's saved values visible; a later Refresh retries.
+    }
+    void getPlatformConsoleMetrics().then(setMetrics).catch(() => undefined);
+    void listPlatformAuditLogs(80).then(setAuditLogs).catch(() => undefined);
+  }, []);
 
   const sendInviteEmail = async (composeInput: Parameters<typeof deliverVenueAdminInvite>[0], successMessage: string) => {
     setInviteCompose(buildVenueAdminInviteCompose(composeInput));
@@ -542,7 +554,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
                 onRevoke={() => void handleRevoke(selectedVenue)}
                 onSuspend={() => void handleSuspend(selectedVenue)}
                 onReactivate={() => void handleReactivate(selectedVenue)}
-                onSaved={loadConsole}
+                onSaved={refreshVenuesAfterSave}
               />
             ) : (
               <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
@@ -801,9 +813,12 @@ function VenueDetail({
     suspensionReason: organization.suspensionReason || '',
   });
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  savingRef.current = saving;
   const [addressVerified, setAddressVerified] = useState(hasCompleteStreetAddress(organization));
 
   useEffect(() => {
+    if (savingRef.current) return;
     setAddressVerified(hasCompleteStreetAddress(organization));
     setDraft({
       name: organization.name,
@@ -827,43 +842,58 @@ function VenueDetail({
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    const phone = normalizeUsPhone(draft.primaryContactPhone, { required: true });
+    const email = normalizeEmail(draft.primaryContactEmail, { required: true });
+    const supportEmail = normalizeEmail(draft.supportEmail);
+    const venuePhone = normalizeUsPhone(draft.phone);
+    const website = normalizeWebsite(draft.websiteUrl);
+    const contactError = firstFieldError(phone, email, supportEmail, venuePhone, website);
+    if (contactError) {
+      showToast(contactError, 'warning');
+      return;
+    }
+    if (streetAddressKey(draft) !== streetAddressKey(organization)) {
+      if (!addressVerified || !hasCompleteStreetAddress(draft)) {
+        showToast('Select a verified US street address from the suggestions.', 'warning');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       let latitude = organization.latitude ?? null;
       let longitude = organization.longitude ?? null;
-      const phone = normalizeUsPhone(draft.primaryContactPhone, { required: true });
-      const email = normalizeEmail(draft.primaryContactEmail, { required: true });
-      const supportEmail = normalizeEmail(draft.supportEmail);
-      const venuePhone = normalizeUsPhone(draft.phone);
-      const website = normalizeWebsite(draft.websiteUrl);
-      const contactError = firstFieldError(phone, email, supportEmail, venuePhone, website);
-      if (contactError) throw new Error(contactError);
       if (streetAddressKey(draft) !== streetAddressKey(organization)) {
-        if (!addressVerified || !hasCompleteStreetAddress(draft)) {
-          throw new Error('Select a verified US street address from the suggestions.');
-        }
-        const coordinates = await geocodeVenueAddress({ ...draft, country: 'US' });
+        const coordinates = await withTimeout(
+          geocodeVenueAddress({ ...draft, country: 'US' }),
+          15000,
+          'Address verification timed out. Save again, or keep the existing address.',
+        );
         latitude = coordinates.latitude;
         longitude = coordinates.longitude;
       }
-      await updateVenueOrganization({
-        organizationId: organization.id,
-        ...draft,
-        country: 'US',
-        primaryContactName: joinContactName(draft.primaryContactFirstName, draft.primaryContactLastName),
-        primaryContactPhone: phone.value,
-        primaryContactEmail: email.value,
-        supportEmail: supportEmail.value,
-        phone: venuePhone.value,
-        websiteUrl: website.value,
-        latitude,
-        longitude,
-      });
-      showToast(`${draft.name} updated.`, 'success');
-      await onSaved();
+      const updated = await withTimeout(
+        updateVenueOrganization({
+          organizationId: organization.id,
+          ...draft,
+          country: 'US',
+          primaryContactName: joinContactName(draft.primaryContactFirstName, draft.primaryContactLastName),
+          primaryContactPhone: phone.value,
+          primaryContactEmail: email.value,
+          supportEmail: supportEmail.value,
+          phone: venuePhone.value,
+          websiteUrl: website.value,
+          latitude,
+          longitude,
+        }),
+        20000,
+        'Saving the venue timed out. Sign in again at Platform login if this keeps happening.',
+      );
+      showToast(`${updated.organizationName} updated.`, 'success');
+      setSaving(false);
+      void onSaved();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not update the venue.', 'warning');
-    } finally {
+      showToast(describeUnknownError(err, 'Could not update the venue.'), 'warning');
       setSaving(false);
     }
   };

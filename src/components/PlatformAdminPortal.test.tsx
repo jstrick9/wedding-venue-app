@@ -191,6 +191,43 @@ describe('PlatformAdminPortal console', () => {
     expect(window.location.hash).toBe('#/platform-admin/venues/org-2');
   });
 
+  it('saves a provisioning-to-active status change without waiting on a hung console reload', async () => {
+    window.location.hash = '#/platform-admin/venues/org-2';
+    listOrganizationsMock
+      .mockResolvedValueOnce(organizations)
+      .mockImplementation(() => new Promise(() => {}));
+    metricsMock
+      .mockResolvedValueOnce(metrics)
+      .mockImplementation(() => new Promise(() => {}));
+    updateVenueMock.mockResolvedValue({
+      organizationId: 'org-2',
+      organizationName: 'Hilltop Barn',
+      organizationSlug: 'hilltop-barn',
+      status: 'active',
+    });
+
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+
+    const status = await screen.findByLabelText(/^status$/i);
+    expect(status).toHaveValue('provisioning');
+    fireEvent.change(status, { target: { value: 'active' } });
+    fireEvent.click(screen.getByRole('button', { name: /save venue changes/i }));
+
+    await waitFor(() => {
+      expect(updateVenueMock).toHaveBeenCalledTimes(1);
+    });
+    expect(geocodeMock).not.toHaveBeenCalled();
+    expect(updateVenueMock.mock.calls[0][0]).toMatchObject({
+      organizationId: 'org-2',
+      status: 'active',
+      name: 'Hilltop Barn',
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /save venue changes/i })).toBeEnabled();
+    });
+    expect(screen.queryByRole('button', { name: /saving/i })).not.toBeInTheDocument();
+  });
+
   it('saves venue identity edits without re-geocoding an unchanged address', async () => {
     window.location.hash = '#/platform-admin/venues/org-1';
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);

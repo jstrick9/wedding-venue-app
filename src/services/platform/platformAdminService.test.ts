@@ -231,7 +231,7 @@ describe('platformAdminService', () => {
       primaryContactName: 'Ada',
       primaryContactPhone: '704-555-0100',
       primaryContactEmail: 'ada@sevenpaths.com',
-    })).rejects.toThrow('forbidden');
+    })).rejects.toThrow(/platform administrator login/i);
   });
 
   it('maps platform audit log rows into camelCase entries', async () => {

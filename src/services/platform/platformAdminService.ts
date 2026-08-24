@@ -46,10 +46,14 @@ export interface VenueAdminInviteContext {
 }
 
 function describePlatformRpcFailure(error: string, fallback: string): string {
-  if (/^forbidden$/i.test(error.trim())) {
-    return 'Reissue requires the platform administrator login. Sign in again at Platform login. A venue invite account in this browser is separate and cannot reissue invites.';
+  const message = error.trim();
+  if (/^forbidden$/i.test(message)) {
+    return 'This action requires the platform administrator login. Sign in again at Platform login. A venue invite account in this browser is separate and cannot change venue records.';
   }
-  return error || fallback;
+  if (/could not find the function|schema cache|PGRST202/i.test(message)) {
+    return 'The venue update function is missing. In Supabase → SQL Editor, run supabase/migrations/0014_geoapify_address_quality.sql.';
+  }
+  return message || fallback;
 }
 
 async function requireSupabase(surface: AuthSurface = 'platform'): Promise<ReturnType<typeof getSupabaseClient>> {
@@ -341,8 +345,12 @@ export async function updateVenueOrganization(
     p_longitude: input.longitude ?? null,
     p_suspension_reason: input.suspensionReason?.trim() || null,
   });
-  if (error) throw error;
-  if (!data?.ok) throw new Error(String(data?.error || 'Could not update the venue organization.'));
+  if (error) {
+    throw new Error(describePlatformRpcFailure(error.message || '', 'Could not update the venue organization.'));
+  }
+  if (!data?.ok) {
+    throw new Error(describePlatformRpcFailure(String(data?.error || ''), 'Could not update the venue organization.'));
+  }
   return {
     organizationId: String(data.organization_id),
     organizationName: String(data.organization_name),
