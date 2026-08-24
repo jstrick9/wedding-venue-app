@@ -788,5 +788,18 @@ organization, so events, layouts, guests, and team work stay.
 **Rule going forward:** treat #211 + §9.12–9.35 as current truth for
 venue-admin setup. Deploy `claim-venue-admin` and still apply **0015**.
 
+### 9.36 Venue edit Save must not wait on console metrics (Review #212, 2026-08-24)
+
+See `docs/reviews/212-venue-edit-save-hang-2026-08-24.md`.
+
+Saving a venue (including provisioning → active) must finish when
+`update_venue_organization` returns. Do not `await loadConsole()` on that
+path; metrics can stall after a venue becomes active because they scan
+`org_data`. Refresh the directory in the background.
+
+**Rule going forward:** treat #212 + §9.12–9.36 as current truth for
+platform venue edit.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
+
