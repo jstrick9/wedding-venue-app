@@ -1,3 +1,4 @@
+import type { AuthSurface } from '../../utils/authSurface';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
 export type EmailPurpose =
@@ -60,14 +61,18 @@ async function describeFunctionError(error: unknown, data: unknown): Promise<str
   return describeEmailDeliveryFailure(error, data);
 }
 
-export async function sendTransactionalEmail(params: SendTransactionalEmailParams): Promise<void> {
+export async function sendTransactionalEmail(
+  params: SendTransactionalEmailParams,
+  surface?: AuthSurface,
+): Promise<void> {
   if (!isSupabaseConfigured()) {
     throw new Error('Email delivery requires Supabase Edge Functions configuration.');
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const invoked = getSupabaseClient().functions.invoke('send-email', { body: params });
+    const clientSurface = surface || (params.purpose === 'venue_admin_invite' ? 'platform' : undefined);
+    const invoked = getSupabaseClient(clientSurface).functions.invoke('send-email', { body: params });
     const { data, error } = await Promise.race([
       invoked,
       new Promise<never>((_, reject) => {

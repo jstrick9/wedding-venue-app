@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectAuthSurface, isVenueStaffRoute } from './authSurface';
+import { detectAuthSurface, isVenueStaffRoute, surfacesForLegacySession } from './authSurface';
 
 describe('authSurface', () => {
   it('keeps platform console and login on the platform surface', () => {

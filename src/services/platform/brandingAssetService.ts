@@ -9,7 +9,7 @@ export async function uploadPublicBrandingAsset(
   const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
   const prefix = scope === 'platform' ? 'platform' : `venues/${scope.organizationId}`;
   const path = `${prefix}/${Date.now()}-${safeName}`;
-  const { error } = await getSupabaseClient().storage.from(bucket).upload(path, file, {
+  const { error } = await getSupabaseClient(scope === 'platform' ? 'platform' : 'venue').storage.from(bucket).upload(path, file, {
     upsert: true,
     cacheControl: '3600',
     contentType: file.type || 'application/octet-stream',

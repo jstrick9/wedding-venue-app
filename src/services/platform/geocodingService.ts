@@ -37,7 +37,7 @@ function translateNetworkError(error: unknown): never {
 }
 
 async function authorizedFetch(init: RequestInit): Promise<Response> {
-  const accessToken = await getCurrentAccessToken();
+  const accessToken = await getCurrentAccessToken('platform');
   if (!accessToken) throw new Error('Sign in as a platform administrator before looking up an address.');
   const url = `${requireSupabaseUrl()}/functions/v1/geocode-venue`;
   try {

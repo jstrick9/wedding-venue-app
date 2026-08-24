@@ -1,5 +1,5 @@
 import type { AuthSurface } from '../../utils/authSurface';
-import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
+import { getSupabaseClient, isSupabaseConfigured, requirePlatformClient } from '../backend/supabaseClient';
 import { createOpaqueToken } from '../../utils/secureTokens';
 import { normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../../utils/contactQuality';
 import { buildVenueAdminInviteUrl, sanitizeVenueAdminToken } from '../../utils/venueAdminInviteRoute';
@@ -45,17 +45,25 @@ export interface VenueAdminInviteContext {
   expiresAt: string;
 }
 
-function requireSupabase(surface: AuthSurface = 'platform'): ReturnType<typeof getSupabaseClient> {
+function describePlatformRpcFailure(error: string, fallback: string): string {
+  if (/^forbidden$/i.test(error.trim())) {
+    return 'Reissue requires the platform administrator login. Sign in again at Platform login. A venue invite account in this browser is separate and cannot reissue invites.';
+  }
+  return error || fallback;
+}
+
+async function requireSupabase(surface: AuthSurface = 'platform'): Promise<ReturnType<typeof getSupabaseClient>> {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase is not configured.');
   }
+  if (surface === 'platform') return requirePlatformClient();
   return getSupabaseClient(surface);
 }
 
 export { buildVenueAdminInviteUrl } from '../../utils/venueAdminInviteRoute';
 
 export async function listPlatformOrganizations(): Promise<PlatformOrganizationSummary[]> {
-  const supabase = requireSupabase();
+  const supabase = await requireSupabase();
   const [organizationsResult, membershipsResult, profilesResult, invitesResult] = await Promise.all([
     supabase
       .from('organizations')
@@ -135,7 +143,7 @@ export async function listPlatformOrganizations(): Promise<PlatformOrganizationS
 }
 
 export async function getPlatformConsoleMetrics(): Promise<PlatformConsoleMetrics> {
-  const { data, error } = await requireSupabase().rpc('get_platform_console_metrics');
+  const { data, error } = await (await requireSupabase()).rpc('get_platform_console_metrics');
   if (error) throw error;
   if (!data?.ok) throw new Error(String(data?.error || 'Could not load platform metrics.'));
   const global = data.global || {};
@@ -169,7 +177,7 @@ export async function getPlatformConsoleMetrics(): Promise<PlatformConsoleMetric
 export async function createVenueOrganization(
   input: CreateVenueOrganizationInput,
 ): Promise<CreateVenueOrganizationResult> {
-  const supabase = requireSupabase();
+  const supabase = await requireSupabase();
   const token = createOpaqueToken('va');
   const expiresAt = input.expiresAt || inviteExpiresAt(DEFAULT_NEW_INVITE_TTL_DAYS);
   const adminEmail = normalizeEmail(input.adminEmail, { required: true });
@@ -212,7 +220,7 @@ export async function createVenueOrganization(
 export async function lookupVenueAdminInvite(token: string): Promise<{ context: VenueAdminInviteContext | null; error?: string }> {
   const trimmed = sanitizeVenueAdminToken(token) || token.trim();
   if (!trimmed) return { context: null, error: 'missing' };
-  const { data, error } = await requireSupabase().rpc('get_venue_admin_invite_context', { p_token: trimmed });
+  const { data, error } = await (await requireSupabase('venue')).rpc('get_venue_admin_invite_context', { p_token: trimmed });
   if (error) return { context: null, error: error.message || 'not_found' };
   const payload = (typeof data === 'string'
     ? (() => { try { return JSON.parse(data) as Record<string, unknown>; } catch { return null; } })()
@@ -242,19 +250,19 @@ export async function reissueVenueAdminInvite(
 ): Promise<{ inviteUrl: string; expiresAt: string }> {
   const token = createOpaqueToken('va');
   const nextExpiry = expiresAt || inviteExpiresAt(DEFAULT_REISSUE_INVITE_TTL_DAYS);
-  const { data, error } = await requireSupabase().rpc('reissue_venue_admin_invite', {
+  const { data, error } = await (await requireSupabase('platform')).rpc('reissue_venue_admin_invite', {
     p_organization_id: organizationId,
     p_email: email.trim().toLowerCase(),
     p_admin_token: token,
     p_expires_at: nextExpiry,
   });
-  if (error) throw error;
-  if (!data?.ok) throw new Error(String(data?.error || 'Could not reissue the venue administrator invite.'));
+  if (error) throw new Error(describePlatformRpcFailure(error.message || '', 'Could not reissue the venue administrator invite.'));
+  if (!data?.ok) throw new Error(describePlatformRpcFailure(String(data?.error || ''), 'Could not reissue the venue administrator invite.'));
   return { inviteUrl: buildVenueAdminInviteUrl(token), expiresAt: String(data.expires_at || nextExpiry) };
 }
 
 export async function revokeVenueAdminInvite(inviteId: string, reason?: string): Promise<void> {
-  const { data, error } = await requireSupabase().rpc('revoke_venue_admin_invite', {
+  const { data, error } = await (await requireSupabase()).rpc('revoke_venue_admin_invite', {
     p_invite_id: inviteId,
     p_reason: reason || null,
   });
@@ -263,7 +271,7 @@ export async function revokeVenueAdminInvite(inviteId: string, reason?: string):
 }
 
 export async function suspendVenueOrganization(organizationId: string, reason?: string): Promise<void> {
-  const { data, error } = await requireSupabase().rpc('suspend_venue_organization', {
+  const { data, error } = await (await requireSupabase()).rpc('suspend_venue_organization', {
     p_organization_id: organizationId,
     p_reason: reason || null,
   });
@@ -272,7 +280,7 @@ export async function suspendVenueOrganization(organizationId: string, reason?: 
 }
 
 export async function reactivateVenueOrganization(organizationId: string): Promise<void> {
-  const { data, error } = await requireSupabase().rpc('reactivate_venue_organization', {
+  const { data, error } = await (await requireSupabase()).rpc('reactivate_venue_organization', {
     p_organization_id: organizationId,
   });
   if (error) throw error;
@@ -313,7 +321,7 @@ export async function updateVenueOrganization(
   if (!contactPhone.ok) throw new Error(contactPhone.error);
   if (!supportEmail.ok) throw new Error(supportEmail.error);
   if (!venuePhone.ok) throw new Error(venuePhone.error);
-  const { data, error } = await requireSupabase().rpc('update_venue_organization', {
+  const { data, error } = await (await requireSupabase()).rpc('update_venue_organization', {
     p_organization_id: input.organizationId,
     p_name: input.name.trim(),
     p_status: input.status,
@@ -344,7 +352,7 @@ export async function updateVenueOrganization(
 }
 
 export async function listPlatformAuditLogs(limit = 100): Promise<PlatformAuditLogEntry[]> {
-  const { data, error } = await requireSupabase()
+  const { data, error } = await (await requireSupabase())
     .from('platform_audit_logs')
     .select('id,platform_user_id,organization_id,action,target_type,target_id,reason,metadata,created_at')
     .order('created_at', { ascending: false })
@@ -364,7 +372,7 @@ export async function listPlatformAuditLogs(limit = 100): Promise<PlatformAuditL
 }
 
 export async function acceptVenueAdminInvite(token: string): Promise<{ organizationId: string; organizationName: string; organizationSlug?: string }> {
-  const { data, error } = await requireSupabase('venue').rpc('accept_venue_admin_invite', { p_token: token });
+  const { data, error } = await (await requireSupabase('venue')).rpc('accept_venue_admin_invite', { p_token: token });
   if (error) throw error;
   if (!data?.ok) throw new Error(String(data?.error || 'Could not accept the venue administrator invitation.'));
   return { organizationId: String(data.organization_id), organizationName: String(data.organization_name), organizationSlug: data.organization_slug ? String(data.organization_slug) : undefined };

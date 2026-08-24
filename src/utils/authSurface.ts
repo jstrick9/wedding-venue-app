@@ -19,6 +19,13 @@ export function isVenueStaffRoute(hash = ''): boolean {
   );
 }
 
+/** Never put the same refresh token on both clients — rotation would sign one out. */
+export function surfacesForLegacySession(hasPlatformRole: boolean, hasOrgMembership: boolean): AuthSurface[] {
+  if (hasPlatformRole) return ['platform'];
+  if (hasOrgMembership) return ['venue'];
+  return ['platform'];
+}
+
 export function detectAuthSurface(input: { hash?: string; pathname?: string } = {}): AuthSurface {
   const hash = input.hash ?? (typeof window !== 'undefined' ? window.location.hash : '');
   const pathname = input.pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');

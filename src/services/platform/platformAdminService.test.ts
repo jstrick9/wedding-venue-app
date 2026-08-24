@@ -35,6 +35,7 @@ vi.mock('../backend/supabaseClient', () => {
   };
   return {
     getSupabaseClient: () => supabase,
+    requirePlatformClient: () => Promise.resolve(supabase),
     isSupabaseConfigured: () => true,
     getCurrentAccessToken: () => Promise.resolve('tok'),
   };

@@ -763,5 +763,16 @@ signing in as the venue admin must not sign out the platform console.
 **Rule going forward:** treat #209 + §9.12–9.33 as current truth for staff
 auth. Do not share one Auth session between platform and venue emails.
 
+### 9.34 Platform reissue uses the platform session (Review #210, 2026-08-24)
+
+See `docs/reviews/210-platform-reissue-uses-platform-session-2026-08-24.md`.
+
+`forbidden` on **Reissue & email invite** meant the venue JWT hit
+`is_platform_admin()`. Console mutations and invite email must use the
+platform client. Do not copy one refresh token onto both surface clients.
+
+**Rule going forward:** treat #210 + §9.12–9.34 as current truth for
+platform RPCs after dual-session auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

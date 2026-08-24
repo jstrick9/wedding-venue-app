@@ -12,7 +12,7 @@ export interface PlatformVenueMessage {
 
 function requireSupabase() {
   if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
-  return getSupabaseClient();
+  return getSupabaseClient('platform');
 }
 
 function mapMessage(row: Record<string, unknown>): PlatformVenueMessage {

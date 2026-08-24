@@ -17,21 +17,21 @@ function normalizeBranding(value: Record<string, unknown> | null | undefined): C
 
 export async function getPublicPlatformBranding(): Promise<Config> {
   if (!isSupabaseConfigured()) return normalizeBranding(null);
-  const { data, error } = await getSupabaseClient().rpc('get_public_platform_branding');
+  const { data, error } = await getSupabaseClient('platform').rpc('get_public_platform_branding');
   if (error || !data?.ok) return normalizeBranding(null);
   return normalizeBranding((data.branding || {}) as Record<string, unknown>);
 }
 
 export async function getPlatformBranding(): Promise<Config> {
   if (!isSupabaseConfigured()) return normalizeBranding(null);
-  const { data, error } = await getSupabaseClient().from('platform_settings').select('branding').eq('id', 'default').maybeSingle();
+  const { data, error } = await getSupabaseClient('platform').from('platform_settings').select('branding').eq('id', 'default').maybeSingle();
   if (error || !data?.branding) return normalizeBranding(null);
   return normalizeBranding(data.branding as Record<string, unknown>);
 }
 
 export async function savePlatformBranding(branding: Config): Promise<void> {
   if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
-  const { data, error } = await getSupabaseClient().rpc('upsert_platform_branding', {
+  const { data, error } = await getSupabaseClient('platform').rpc('upsert_platform_branding', {
     p_branding: branding,
   });
   if (error) throw error;
