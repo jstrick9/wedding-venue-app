@@ -55,26 +55,32 @@ function GlobalStorageErrorListener() {
 function AppContent() {
   const { user, continueAsGuest, isPlatformAdmin, registerWithInvite, organizationSlug } = useAuth();
   const [hash, setHash] = useState(window.location.hash);
+  const [pathname, setPathname] = useState(window.location.pathname);
   const [venueAdminToken, setVenueAdminToken] = useState(() => captureVenueAdminInviteToken());
 
   useEffect(() => {
-    const handleHashChange = () => {
+    const syncLocation = () => {
       setHash(window.location.hash);
+      setPathname(window.location.pathname);
       const next = captureVenueAdminInviteToken();
       if (next) setVenueAdminToken(next);
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('hashchange', syncLocation);
+    window.addEventListener('popstate', syncLocation);
+    return () => {
+      window.removeEventListener('hashchange', syncLocation);
+      window.removeEventListener('popstate', syncLocation);
+    };
   }, []);
 
   // First venue administrator onboarding is a public invitation route. The
   // invitee creates an Auth account and claims the platform-created tenant.
-  // Honor ?va= when a mail client kept the query string but dropped the hash,
-  // and keep the screen mounted after the query is stripped.
+  // Path /i/<token> is the email-safe URL; ?va= and hash links still work.
   if (shouldShowVenueAdminOnboarding({
     hash,
     locationHash: window.location.hash,
     search: window.location.search,
+    pathname: pathname || window.location.pathname,
     token: venueAdminToken,
   })) {
     return (

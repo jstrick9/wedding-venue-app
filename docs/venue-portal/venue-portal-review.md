@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Path-only invite URL (#206, 2026-08-24)** — emailed setup links are `https://app/i/<token>` so Outlook/Brevo cannot strip the token. Full report: **`docs/reviews/206-path-invite-url-2026-08-24.md`**.
 - ✅ **Brevo Outlook sender (#205, 2026-08-24)** — leftover `EMAIL_FROM=invites@weddingvip.com` no longer overrides the from-address; invites always send as `wedding-vip@outlook.com`. Full report: **`docs/reviews/205-brevo-outlook-sender-2026-08-24.md`**.
 - ✅ **Brevo auto-send + invite TTL + token fix (#204, 2026-08-22)** — setup links no longer go invalid after the URL is cleaned; new vs reissue lifetimes are configurable; merge tags drag into the template; preview matches the live HTML email; onboard/reissue send via Brevo. Full report: **`docs/reviews/204-brevo-invite-ttl-and-token-fix-2026-08-22.md`**.
 - ✅ **Manual HTML Outlook invite (#203, 2026-08-22)** — removed Azure/Graph/SMTP auto-send. Send with Outlook downloads a ready-to-send HTML `.eml` with a Set up your account button. Full report: **`docs/reviews/203-manual-html-outlook-invite-2026-08-22.md`**.

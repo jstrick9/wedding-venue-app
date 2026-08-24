@@ -126,9 +126,9 @@ describe('platformAdminService', () => {
 
     expect(result.organizationId).toBe('org9');
     expect(result.organizationSlug).toBe('hilltop-barn');
-    expect(result.inviteUrl).toContain('?va=');
-    expect(result.inviteUrl).toContain('#/venue-onboarding');
-    expect(result.inviteUrl).not.toContain('#/venue-onboarding?token=');
+    expect(result.inviteUrl).toContain('/i/');
+    expect(result.inviteUrl).not.toContain('?va=');
+    expect(result.inviteUrl).not.toContain('#/venue-onboarding');
     expect(rpcCalls[0].fn).toBe('create_venue_organization_v2');
     expect(rpcCalls[0].args.p_city).toBe('Asheville');
   });
@@ -289,8 +289,8 @@ describe('platformAdminService', () => {
       error: null,
     };
     const next = await reissueVenueAdminInvite('org9', 'owner@hilltop.com', '2026-08-29T00:00:00.000Z');
-    expect(next.inviteUrl).toContain('?va=');
-    expect(next.inviteUrl).toContain('#/venue-onboarding');
+    expect(next.inviteUrl).toContain('/i/');
+    expect(next.inviteUrl).not.toContain('#/');
     expect(next.expiresAt).toBe('2026-08-29T00:00:00.000Z');
     expect(rpcCalls[0].fn).toBe('reissue_venue_admin_invite');
     expect(rpcCalls[0].args.p_organization_id).toBe('org9');

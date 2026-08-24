@@ -716,5 +716,17 @@ as a Brevo sender and redeploy `send-email`.
 email. Never send as invites@weddingvip.com until that domain is actually
 delegated and verified.
 
+### 9.30 Path-only venue-admin invite URLs (Review #206, 2026-08-24)
+
+See `docs/reviews/206-path-invite-url-2026-08-24.md`.
+
+Brevo/Outlook click wrappers treat `?` and `#` in `/?va=<token>#/venue-onboarding`
+as their own query/fragment, so the app opened the setup screen with no token.
+New invites use `https://weddingvip.vercel.app/i/<token>`. `vercel.json` rewrites
+that path to `index.html`. Legacy `?va=` and hash links still parse.
+
+**Rule going forward:** treat #206 + §9.12–9.30 as current truth for invite
+URLs. Do not put `?` or `#` in emailed setup links.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

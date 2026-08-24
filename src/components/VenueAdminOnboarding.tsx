@@ -37,24 +37,7 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
   }, []);
 
   useEffect(() => {
-    if (!resolvedToken) return;
-    captureVenueAdminInviteToken();
-    try {
-      if (!window.location.hash.split('?')[0].startsWith('#/venue-onboarding')) {
-        window.location.hash = '#/venue-onboarding';
-      }
-      const url = new URL(window.location.href);
-      url.searchParams.delete('va');
-      url.searchParams.delete('token');
-      url.hash = '#/venue-onboarding';
-      const next = `${url.pathname}${url.search}${url.hash}`;
-      const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-      if (next !== current) {
-        window.history.replaceState(null, '', next);
-      }
-    } catch {
-      // Best-effort; the token is already in sessionStorage and React state.
-    }
+    if (resolvedToken) captureVenueAdminInviteToken();
   }, [resolvedToken]);
 
   useEffect(() => {
@@ -80,6 +63,11 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
       } else {
         applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
       }
+      setLoadingInvite(false);
+    }).catch((err: unknown) => {
+      if (cancelled) return;
+      setInvite(null);
+      setInviteError(err instanceof Error ? err.message : 'not_found');
       setLoadingInvite(false);
     });
     return () => { cancelled = true; };

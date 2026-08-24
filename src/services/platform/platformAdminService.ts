@@ -1,7 +1,7 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { createOpaqueToken } from '../../utils/secureTokens';
 import { normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../../utils/contactQuality';
-import { buildVenueAdminInviteUrl } from '../../utils/venueAdminInviteRoute';
+import { buildVenueAdminInviteUrl, sanitizeVenueAdminToken } from '../../utils/venueAdminInviteRoute';
 import { DEFAULT_NEW_INVITE_TTL_DAYS, DEFAULT_REISSUE_INVITE_TTL_DAYS, inviteExpiresAt } from '../../utils/inviteTtl';
 import type {
   OrganizationStatus,
@@ -209,19 +209,22 @@ export async function createVenueOrganization(
 }
 
 export async function lookupVenueAdminInvite(token: string): Promise<{ context: VenueAdminInviteContext | null; error?: string }> {
-  const trimmed = token.trim();
+  const trimmed = sanitizeVenueAdminToken(token) || token.trim();
   if (!trimmed) return { context: null, error: 'missing' };
   const { data, error } = await requireSupabase().rpc('get_venue_admin_invite_context', { p_token: trimmed });
   if (error) return { context: null, error: error.message || 'not_found' };
-  if (!data?.ok) return { context: null, error: String(data?.error || 'not_found') };
+  const payload = (typeof data === 'string'
+    ? (() => { try { return JSON.parse(data) as Record<string, unknown>; } catch { return null; } })()
+    : data) as Record<string, unknown> | null;
+  if (!payload?.ok) return { context: null, error: String(payload?.error || 'not_found') };
   return {
     context: {
-      organizationId: String(data.organization_id),
-      organizationName: String(data.organization_name),
-      organizationSlug: String(data.organization_slug),
-      email: String(data.email),
-      role: String(data.role),
-      expiresAt: String(data.expires_at),
+      organizationId: String(payload.organization_id),
+      organizationName: String(payload.organization_name),
+      organizationSlug: String(payload.organization_slug),
+      email: String(payload.email),
+      role: String(payload.role),
+      expiresAt: String(payload.expires_at),
     },
   };
 }

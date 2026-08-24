@@ -40,7 +40,7 @@ export default function InviteEmailTemplateEditor({ branding, onChange }: Invite
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const newTtl = clampInviteTtlDays(branding.venueAdminInviteTtlDays, DEFAULT_NEW_INVITE_TTL_DAYS);
   const reissueTtl = clampInviteTtlDays(branding.venueAdminReissueTtlDays, DEFAULT_REISSUE_INVITE_TTL_DAYS);
-  const previewUrl = 'https://weddingvip.vercel.app/?va=example#/venue-onboarding';
+  const previewUrl = 'https://weddingvip.vercel.app/i/va-exampletoken0001';
   const preview = useMemo(
     () => applyVenueAdminInviteTemplate(branding.venueAdminInviteSubject, branding.venueAdminInviteBody, {
       venueName: 'Hilltop Barn',
