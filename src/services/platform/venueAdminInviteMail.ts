@@ -1,9 +1,10 @@
+import { sendTransactionalEmail } from '../backend/EmailService';
 import {
   applyVenueAdminInviteTemplate,
   buildVenueAdminInviteHtml,
   ensureInviteUrlInPlainText,
+  joinContactName,
 } from '../../utils/venueAdminInviteEmail';
-import { inviteEmlFilename } from '../../utils/htmlInviteEmail';
 import type { InviteComposeMessage } from '../../utils/inviteCompose';
 
 export interface SendVenueAdminInviteEmailInput {
@@ -24,7 +25,7 @@ export function buildVenueAdminInviteCompose(input: SendVenueAdminInviteEmailInp
     venueName: input.organizationName,
     inviteUrl: input.inviteUrl,
     adminEmail: input.to,
-    expiresAt: input.expiresAt ? new Date(input.expiresAt).toLocaleString() : 'in 7 days',
+    expiresAt: input.expiresAt ? new Date(input.expiresAt).toLocaleString() : 'the configured expiry',
     platformName: input.platformName || 'the platform',
     contactFirstName: input.contactFirstName,
     contactLastName: input.contactLastName,
@@ -34,6 +35,27 @@ export function buildVenueAdminInviteCompose(input: SendVenueAdminInviteEmailInp
     subject: applied.subject,
     body: ensureInviteUrlInPlainText(applied.body, input.inviteUrl),
     html: buildVenueAdminInviteHtml(applied.body, input.inviteUrl, applied.subject),
-    filename: inviteEmlFilename(`invite-${input.organizationName}`),
   };
+}
+
+export async function deliverVenueAdminInvite(input: SendVenueAdminInviteEmailInput): Promise<'sent'> {
+  const compose = buildVenueAdminInviteCompose(input);
+  const contactName = joinContactName(input.contactFirstName, input.contactLastName);
+  await sendTransactionalEmail({
+    to: input.to,
+    purpose: 'venue_admin_invite',
+    organizationId: input.organizationId,
+    templateData: {
+      subject: compose.subject,
+      body: compose.body,
+      html: compose.html,
+      inviteUrl: input.inviteUrl,
+      organizationName: input.organizationName,
+      recipientName: contactName || input.to,
+      contactFirstName: (input.contactFirstName || '').trim(),
+      contactLastName: (input.contactLastName || '').trim(),
+      contactName,
+    },
+  });
+  return 'sent';
 }

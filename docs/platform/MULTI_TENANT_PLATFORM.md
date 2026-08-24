@@ -171,15 +171,12 @@ The legacy local User Management form still represents local browser records. It
 
 ## Venue administrator invite email
 
-Onboard and Reissue create the setup link and show **Send with Outlook**.
-That downloads a ready-to-send HTML Outlook draft (`.eml`) from
-`wedding-vip@outlook.com` with a **Set up your account** button. Open the file
-in Outlook and click Send. Automatic Graph/SMTP send was removed.
+Onboard and **Reissue & email invite** send HTML automatically through Brevo
+from `wedding-vip@outlook.com`. The invite URL is
+`https://app/?va=<token>#/venue-onboarding`.
 
-Customize subject and body under **Platform → Branding**. Merge tags:
-`{contactName}`, `{contactFirstName}`, `{contactLastName}`, `{venueName}`,
-`{adminEmail}`, `{expiresAt}`, `{platformName}`. The tokenized URL is the
-button href only.
+Customize subject, body, and new/reissue lifetimes under **Platform → Branding**.
+Drag merge tags into the fields. The preview is the same HTML Brevo sends.
 
 ## Geoapify address lookup (required for Venue Detail / Onboard)
 

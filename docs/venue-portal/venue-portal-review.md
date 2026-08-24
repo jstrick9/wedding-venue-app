@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Brevo auto-send + invite TTL + token fix (#204, 2026-08-22)** — setup links no longer go invalid after the URL is cleaned; new vs reissue lifetimes are configurable; merge tags drag into the template; preview matches the live HTML email; onboard/reissue send via Brevo. Full report: **`docs/reviews/204-brevo-invite-ttl-and-token-fix-2026-08-22.md`**.
 - ✅ **Manual HTML Outlook invite (#203, 2026-08-22)** — removed Azure/Graph/SMTP auto-send. Send with Outlook downloads a ready-to-send HTML `.eml` with a Set up your account button. Full report: **`docs/reviews/203-manual-html-outlook-invite-2026-08-22.md`**.
 - ✅ **Outlook Graph connect (#202, 2026-08-22)** — SMTP 465 timed out on Edge; invites now send via Microsoft Graph after Platform Console → Email → Connect Outlook. Migration `0015`. Full report: **`docs/reviews/202-outlook-graph-connect-2026-08-22.md`**.
 - ✅ **Outlook SMTPS port 465 (#201, 2026-08-22)** — “Failed to send a request to the Edge Function” was a hung connect to blocked port 587. send-email now uses Outlook SMTPS on 465 with timeouts and always returns CORS JSON. Full report: **`docs/reviews/201-outlook-smtps-port-465-2026-08-22.md`**.

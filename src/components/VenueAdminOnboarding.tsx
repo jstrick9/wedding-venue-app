@@ -2,8 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   acceptVenueAdminInvite,
-  getVenueAdminInviteContext,
+  lookupVenueAdminInvite,
 } from '../services/platform/platformAdminService';
+import {
+  captureVenueAdminInviteToken,
+  clearVenueAdminInviteToken,
+  describeVenueAdminInviteError,
+} from '../utils/venueAdminInviteRoute';
 import { signUpVenueAdminWithInvite } from '../services/backend/AuthBackend';
 import { isSupabaseConfigured } from '../services/backend/supabaseClient';
 import type { VenueAdminInviteContext } from '../services/platform/platformAdminService';
@@ -18,41 +23,51 @@ interface VenueAdminOnboardingProps {
 export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProps) {
   const { user, logout } = useAuth();
   const [invite, setInvite] = useState<VenueAdminInviteContext | null>(null);
+  const [inviteError, setInviteError] = useState('');
   const [branding, setBranding] = useState<Config>(NEUTRAL_LOGIN_CONFIG);
   const [loadingInvite, setLoadingInvite] = useState(true);
+  const resolvedToken = token || captureVenueAdminInviteToken();
   const chrome = resolveLoginChrome(branding);
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
   const [state, setState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
-  // Strip the bearer invite token from the URL hash as soon as this component
-  // has read it, so the secret does not linger in browser history or in a
-  // copied/shareable link after use (Review #180 N-2).
   useEffect(() => {
     applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (!resolvedToken) return;
+    captureVenueAdminInviteToken();
     try {
-      const clean = window.location.hash.replace(/[?&]token=[^&#]*/i, '');
-      if (clean !== window.location.hash) {
-        window.history.replaceState(null, '', clean || '#/venue-onboarding');
+      if (!window.location.hash.split('?')[0].startsWith('#/venue-onboarding')) {
+        window.location.hash = '#/venue-onboarding';
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete('va');
+      url.searchParams.delete('token');
+      url.hash = '#/venue-onboarding';
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (next !== current) {
+        window.history.replaceState(null, '', next);
       }
     } catch {
-      // Best-effort; failing to rewrite the URL is not fatal to onboarding.
+      // Best-effort; the token is already in sessionStorage and React state.
     }
-  }, [token]);
+  }, [resolvedToken]);
 
   useEffect(() => {
     let cancelled = false;
-    if (!token || !isSupabaseConfigured()) {
+    if (!resolvedToken || !isSupabaseConfigured()) {
+      setInviteError(resolvedToken ? '' : 'missing');
       setLoadingInvite(false);
       return;
     }
-    void getVenueAdminInviteContext(token).then(async (context) => {
+    void lookupVenueAdminInvite(resolvedToken).then(async ({ context, error }) => {
       if (cancelled) return;
       setInvite(context);
+      setInviteError(context ? '' : (error || 'not_found'));
       if (context) setForm((current) => ({ ...current, email: context.email }));
       if (context?.organizationSlug) {
         const publicBrand = await getPublicVenueBranding(context.organizationSlug);
@@ -68,7 +83,7 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
       setLoadingInvite(false);
     });
     return () => { cancelled = true; };
-  }, [token]);
+  }, [resolvedToken]);
 
   const invitedEmail = invite?.email.trim().toLowerCase();
   const signedInEmail = user?.email?.trim().toLowerCase();
@@ -84,11 +99,12 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
   };
 
   const handleExistingAccount = async () => {
-    if (!token || !user || !signedInUserMatchesInvite) return;
+    if (!resolvedToken || !user || !signedInUserMatchesInvite) return;
     setState('saving');
     setMessage('Claiming your venue workspace…');
     try {
-      const result = await acceptVenueAdminInvite(token);
+      const result = await acceptVenueAdminInvite(resolvedToken);
+      clearVenueAdminInviteToken();
       finish(result.organizationSlug || invite?.organizationSlug);
     } catch (error) {
       setState('error');
@@ -98,9 +114,9 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!token || !invite) {
+    if (!resolvedToken || !invite) {
       setState('error');
-      setMessage('This setup link is invalid, expired, or has already been used.');
+      setMessage(describeVenueAdminInviteError(inviteError || 'missing'));
       return;
     }
     if (!isSupabaseConfigured()) {
@@ -136,8 +152,9 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
         email: form.email.trim().toLowerCase(),
         password: form.password,
         fullName: form.fullName.trim(),
-        inviteToken: token,
+        inviteToken: resolvedToken,
       });
+      clearVenueAdminInviteToken();
       finish(session.organizationSlug || invite.organizationSlug);
     } catch (error) {
       setState('error');
@@ -158,8 +175,8 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
 
           {loadingInvite ? (
             <p className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-600">Checking invitation…</p>
-          ) : !token || !invite ? (
-            <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">This setup link is invalid, expired, revoked, or already used.</div>
+          ) : !resolvedToken || !invite ? (
+            <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{describeVenueAdminInviteError(inviteError || (!resolvedToken ? 'missing' : 'not_found'))}</div>
           ) : user && !signedInUserMatchesInvite ? (
             <div className="mt-6 space-y-4">
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

@@ -14,6 +14,12 @@ vi.mock('../backend/supabaseClient', () => ({
   }),
 }));
 
+const invoke = vi.fn();
+vi.mock('../backend/EmailService', () => ({
+  sendTransactionalEmail: (p: any) => invoke(p),
+  buildInvitationTemplateData: (d: any) => d,
+}));
+
 import { acceptInvite, createInvite } from './inviteService';
 
 const params = {
@@ -36,8 +42,9 @@ describe('inviteService (supabase)', () => {
     });
   });
 
-  it('createInvite inserts a hashed invite row and returns the accept URL', async () => {
-    insert.mockReturnValue(null); // no error
+  it('createInvite inserts a hashed invite row and sends an invitation email', async () => {
+    insert.mockReturnValue(null);
+    invoke.mockResolvedValue(undefined);
 
     const res = await createInvite(params);
 
@@ -48,6 +55,11 @@ describe('inviteService (supabase)', () => {
       role: 'staff',
       token_hash: expect.any(String),
       status: 'pending',
+    }));
+    expect(invoke).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'staff@x.com',
+      purpose: 'invitation',
+      organizationId: 'org1',
     }));
     expect(res.inviteUrl).toContain('#/accept-invite/');
   });

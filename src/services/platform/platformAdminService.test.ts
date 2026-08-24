@@ -45,6 +45,8 @@ import {
   getPlatformConsoleMetrics,
   listPlatformAuditLogs,
   listPlatformOrganizations,
+  lookupVenueAdminInvite,
+  reissueVenueAdminInvite,
   updateVenueOrganization,
 } from './platformAdminService';
 
@@ -124,7 +126,9 @@ describe('platformAdminService', () => {
 
     expect(result.organizationId).toBe('org9');
     expect(result.organizationSlug).toBe('hilltop-barn');
-    expect(result.inviteUrl).toContain('#/venue-onboarding?token=');
+    expect(result.inviteUrl).toContain('?va=');
+    expect(result.inviteUrl).toContain('#/venue-onboarding');
+    expect(result.inviteUrl).not.toContain('#/venue-onboarding?token=');
     expect(rpcCalls[0].fn).toBe('create_venue_organization_v2');
     expect(rpcCalls[0].args.p_city).toBe('Asheville');
   });
@@ -254,5 +258,42 @@ describe('platformAdminService', () => {
       action: 'venue_updated',
       targetType: 'organization',
     });
+  });
+
+  it('looks up a venue-admin invite and reports specific RPC errors', async () => {
+    rpcResults['get_venue_admin_invite_context'] = {
+      data: {
+        ok: true,
+        organization_id: 'org9',
+        organization_name: 'Hilltop Barn',
+        organization_slug: 'hilltop-barn',
+        email: 'owner@hilltop.com',
+        role: 'owner',
+        expires_at: '2026-09-01T00:00:00.000Z',
+      },
+      error: null,
+    };
+    const found = await lookupVenueAdminInvite('va-abc');
+    expect(found.context?.organizationSlug).toBe('hilltop-barn');
+    expect(found.context?.email).toBe('owner@hilltop.com');
+
+    rpcResults['get_venue_admin_invite_context'] = { data: { ok: false, error: 'expired' }, error: null };
+    const expired = await lookupVenueAdminInvite('va-old');
+    expect(expired.context).toBeNull();
+    expect(expired.error).toBe('expired');
+  });
+
+  it('reissues a venue-admin invite with a new token URL and expiry', async () => {
+    rpcResults['reissue_venue_admin_invite'] = {
+      data: { ok: true, expires_at: '2026-08-29T00:00:00.000Z' },
+      error: null,
+    };
+    const next = await reissueVenueAdminInvite('org9', 'owner@hilltop.com', '2026-08-29T00:00:00.000Z');
+    expect(next.inviteUrl).toContain('?va=');
+    expect(next.inviteUrl).toContain('#/venue-onboarding');
+    expect(next.expiresAt).toBe('2026-08-29T00:00:00.000Z');
+    expect(rpcCalls[0].fn).toBe('reissue_venue_admin_invite');
+    expect(rpcCalls[0].args.p_organization_id).toBe('org9');
+    expect(rpcCalls[0].args.p_expires_at).toBe('2026-08-29T00:00:00.000Z');
   });
 });

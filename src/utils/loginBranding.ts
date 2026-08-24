@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { applyRootStyles } from '../config';
 import type { Config } from '../types';
 import { applyDocumentBranding } from './documentBranding';
+import { DEFAULT_NEW_INVITE_TTL_DAYS, DEFAULT_REISSUE_INVITE_TTL_DAYS } from './inviteTtl';
 
 /** Charcoal / white / gray used when a venue has not saved branding yet. */
 export const NEUTRAL_LOGIN_CONFIG: Config = {
@@ -65,6 +66,8 @@ export const DEFAULT_PLATFORM_LOGIN_CONFIG: Config = {
   loginBackgroundPattern: 'dots',
   loginBackgroundAnimation: 'none',
   loginBackgroundOverlayOpacity: 0,
+  venueAdminInviteTtlDays: DEFAULT_NEW_INVITE_TTL_DAYS,
+  venueAdminReissueTtlDays: DEFAULT_REISSUE_INVITE_TTL_DAYS,
 };
 
 export interface LoginChrome {
@@ -136,6 +139,8 @@ export function mergePlatformLoginBranding(partial?: Partial<Config> | null): Co
     accentTextColor: firstColor(partial?.accentTextColor, DEFAULT_PLATFORM_LOGIN_CONFIG.accentTextColor),
     venueAdminInviteSubject: String(partial?.venueAdminInviteSubject || ''),
     venueAdminInviteBody: String(partial?.venueAdminInviteBody || ''),
+    venueAdminInviteTtlDays: Number(partial?.venueAdminInviteTtlDays || 0) || DEFAULT_NEW_INVITE_TTL_DAYS,
+    venueAdminReissueTtlDays: Number(partial?.venueAdminReissueTtlDays || 0) || DEFAULT_REISSUE_INVITE_TTL_DAYS,
   };
 }
 

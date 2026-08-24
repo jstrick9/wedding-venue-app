@@ -730,6 +730,10 @@ export interface Config {
   /** Platform-admin venue-administrator invite email (plain-text template; HTML button is added by send-email). */
   venueAdminInviteSubject?: string;
   venueAdminInviteBody?: string;
+  /** Lifetime in days for a brand-new venue-admin invite token. */
+  venueAdminInviteTtlDays?: number;
+  /** Lifetime in days for a reissued venue-admin invite token. */
+  venueAdminReissueTtlDays?: number;
   welcomeTitle?: string;
   showWelcomeByDefault?: boolean;
   welcomeFeatures?: string[];

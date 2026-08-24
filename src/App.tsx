@@ -12,6 +12,7 @@ import { ToastContainer, showToast } from './components/Toast';
 import { on } from './utils/appEvents';
 import { lazy } from 'react';
 import PlatformLoginScreen from './components/PlatformLoginScreen';
+import { captureVenueAdminInviteToken, shouldShowVenueAdminOnboarding } from './utils/venueAdminInviteRoute';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
 const CouplesPortal = lazy(() => import('./components/CouplesPortal'));
@@ -28,12 +29,7 @@ const VenueLoginScreen = lazy(() => import('./components/VenueLoginScreen'));
  * listener only existed inside AuthenticatedApp, so storage failures on the
  * login/guest screens were silently dropped.
  */
-function getVenueAdminTokenFromLocation(location: Location = window.location): string | undefined {
-  const hash = location.hash || '';
-  const queryIndex = hash.indexOf('?');
-  if (queryIndex < 0) return undefined;
-  return new URLSearchParams(hash.slice(queryIndex + 1)).get('token') || undefined;
-}
+
 
 function getVenueSlugFromLocation(location: Location = window.location): string {
   const hash = location.hash || '';
@@ -59,19 +55,31 @@ function GlobalStorageErrorListener() {
 function AppContent() {
   const { user, continueAsGuest, isPlatformAdmin, registerWithInvite, organizationSlug } = useAuth();
   const [hash, setHash] = useState(window.location.hash);
+  const [venueAdminToken, setVenueAdminToken] = useState(() => captureVenueAdminInviteToken());
 
   useEffect(() => {
-    const handleHashChange = () => setHash(window.location.hash);
+    const handleHashChange = () => {
+      setHash(window.location.hash);
+      const next = captureVenueAdminInviteToken();
+      if (next) setVenueAdminToken(next);
+    };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   // First venue administrator onboarding is a public invitation route. The
   // invitee creates an Auth account and claims the platform-created tenant.
-  if (hash.startsWith('#/venue-onboarding')) {
+  // Honor ?va= when a mail client kept the query string but dropped the hash,
+  // and keep the screen mounted after the query is stripped.
+  if (shouldShowVenueAdminOnboarding({
+    hash,
+    locationHash: window.location.hash,
+    search: window.location.search,
+    token: venueAdminToken,
+  })) {
     return (
       <Suspense fallback={<LoadingScreen />}>
-        <VenueAdminOnboarding token={getVenueAdminTokenFromLocation(window.location)} />
+        <VenueAdminOnboarding token={venueAdminToken || captureVenueAdminInviteToken()} />
       </Suspense>
     );
   }

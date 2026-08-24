@@ -1,6 +1,8 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { createOpaqueToken } from '../../utils/secureTokens';
 import { normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../../utils/contactQuality';
+import { buildVenueAdminInviteUrl } from '../../utils/venueAdminInviteRoute';
+import { DEFAULT_NEW_INVITE_TTL_DAYS, DEFAULT_REISSUE_INVITE_TTL_DAYS, inviteExpiresAt } from '../../utils/inviteTtl';
 import type {
   OrganizationStatus,
   PlatformAuditLogEntry,
@@ -49,14 +51,7 @@ function requireSupabase(): ReturnType<typeof getSupabaseClient> {
   return getSupabaseClient();
 }
 
-function appBaseUrl(): string {
-  if (typeof window === 'undefined') return '';
-  return `${window.location.origin}${window.location.pathname}`;
-}
-
-export function buildVenueAdminInviteUrl(token: string): string {
-  return `${appBaseUrl()}#/venue-onboarding?token=${encodeURIComponent(token)}`;
-}
+export { buildVenueAdminInviteUrl } from '../../utils/venueAdminInviteRoute';
 
 export async function listPlatformOrganizations(): Promise<PlatformOrganizationSummary[]> {
   const supabase = requireSupabase();
@@ -175,7 +170,7 @@ export async function createVenueOrganization(
 ): Promise<CreateVenueOrganizationResult> {
   const supabase = requireSupabase();
   const token = createOpaqueToken('va');
-  const expiresAt = input.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = input.expiresAt || inviteExpiresAt(DEFAULT_NEW_INVITE_TTL_DAYS);
   const adminEmail = normalizeEmail(input.adminEmail, { required: true });
   const contactEmail = normalizeEmail(input.primaryContactEmail, { required: true });
   const contactPhone = normalizeUsPhone(input.primaryContactPhone, { required: true });
@@ -213,34 +208,45 @@ export async function createVenueOrganization(
   };
 }
 
-export async function getVenueAdminInviteContext(token: string): Promise<VenueAdminInviteContext | null> {
-  const { data, error } = await requireSupabase().rpc('get_venue_admin_invite_context', { p_token: token });
-  if (error || !data?.ok) return null;
+export async function lookupVenueAdminInvite(token: string): Promise<{ context: VenueAdminInviteContext | null; error?: string }> {
+  const trimmed = token.trim();
+  if (!trimmed) return { context: null, error: 'missing' };
+  const { data, error } = await requireSupabase().rpc('get_venue_admin_invite_context', { p_token: trimmed });
+  if (error) return { context: null, error: error.message || 'not_found' };
+  if (!data?.ok) return { context: null, error: String(data?.error || 'not_found') };
   return {
-    organizationId: String(data.organization_id),
-    organizationName: String(data.organization_name),
-    organizationSlug: String(data.organization_slug),
-    email: String(data.email),
-    role: String(data.role),
-    expiresAt: String(data.expires_at),
+    context: {
+      organizationId: String(data.organization_id),
+      organizationName: String(data.organization_name),
+      organizationSlug: String(data.organization_slug),
+      email: String(data.email),
+      role: String(data.role),
+      expiresAt: String(data.expires_at),
+    },
   };
+}
+
+export async function getVenueAdminInviteContext(token: string): Promise<VenueAdminInviteContext | null> {
+  const result = await lookupVenueAdminInvite(token);
+  return result.context;
 }
 
 export async function reissueVenueAdminInvite(
   organizationId: string,
   email: string,
+  expiresAt?: string,
 ): Promise<{ inviteUrl: string; expiresAt: string }> {
   const token = createOpaqueToken('va');
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const nextExpiry = expiresAt || inviteExpiresAt(DEFAULT_REISSUE_INVITE_TTL_DAYS);
   const { data, error } = await requireSupabase().rpc('reissue_venue_admin_invite', {
     p_organization_id: organizationId,
     p_email: email.trim().toLowerCase(),
     p_admin_token: token,
-    p_expires_at: expiresAt,
+    p_expires_at: nextExpiry,
   });
   if (error) throw error;
   if (!data?.ok) throw new Error(String(data?.error || 'Could not reissue the venue administrator invite.'));
-  return { inviteUrl: buildVenueAdminInviteUrl(token), expiresAt: String(data.expires_at || expiresAt) };
+  return { inviteUrl: buildVenueAdminInviteUrl(token), expiresAt: String(data.expires_at || nextExpiry) };
 }
 
 export async function revokeVenueAdminInvite(inviteId: string, reason?: string): Promise<void> {

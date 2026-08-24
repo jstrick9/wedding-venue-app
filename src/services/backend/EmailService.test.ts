@@ -27,17 +27,17 @@ describe('sendTransactionalEmail', () => {
 
   it('surfaces the Edge Function error body instead of a generic invoke message', async () => {
     invokeMock.mockResolvedValue({
-      data: { error: 'Email service is not configured. Set SMTP_PASS for Outlook (wedding-vip@outlook.com) or RESEND_API_KEY + EMAIL_FROM.' },
+      data: { error: 'Email service is not configured. Set BREVO_API_KEY on the send-email function.' },
       error: { message: 'Edge Function returned a non-2xx status code' },
     });
     await expect(sendTransactionalEmail({
       to: 'owner@hilltop.com',
       purpose: 'venue_admin_invite',
       organizationId: 'org9',
-    })).rejects.toThrow(/SMTP_PASS/);
+    })).rejects.toThrow(/BREVO_API_KEY/);
   });
 
   it('explains a browser fetch failure instead of repeating the generic invoke message', () => {
-    expect(describeEmailDeliveryFailure({ message: 'Failed to send a request to the Edge Function' })).toMatch(/send with outlook/i);
+    expect(describeEmailDeliveryFailure({ message: 'Failed to send a request to the Edge Function' })).toMatch(/brevo/i);
   });
 });

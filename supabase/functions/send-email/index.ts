@@ -1,16 +1,22 @@
 // Supabase Edge Function: send-email
-// Optional Resend path for couple/guest mail after a domain is verified.
-// Venue-admin and staff invites are sent manually via an HTML Outlook .eml draft.
-// Graph / Outlook SMTP were removed: Azure is not free for this mailbox, and
-// Supabase Edge cannot open Outlook SMTP ports.
-// Required secrets when using Resend:
-//   RESEND_API_KEY
-//   EMAIL_FROM
+// Venue-admin invites send automatically through Brevo HTTPS.
+// Required secrets:
+//   BREVO_API_KEY
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
+// Optional:
+//   EMAIL_FROM          default wedding-vip@outlook.com
+//   EMAIL_FROM_NAME     default Wedding VIP
+//   RESEND_API_KEY      fallback after a custom domain is verified
+//
+// Outlook SMTP ports are not usable from this runtime.
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+const DEFAULT_FROM_EMAIL = 'wedding-vip@outlook.com';
+const DEFAULT_FROM_NAME = 'Wedding VIP';
+const SETUP_ACCOUNT_BUTTON_LABEL = 'Set up your account';
 
 type EmailPurpose =
   | 'invitation'
@@ -24,9 +30,9 @@ type EmailPurpose =
 type AppRole = 'owner' | 'admin' | 'planner' | 'couple' | 'staff' | 'guest';
 
 interface SendEmailRequest {
-  to: string;
-  purpose: EmailPurpose;
-  organizationId: string;
+  to?: string;
+  purpose?: EmailPurpose;
+  organizationId?: string;
   eventId?: string;
   templateData?: Record<string, unknown>;
 }
@@ -70,6 +76,11 @@ function sanitizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function extractEmailAddress(value: string): string {
+  const angled = value.match(/<([^>]+)>/);
+  return sanitizeEmail(angled?.[1] || value);
+}
+
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -94,20 +105,22 @@ function renderShell(title: string, body: string): string {
   `;
 }
 
-function renderPlainTemplate(templateData: Record<string, unknown> | undefined): RenderedEmail {
+function renderSetupAccountButton(inviteUrl: string): string {
+  return `<p style="margin:24px 0 8px;"><a href="${escapeHtml(inviteUrl)}" style="background:#4A1942;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:700;">${SETUP_ACCOUNT_BUTTON_LABEL}</a></p>`;
+}
+
+function renderVenueAdminInvite(templateData: Record<string, unknown> | undefined): RenderedEmail {
   const subject = getString(templateData, 'subject').trim();
-  const text = getString(templateData, 'body').trim();
+  const rawBody = getString(templateData, 'body').trim();
   const inviteUrl = getString(templateData, 'inviteUrl').trim();
-  if (!subject || !text) throw new Error('Invite email subject and body are required.');
+  const suppliedHtml = getString(templateData, 'html').trim();
+  if (!subject || !rawBody) throw new Error('Invite email subject and body are required.');
   if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for venue administrator invite.');
-  const escapedBody = escapeHtml(text);
-  const escapedUrl = escapeHtml(inviteUrl);
-  const linked = escapedUrl ? escapedBody.split(escapedUrl).join(`<a href="${escapedUrl}">${escapedUrl}</a>`) : escapedBody;
-  return {
-    subject,
-    text,
-    html: renderShell(subject, `<div>${linked.replace(/\n/g, '<br/>')}</div>`),
-  };
+  const text = rawBody.includes(inviteUrl) ? rawBody : `${rawBody}\n\n${SETUP_ACCOUNT_BUTTON_LABEL}:\n${inviteUrl}`;
+  const html = suppliedHtml.startsWith('<')
+    ? suppliedHtml
+    : renderShell(subject, `<div>${escapeHtml(rawBody).replace(/\n/g, '<br/>')}${renderSetupAccountButton(inviteUrl)}</div>`);
+  return { subject, text, html };
 }
 
 function renderEmail(purpose: EmailPurpose, templateData: Record<string, unknown> | undefined): RenderedEmail {
@@ -117,7 +130,7 @@ function renderEmail(purpose: EmailPurpose, templateData: Record<string, unknown
 
   switch (purpose) {
     case 'venue_admin_invite':
-      return renderPlainTemplate(templateData);
+      return renderVenueAdminInvite(templateData);
     case 'invitation': {
       const inviteUrl = escapeHtml(getString(templateData, 'inviteUrl'));
       if (!inviteUrl) throw new Error('Missing templateData.inviteUrl for invitation email.');
@@ -209,84 +222,31 @@ async function ensureRateLimit(supabase: ReturnType<typeof createClient>, organi
   }
 }
 
-serve(async (req) => {
-  const corsHeaders = corsHeadersFor(req);
-  const json = (body: unknown, status = 200) => jsonWith(corsHeaders, body, status);
-
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const resendApiKey = Deno.env.get('RESEND_API_KEY');
-  const emailFrom = Deno.env.get('EMAIL_FROM');
-
-  if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !emailFrom) {
-    return json({ error: 'Email service is not configured. Set RESEND_API_KEY and EMAIL_FROM Edge Function secrets.' }, 500);
-  }
-
-  const authHeader = req.headers.get('Authorization') || '';
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-
-  const { data: userData, error: userError } = await supabase.auth.getUser(
-    authHeader.replace(/^Bearer\s+/i, ''),
-  );
-
-  if (userError || !userData.user) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  let payload: SendEmailRequest;
-  try {
-    payload = (await req.json()) as SendEmailRequest;
-  } catch {
-    return json({ error: 'Invalid JSON request body.' }, 400);
-  }
-
-  const to = sanitizeEmail(payload.to || '');
-  if (!to || !payload.organizationId || !payload.purpose) {
-    return json({ error: 'Missing required to, organizationId, or purpose.' }, 400);
-  }
-
-  if (payload.purpose === 'venue_admin_invite') {
-    const { data: platformRole } = await supabase
-      .from('platform_memberships')
-      .select('role,status')
-      .eq('user_id', userData.user.id)
-      .eq('status', 'active')
-      .in('role', ['platform_owner', 'platform_admin'])
-      .maybeSingle();
-    if (!platformRole) return json({ error: 'Platform administrator access required to send venue invites.' }, 403);
-  } else {
-    const allowedRoles = PURPOSE_ROLES[payload.purpose as Exclude<EmailPurpose, 'venue_admin_invite'>];
-    if (!allowedRoles) return json({ error: 'Unsupported email purpose.' }, 400);
-    const { data: membership, error: membershipError } = await supabase
-      .from('organization_memberships')
-      .select('role,status')
-      .eq('organization_id', payload.organizationId)
-      .eq('user_id', userData.user.id)
-      .eq('status', 'active')
-      .maybeSingle();
-    if (membershipError || !membership) return json({ error: 'Forbidden' }, 403);
-    if (!allowedRoles.includes(membership.role as AppRole)) {
-      return json({ error: 'Insufficient role for this email purpose.' }, 403);
-    }
-  }
-
-  let rendered: RenderedEmail;
-  try {
-    await ensureRateLimit(supabase, payload.organizationId, userData.user.id);
-    rendered = renderEmail(payload.purpose, payload.templateData);
-  } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Unable to prepare email.' }, 400);
-  }
-
-  const resendResponse = await fetch('https://api.resend.com/emails', {
+async function sendViaBrevo(apiKey: string, fromEmail: string, fromName: string, to: string, rendered: RenderedEmail) {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${resendApiKey}`,
+      'api-key': apiKey,
+      accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: fromName, email: fromEmail },
+      to: [{ email: to }],
+      subject: rendered.subject,
+      htmlContent: rendered.html,
+      textContent: rendered.text,
+    }),
+  });
+  const details = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, details };
+}
+
+async function sendViaResend(apiKey: string, emailFrom: string, to: string, rendered: RenderedEmail) {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -297,27 +257,125 @@ serve(async (req) => {
       text: rendered.text,
     }),
   });
+  const details = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, details };
+}
 
-  const resendBody = await resendResponse.json().catch(() => ({}));
+serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+  const json = (body: unknown, status = 200) => jsonWith(corsHeaders, body, status);
 
-  await supabase.from('audit_logs').insert({
-    organization_id: payload.organizationId,
-    event_id: payload.eventId ?? null,
-    actor_id: userData.user.id,
-    action: resendResponse.ok ? `email.${payload.purpose}.sent` : `email.${payload.purpose}.failed`,
-    entity_type: 'email',
-    after_data: {
-      to,
-      subject: rendered.subject,
-      purpose: payload.purpose,
-      providerStatus: resendResponse.status,
-      providerResponse: resendBody,
-    },
-  });
+  try {
+    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+    if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  if (!resendResponse.ok) {
-    return json({ error: 'Email provider rejected request.', details: resendBody }, 502);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const brevoApiKey = Deno.env.get('BREVO_API_KEY') || '';
+    const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
+    const emailFrom = Deno.env.get('EMAIL_FROM') || `${DEFAULT_FROM_NAME} <${DEFAULT_FROM_EMAIL}>`;
+    const fromEmail = extractEmailAddress(emailFrom) || DEFAULT_FROM_EMAIL;
+    const fromName = Deno.env.get('EMAIL_FROM_NAME') || DEFAULT_FROM_NAME;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return json({ error: 'Email service is not configured.' }, 500);
+    }
+    if (!brevoApiKey && !resendApiKey) {
+      return json({ error: 'Email service is not configured. Set BREVO_API_KEY on the send-email function (verify wedding-vip@outlook.com in Brevo first).' }, 500);
+    }
+
+    const authHeader = req.headers.get('Authorization') || '';
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: userData, error: userError } = await admin.auth.getUser(
+      authHeader.replace(/^Bearer\s+/i, ''),
+    );
+    if (userError || !userData.user) return json({ error: 'Unauthorized' }, 401);
+
+    let payload: SendEmailRequest;
+    try {
+      payload = (await req.json()) as SendEmailRequest;
+    } catch {
+      return json({ error: 'Invalid JSON request body.' }, 400);
+    }
+
+    const to = sanitizeEmail(payload.to || '');
+    if (!to || !payload.organizationId || !payload.purpose) {
+      return json({ error: 'Missing required to, organizationId, or purpose.' }, 400);
+    }
+
+    if (payload.purpose === 'venue_admin_invite') {
+      const { data: platformRole } = await supabase
+        .from('platform_memberships')
+        .select('role,status')
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .in('role', ['platform_owner', 'platform_admin'])
+        .maybeSingle();
+      if (!platformRole) return json({ error: 'Platform administrator access required to send venue invites.' }, 403);
+    } else {
+      const allowedRoles = PURPOSE_ROLES[payload.purpose as Exclude<EmailPurpose, 'venue_admin_invite'>];
+      if (!allowedRoles) return json({ error: 'Unsupported email purpose.' }, 400);
+      const { data: membership, error: membershipError } = await supabase
+        .from('organization_memberships')
+        .select('role,status')
+        .eq('organization_id', payload.organizationId)
+        .eq('user_id', userData.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (membershipError || !membership) return json({ error: 'Forbidden' }, 403);
+      if (!allowedRoles.includes(membership.role as AppRole)) {
+        return json({ error: 'Insufficient role for this email purpose.' }, 403);
+      }
+    }
+
+    let rendered: RenderedEmail;
+    try {
+      await ensureRateLimit(admin, payload.organizationId, userData.user.id);
+      rendered = renderEmail(payload.purpose, payload.templateData);
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : 'Unable to prepare email.' }, 400);
+    }
+
+    let delivery = { ok: false, provider: 'none', status: 500, details: { error: 'No email provider is configured.' } as unknown };
+    if (brevoApiKey) {
+      const brevo = await sendViaBrevo(brevoApiKey, fromEmail, fromName, to, rendered);
+      delivery = { ok: brevo.ok, provider: 'brevo', status: brevo.status, details: brevo.details };
+    }
+    if (!delivery.ok && resendApiKey) {
+      const resend = await sendViaResend(resendApiKey, emailFrom, to, rendered);
+      delivery = { ok: resend.ok, provider: 'resend', status: resend.status, details: resend.details };
+    }
+
+    const { error: auditError } = await admin.from('audit_logs').insert({
+      organization_id: payload.organizationId,
+      event_id: payload.eventId ?? null,
+      actor_id: userData.user.id,
+      action: delivery.ok ? `email.${payload.purpose}.sent` : `email.${payload.purpose}.failed`,
+      entity_type: 'email',
+      after_data: {
+        to,
+        subject: rendered.subject,
+        purpose: payload.purpose,
+        provider: delivery.provider,
+        providerStatus: delivery.status,
+        providerResponse: delivery.details,
+      },
+    });
+    if (auditError) console.error('send-email audit_logs insert failed', auditError.message);
+
+    if (!delivery.ok) {
+      const detailError = delivery.details && typeof delivery.details === 'object' && delivery.details !== null && 'message' in delivery.details
+        ? String((delivery.details as { message?: unknown }).message || '').trim()
+        : '';
+      return json({ error: detailError || 'Email provider rejected request.', details: delivery.details }, 502);
+    }
+
+    return json({ ok: true, provider: delivery.provider, details: delivery.details });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'send-email failed.' }, 500);
   }
-
-  return json({ ok: true, provider: resendBody });
 });

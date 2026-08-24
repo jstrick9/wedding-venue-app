@@ -688,5 +688,20 @@ render HTML, so the `.eml` draft is the HTML send path.
 **Rule going forward:** treat #203 + §9.12–9.27 as current truth for invite
 email. Do not re-add Azure Graph or Outlook SMTP from Edge Functions.
 
+### 9.28 Brevo auto-send, invite TTL, and setup-link token fix (Review #204, 2026-08-22)
+
+See `docs/reviews/204-brevo-invite-ttl-and-token-fix-2026-08-22.md`.
+
+The “invalid, expired, revoked, or already used” setup screen was caused by
+stripping `?token=` from the hash and then re-reading the URL. Tokens now live
+in React state + sessionStorage. Invite URLs use `?va=` so mail clients cannot
+drop the token with the hash. Onboard/reissue send HTML automatically through
+**Brevo**. Platform Branding has separate new/reissue lifetimes and drag-and-drop
+merge tags. The preview is the same HTML document Brevo sends.
+
+**Rule going forward:** treat #204 + §9.12–9.28 as current truth for invite
+email. Do not retry Outlook SMTP. Set `BREVO_API_KEY` after verifying
+wedding-vip@outlook.com in Brevo.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

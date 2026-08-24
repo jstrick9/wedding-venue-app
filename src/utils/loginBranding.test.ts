@@ -33,6 +33,8 @@ describe('login branding', () => {
     expect(merged.primaryColor).toBe(DEFAULT_PLATFORM_LOGIN_CONFIG.primaryColor);
     expect(merged.primaryColor).toBe('#26354A');
     expect(merged.venueName).toBe('Wedding Venue Intelligence Platform');
+    expect(merged.venueAdminInviteTtlDays).toBe(14);
+    expect(merged.venueAdminReissueTtlDays).toBe(7);
   });
 
   it('does not let an empty public payload collapse onto Seven Paths plum', () => {

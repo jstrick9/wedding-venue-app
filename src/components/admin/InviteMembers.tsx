@@ -4,8 +4,6 @@ import { getConfig } from '../../config';
 import { createInvite } from '../../services/org/inviteService';
 import { showToast } from '../Toast';
 import { normalizeEmail } from '../../utils/contactQuality';
-import { OUTLOOK_INVITE_FROM, openOutlookInviteCompose, type InviteComposeMessage } from '../../utils/inviteCompose';
-import { buildHtmlInviteDocument, inviteEmlFilename } from '../../utils/htmlInviteEmail';
 
 const ROLES = [
   { id: 'admin', label: 'Admin' },
@@ -15,8 +13,7 @@ const ROLES = [
 
 /**
  * Invite a team member (staff/planner/admin) into the current organization.
- * Uses the platform invite service. The operator emails the HTML invite
- * with Send with Outlook (ready-to-send .eml draft).
+ * The invitation email is sent automatically through send-email / Brevo.
  */
 export function InviteMembers() {
   const { user, organizationId, isAdmin } = useAuth();
@@ -26,7 +23,7 @@ export function InviteMembers() {
   const [role, setRole] = useState<'admin' | 'planner' | 'staff'>('staff');
   const [inviteeName, setInviteeName] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [result, setResult] = useState<{ inviteUrl?: string; compose?: InviteComposeMessage | null } | null>(null);
+  const [result, setResult] = useState<{ inviteUrl?: string } | null>(null);
 
   if (!isAdmin || !organizationId || !user) {
     return (
@@ -60,33 +57,14 @@ export function InviteMembers() {
       showToast(res.error || 'Could not send the invite.', 'warning');
       return;
     }
-    const greetingName = inviteeName.trim();
-    const subject = `You are invited to ${config.venueName || 'the venue workspace'}`;
-    const body = [
-      `Hello${greetingName ? ` ${greetingName}` : ''},`,
-      '',
-      `You have been invited to join ${config.venueName || 'the venue workspace'} as ${role}.`,
-      '',
-      'Use the button in this email to accept the invitation.',
-    ].join('\n');
-    const compose = res.inviteUrl
-      ? {
-          to: trimmed,
-          subject,
-          body: `${body}\n\nOpen invitation:\n${res.inviteUrl}`,
-          html: buildHtmlInviteDocument({
-            subject,
-            body,
-            buttonUrl: res.inviteUrl,
-            buttonLabel: 'Open invitation',
-          }),
-          filename: inviteEmlFilename(`invite-${config.venueName || 'venue'}`),
-        }
-      : null;
-    showToast(`Invitation created for ${trimmed}. Click Send with Outlook to email the HTML invite.`, 'success');
+    if (res.error) {
+      showToast(`${res.error} Copy the invitation link below.`, 'warning');
+    } else {
+      showToast(`Invitation emailed to ${trimmed}.`, 'success');
+    }
     setEmail('');
     setInviteeName('');
-    setResult({ ...res, compose });
+    setResult(res);
   };
 
   return (
@@ -98,7 +76,7 @@ export function InviteMembers() {
         </div>
         <p className="text-sm text-gray-500">
           Invite a planner, coordinator, or staff member to collaborate in this
-          workspace. Create the invitation, then send the HTML email from Outlook.
+          workspace. They will receive an HTML email with an Open invitation button.
         </p>
       </div>
 
@@ -150,7 +128,7 @@ export function InviteMembers() {
           className="w-full rounded-lg text-white text-sm font-medium disabled:opacity-60 py-2.5"
           style={{ backgroundColor: config.primaryColor }}
         >
-          {isSending ? 'Creating invite…' : 'Create invitation'}
+          {isSending ? 'Sending invite…' : 'Send invite'}
         </button>
       </form>
 
@@ -171,18 +149,6 @@ export function InviteMembers() {
               📋 Copy
             </button>
           </div>
-          {result.compose ? (
-            <button
-              type="button"
-              onClick={() => {
-                openOutlookInviteCompose(result.compose!);
-                showToast('HTML invite downloaded. Open the .eml file in Outlook and click Send.', 'success');
-              }}
-              className="mt-2 rounded-lg border border-green-300 bg-white px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100"
-            >
-              Send with Outlook ({OUTLOOK_INVITE_FROM})
-            </button>
-          ) : null}
           <p className="text-xs break-all mt-1">{result.inviteUrl}</p>
         </div>
       )}

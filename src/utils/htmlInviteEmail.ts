@@ -1,4 +1,4 @@
-/** Shared HTML invite rendering and Outlook-ready .eml drafts. */
+/** Shared HTML invite rendering used by the live preview and Brevo send. */
 
 export function escapeHtml(value: unknown): string {
   return String(value ?? '')
@@ -7,15 +7,6 @@ export function escapeHtml(value: unknown): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-}
-
-export function inviteEmlFilename(label: string): string {
-  const slug = (label || 'invite')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-  return `${slug || 'invite'}.eml`;
 }
 
 export function renderEmailCtaButton(href: string, label: string): string {
@@ -80,64 +71,4 @@ export function buildHtmlInviteDocument(input: {
   return wrapInviteHtml(input.subject, `${paragraphsToHtml(bodyWithoutUrl)}${renderEmailCtaButton(input.buttonUrl, input.buttonLabel)}`);
 }
 
-function encodeMimeHeader(value: string): string {
-  if (/^[\x20-\x7E]*$/.test(value)) return value;
-  const bytes = unescape(encodeURIComponent(value));
-  return `=?UTF-8?B?${btoa(bytes)}?=`;
-}
 
-export interface UnsentHtmlEmlInput {
-  from: string;
-  fromLabel?: string;
-  to: string;
-  subject: string;
-  text: string;
-  html: string;
-}
-
-export function buildUnsentHtmlEml(input: UnsentHtmlEmlInput): string {
-  const boundary = `wvip-${Math.random().toString(36).slice(2, 12)}`;
-  const from = input.fromLabel
-    ? `${encodeMimeHeader(input.fromLabel)} <${input.from}>`
-    : input.from;
-  const headers = [
-    'MIME-Version: 1.0',
-    'X-Unsent: 1',
-    `From: ${from}`,
-    `To: ${input.to.trim()}`,
-    `Subject: ${encodeMimeHeader(input.subject)}`,
-    `Date: ${new Date().toUTCString()}`,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-  ];
-  const parts = [
-    `--${boundary}`,
-    'Content-Type: text/plain; charset="UTF-8"',
-    'Content-Transfer-Encoding: 8bit',
-    '',
-    input.text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n'),
-    `--${boundary}`,
-    'Content-Type: text/html; charset="UTF-8"',
-    'Content-Transfer-Encoding: 8bit',
-    '',
-    input.html.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n'),
-    `--${boundary}--`,
-    '',
-  ];
-  return `${headers.join('\r\n')}\r\n\r\n${parts.join('\r\n')}`;
-}
-
-export function downloadUnsentHtmlEml(input: UnsentHtmlEmlInput & { filename?: string }): string {
-  const filename = input.filename || inviteEmlFilename(input.subject);
-  if (typeof document === 'undefined') return filename;
-  const blob = new Blob([buildUnsentHtmlEml(input)], { type: 'message/rfc822' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.rel = 'noopener';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-  return filename;
-}

@@ -29,16 +29,15 @@ import type {
   PlatformOrganizationSummary,
 } from '../services/platform/platformTypes';
 import { showToast } from './Toast';
-import { buildVenueAdminInviteCompose } from '../services/platform/venueAdminInviteMail';
-import { OUTLOOK_INVITE_FROM, openOutlookInviteCompose, type InviteComposeMessage } from '../utils/inviteCompose';
+import { buildVenueAdminInviteCompose, deliverVenueAdminInvite } from '../services/platform/venueAdminInviteMail';
+import type { InviteComposeMessage } from '../utils/inviteCompose';
 import {
-  DEFAULT_VENUE_ADMIN_INVITE_BODY,
-  DEFAULT_VENUE_ADMIN_INVITE_SUBJECT,
   VENUE_ADMIN_SETUP_BUTTON_LABEL,
-  applyVenueAdminInviteTemplate,
   joinContactName,
   splitContactName,
 } from '../utils/venueAdminInviteEmail';
+import { DEFAULT_NEW_INVITE_TTL_DAYS, DEFAULT_REISSUE_INVITE_TTL_DAYS, formatInviteExpiry, inviteExpiresAt } from '../utils/inviteTtl';
+import InviteEmailTemplateEditor from './platform/InviteEmailTemplateEditor';
 import { buildPlatformConsoleHash, parsePlatformConsoleHash, type PlatformConsoleSection } from '../utils/platformConsoleRoute';
 import { filterPlatformVenues, listVenueRegions } from '../utils/platformVenueFilters';
 import { applyDocumentBranding } from '../utils/documentBranding';
@@ -176,10 +175,15 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
 
   useEffect(() => { void loadConsole(); }, [loadConsole]);
 
-  const sendOutlookHtmlInvite = () => {
-    if (!inviteCompose) return;
-    openOutlookInviteCompose(inviteCompose);
-    showToast('HTML invite downloaded. Open the .eml file in Outlook as wedding-vip@outlook.com and click Send.', 'success');
+  const sendInviteEmail = async (composeInput: Parameters<typeof deliverVenueAdminInvite>[0], successMessage: string) => {
+    setInviteCompose(buildVenueAdminInviteCompose(composeInput));
+    try {
+      await deliverVenueAdminInvite(composeInput);
+      showToast(successMessage, 'success');
+    } catch (mailErr) {
+      const mailMessage = mailErr instanceof Error ? mailErr.message : 'Email delivery failed.';
+      showToast(`${mailMessage} Copy the setup link below.`, 'warning');
+    }
   };
 
   useEffect(() => {
@@ -263,6 +267,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
         adminEmail: adminEmail.value,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
+        expiresAt: inviteExpiresAt(platformBranding.venueAdminInviteTtlDays, DEFAULT_NEW_INVITE_TTL_DAYS),
       });
       setResult(created);
       const composeInput = {
@@ -280,9 +285,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       setForm(EMPTY_FORM);
       setOnboardVerified(false);
       await loadConsole();
-      const compose = buildVenueAdminInviteCompose(composeInput);
-      setInviteCompose(compose);
-      showToast(`Created ${created.organizationName}. Click Send with Outlook to email the HTML invite from ${OUTLOOK_INVITE_FROM}.`, 'success');
+      await sendInviteEmail(composeInput, `Created ${created.organizationName} and emailed the HTML invite to ${adminEmail.value}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the venue organization.');
     } finally {
@@ -315,10 +318,14 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     }
     setActionId(organization.id);
     try {
-      const next = await reissueVenueAdminInvite(organization.id, normalized.value);
+      const next = await reissueVenueAdminInvite(
+        organization.id,
+        normalized.value,
+        inviteExpiresAt(platformBranding.venueAdminReissueTtlDays, DEFAULT_REISSUE_INVITE_TTL_DAYS),
+      );
       void navigator.clipboard?.writeText(next.inviteUrl);
       const contact = splitContactName(organization.primaryContactName || '');
-      const composeInput = {
+      await sendInviteEmail({
         to: normalized.value,
         organizationId: organization.id,
         organizationName: organization.name,
@@ -329,9 +336,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
         body: platformBranding.venueAdminInviteBody,
         contactFirstName: contact.firstName,
         contactLastName: contact.lastName,
-      };
-      setInviteCompose(buildVenueAdminInviteCompose(composeInput));
-      showToast('Old pending invite revoked and setup link copied. Click Send with Outlook to email the HTML invite.', 'success');
+      }, `New setup link created and emailed to ${normalized.value}. Expires ${formatInviteExpiry(next.expiresAt)}.`);
       await loadConsole();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not reissue the invite.', 'warning');
@@ -535,7 +540,6 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
                 onSuspend={() => void handleSuspend(selectedVenue)}
                 onReactivate={() => void handleReactivate(selectedVenue)}
                 onSaved={loadConsole}
-                onOutlookInvite={sendOutlookHtmlInvite}
               />
             ) : (
               <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
@@ -560,7 +564,6 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               inviteCompose={inviteCompose}
               onSubmit={(event) => void handleCreateVenue(event)}
               onCopyInvite={copyInvite}
-              onOutlookInvite={sendOutlookHtmlInvite}
               primaryColor={config.primaryColor || '#4A1942'}
             />
           )}
@@ -763,7 +766,6 @@ function VenueDetail({
   onReactivate,
   onSaved,
   inviteCompose,
-  onOutlookInvite,
 }: {
   organization: PlatformOrganizationSummary;
   metric?: PlatformConsoleMetrics['venues'][number];
@@ -776,7 +778,6 @@ function VenueDetail({
   onSuspend: () => void;
   onReactivate: () => void;
   onSaved: () => Promise<void>;
-  onOutlookInvite: () => void;
 }) {
   const [draft, setDraft] = useState({
     name: organization.name,
@@ -936,11 +937,8 @@ function VenueDetail({
           <button type="button" onClick={() => onCopyLogin(organization.slug)} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700">Copy staff login</button>
           {organization.pendingInvite && (
             <>
-              <span className="self-center text-xs text-gray-600">Pending admin: {organization.pendingInvite.email}</span>
-              <button type="button" disabled={busy} onClick={onReissue} className="rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60">Reissue invite</button>
-              {inviteCompose && (
-                <button type="button" onClick={onOutlookInvite} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-800">Send with Outlook ({OUTLOOK_INVITE_FROM})</button>
-              )}
+              <span className="self-center text-xs text-gray-600">Pending admin: {organization.pendingInvite.email} · expires {formatInviteExpiry(organization.pendingInvite.expiresAt)}</span>
+              <button type="button" disabled={busy} onClick={onReissue} className="rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60">Reissue & email invite</button>
               <button type="button" disabled={busy} onClick={onRevoke} className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60">Revoke invite</button>
             </>
           )}
@@ -970,7 +968,6 @@ function OnboardVenueForm({
   inviteCompose,
   onSubmit,
   onCopyInvite,
-  onOutlookInvite,
   primaryColor,
 }: {
   form: typeof EMPTY_FORM;
@@ -984,14 +981,13 @@ function OnboardVenueForm({
   inviteCompose: InviteComposeMessage | null;
   onSubmit: (event: FormEvent) => void;
   onCopyInvite: () => void;
-  onOutlookInvite: () => void;
   primaryColor: string;
 }) {
   return (
     <section className="mx-auto max-w-2xl rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Tenant onboarding</p>
       <h2 className="mt-1 text-lg font-bold text-gray-900">Create a venue organization</h2>
-      <p className="mt-1 text-xs leading-relaxed text-gray-500">The venue slug is generated from the name and permanently frozen. After create, click Send with Outlook to email the HTML invite with the Set up your account button.</p>
+      <p className="mt-1 text-xs leading-relaxed text-gray-500">The venue slug is generated from the name and permanently frozen. Creating the venue emails a new HTML invite with a Set up your account button.</p>
       <form onSubmit={onSubmit} className="mt-4 space-y-3">
         <label className="block text-xs font-semibold text-gray-700">Venue name *<input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
         <AddressAutocomplete
@@ -1015,13 +1011,9 @@ function OnboardVenueForm({
       {result && (
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="text-sm font-bold text-emerald-900">Venue created: {result.organizationSlug}</p>
+          <p className="mt-1 text-xs text-emerald-800">Invite expires {formatInviteExpiry(result.expiresAt)}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={onCopyInvite} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800">Copy setup link</button>
-            {inviteCompose && (
-              <button type="button" onClick={onOutlookInvite} className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-100">
-                Send with Outlook ({OUTLOOK_INVITE_FROM})
-              </button>
-            )}
           </div>
           {inviteCompose?.html && <InviteHtmlPreview html={inviteCompose.html} />}
           <p className="mt-2 break-all rounded-lg border border-emerald-200 bg-white px-3 py-2 font-mono text-[11px] text-gray-700">{result.inviteUrl}</p>
@@ -1036,9 +1028,9 @@ function InviteHtmlPreview({ html }: { html: string }) {
   return (
     <div className="mt-3 overflow-hidden rounded-lg border border-emerald-200 bg-white">
       <p className="border-b border-emerald-100 px-3 py-1.5 text-[11px] font-semibold text-emerald-900">
-        HTML invite preview — {VENUE_ADMIN_SETUP_BUTTON_LABEL} is the invite link
+        Email the venue receives — {VENUE_ADMIN_SETUP_BUTTON_LABEL} is the invite link
       </p>
-      <div className="max-h-72 overflow-auto bg-slate-50 p-2" dangerouslySetInnerHTML={{ __html: html }} />
+      <iframe title="Invite email preview" sandbox="" srcDoc={html} className="h-[380px] w-full bg-white" />
     </div>
   );
 }
@@ -1065,14 +1057,7 @@ function BrandingSection({
           <label className="block text-xs font-semibold text-gray-700">Platform name<input value={platformBranding.venueName} onChange={(event) => setPlatformBranding({ ...platformBranding, venueName: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="block text-xs font-semibold text-gray-700">Tagline<input value={platformBranding.tagline} onChange={(event) => setPlatformBranding({ ...platformBranding, tagline: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
           <label className="block text-xs font-semibold text-gray-700">Login welcome message<textarea value={platformBranding.loginWelcomeMessage || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, loginWelcomeMessage: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={2} /></label>
-          <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
-            <p className="text-xs font-bold text-indigo-950">Venue administrator invite email</p>
-            <p className="mt-1 text-[11px] text-indigo-800">Sent automatically via Outlook SMTP. HTML emails use a Set up your account button (the tokenized URL is not shown). Tags: {'{contactName}'}, {'{contactFirstName}'}, {'{contactLastName}'}, {'{venueName}'}, {'{adminEmail}'}, {'{expiresAt}'}, {'{platformName}'}.</p>
-            <label className="mt-2 block text-xs font-semibold text-gray-700">Subject<input value={platformBranding.venueAdminInviteSubject || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, venueAdminInviteSubject: event.target.value })} placeholder={DEFAULT_VENUE_ADMIN_INVITE_SUBJECT} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-            <label className="mt-2 block text-xs font-semibold text-gray-700">Body<textarea value={platformBranding.venueAdminInviteBody || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, venueAdminInviteBody: event.target.value })} placeholder={DEFAULT_VENUE_ADMIN_INVITE_BODY} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs" rows={8} /></label>
-            <p className="mt-2 text-[11px] font-semibold text-gray-600">Preview</p>
-            <pre className="mt-1 whitespace-pre-wrap rounded-lg border border-white bg-white px-3 py-2 text-[11px] text-gray-700">{applyVenueAdminInviteTemplate(platformBranding.venueAdminInviteSubject, platformBranding.venueAdminInviteBody, { venueName: 'Hilltop Barn', inviteUrl: 'https://your-app/#/venue-onboarding?token=example', adminEmail: 'owner@example.com', expiresAt: 'in 7 days', platformName: platformBranding.venueName || 'Platform', contactFirstName: 'Ada', contactLastName: 'Lovelace' }).subject + '\n\n' + applyVenueAdminInviteTemplate(platformBranding.venueAdminInviteSubject, platformBranding.venueAdminInviteBody, { venueName: 'Hilltop Barn', inviteUrl: 'https://your-app/#/venue-onboarding?token=example', adminEmail: 'owner@example.com', expiresAt: 'in 7 days', platformName: platformBranding.venueName || 'Platform', contactFirstName: 'Ada', contactLastName: 'Lovelace' }).body}</pre>
-          </div>
+          <InviteEmailTemplateEditor branding={platformBranding} onChange={setPlatformBranding} />
           <div className="flex items-center gap-3">
             <input id="platform-logo-upload" type="file" accept="image/*" className="sr-only" onChange={(event) => void onLogo(event)} />
             <label htmlFor="platform-logo-upload" className="cursor-pointer rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-800">Upload platform logo</label>
