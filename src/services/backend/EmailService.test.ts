@@ -40,4 +40,8 @@ describe('sendTransactionalEmail', () => {
   it('explains a browser fetch failure instead of repeating the generic invoke message', () => {
     expect(describeEmailDeliveryFailure({ message: 'Failed to send a request to the Edge Function' })).toMatch(/brevo/i);
   });
+
+  it('explains a leftover weddingvip.com sender rejection', () => {
+    expect(describeEmailDeliveryFailure({ message: 'Sender invites@weddingvip.com is not valid' })).toMatch(/wedding-vip@outlook.com/);
+  });
 });

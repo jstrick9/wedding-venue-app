@@ -1,6 +1,8 @@
+import { TRANSACTIONAL_FROM_EMAIL, TRANSACTIONAL_FROM_NAME } from './inviteFromAddress';
+
 /** Mailbox shown as the platform invite from-address. */
-export const OUTLOOK_INVITE_FROM = 'wedding-vip@outlook.com';
-export const OUTLOOK_INVITE_FROM_LABEL = 'Wedding VIP';
+export const OUTLOOK_INVITE_FROM = TRANSACTIONAL_FROM_EMAIL;
+export const OUTLOOK_INVITE_FROM_LABEL = TRANSACTIONAL_FROM_NAME;
 
 export interface InviteComposeMessage {
   to: string;

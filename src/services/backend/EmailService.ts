@@ -34,6 +34,9 @@ export function describeEmailDeliveryFailure(error: unknown, data?: unknown): st
     if (/failed to send a request to the edge function/i.test(message)) {
       return 'The send-email function did not respond. Set BREVO_API_KEY on send-email, then copy the setup link if needed.';
     }
+    if (/invites@weddingvip\.com|sender not valid|not authenticated/i.test(message)) {
+      return 'Brevo rejected the sender. Confirm wedding-vip@outlook.com as a verified sender. Leftover EMAIL_FROM values such as invites@weddingvip.com are ignored.';
+    }
     if (message) return message;
   }
   return 'Email delivery failed.';

@@ -18,6 +18,22 @@ const DEFAULT_FROM_EMAIL = 'wedding-vip@outlook.com';
 const DEFAULT_FROM_NAME = 'Wedding VIP';
 const SETUP_ACCOUNT_BUTTON_LABEL = 'Set up your account';
 
+function resolveFromEmail(_emailFromSecret: string): string {
+  // Always send as the Outlook mailbox. Leftover EMAIL_FROM secrets from the
+  // unused weddingvip.com / Resend plan (invites@weddingvip.com) are ignored.
+  return DEFAULT_FROM_EMAIL;
+}
+
+function describeDeliveryError(details: unknown, fromEmail: string): string {
+  const message = details && typeof details === 'object' && details !== null && 'message' in details
+    ? String((details as { message?: unknown }).message || '').trim()
+    : '';
+  if (/sender|from address|not authenticated|not verified|invalid_parameter|unrecognised/i.test(message) || /weddingvip\.com/i.test(message)) {
+    return `Brevo rejected sender ${fromEmail}. Confirm wedding-vip@outlook.com as a verified sender in Brevo. Leftover EMAIL_FROM values such as invites@weddingvip.com are ignored.${message ? ` Provider: ${message}` : ''}`;
+  }
+  return message;
+}
+
 type EmailPurpose =
   | 'invitation'
   | 'venue_admin_invite'
@@ -74,11 +90,6 @@ function jsonWith(corsHeaders: Record<string, string>, body: unknown, status = 2
 
 function sanitizeEmail(value: string): string {
   return value.trim().toLowerCase();
-}
-
-function extractEmailAddress(value: string): string {
-  const angled = value.match(/<([^>]+)>/);
-  return sanitizeEmail(angled?.[1] || value);
 }
 
 function escapeHtml(value: unknown): string {
@@ -273,9 +284,10 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const brevoApiKey = Deno.env.get('BREVO_API_KEY') || '';
     const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
-    const emailFrom = Deno.env.get('EMAIL_FROM') || `${DEFAULT_FROM_NAME} <${DEFAULT_FROM_EMAIL}>`;
-    const fromEmail = extractEmailAddress(emailFrom) || DEFAULT_FROM_EMAIL;
+    const emailFromSecret = Deno.env.get('EMAIL_FROM') || '';
+    const fromEmail = resolveFromEmail(emailFromSecret);
     const fromName = Deno.env.get('EMAIL_FROM_NAME') || DEFAULT_FROM_NAME;
+    const emailFrom = `${fromName} <${fromEmail}>`;
 
     if (!supabaseUrl || !serviceRoleKey) {
       return json({ error: 'Email service is not configured.' }, 500);
@@ -358,6 +370,7 @@ serve(async (req) => {
       entity_type: 'email',
       after_data: {
         to,
+        from: fromEmail,
         subject: rendered.subject,
         purpose: payload.purpose,
         provider: delivery.provider,
@@ -368,10 +381,12 @@ serve(async (req) => {
     if (auditError) console.error('send-email audit_logs insert failed', auditError.message);
 
     if (!delivery.ok) {
-      const detailError = delivery.details && typeof delivery.details === 'object' && delivery.details !== null && 'message' in delivery.details
-        ? String((delivery.details as { message?: unknown }).message || '').trim()
-        : '';
-      return json({ error: detailError || 'Email provider rejected request.', details: delivery.details }, 502);
+      const detailError = describeDeliveryError(delivery.details, fromEmail);
+      return json({
+        error: detailError || 'Email provider rejected request.',
+        from: fromEmail,
+        details: delivery.details,
+      }, 502);
     }
 
     return json({ ok: true, provider: delivery.provider, details: delivery.details });

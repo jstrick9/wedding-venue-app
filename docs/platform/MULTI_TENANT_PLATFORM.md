@@ -172,7 +172,8 @@ The legacy local User Management form still represents local browser records. It
 ## Venue administrator invite email
 
 Onboard and **Reissue & email invite** send HTML automatically through Brevo
-from `wedding-vip@outlook.com`. The invite URL is
+from `wedding-vip@outlook.com` (a leftover `EMAIL_FROM=invites@weddingvip.com`
+secret is ignored). The invite URL is
 `https://app/?va=<token>#/venue-onboarding`.
 
 Customize subject, body, and new/reissue lifetimes under **Platform → Branding**.

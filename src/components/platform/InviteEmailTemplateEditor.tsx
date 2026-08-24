@@ -160,6 +160,7 @@ export default function InviteEmailTemplateEditor({ branding, onChange }: Invite
       <p className="mt-3 text-[11px] leading-relaxed text-indigo-900">
         One-time Brevo setup: create a free Brevo account, add wedding-vip@outlook.com as a sender and confirm the email,
         then save the API key as the <code className="rounded bg-white px-1">BREVO_API_KEY</code> secret on the send-email Edge Function and redeploy it.
+        Invites always send from wedding-vip@outlook.com. A leftover EMAIL_FROM secret such as invites@weddingvip.com is ignored.
       </p>
     </div>
   );

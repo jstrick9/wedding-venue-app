@@ -703,5 +703,18 @@ merge tags. The preview is the same HTML document Brevo sends.
 email. Do not retry Outlook SMTP. Set `BREVO_API_KEY` after verifying
 wedding-vip@outlook.com in Brevo.
 
+### 9.29 Force Outlook sender on Brevo (Review #205, 2026-08-24)
+
+See `docs/reviews/205-brevo-outlook-sender-2026-08-24.md`.
+
+A leftover `EMAIL_FROM` secret (`invites@weddingvip.com` from the unused Resend
+domain) was winning over `wedding-vip@outlook.com`, so Brevo rejected the send.
+`send-email` now always uses **wedding-vip@outlook.com**. Confirm that mailbox
+as a Brevo sender and redeploy `send-email`.
+
+**Rule going forward:** treat #205 + §9.12–9.29 as current truth for invite
+email. Never send as invites@weddingvip.com until that domain is actually
+delegated and verified.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
