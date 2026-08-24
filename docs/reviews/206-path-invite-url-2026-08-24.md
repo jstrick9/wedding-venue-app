@@ -24,14 +24,14 @@ and `#`), so the app opened `#/venue-onboarding` with no token.
 
 | Gate | Result |
 |---|---|
-| `npm run typecheck` | Pending |
-| `npm run lint:events` | Pending |
-| `npm run lint` | Pending |
-| Strict unused-locals scan | Pending |
-| `npx vitest run` | Pending |
-| `npm run build` | Pending |
-| `npm run build:split` | Pending |
-| `npm audit --omit=dev` | Pending |
+| `npm run typecheck` | Pass |
+| `npm run lint:events` | Pass |
+| `npm run lint` | 0 errors / 47 warnings |
+| Strict unused-locals scan | Clean (non-test; grep printed nothing) |
+| `npx vitest run` | **874 passed / 5 skipped** |
+| `npm run build` | Pass — **2,306.16 kB / 551.25 kB gzip** |
+| `npm run build:split` | Pass |
+| `npm audit --omit=dev` | 0 vulnerabilities |
 
 ---
 
