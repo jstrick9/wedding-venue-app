@@ -310,7 +310,10 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   };
 
   const handleReissue = async (organization: PlatformOrganizationSummary) => {
-    const email = organization.pendingInvite?.email || window.prompt('Email for the new managed-admin invitation:', '') || '';
+    if (organization.ownerId && !window.confirm(`${organization.name} already has an owner. Reissuing emails a new setup link. When that person accepts, they become the venue owner.`)) {
+      return;
+    }
+    const email = organization.pendingInvite?.email || window.prompt('Email for the new managed-admin invitation:', organization.primaryContactEmail || '') || '';
     const normalized = normalizeEmail(email, { required: true });
     if (!normalized.ok) {
       showToast(normalized.error || 'Enter a valid email address.', 'warning');

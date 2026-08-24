@@ -728,5 +728,17 @@ that path to `index.html`. Legacy `?va=` and hash links still parse.
 **Rule going forward:** treat #206 + §9.12–9.30 as current truth for invite
 URLs. Do not put `?` or `#` in emailed setup links.
 
+### 9.31 Claimed-venue reissue and invite lookup (Review #207, 2026-08-24)
+
+See `docs/reviews/207-claimed-venue-reissue-and-invite-lookup-2026-08-24.md`.
+
+`get_venue_admin_invite_context` used `SELECT vai INTO invite_row`, which
+assigned the whole composite to `id uuid`. Apply migration **0016**. Reissue
+is allowed on claimed active/provisioning venues; accept transfers managed
+ownership to the invitee and demotes the previous owner membership to admin.
+
+**Rule going forward:** treat #207 + §9.12–9.31 as current truth for venue-admin
+invite RPCs. Apply 0016 in the live project before claiming the lookup is fixed.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*

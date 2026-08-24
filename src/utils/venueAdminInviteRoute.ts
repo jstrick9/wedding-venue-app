@@ -149,8 +149,15 @@ export function describeVenueAdminInviteError(code?: string | null): string {
     case 'invalid_token':
     case 'missing':
       return 'This setup link is missing or incomplete. Open the newest invitation email and use the Set up your account button, or ask the platform administrator to copy the link from the console.';
+    case 'venue_already_claimed':
+      return 'This venue already has an owner. Ask the platform administrator to apply migration 0016, then reissue the invitation.';
     default:
-      if (code && /[. ]/.test(code) && code.length > 12) return code;
+      if (/invalid input syntax for type uuid/i.test(code || '')) {
+        return 'The invitation is valid, but the lookup function needs a database update. In Supabase → SQL Editor, run supabase/migrations/0016_reissue_claimed_venue_and_invite_lookup.sql, then open this link again.';
+      }
+      if (code && /[. ]/.test(code) && code.length > 12 && !/invalid input syntax/i.test(code)) {
+        return code;
+      }
       return 'This setup link is invalid, expired, revoked, or already used. Ask the platform administrator to reissue the invitation.';
   }
 }
