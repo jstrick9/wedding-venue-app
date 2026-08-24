@@ -16,7 +16,8 @@ import {
   verifyPassword,
 } from '../utils/auth';
 import type { PlatformRole } from '../services/platform/platformTypes';
-import { setActiveOrganizationSlug } from '../services/platform/organizationContext';
+import { getActiveOrganizationSlug, setActiveOrganizationSlug } from '../services/platform/organizationContext';
+import type { BackendAuthSession } from '../services/backend/AuthBackend';
 import {
   restoreSupabaseSession,
   shouldUseSupabaseAuth,
@@ -25,6 +26,8 @@ import {
   signUpOrganizationInvite,
   signUpWithSupabase,
 } from '../services/backend/AuthBackend';
+import { migrateLegacyAuthSessions, setAuthSurface } from '../services/backend/supabaseClient';
+import { detectAuthSurface, type AuthSurface } from '../utils/authSurface';
 import { loginHashAfterLogout } from '../utils/loginRoute';
 
 export interface AuthRegistrationParams {
@@ -46,6 +49,10 @@ interface AuthContextType {
   isPlatformAdmin: boolean;
   /** True for any active platform membership, including support. */
   isPlatformSupport: boolean;
+  /** Independent of the venue session — a platform admin can stay signed in. */
+  hasPlatformSession: boolean;
+  hasVenueSession: boolean;
+  authSurface: AuthSurface;
   isAdmin: boolean;
   isBasicUser: boolean;
   isGuest: boolean;
@@ -109,33 +116,74 @@ function buildGuestUser(): User {
   };
 }
 
+function applyCloudSession(
+  session: BackendAuthSession,
+  setUser: (user: User | null) => void,
+  setOrganizationId: (id: string | null) => void,
+  setOrganizationSlug: (slug: string | null) => void,
+  setPlatformRole: (role: PlatformRole | null) => void,
+) {
+  setUser(session.user);
+  setOrganizationId(session.organizationId ?? null);
+  setOrganizationSlug(session.organizationSlug ?? null);
+  setActiveOrganizationSlug(session.organizationSlug);
+  setPlatformRole(session.platformRole ?? null);
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationSlug, setOrganizationSlug] = useState<string | null>(null);
   const [platformRole, setPlatformRole] = useState<PlatformRole | null>(null);
+  const [platformAuth, setPlatformAuth] = useState<BackendAuthSession | null>(null);
+  const [venueAuth, setVenueAuth] = useState<BackendAuthSession | null>(null);
+  const [surface, setSurface] = useState<AuthSurface>(() => detectAuthSurface());
   const [initialized, setInitialized] = useState(false);
+  const supabaseMode = shouldUseSupabaseAuth();
+
+  useEffect(() => {
+    const syncSurface = () => {
+      const next = detectAuthSurface();
+      setSurface(next);
+      setAuthSurface(next);
+    };
+    syncSurface();
+    window.addEventListener('hashchange', syncSurface);
+    window.addEventListener('popstate', syncSurface);
+    return () => {
+      window.removeEventListener('hashchange', syncSurface);
+      window.removeEventListener('popstate', syncSurface);
+    };
+  }, []);
 
   useEffect(() => {
     if (shouldUseSupabaseAuth()) {
-      void restoreSupabaseSession()
-        .then((session) => {
-          if (session?.user) {
-            setUser(session.user);
-            setOrganizationId(session.organizationId ?? null);
-            setOrganizationSlug(session.organizationSlug ?? null);
-            setActiveOrganizationSlug(session.organizationSlug);
-            setPlatformRole(session.platformRole ?? null);
-          } else {
-            clearSession();
-            setOrganizationId(null);
-            setOrganizationSlug(null);
-            setActiveOrganizationSlug(null);
-            setPlatformRole(null);
-          }
-        })
-        .finally(() => setInitialized(true));
-      return;
+      let cancelled = false;
+      void (async () => {
+        await migrateLegacyAuthSessions();
+        const [platform, venue] = await Promise.all([
+          restoreSupabaseSession(undefined, 'platform'),
+          restoreSupabaseSession(undefined, 'venue'),
+        ]);
+        if (cancelled) return;
+        setPlatformAuth(platform);
+        setVenueAuth(venue);
+        const active = detectAuthSurface() === 'venue' ? venue : platform;
+        if (active?.user) {
+          applyCloudSession(active, setUser, setOrganizationId, setOrganizationSlug, setPlatformRole);
+          if (venue?.organizationSlug) setActiveOrganizationSlug(venue.organizationSlug);
+        } else {
+          clearSession();
+          setOrganizationId(venue?.organizationId ?? null);
+          setOrganizationSlug(venue?.organizationSlug ?? null);
+          setActiveOrganizationSlug(venue?.organizationSlug ?? getActiveOrganizationSlug() ?? null);
+          setPlatformRole(platform?.platformRole ?? null);
+        }
+        setInitialized(true);
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
 
     const savedSession = loadSession();
@@ -170,15 +218,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setInitialized(true);
   }, []);
 
+  useEffect(() => {
+    if (!supabaseMode) return;
+    const active = surface === 'venue' ? venueAuth : platformAuth;
+    setUser(active?.user ?? null);
+    setOrganizationId(venueAuth?.organizationId ?? null);
+    setOrganizationSlug(venueAuth?.organizationSlug ?? null);
+    setPlatformRole(platformAuth?.platformRole ?? null);
+    if (venueAuth?.organizationSlug) setActiveOrganizationSlug(venueAuth.organizationSlug);
+    setAuthSurface(surface);
+  }, [supabaseMode, surface, platformAuth, venueAuth]);
+
   const login = async (username: string, password: string): Promise<boolean> => {
     if (shouldUseSupabaseAuth()) {
-      const session = await signInWithSupabase(username, password);
+      const session = await signInWithSupabase(username, password, undefined, 'platform');
       if (!session) return false;
-      setUser(session.user);
-      setOrganizationId(session.organizationId ?? null);
-      setOrganizationSlug(session.organizationSlug ?? null);
-      setActiveOrganizationSlug(session.organizationSlug);
-      setPlatformRole(session.platformRole ?? null);
+      const role = session.platformRole;
+      if (role !== 'platform_owner' && role !== 'platform_admin' && role !== 'platform_support') {
+        await signOutSupabase('platform');
+        return false;
+      }
+      setPlatformAuth(session);
       return true;
     }
 
@@ -235,26 +295,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const loginForOrganization: AuthContextType['loginForOrganization'] = async (organizationId, username, password) => {
     if (!shouldUseSupabaseAuth()) return false;
-    const session = await signInWithSupabase(username, password, organizationId);
+    const session = await signInWithSupabase(username, password, organizationId, 'venue');
     if (!session) return false;
-    setUser(session.user);
-    setOrganizationId(session.organizationId ?? null);
-    setOrganizationSlug(session.organizationSlug ?? null);
-    setActiveOrganizationSlug(session.organizationSlug);
-    setPlatformRole(session.platformRole ?? null);
+    setVenueAuth(session);
     return true;
   };
 
   const logout = () => {
-    const nextHash = loginHashAfterLogout(window.location.hash, organizationSlug);
-    setUser(null);
-    setOrganizationId(null);
-    setOrganizationSlug(null);
-    setActiveOrganizationSlug(null);
-    setPlatformRole(null);
-    clearSession();
+    const nextHash = loginHashAfterLogout(
+      window.location.hash,
+      venueAuth?.organizationSlug || organizationSlug,
+      window.location.pathname,
+    );
     if (shouldUseSupabaseAuth()) {
-      void signOutSupabase();
+      if (surface === 'venue') {
+        setVenueAuth(null);
+        void signOutSupabase('venue');
+      } else {
+        setPlatformAuth(null);
+        void signOutSupabase('platform');
+      }
+    } else {
+      setUser(null);
+      setOrganizationId(null);
+      setOrganizationSlug(null);
+      setActiveOrganizationSlug(null);
+      setPlatformRole(null);
+      clearSession();
     }
     if ((window.location.hash || '') !== nextHash) {
       window.location.hash = nextHash;
@@ -267,11 +334,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     try {
       const session = await signUpWithSupabase({ email, password, fullName, organizationName });
-      setUser(session.user);
-      setOrganizationId(session.organizationId ?? null);
-      setOrganizationSlug(session.organizationSlug ?? null);
-      setActiveOrganizationSlug(session.organizationSlug);
-      setPlatformRole(session.platformRole ?? null);
+      setVenueAuth(session);
       return null;
     } catch (err) {
       return err instanceof Error ? err.message : 'Unable to create your account.';
@@ -284,11 +347,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     try {
       const session = await signUpOrganizationInvite({ email, password, fullName, inviteToken });
-      setUser(session.user);
-      setOrganizationId(session.organizationId ?? null);
-      setOrganizationSlug(session.organizationSlug ?? null);
-      setActiveOrganizationSlug(session.organizationSlug);
-      setPlatformRole(session.platformRole ?? null);
+      setVenueAuth(session);
       return null;
     } catch (err) {
       return err instanceof Error ? err.message : 'Unable to create your invited account.';
@@ -410,14 +469,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshSession = useCallback(async (): Promise<void> => {
     if (shouldUseSupabaseAuth()) {
-      const session = await restoreSupabaseSession();
-      if (session?.user) {
-        setUser(session.user);
-        setOrganizationId(session.organizationId ?? null);
-        setOrganizationSlug(session.organizationSlug ?? null);
-        setActiveOrganizationSlug(session.organizationSlug);
-        setPlatformRole(session.platformRole ?? null);
-      }
+      const [platform, venue] = await Promise.all([
+        restoreSupabaseSession(undefined, 'platform'),
+        restoreSupabaseSession(undefined, 'venue'),
+      ]);
+      setPlatformAuth(platform);
+      setVenueAuth(venue);
       return;
     }
 
@@ -466,11 +523,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return true;
   };
 
-  const isPlatformAdmin = platformRole === 'platform_owner' || platformRole === 'platform_admin';
-  const isPlatformSupport = isPlatformAdmin || platformRole === 'platform_support';
-  const isAdmin = user?.role === 'admin';
-  const isBasicUser = user?.role === 'basic';
-  const isGuest = user?.role === 'guest';
+  const activeUser = supabaseMode
+    ? ((surface === 'venue' ? venueAuth?.user : platformAuth?.user) ?? null)
+    : user;
+  const activeOrganizationId = supabaseMode ? (venueAuth?.organizationId ?? null) : organizationId;
+  const activeOrganizationSlug = supabaseMode ? (venueAuth?.organizationSlug ?? null) : organizationSlug;
+  const activePlatformRole = supabaseMode ? (platformAuth?.platformRole ?? null) : platformRole;
+  const isPlatformAdmin = activePlatformRole === 'platform_owner' || activePlatformRole === 'platform_admin';
+  const isPlatformSupport = isPlatformAdmin || activePlatformRole === 'platform_support';
+  const isAdmin = activeUser?.role === 'admin';
+  const isBasicUser = activeUser?.role === 'basic';
+  const isGuest = activeUser?.role === 'guest';
 
   if (!initialized) {
     return <div>Loading...</div>;
@@ -479,12 +542,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return (
     <AuthContext.Provider
       value={{
-        user,
-        organizationId,
-        organizationSlug,
-        platformRole,
+        user: activeUser,
+        organizationId: activeOrganizationId,
+        organizationSlug: activeOrganizationSlug,
+        platformRole: activePlatformRole,
         isPlatformAdmin,
         isPlatformSupport,
+        hasPlatformSession: Boolean(platformAuth?.user),
+        hasVenueSession: Boolean(venueAuth?.user),
+        authSurface: surface,
         isAdmin,
         isBasicUser,
         isGuest,

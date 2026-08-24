@@ -12,6 +12,8 @@ import { ToastContainer, showToast } from './components/Toast';
 import { on } from './utils/appEvents';
 import { lazy } from 'react';
 import PlatformLoginScreen from './components/PlatformLoginScreen';
+import { getActiveOrganizationSlug } from './services/platform/organizationContext';
+import { isVenueStaffRoute } from './utils/authSurface';
 import { captureVenueAdminInviteToken, shouldShowVenueAdminOnboarding } from './utils/venueAdminInviteRoute';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
@@ -117,6 +119,35 @@ function AppContent() {
       <Suspense fallback={<LoadingScreen />}>
         <VenueLoginScreen slug={getVenueSlugFromLocation(window.location)} />
       </Suspense>
+    );
+  }
+
+  if (isVenueStaffRoute(hash) && !user) {
+    const slug = organizationSlug || getActiveOrganizationSlug() || '';
+    if (slug) {
+      return (
+        <Suspense fallback={<LoadingScreen />}>
+          <VenueLoginScreen slug={slug} />
+        </Suspense>
+      );
+    }
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
+          <div className="text-4xl">🏛️</div>
+          <h1 className="mt-3 text-lg font-bold text-gray-900">Venue sign-in is separate</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Platform administration and venue workspaces use different accounts. Open this venue from its login link or from the platform console.
+          </p>
+          <button
+            type="button"
+            onClick={() => { window.location.hash = '#/platform-login'; }}
+            className="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Platform login
+          </button>
+        </div>
+      </div>
     );
   }
 

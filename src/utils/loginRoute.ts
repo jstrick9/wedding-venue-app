@@ -1,8 +1,20 @@
+import { isVenueOnboardingPath } from './venueAdminInviteRoute';
+
 /**
  * Hash to show after signing out of a staff/platform session.
  * Platform console paths must not linger on the login screen.
+ * Venue invite paths stay put so a platform sign-out cannot steal `/i/<token>`.
  */
-export function loginHashAfterLogout(hash = '', organizationSlug?: string | null): string {
+export function loginHashAfterLogout(
+  hash = '',
+  organizationSlug?: string | null,
+  pathname?: string,
+): string {
+  const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
+  if (isVenueOnboardingPath(path)) {
+    return hash || '';
+  }
+
   const route = (hash || '').split('?')[0];
 
   if (

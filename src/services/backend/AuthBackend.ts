@@ -1,4 +1,5 @@
 import type { User, UserRole } from '../../types';
+import type { AuthSurface } from '../../utils/authSurface';
 import type { PlatformRole } from '../platform/platformTypes';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
@@ -48,8 +49,8 @@ export function shouldUseSupabaseAuth(): boolean {
   return import.meta.env.VITE_BACKEND_PROVIDER === 'supabase' && isSupabaseConfigured();
 }
 
-async function loadPlatformRole(userId: string): Promise<PlatformRole | undefined> {
-  const { data, error } = await getSupabaseClient()
+async function loadPlatformRole(userId: string, surface: AuthSurface): Promise<PlatformRole | undefined> {
+  const { data, error } = await getSupabaseClient(surface)
     .from('platform_memberships')
     .select('role,status')
     .eq('user_id', userId)
@@ -67,8 +68,10 @@ export async function signInWithSupabase(
   email: string,
   password: string,
   requiredOrganizationId?: string,
+  surface?: AuthSurface,
 ): Promise<BackendAuthSession | null> {
-  const supabase = getSupabaseClient();
+  const target: AuthSurface = surface || (requiredOrganizationId ? 'venue' : 'platform');
+  const supabase = getSupabaseClient(target);
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.session || !data.user) return null;
 
@@ -100,7 +103,7 @@ export async function signInWithSupabase(
   const organizationActive = !organization?.status || organization.status === 'active';
   if (requiredOrganizationId && !organizationActive) return null;
   const effectiveMembership = organizationActive ? membership : null;
-  const platformRole = await loadPlatformRole(data.user.id);
+  const platformRole = await loadPlatformRole(data.user.id, target);
   const user = mapProfileToUser(
     {
       ...profile,
@@ -119,8 +122,11 @@ export async function signInWithSupabase(
   };
 }
 
-export async function restoreSupabaseSession(requiredOrganizationId?: string): Promise<BackendAuthSession | null> {
-  const supabase = getSupabaseClient();
+export async function restoreSupabaseSession(
+  requiredOrganizationId?: string,
+  surface: AuthSurface = 'platform',
+): Promise<BackendAuthSession | null> {
+  const supabase = getSupabaseClient(surface);
   const { data } = await supabase.auth.getSession();
   const session = data.session;
   if (!session?.user) return null;
@@ -153,7 +159,7 @@ export async function restoreSupabaseSession(requiredOrganizationId?: string): P
   const organizationActive = !organization?.status || organization.status === 'active';
   if (requiredOrganizationId && !organizationActive) return null;
   const effectiveMembership = organizationActive ? membership : null;
-  const platformRole = await loadPlatformRole(session.user.id);
+  const platformRole = await loadPlatformRole(session.user.id, surface);
   return {
     user: mapProfileToUser(
       {
@@ -170,9 +176,9 @@ export async function restoreSupabaseSession(requiredOrganizationId?: string): P
   };
 }
 
-export async function signOutSupabase(): Promise<void> {
+export async function signOutSupabase(surface?: AuthSurface): Promise<void> {
   if (!isSupabaseConfigured()) return;
-  await getSupabaseClient().auth.signOut();
+  await getSupabaseClient(surface).auth.signOut();
 }
 
 export interface SignUpParams {
@@ -273,7 +279,7 @@ export async function signUpVenueAdminWithInvite({
   fullName,
   inviteToken,
 }: VenueAdminInviteSignUpParams): Promise<BackendAuthSession> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient('venue');
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -292,7 +298,7 @@ export async function signUpVenueAdminWithInvite({
     throw new Error(String(accepted?.error || 'The venue administrator invitation could not be accepted.'));
   }
 
-  const session = await restoreSupabaseSession();
+  const session = await restoreSupabaseSession(undefined, 'venue');
   if (!session) throw new Error('Venue administrator account was created, but the session could not be restored.');
   return session;
 }
@@ -303,7 +309,7 @@ export async function signUpOrganizationInvite({
   fullName,
   inviteToken,
 }: VenueAdminInviteSignUpParams): Promise<BackendAuthSession> {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient('venue');
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -322,7 +328,7 @@ export async function signUpOrganizationInvite({
     throw new Error(String(accepted?.error || 'The organization invitation could not be accepted.'));
   }
 
-  const session = await restoreSupabaseSession();
+  const session = await restoreSupabaseSession(undefined, 'venue');
   if (!session) throw new Error('Account was created, but the organization session could not be restored.');
   return session;
 }

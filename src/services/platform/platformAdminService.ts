@@ -1,3 +1,4 @@
+import type { AuthSurface } from '../../utils/authSurface';
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { createOpaqueToken } from '../../utils/secureTokens';
 import { normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../../utils/contactQuality';
@@ -44,11 +45,11 @@ export interface VenueAdminInviteContext {
   expiresAt: string;
 }
 
-function requireSupabase(): ReturnType<typeof getSupabaseClient> {
+function requireSupabase(surface: AuthSurface = 'platform'): ReturnType<typeof getSupabaseClient> {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase is not configured.');
   }
-  return getSupabaseClient();
+  return getSupabaseClient(surface);
 }
 
 export { buildVenueAdminInviteUrl } from '../../utils/venueAdminInviteRoute';
@@ -363,7 +364,7 @@ export async function listPlatformAuditLogs(limit = 100): Promise<PlatformAuditL
 }
 
 export async function acceptVenueAdminInvite(token: string): Promise<{ organizationId: string; organizationName: string; organizationSlug?: string }> {
-  const { data, error } = await requireSupabase().rpc('accept_venue_admin_invite', { p_token: token });
+  const { data, error } = await requireSupabase('venue').rpc('accept_venue_admin_invite', { p_token: token });
   if (error) throw error;
   if (!data?.ok) throw new Error(String(data?.error || 'Could not accept the venue administrator invitation.'));
   return { organizationId: String(data.organization_id), organizationName: String(data.organization_name), organizationSlug: data.organization_slug ? String(data.organization_slug) : undefined };

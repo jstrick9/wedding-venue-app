@@ -22,5 +22,6 @@ describe('loginHashAfterLogout', () => {
     expect(loginHashAfterLogout('#/couples-portal?token=abc')).toBe('#/couples-portal?token=abc');
     expect(loginHashAfterLogout('#/guest-portal?couple=1')).toBe('#/guest-portal?couple=1');
     expect(loginHashAfterLogout('#/venue-onboarding')).toBe('#/venue-onboarding');
+    expect(loginHashAfterLogout('', 'seven-paths-manor', '/i/va-abc123def4567890')).toBe('');
   });
 });

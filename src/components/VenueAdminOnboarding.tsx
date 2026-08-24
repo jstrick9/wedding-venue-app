@@ -20,8 +20,16 @@ interface VenueAdminOnboardingProps {
   token?: string;
 }
 
+function leaveInviteForVenue(organizationSlug?: string) {
+  const origin = window.location.origin;
+  const next = organizationSlug
+    ? `${origin}/#/venue-login/${encodeURIComponent(organizationSlug)}`
+    : `${origin}/#/home`;
+  window.location.replace(next);
+}
+
 export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProps) {
-  const { user, logout } = useAuth();
+  const { user, loginForOrganization, hasPlatformSession } = useAuth();
   const [invite, setInvite] = useState<VenueAdminInviteContext | null>(null);
   const [inviteError, setInviteError] = useState('');
   const [branding, setBranding] = useState<Config>(NEUTRAL_LOGIN_CONFIG);
@@ -29,6 +37,7 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
   const resolvedToken = token || captureVenueAdminInviteToken();
   const chrome = resolveLoginChrome(branding);
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
+  const [existingPassword, setExistingPassword] = useState('');
   const [state, setState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
@@ -79,11 +88,10 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
 
   const finish = (organizationSlug?: string) => {
     setState('success');
-    setMessage('Your venue administrator access is ready. Opening the venue staff login…');
+    setMessage('Your venue administrator access is ready. Opening the venue workspace…');
     window.setTimeout(() => {
-      window.location.hash = organizationSlug ? `#/venue-login/${encodeURIComponent(organizationSlug)}` : '#/platform-login';
-      window.location.reload();
-    }, 900);
+      leaveInviteForVenue(organizationSlug);
+    }, 600);
   };
 
   const handleExistingAccount = async () => {
@@ -97,6 +105,30 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
     } catch (error) {
       setState('error');
       setMessage(error instanceof Error ? error.message : 'Could not claim this venue invitation.');
+    }
+  };
+
+  const handleExistingSignIn = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!resolvedToken || !invite || !invitedEmail) return;
+    if (!existingPassword) {
+      setState('error');
+      setMessage('Enter the password for the invited venue administrator account.');
+      return;
+    }
+    setState('saving');
+    setMessage('Signing in to the invited venue account…');
+    try {
+      const signedIn = await loginForOrganization(invite.organizationId, invitedEmail, existingPassword);
+      if (!signedIn) {
+        throw new Error('Could not sign in with that password. Use the invited email’s venue password, not the platform administrator password.');
+      }
+      const result = await acceptVenueAdminInvite(resolvedToken);
+      clearVenueAdminInviteToken();
+      finish(result.organizationSlug || invite.organizationSlug);
+    } catch (error) {
+      setState('error');
+      setMessage(error instanceof Error ? error.message : 'Could not sign in and claim this venue invitation.');
     }
   };
 
@@ -150,6 +182,10 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
     }
   };
 
+  const returnToPlatform = () => {
+    window.location.replace(`${window.location.origin}/${hasPlatformSession ? '#/platform-admin' : '#/platform-login'}`);
+  };
+
   return (
     <div className="min-h-screen px-4 py-8" style={{ ...loginBackgroundStyle(branding), fontFamily: chrome.fontFamily, color: chrome.bodyText }}>
       <div className="mx-auto flex min-h-[80vh] max-w-lg items-center justify-center">
@@ -165,31 +201,43 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
             <p className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 text-center text-sm text-gray-600">Checking invitation…</p>
           ) : !resolvedToken || !invite ? (
             <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{describeVenueAdminInviteError(inviteError || (!resolvedToken ? 'missing' : 'not_found'))}</div>
-          ) : user && !signedInUserMatchesInvite ? (
+          ) : signedInUserMatchesInvite ? (
             <div className="mt-6 space-y-4">
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                You are currently signed in as <strong>{user.email || user.name}</strong>, but this invitation was issued to <strong>{invite.email}</strong>.
-              </div>
-              <p className="text-xs leading-relaxed text-gray-600">Sign out of the platform administrator account, then create or sign in with the invited venue administrator account. The invitation will remain in this browser route.</p>
-              <button type="button" onClick={logout} className="w-full rounded-lg bg-gray-800 px-4 py-3 text-sm font-bold text-white">Sign out and continue as invited admin</button>
-            </div>
-          ) : user ? (
-            <div className="mt-6 space-y-4">
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">You are signed in as <strong>{user.email}</strong>, the invited venue administrator for <strong>{invite.organizationName}</strong>.</div>
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">You are signed in as <strong>{user?.email}</strong>, the invited venue administrator for <strong>{invite.organizationName}</strong>.</div>
               <button type="button" onClick={() => void handleExistingAccount()} disabled={state === 'saving'} className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:opacity-60" style={{ backgroundColor: chrome.primary, color: chrome.headerText }}>{state === 'saving' ? 'Claiming venue…' : 'Claim Venue Administrator Access'}</button>
             </div>
           ) : (
-            <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-3">
-              <div><label htmlFor="venue-admin-full-name" className="mb-1 block text-xs font-semibold text-gray-700">Full name</label><input id="venue-admin-full-name" value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="name" /></div>
-              <div><label htmlFor="venue-admin-email" className="mb-1 block text-xs font-semibold text-gray-700">Invited email address</label><input id="venue-admin-email" type="email" value={form.email} readOnly className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2.5 text-sm" autoComplete="email" /><p className="mt-1 text-[11px] text-gray-500">This address is fixed to the platform invitation: {invite.email}</p></div>
-              <div><label htmlFor="venue-admin-password" className="mb-1 block text-xs font-semibold text-gray-700">Password</label><input id="venue-admin-password" type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="new-password" /></div>
-              <div><label htmlFor="venue-admin-confirm-password" className="mb-1 block text-xs font-semibold text-gray-700">Confirm password</label><input id="venue-admin-confirm-password" type="password" value={form.confirmPassword} onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="new-password" /></div>
-              <button type="submit" disabled={state === 'saving'} className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:opacity-60" style={{ backgroundColor: chrome.primary, color: chrome.headerText }}>{state === 'saving' ? 'Creating account…' : 'Create Venue Administrator Account'}</button>
-            </form>
+            <div className="mt-6 space-y-5">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900">
+                Venue setup uses the invited email <strong>{invite.email}</strong>. Platform administration stays signed in separately if you already have a platform console session in this browser.
+              </div>
+              <form onSubmit={(event) => void handleSubmit(event)} className="space-y-3">
+                <div><label htmlFor="venue-admin-full-name" className="mb-1 block text-xs font-semibold text-gray-700">Full name</label><input id="venue-admin-full-name" value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="name" /></div>
+                <div><label htmlFor="venue-admin-email" className="mb-1 block text-xs font-semibold text-gray-700">Invited email address</label><input id="venue-admin-email" type="email" value={form.email} readOnly className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2.5 text-sm" autoComplete="email" /><p className="mt-1 text-[11px] text-gray-500">This address is fixed to the platform invitation: {invite.email}</p></div>
+                <div><label htmlFor="venue-admin-password" className="mb-1 block text-xs font-semibold text-gray-700">Password</label><input id="venue-admin-password" type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="new-password" /></div>
+                <div><label htmlFor="venue-admin-confirm-password" className="mb-1 block text-xs font-semibold text-gray-700">Confirm password</label><input id="venue-admin-confirm-password" type="password" value={form.confirmPassword} onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="new-password" /></div>
+                <button type="submit" disabled={state === 'saving'} className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:opacity-60" style={{ backgroundColor: chrome.primary, color: chrome.headerText }}>{state === 'saving' ? 'Creating account…' : 'Create Venue Administrator Account'}</button>
+              </form>
+              <form onSubmit={(event) => void handleExistingSignIn(event)} className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold text-gray-800">Already created this venue account?</p>
+                <p className="text-[11px] text-gray-600">Sign in with {invite.email}. This does not use or replace the platform administrator login.</p>
+                <div>
+                  <label htmlFor="venue-admin-existing-password" className="mb-1 block text-xs font-semibold text-gray-700">Venue account password</label>
+                  <input id="venue-admin-existing-password" type="password" value={existingPassword} onChange={(event) => setExistingPassword(event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm" autoComplete="current-password" />
+                </div>
+                <button type="submit" disabled={state === 'saving'} className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 disabled:opacity-60">
+                  {state === 'saving' ? 'Signing in…' : 'Sign in and claim venue'}
+                </button>
+              </form>
+            </div>
           )}
 
           {message && <div className={`mt-4 rounded-xl border p-3 text-sm ${state === 'error' ? 'border-red-200 bg-red-50 text-red-700' : state === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-gray-200 bg-gray-50 text-gray-700'}`} role={state === 'error' ? 'alert' : 'status'}>{message}</div>}
-          {state !== 'success' && <button type="button" onClick={() => { window.location.hash = '#/platform-login'; }} className="mt-6 w-full text-center text-xs text-gray-500 hover:underline">Return to platform login</button>}
+          {state !== 'success' && (
+            <button type="button" onClick={returnToPlatform} className="mt-6 w-full text-center text-xs text-gray-500 hover:underline">
+              {hasPlatformSession ? 'Return to platform console' : 'Return to platform login'}
+            </button>
+          )}
         </div>
       </div>
     </div>

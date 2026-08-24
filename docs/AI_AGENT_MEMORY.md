@@ -751,5 +751,17 @@ That file also drops leftover Graph table/functions if they were applied.
 invite RPCs. Apply **0015** in the live project before claiming the lookup is
 fixed. There is no 0016.
 
+### 9.33 Separate platform and venue sessions (Review #209, 2026-08-24)
+
+See `docs/reviews/209-separate-platform-and-venue-sessions-2026-08-24.md`.
+
+Platform console and venue workspace use independent Supabase sessions
+(`wvip-auth-platform`, `wvip-auth-venue`). Opening `/i/<token>` while signed in
+as a platform administrator must show the invited-email setup form. Creating or
+signing in as the venue admin must not sign out the platform console.
+
+**Rule going forward:** treat #209 + §9.12–9.33 as current truth for staff
+auth. Do not share one Auth session between platform and venue emails.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
