@@ -800,6 +800,24 @@ path; metrics can stall after a venue becomes active because they scan
 **Rule going forward:** treat #212 + §9.12–9.36 as current truth for
 platform venue edit.
 
+### 9.37 Operator-first Platform console actions (Review #213, 2026-08-25)
+
+See `docs/reviews/213-operator-first-platform-console-actions-2026-08-25.md`.
+
+Console mutations (reissue, revoke, suspend, reactivate, activate,
+archive, onboard) must not `await loadConsole()`. Refresh the directory
+in the background. Overview KPIs deep-link into `#/platform-admin/venues`
+with `?status=` / `?queue=` (`awaiting-admin` | `pending-invite` |
+`expired-invite`). Awaiting admin is provisioning **or** no owner.
+Venue status is a read-only badge; Activate / Suspend / Reactivate /
+Archive are buttons. Reissue uses an inline email field. Map Open / edit
+opens venue detail. The workspace card shows only when a venue session
+exists and opens `#/home` without replacing the platform login. Audit
+rows include actor name/email.
+
+**Rule going forward:** treat #213 + §9.12–9.37 as current truth for
+platform console operator actions. Do not start Phase 3.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
