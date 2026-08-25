@@ -359,24 +359,61 @@ export async function updateVenueOrganization(
   };
 }
 
+export function venueLifecycleUpdateInput(
+  organization: PlatformOrganizationSummary,
+  status: OrganizationStatus,
+): UpdateVenueOrganizationInput {
+  return {
+    organizationId: organization.id,
+    name: organization.name,
+    status,
+    addressLine1: organization.addressLine1 || '',
+    addressLine2: organization.addressLine2 || '',
+    city: organization.city || '',
+    stateRegion: organization.stateRegion || '',
+    postalCode: organization.postalCode || '',
+    country: organization.country || 'US',
+    primaryContactName: organization.primaryContactName || '',
+    primaryContactPhone: organization.primaryContactPhone || '',
+    primaryContactEmail: organization.primaryContactEmail || '',
+    supportEmail: organization.supportEmail || '',
+    phone: organization.phone || '',
+    websiteUrl: organization.websiteUrl || '',
+    latitude: organization.latitude ?? null,
+    longitude: organization.longitude ?? null,
+    suspensionReason: organization.suspensionReason || '',
+  };
+}
+
 export async function listPlatformAuditLogs(limit = 100): Promise<PlatformAuditLogEntry[]> {
-  const { data, error } = await (await requireSupabase())
-    .from('platform_audit_logs')
-    .select('id,platform_user_id,organization_id,action,target_type,target_id,reason,metadata,created_at')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data || []).map((row) => ({
-    id: String(row.id),
-    platformUserId: String(row.platform_user_id),
-    organizationId: row.organization_id ? String(row.organization_id) : null,
-    action: String(row.action),
-    targetType: String(row.target_type),
-    targetId: row.target_id ? String(row.target_id) : null,
-    reason: row.reason ? String(row.reason) : null,
-    metadata: (row.metadata && typeof row.metadata === 'object' ? row.metadata : {}) as Record<string, unknown>,
-    createdAt: String(row.created_at),
-  }));
+  const supabase = await requireSupabase();
+  const [logsResult, profilesResult] = await Promise.all([
+    supabase
+      .from('platform_audit_logs')
+      .select('id,platform_user_id,organization_id,action,target_type,target_id,reason,metadata,created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    supabase.from('profiles').select('id,email,full_name'),
+  ]);
+  if (logsResult.error) throw logsResult.error;
+  if (profilesResult.error) throw profilesResult.error;
+  const profileById = new Map((profilesResult.data || []).map((profile) => [profile.id, profile]));
+  return (logsResult.data || []).map((row) => {
+    const profile = profileById.get(String(row.platform_user_id));
+    return {
+      id: String(row.id),
+      platformUserId: String(row.platform_user_id),
+      actorEmail: profile?.email || '',
+      actorName: profile?.full_name || profile?.email || 'Platform admin',
+      organizationId: row.organization_id ? String(row.organization_id) : null,
+      action: String(row.action),
+      targetType: String(row.target_type),
+      targetId: row.target_id ? String(row.target_id) : null,
+      reason: row.reason ? String(row.reason) : null,
+      metadata: (row.metadata && typeof row.metadata === 'object' ? row.metadata : {}) as Record<string, unknown>,
+      createdAt: String(row.created_at),
+    };
+  });
 }
 
 export async function acceptVenueAdminInvite(token: string): Promise<{ organizationId: string; organizationName: string; organizationSlug?: string }> {

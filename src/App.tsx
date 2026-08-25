@@ -251,7 +251,7 @@ function AppContent() {
   if (isPlatformAdmin && (hash === '' || hash === '#/' || hash.startsWith('#/platform-admin'))) {
     return (
       <Suspense fallback={<LoadingScreen />}>
-        <PlatformAdminPortal onOpenVenueWorkspace={() => { window.location.hash = organizationSlug ? `#/venue-login/${encodeURIComponent(organizationSlug)}` : '#/venue'; }} />
+        <PlatformAdminPortal onOpenVenueWorkspace={() => { window.location.hash = '#/home'; }} />
       </Suspense>
     );
   }

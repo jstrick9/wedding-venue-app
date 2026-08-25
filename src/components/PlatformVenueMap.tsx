@@ -7,6 +7,7 @@ import { formatMapCoordinates, mapBounds, markerColor, parseMapPoint } from '../
 
 interface PlatformVenueMapProps {
   organizations: PlatformOrganizationSummary[];
+  onOpenVenue?: (id: string) => void;
 }
 
 type MapView = 'points' | 'density' | 'regions';
@@ -32,7 +33,7 @@ function waitForMapSize(element: HTMLElement): Promise<boolean> {
   });
 }
 
-export default function PlatformVenueMap({ organizations }: PlatformVenueMapProps) {
+export default function PlatformVenueMap({ organizations, onOpenVenue }: PlatformVenueMapProps) {
   const [view, setView] = useState<MapView>('points');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tileError, setTileError] = useState('');
@@ -185,9 +186,9 @@ export default function PlatformVenueMap({ organizations }: PlatformVenueMapProp
 
       {located.length === 0 && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">No venues have coordinates yet. Verify a street address during venue setup to place them on the map.</p>}
       {tileError && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{tileError}</p>}
-      {selected && <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4"><p className="text-sm font-bold text-indigo-950">{selected.name}</p><p className="mt-1 text-xs text-indigo-900">{selected.addressLine1}, {selected.city}, {selected.stateRegion} {selected.postalCode}</p><p className="mt-1 text-xs text-indigo-900">Status: {selected.status} · Admins: {selected.admins.length}</p></div>}
+      {selected && <div className="mt-3 flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-indigo-950">{selected.name}</p><p className="mt-1 text-xs text-indigo-900">{selected.addressLine1}, {selected.city}, {selected.stateRegion} {selected.postalCode}</p><p className="mt-1 text-xs text-indigo-900">Status: {selected.status} · Admins: {selected.admins.length}</p></div>{onOpenVenue && <button type="button" onClick={() => onOpenVenue(selected.id)} className="rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white">Open / edit</button>}</div>}
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200"><table className="min-w-full text-left text-xs"><caption className="sr-only">Venue map data table</caption><thead className="bg-gray-50 font-bold text-gray-600"><tr><th className="px-3 py-2">Venue</th><th className="px-3 py-2">Region</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Coordinates</th></tr></thead><tbody>{organizations.map((organization) => <tr key={organization.id} className="border-t border-gray-100"><td className="px-3 py-2 font-semibold text-gray-800">{organization.name}</td><td className="px-3 py-2 text-gray-600">{organization.city}, {organization.stateRegion}</td><td className="px-3 py-2 text-gray-600">{organization.status}</td><td className="px-3 py-2 text-gray-600">{formatMapCoordinates(organization)}</td></tr>)}</tbody></table></div>
+      <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200"><table className="min-w-full text-left text-xs"><caption className="sr-only">Venue map data table</caption><thead className="bg-gray-50 font-bold text-gray-600"><tr><th className="px-3 py-2">Venue</th><th className="px-3 py-2">Region</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Coordinates</th><th className="px-3 py-2">Actions</th></tr></thead><tbody>{organizations.map((organization) => <tr key={organization.id} className="border-t border-gray-100"><td className="px-3 py-2 font-semibold text-gray-800">{organization.name}</td><td className="px-3 py-2 text-gray-600">{organization.city}, {organization.stateRegion}</td><td className="px-3 py-2 text-gray-600">{organization.status}</td><td className="px-3 py-2 text-gray-600">{formatMapCoordinates(organization)}</td><td className="px-3 py-2">{onOpenVenue ? <button type="button" onClick={() => onOpenVenue(organization.id)} className="rounded-lg bg-indigo-700 px-2.5 py-1 text-[11px] font-bold text-white">Open / edit</button> : '—'}</td></tr>)}</tbody></table></div>
       <p className="mt-2 text-[11px] text-gray-400">Map tiles: Powered by Geoapify | © OpenMapTiles © OpenStreetMap contributors. Density and region views stay schematic. Floor-plan designer is unchanged.</p>
     </section>
   );

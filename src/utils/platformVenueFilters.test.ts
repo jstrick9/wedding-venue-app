@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { PlatformOrganizationSummary } from '../services/platform/platformTypes';
-import { filterPlatformVenues, listVenueRegions, venueRegionLabel } from './platformVenueFilters';
+import {
+  filterPlatformVenues,
+  isAwaitingAdmin,
+  isInviteExpired,
+  isPendingInviteLive,
+  listVenueRegions,
+  venueRegionLabel,
+} from './platformVenueFilters';
 
 function org(over: Partial<PlatformOrganizationSummary> = {}): PlatformOrganizationSummary {
   return {
@@ -66,5 +73,30 @@ describe('platform venue filters', () => {
   it('lists unique region labels', () => {
     expect(venueRegionLabel(venues[0])).toBe('NC, US');
     expect(listVenueRegions(venues)).toEqual(['NC, US', 'TX, US']);
+  });
+
+  it('classifies awaiting-admin, live pending, and expired invites', () => {
+    const live = org({
+      id: 'org-live',
+      ownerId: null,
+      status: 'provisioning',
+      pendingInvite: { id: 'inv-live', email: 'new@hilltop.com', expiresAt: '2099-01-01T00:00:00.000Z', status: 'pending' },
+    });
+    const expired = org({
+      id: 'org-expired',
+      ownerId: 'u1',
+      status: 'active',
+      pendingInvite: { id: 'inv-old', email: 'old@hilltop.com', expiresAt: '2020-01-01T00:00:00.000Z', status: 'pending' },
+    });
+    const claimed = org({ id: 'org-claimed', ownerId: 'u1', status: 'active' });
+
+    expect(isAwaitingAdmin(live)).toBe(true);
+    expect(isAwaitingAdmin(claimed)).toBe(false);
+    expect(isPendingInviteLive(live)).toBe(true);
+    expect(isInviteExpired(expired)).toBe(true);
+    expect(isPendingInviteLive(expired)).toBe(false);
+    expect(filterPlatformVenues([live, expired, claimed], { queue: 'awaiting-admin' }).map((venue) => venue.id)).toEqual(['org-live']);
+    expect(filterPlatformVenues([live, expired, claimed], { queue: 'pending-invite' }).map((venue) => venue.id)).toEqual(['org-live']);
+    expect(filterPlatformVenues([live, expired, claimed], { queue: 'expired-invite' }).map((venue) => venue.id)).toEqual(['org-expired']);
   });
 });

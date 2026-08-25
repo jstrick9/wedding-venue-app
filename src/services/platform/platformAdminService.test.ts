@@ -49,6 +49,7 @@ import {
   lookupVenueAdminInvite,
   reissueVenueAdminInvite,
   updateVenueOrganization,
+  venueLifecycleUpdateInput,
 } from './platformAdminService';
 
 describe('platformAdminService', () => {
@@ -249,12 +250,15 @@ describe('platformAdminService', () => {
       }],
       error: null,
     };
+    tableResults['profiles'] = { data: [{ id: 'u1', email: 'punistricker@gmail.com', full_name: 'Platform Admin' }], error: null };
 
     const logs = await listPlatformAuditLogs(20);
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({
       id: 'log-1',
       platformUserId: 'u1',
+      actorEmail: 'punistricker@gmail.com',
+      actorName: 'Platform Admin',
       organizationId: 'org1',
       action: 'venue_updated',
       targetType: 'organization',
@@ -296,5 +300,31 @@ describe('platformAdminService', () => {
     expect(rpcCalls[0].fn).toBe('reissue_venue_admin_invite');
     expect(rpcCalls[0].args.p_organization_id).toBe('org9');
     expect(rpcCalls[0].args.p_expires_at).toBe('2026-08-29T00:00:00.000Z');
+  });
+
+  it('builds a lifecycle update from the current organization snapshot', () => {
+    const input = venueLifecycleUpdateInput({
+      id: 'org1',
+      name: 'Seven Paths Manor',
+      slug: 'seven-paths',
+      status: 'provisioning',
+      addressLine1: '100 Manor Rd',
+      city: 'Charlotte',
+      stateRegion: 'NC',
+      postalCode: '28202',
+      country: 'US',
+      primaryContactName: 'Ada',
+      primaryContactPhone: '704-555-0100',
+      primaryContactEmail: 'ada@sevenpaths.com',
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+      admins: [],
+    }, 'archived');
+    expect(input).toMatchObject({
+      organizationId: 'org1',
+      name: 'Seven Paths Manor',
+      status: 'archived',
+      city: 'Charlotte',
+    });
   });
 });

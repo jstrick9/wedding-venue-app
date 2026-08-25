@@ -45,6 +45,8 @@ export interface PlatformConsoleMetrics {
 export interface PlatformAuditLogEntry {
   id: string;
   platformUserId: string;
+  actorEmail: string;
+  actorName: string;
   organizationId: string | null;
   action: string;
   targetType: string;

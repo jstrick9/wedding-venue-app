@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlatformConsoleMetrics, PlatformOrganizationSummary } from '../services/platform/platformTypes';
 
 const listOrganizationsMock = vi.fn();
@@ -8,13 +8,16 @@ const auditMock = vi.fn();
 const updateVenueMock = vi.fn();
 const geocodeMock = vi.fn();
 const logoutMock = vi.fn();
+const authState = {
+  user: { email: 'platform@example.com', name: 'Platform Admin' },
+  organizationId: null,
+  organizationSlug: null,
+  hasVenueSession: false,
+  logout: logoutMock,
+};
 
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: { email: 'platform@example.com', name: 'Platform Admin' },
-    organizationId: null,
-    logout: logoutMock,
-  }),
+  useAuth: () => authState,
 }));
 
 vi.mock('../services/platform/platformAdminService', () => ({
@@ -27,6 +30,26 @@ vi.mock('../services/platform/platformAdminService', () => ({
   reissueVenueAdminInvite: vi.fn(),
   revokeVenueAdminInvite: vi.fn(),
   suspendVenueOrganization: vi.fn(),
+  venueLifecycleUpdateInput: (organization: PlatformOrganizationSummary, status: PlatformOrganizationSummary['status']) => ({
+    organizationId: organization.id,
+    name: organization.name,
+    status,
+    addressLine1: organization.addressLine1 || '',
+    addressLine2: organization.addressLine2 || '',
+    city: organization.city || '',
+    stateRegion: organization.stateRegion || '',
+    postalCode: organization.postalCode || '',
+    country: organization.country || 'US',
+    primaryContactName: organization.primaryContactName || '',
+    primaryContactPhone: organization.primaryContactPhone || '',
+    primaryContactEmail: organization.primaryContactEmail || '',
+    supportEmail: organization.supportEmail || '',
+    phone: organization.phone || '',
+    websiteUrl: organization.websiteUrl || '',
+    latitude: organization.latitude ?? null,
+    longitude: organization.longitude ?? null,
+    suspensionReason: organization.suspensionReason || '',
+  }),
 }));
 
 vi.mock('../services/platform/platformBrandingService', () => ({
@@ -43,7 +66,12 @@ vi.mock('./PlatformVenueChatPanel', () => ({
 }));
 
 vi.mock('./PlatformVenueMap', () => ({
-  default: () => <div>Map stub</div>,
+  default: ({ onOpenVenue }: { onOpenVenue?: (id: string) => void }) => (
+    <div>
+      Map stub
+      <button type="button" onClick={() => onOpenVenue?.('org-1')}>Open / edit</button>
+    </div>
+  ),
 }));
 
 vi.mock('./Toast', () => ({
@@ -58,6 +86,7 @@ function org(over: Partial<PlatformOrganizationSummary> = {}): PlatformOrganizat
     name: 'Seven Paths Manor',
     slug: 'seven-paths-manor',
     status: 'active',
+    ownerId: 'u1',
     city: 'Charlotte',
     stateRegion: 'NC',
     country: 'US',
@@ -85,7 +114,7 @@ const organizations: PlatformOrganizationSummary[] = [
     city: 'Asheville',
     primaryContactEmail: 'owner@hilltop.com',
     ownerId: null,
-    pendingInvite: { id: 'inv-2', email: 'owner@hilltop.com', expiresAt: '2026-09-01', status: 'pending' },
+    pendingInvite: { id: 'inv-2', email: 'owner@hilltop.com', expiresAt: '2026-09-01T00:00:00.000Z', status: 'pending' },
     admins: [],
   }),
 ];
@@ -131,12 +160,15 @@ const metrics: PlatformConsoleMetrics = {
 describe('PlatformAdminPortal console', () => {
   beforeEach(() => {
     window.location.hash = '#/platform-admin';
+    authState.hasVenueSession = false;
     listOrganizationsMock.mockReset().mockResolvedValue(organizations);
     metricsMock.mockReset().mockResolvedValue(metrics);
     auditMock.mockReset().mockResolvedValue([
       {
         id: 'log-1',
         platformUserId: 'u1',
+        actorEmail: 'punistricker@gmail.com',
+        actorName: 'Platform Admin',
         organizationId: 'org-1',
         action: 'venue_updated',
         targetType: 'organization',
@@ -156,6 +188,10 @@ describe('PlatformAdminPortal console', () => {
     logoutMock.mockReset();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('renders a sidebar of console areas', async () => {
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
 
@@ -164,6 +200,30 @@ describe('PlatformAdminPortal console', () => {
       expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument();
     }
     expect(screen.getByText(/venue intelligence platform console/i)).toBeInTheDocument();
+  });
+
+  it('deep-links overview KPIs into a filtered venue directory', async () => {
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+
+    const pending = await screen.findByRole('button', { name: /pending invites/i });
+    fireEvent.click(pending);
+    expect(window.location.hash).toBe('#/platform-admin/venues?queue=pending-invite');
+    await waitFor(() => {
+      expect(screen.getByText('Hilltop Barn')).toBeInTheDocument();
+      expect(screen.queryByText('Seven Paths Manor')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Invite pending')).toBeInTheDocument();
+  });
+
+  it('shows a venue-session card only when a venue login exists', async () => {
+    const { unmount } = render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+    await screen.findByRole('navigation', { name: 'Platform console' });
+    expect(screen.queryByText(/this browser also has a venue login/i)).not.toBeInTheDocument();
+    unmount();
+    authState.hasVenueSession = true;
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+    expect(await screen.findByText(/this browser also has a venue login/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not replace your platform login/i)).toBeInTheDocument();
   });
 
   it('filters the venue directory by name and opens a detail/edit view', async () => {
@@ -187,12 +247,16 @@ describe('PlatformAdminPortal console', () => {
       expect(screen.getByText(/slug is immutable: hilltop-barn/i)).toBeInTheDocument();
     });
     expect(screen.getByLabelText(/venue name/i)).toHaveValue('Hilltop Barn');
+    expect(screen.getByLabelText(/invite email/i)).toHaveValue('owner@hilltop.com');
     expect(screen.getByRole('button', { name: /save venue changes/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /activate venue/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^status$/i)).not.toBeInTheDocument();
     expect(window.location.hash).toBe('#/platform-admin/venues/org-2');
   });
 
-  it('saves a provisioning-to-active status change without waiting on a hung console reload', async () => {
+  it('activates a provisioning venue without waiting on a hung console reload', async () => {
     window.location.hash = '#/platform-admin/venues/org-2';
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     listOrganizationsMock
       .mockResolvedValueOnce(organizations)
       .mockImplementation(() => new Promise(() => {}));
@@ -208,10 +272,8 @@ describe('PlatformAdminPortal console', () => {
 
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
 
-    const status = await screen.findByLabelText(/^status$/i);
-    expect(status).toHaveValue('provisioning');
-    fireEvent.change(status, { target: { value: 'active' } });
-    fireEvent.click(screen.getByRole('button', { name: /save venue changes/i }));
+    const activate = await screen.findByRole('button', { name: /activate venue/i });
+    fireEvent.click(activate);
 
     await waitFor(() => {
       expect(updateVenueMock).toHaveBeenCalledTimes(1);
@@ -223,7 +285,7 @@ describe('PlatformAdminPortal console', () => {
       name: 'Hilltop Barn',
     });
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /save venue changes/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /activate venue/i })).toBeEnabled();
     });
     expect(screen.queryByRole('button', { name: /saving/i })).not.toBeInTheDocument();
   });
@@ -243,6 +305,7 @@ describe('PlatformAdminPortal console', () => {
     expect(updateVenueMock.mock.calls[0][0]).toMatchObject({
       organizationId: 'org-1',
       name: 'Seven Paths Estate',
+      status: 'active',
       latitude: 35.227,
       longitude: -80.843,
     });
@@ -257,11 +320,19 @@ describe('PlatformAdminPortal console', () => {
     expect(screen.queryByLabelText(/^contact name/i)).not.toBeInTheDocument();
   });
 
-  it('shows platform audit actions on the Audit screen', async () => {
+  it('shows platform audit actions and actor on the Audit screen', async () => {
     window.location.hash = '#/platform-admin/audit';
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
 
     expect(await screen.findByText('venue_updated')).toBeInTheDocument();
     expect(screen.getByText('Seven Paths Manor')).toBeInTheDocument();
+    expect(screen.getByText(/platform admin · punistricker@gmail.com/i)).toBeInTheDocument();
+  });
+
+  it('opens venue detail from the map Open / edit action', async () => {
+    window.location.hash = '#/platform-admin/map';
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open / edit' }));
+    expect(window.location.hash).toBe('#/platform-admin/venues/org-1');
   });
 });
