@@ -162,26 +162,26 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
+  const loadSecondaryConsoleData = useCallback(() => {
+    void getPlatformBranding()
+      .then((next) => setPlatformBranding({ ...defaultPlatformConfig, ...next }))
+      .catch(() => undefined);
+    void getPlatformConsoleMetrics().then(setMetrics).catch(() => undefined);
+    void listPlatformAuditLogs(80).then(setAuditLogs).catch(() => undefined);
+  }, []);
+
   const loadConsole = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [nextOrganizations, nextMetrics, nextBranding, nextAudit] = await Promise.all([
-        listPlatformOrganizations(),
-        getPlatformConsoleMetrics(),
-        getPlatformBranding(),
-        listPlatformAuditLogs(80).catch(() => [] as PlatformAuditLogEntry[]),
-      ]);
-      setOrganizations(nextOrganizations);
-      setMetrics(nextMetrics);
-      setPlatformBranding({ ...defaultPlatformConfig, ...nextBranding });
-      setAuditLogs(nextAudit);
+      setOrganizations(await listPlatformOrganizations());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load platform console data.');
     } finally {
       setLoading(false);
     }
-  }, []);
+    loadSecondaryConsoleData();
+  }, [loadSecondaryConsoleData]);
 
   useEffect(() => { void loadConsole(); }, [loadConsole]);
 
@@ -197,9 +197,8 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     } catch {
       // Keep the form's saved values visible; a later Refresh retries.
     }
-    void getPlatformConsoleMetrics().then(setMetrics).catch(() => undefined);
-    void listPlatformAuditLogs(80).then(setAuditLogs).catch(() => undefined);
-  }, []);
+    loadSecondaryConsoleData();
+  }, [loadSecondaryConsoleData]);
 
   const sendInviteEmail = async (composeInput: Parameters<typeof deliverVenueAdminInvite>[0], successMessage: string) => {
     setInviteCompose(buildVenueAdminInviteCompose(composeInput));
@@ -468,10 +467,10 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   );
 
   const metricCards: { label: string; value: number; filter?: { status?: OrganizationStatus | 'all'; queue?: VenueQueueFilter } }[] = [
-    { label: 'Venues', value: metrics.totalVenues },
-    { label: 'Active', value: metrics.activeVenues, filter: { status: 'active' } },
+    { label: 'Venues', value: organizations.length },
+    { label: 'Active', value: organizations.filter((organization) => organization.status === 'active').length, filter: { status: 'active' } },
     { label: 'Awaiting admin', value: awaitingAdmin.length, filter: { queue: 'awaiting-admin' } },
-    { label: 'Suspended', value: metrics.suspendedVenues, filter: { status: 'suspended' } },
+    { label: 'Suspended', value: suspended.length, filter: { status: 'suspended' } },
     { label: 'Pending invites', value: pendingInviteVenues.length, filter: { queue: 'pending-invite' } },
     { label: 'Managed admins', value: metrics.activeAdmins },
     { label: 'Couples', value: metrics.totalCouples },
@@ -626,7 +625,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               onStatus={(value) => go('venues', undefined, { status: value, queue: queueFilter })}
               onQueue={(value) => go('venues', undefined, { status: statusFilter, queue: value })}
               onRegion={setRegionFilter}
-              onRefresh={() => void loadConsole()}
+              onRefresh={() => void refreshVenuesAfterSave()}
               onOpen={(id) => go('venue-detail', id)}
               onCopyLogin={copyVenueLogin}
             />

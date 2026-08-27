@@ -329,6 +329,17 @@ describe('PlatformAdminPortal console', () => {
     expect(screen.getByText(/platform admin · punistricker@gmail.com/i)).toBeInTheDocument();
   });
 
+  it('shows venues even if console metrics never return', async () => {
+    metricsMock.mockImplementation(() => new Promise(() => {}));
+    auditMock.mockImplementation(() => new Promise(() => {}));
+    window.location.hash = '#/platform-admin/venues';
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+
+    expect(await screen.findByText('Seven Paths Manor')).toBeInTheDocument();
+    expect(screen.getByText('Hilltop Barn')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Open / edit' }).length).toBeGreaterThan(0);
+  });
+
   it('opens venue detail from the map Open / edit action', async () => {
     window.location.hash = '#/platform-admin/map';
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
