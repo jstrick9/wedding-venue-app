@@ -14,6 +14,7 @@ import { lazy } from 'react';
 import PlatformLoginScreen from './components/PlatformLoginScreen';
 import { getActiveOrganizationSlug } from './services/platform/organizationContext';
 import { isVenueStaffRoute } from './utils/authSurface';
+import { isPlatformConsoleHash } from './utils/platformConsoleRoute';
 import { captureVenueAdminInviteToken, shouldShowVenueAdminOnboarding } from './utils/venueAdminInviteRoute';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
@@ -199,15 +200,7 @@ function AppContent() {
     );
   }
 
-  if ((hash === '' || hash === '#/' || hash === '#/platform-login') && !user) {
-    return (
-      <Suspense fallback={<LoadingScreen />}>
-        <PlatformLoginScreen />
-      </Suspense>
-    );
-  }
-
-  if (hash.startsWith('#/platform-admin') && !user) {
+  if (isPlatformConsoleHash(hash) && !user) {
     return (
       <Suspense fallback={<LoadingScreen />}>
         <PlatformLoginScreen />
@@ -248,7 +241,7 @@ function AppContent() {
     );
   }
 
-  if (isPlatformAdmin && (hash === '' || hash === '#/' || hash.startsWith('#/platform-admin'))) {
+  if (isPlatformAdmin && isPlatformConsoleHash(hash)) {
     return (
       <Suspense fallback={<LoadingScreen />}>
         <PlatformAdminPortal onOpenVenueWorkspace={() => { window.location.hash = '#/home'; }} />

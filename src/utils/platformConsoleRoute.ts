@@ -48,6 +48,29 @@ function parseQueue(value: string | null): VenueQueueFilter | undefined {
   return QUEUES.includes(value as VenueQueueFilter) ? (value as VenueQueueFilter) : undefined;
 }
 
+export function platformHashPath(hash: string): string {
+  return (hash || '').split('?')[0];
+}
+
+/**
+ * Signed-out platform entry (root or `#/platform-login`).
+ * Sign-out uses `#/platform-login`; keep that hash on the same gate as `#/`.
+ */
+export function isPlatformLoginHash(hash: string): boolean {
+  const route = platformHashPath(hash);
+  return route === '' || route === '#' || route === '#/' || route === '#/platform-login';
+}
+
+/**
+ * Hashes that must show the platform console once a platform administrator is signed in.
+ * `#/platform-login` is the post-logout destination — omitting it dumps the operator
+ * into the venue workspace after they sign back in.
+ */
+export function isPlatformConsoleHash(hash: string): boolean {
+  const route = platformHashPath(hash);
+  return isPlatformLoginHash(hash) || route.startsWith('#/platform-admin');
+}
+
 export function parsePlatformConsoleHash(hash: string): PlatformConsoleRoute {
   const raw = hash || '';
   const qIndex = raw.indexOf('?');

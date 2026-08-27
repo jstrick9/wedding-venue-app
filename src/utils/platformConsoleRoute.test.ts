@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildPlatformConsoleHash, parsePlatformConsoleHash } from './platformConsoleRoute';
+import {
+  buildPlatformConsoleHash,
+  isPlatformConsoleHash,
+  isPlatformLoginHash,
+  parsePlatformConsoleHash,
+  platformHashPath,
+} from './platformConsoleRoute';
 
 describe('platform console hash routing', () => {
   it('treats the platform root as overview', () => {
