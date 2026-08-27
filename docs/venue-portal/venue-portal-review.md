@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Console first paint vs metrics hang (#214, 2026-08-27)** — opening the console and Refresh no longer wait on `get_platform_console_metrics`; the venue list paints first. Full report: **`docs/reviews/214-console-first-paint-metrics-hang-2026-08-27.md`**.
 - ✅ **Operator-first Platform console actions (#213, 2026-08-25)** — reissue/suspend/onboard no longer wait on metrics; KPI cards deep-link into filtered directory queues (including pending/expired invites); status is a read-only badge with Activate/Suspend/Reactivate/Archive buttons; map Open / edit opens venue detail; audit shows actor. Full report: **`docs/reviews/213-operator-first-platform-console-actions-2026-08-25.md`**.
 - ✅ **Venue edit Save hang (#212, 2026-08-24)** — provisioning → active left Save stuck on Saving… because the button waited for console metrics; save now finishes on the update RPC. Full report: **`docs/reviews/212-venue-edit-save-hang-2026-08-24.md`**.
 - ✅ **Venue-only claim page + reissue password (#211, 2026-08-24)** — setup heading is Claim {venue}'s Venue Workspace; platform info box, existing-account sign-in, and return-to-platform links are gone; reissue sets a new password without deleting venue work. Full report: **`docs/reviews/211-venue-claim-page-and-reissue-password-2026-08-24.md`**.

@@ -816,8 +816,21 @@ exists and opens `#/home` without replacing the platform login. Audit
 rows include actor name/email.
 
 **Rule going forward:** treat #213 + §9.12–9.37 as current truth for
-platform console operator actions. Do not start Phase 3.
+platform console operator actions.
+
+### 9.38 Console first paint must not wait on metrics (Review #214, 2026-08-27)
+
+See `docs/reviews/214-console-first-paint-metrics-hang-2026-08-27.md`.
+
+Opening the platform console (and directory **Refresh**) must not
+`await get_platform_console_metrics()`. Load the organization list first;
+metrics, branding, and audit hydrate in the background. Venue/Active/
+Suspended overview counts should come from that list.
+
+**Rule going forward:** treat #214 + §9.12–9.38 as current truth for
+platform console load. Hunt continues on platform console + invite/auth.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*
+
 
