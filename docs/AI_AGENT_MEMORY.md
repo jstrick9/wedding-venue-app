@@ -830,6 +830,17 @@ Suspended overview counts should come from that list.
 **Rule going forward:** treat #214 + §9.12–9.38 as current truth for
 platform console load. Hunt continues on platform console + invite/auth.
 
+### 9.39 Venue Platform Chat uses the venue session (Review #215, 2026-08-27)
+
+See `docs/reviews/215-venue-platform-chat-uses-venue-session-2026-08-27.md`.
+
+Platform ↔ venue chat must use `wvip-auth-venue` when the sender is
+venue staff and `wvip-auth-platform` when the sender is a platform
+administrator. Do not list or insert chat with the other surface’s JWT.
+
+**Rule going forward:** treat #215 + §9.12–9.39 as current truth for
+platform chat after dual-session auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
