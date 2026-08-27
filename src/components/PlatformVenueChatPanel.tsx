@@ -27,14 +27,14 @@ export default function PlatformVenueChatPanel({ organizationId, organizationNam
     }
     try {
       setError('');
-      setMessages(await listPlatformVenueMessages(effectiveOrganizationId));
-      void savePlatformChatReadMarker(effectiveOrganizationId);
+      setMessages(await listPlatformVenueMessages(effectiveOrganizationId, senderSide));
+      void savePlatformChatReadMarker(effectiveOrganizationId, senderSide);
     } catch (err) {
       setError(describeUnknownError(err, 'Could not load platform chat.'));
     } finally {
       setLoading(false);
     }
-  }, [effectiveOrganizationId]);
+  }, [effectiveOrganizationId, senderSide]);
 
   useEffect(() => {
     void load();
@@ -43,14 +43,14 @@ export default function PlatformVenueChatPanel({ organizationId, organizationNam
     try {
       unsubscribe = subscribeToPlatformVenueMessages(effectiveOrganizationId, (message) => {
         setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, message]);
-        void savePlatformChatReadMarker(effectiveOrganizationId);
-      });
+        void savePlatformChatReadMarker(effectiveOrganizationId, senderSide);
+      }, senderSide);
     } catch {
       // Realtime is optional; polling keeps the chat usable.
     }
     const poll = window.setInterval(() => { void load(); }, 10000);
     return () => { unsubscribe(); window.clearInterval(poll); };
-  }, [load, effectiveOrganizationId]);
+  }, [load, effectiveOrganizationId, senderSide]);
 
   if (!effectiveOrganizationId) {
     return <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Select an active venue workspace to use platform chat.</div>;

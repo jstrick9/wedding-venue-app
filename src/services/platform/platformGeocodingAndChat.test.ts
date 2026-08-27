@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // token and translate success/failure. N-6/N-7: chat service must scope reads
 // and writes to an organization and surface RLS/transport errors.
 
+const chatClientCalls: { surfaces: string[] } = { surfaces: [] };
+
 vi.mock('../backend/supabaseClient', () => {
   const supabase = {
     from: () => {
@@ -15,16 +17,24 @@ vi.mock('../backend/supabaseClient', () => {
       return c;
     },
     auth: { getUser: () => Promise.resolve({ data: { user: { id: 'u1' } }, error: null }) },
+    channel: () => {
+      const c: any = { on: () => c, subscribe: () => c };
+      return c;
+    },
+    removeChannel: () => Promise.resolve(),
   };
   return {
-    getSupabaseClient: () => supabase,
+    getSupabaseClient: (surface?: string) => {
+      if (surface) chatClientCalls.surfaces.push(surface);
+      return supabase;
+    },
     isSupabaseConfigured: () => true,
     getCurrentAccessToken: () => Promise.resolve('tok123'),
   };
 });
 
 import { geocodeVenueAddress } from './geocodingService';
-import { listPlatformVenueMessages, sendPlatformVenueMessage } from './platformChatService';
+import { chatAuthSurface, listPlatformVenueMessages, sendPlatformVenueMessage } from './platformChatService';
 
 describe('platform geocoding (N-5)', () => {
   beforeEach(() => {
@@ -85,17 +95,28 @@ describe('platform geocoding (N-5)', () => {
 
 describe('platform chat (N-6/N-7)', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    chatClientCalls.surfaces = [];
   });
 
   it('does not query chat when no organization is selected', async () => {
     await expect(listPlatformVenueMessages('')).resolves.toEqual([]);
+    expect(chatClientCalls.surfaces).toEqual([]);
   });
 
-  it('inserts a scoped message with the signed-in user as sender', async () => {
-    // sendPlatformVenueMessage inserts and selects; the mock returns empty data,
-    // which maps to a message with empty fields. We assert it does not throw and
-    // that the user id gate is satisfied.
+  it('inserts a scoped message with the signed-in platform session', async () => {
     await expect(sendPlatformVenueMessage('org1', 'Hello venue', 'platform')).resolves.toBeDefined();
+    expect(chatClientCalls.surfaces).toContain('platform');
+    expect(chatClientCalls.surfaces).not.toContain('venue');
+  });
+
+  it('uses the venue session for venue-side chat', async () => {
+    expect(chatAuthSurface('venue')).toBe('venue');
+    expect(chatAuthSurface('platform')).toBe('platform');
+    await expect(sendPlatformVenueMessage('org1', 'Hello platform', 'venue')).resolves.toBeDefined();
+    expect(chatClientCalls.surfaces).toContain('venue');
+    expect(chatClientCalls.surfaces).not.toContain('platform');
+    chatClientCalls.surfaces = [];
+    await expect(listPlatformVenueMessages('org1', 'venue')).resolves.toEqual([]);
+    expect(chatClientCalls.surfaces).toEqual(['venue']);
   });
 });

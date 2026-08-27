@@ -1218,7 +1218,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
     { id: 'users', label: '👥 Users', icon: '👥', Component: UserManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
     { id: 'access-control', label: '🔐 Access Control', icon: '🔐', Component: AccessControlPanel, props: { inline: true, onClose: () => goToTab('overview') }, group: 'Branding, Access, & Configuration' },
     { id: 'invites', label: '📨 Invite Members', icon: '📨', Component: InviteMembers, props: {}, group: 'Branding, Access, & Configuration' },
-    { id: 'platform-chat', label: '💬 Platform Chat', icon: '💬', Component: PlatformVenueChatPanel, props: {}, group: 'Branding, Access, & Configuration' },
+    { id: 'platform-chat', label: '💬 Platform Chat', icon: '💬', Component: PlatformVenueChatPanel, props: { senderSide: 'venue', organizationName: 'platform administration' }, group: 'Branding, Access, & Configuration' },
     { id: 'communication-templates', label: '💬 Communication Templates', icon: '💬', Component: CommunicationTemplatesManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
     { id: 'operations-settings', label: '🛠️ Operations & Checklists', icon: '🛠️', Component: OperationsSettingsManagement, props: commonProps, group: 'Branding, Access, & Configuration' },
 
