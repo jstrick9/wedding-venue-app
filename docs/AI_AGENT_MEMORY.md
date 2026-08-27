@@ -841,6 +841,19 @@ administrator. Do not list or insert chat with the other surface’s JWT.
 **Rule going forward:** treat #215 + §9.12–9.39 as current truth for
 platform chat after dual-session auth.
 
+### 9.40 Signed-in platform login returns to the console (Review #216, 2026-08-27)
+
+See `docs/reviews/216-platform-login-returns-to-console-2026-08-27.md`.
+
+After platform sign-out, the hash is `#/platform-login`. A signed-in
+platform administrator on that hash (and on `#/` / `#/platform-admin…`)
+must see the platform console, not the venue workspace. Do not omit
+`#/platform-login` from the signed-in console gate.
+
+**Rule going forward:** treat #216 + §9.12–9.40 as current truth for
+platform login vs console routing. Hunt continues on platform console +
+invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

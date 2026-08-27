@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Signed-in platform login returns to console (#216, 2026-08-27)** — after sign-out, `#/platform-login` plus a platform administrator session opens the console instead of the venue workspace. Full report: **`docs/reviews/216-platform-login-returns-to-console-2026-08-27.md`**.
 - ✅ **Venue Platform Chat uses venue session (#215, 2026-08-27)** — venue Admin Platform Chat was using the platform JWT; list/send now use `wvip-auth-venue`. Full report: **`docs/reviews/215-venue-platform-chat-uses-venue-session-2026-08-27.md`**.
 - ✅ **Console first paint vs metrics hang (#214, 2026-08-27)** — opening the console and Refresh no longer wait on `get_platform_console_metrics`; the venue list paints first. Full report: **`docs/reviews/214-console-first-paint-metrics-hang-2026-08-27.md`**.
 - ✅ **Operator-first Platform console actions (#213, 2026-08-25)** — reissue/suspend/onboard no longer wait on metrics; KPI cards deep-link into filtered directory queues (including pending/expired invites); status is a read-only badge with Activate/Suspend/Reactivate/Archive buttons; map Open / edit opens venue detail; audit shows actor. Full report: **`docs/reviews/213-operator-first-platform-console-actions-2026-08-25.md`**.
