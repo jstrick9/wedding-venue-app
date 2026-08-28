@@ -854,6 +854,20 @@ must see the platform console, not the venue workspace. Do not omit
 platform login vs console routing. Hunt continues on platform console +
 invite/auth.
 
+### 9.41 Path-only password reset uses the matching surface (Review #217, 2026-08-27)
+
+See `docs/reviews/217-password-reset-path-and-recovery-session-2026-08-27.md`.
+
+Forgot password must not use `#/password-reset`. Redirect to
+`/reset/platform` or `/reset/venue`, exchange the recovery code on that
+surface client only, then update the password. Do not turn
+`detectSessionInUrl` back on (dual sessions). Open the reset email in the
+same browser that requested it (PKCE).
+
+**Rule going forward:** treat #217 + §9.12–9.41 as current truth for
+staff password reset. Hunt continues on platform console + invite/auth,
+then expands to the next adjacent staff surface after P0/P1 exhaustion.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
