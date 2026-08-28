@@ -892,6 +892,17 @@ succeeds. Managed admins come from the loaded organization admin list.
 **Rule going forward:** treat #219 + §9.12–9.43 as current truth for
 platform console KPIs.
 
+### 9.44 Password recovery must not use an existing session (Review #220, 2026-08-28)
+
+See `docs/reviews/220-recovery-must-not-use-existing-session-2026-08-28.md`.
+
+`/reset/platform` and `/reset/venue` may update a password only after a
+recovery `code` or implicit tokens from the reset email. Never call
+`updateUser` from whatever session is already on that surface client.
+
+**Rule going forward:** treat #220 + §9.12–9.44 as current truth for
+staff password recovery.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
