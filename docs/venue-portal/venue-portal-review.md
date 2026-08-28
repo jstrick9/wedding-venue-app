@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Failed login must not leave a stray JWT (#218, 2026-08-28)** — valid password at the wrong venue/platform door locally signs out that surface only and resyncs React. Full report: **`docs/reviews/218-failed-login-must-not-leave-stray-jwt-2026-08-28.md`**.
 - ✅ **Path-only password reset (#217, 2026-08-27)** — Forgot password emails `/reset/platform` or `/reset/venue`; recovery exchanges the code on the matching dual-session client. Full report: **`docs/reviews/217-password-reset-path-and-recovery-session-2026-08-27.md`**.
 - ✅ **Signed-in platform login returns to console (#216, 2026-08-27)** — after sign-out, `#/platform-login` plus a platform administrator session opens the console instead of the venue workspace. Full report: **`docs/reviews/216-platform-login-returns-to-console-2026-08-27.md`**.
 - ✅ **Venue Platform Chat uses venue session (#215, 2026-08-27)** — venue Admin Platform Chat was using the platform JWT; list/send now use `wvip-auth-venue`. Full report: **`docs/reviews/215-venue-platform-chat-uses-venue-session-2026-08-27.md`**.

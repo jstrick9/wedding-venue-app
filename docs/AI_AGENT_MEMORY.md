@@ -868,6 +868,19 @@ same browser that requested it (PKCE).
 staff password reset. Hunt continues on platform console + invite/auth,
 then expands to the next adjacent staff surface after P0/P1 exhaustion.
 
+### 9.42 Failed login must not leave a stray JWT (Review #218, 2026-08-28)
+
+See `docs/reviews/218-failed-login-must-not-leave-stray-jwt-2026-08-28.md`.
+
+A successful `signInWithPassword` that then fails membership, venue
+status, or platform-role checks must `signOut({ scope: 'local' })` on
+**that surface only**. Do not use global sign-out for a rejected login
+(it can revoke the other surface). Re-read the remaining session into
+React so `platformAuth` / `venueAuth` match storage.
+
+**Rule going forward:** treat #218 + §9.12–9.42 as current truth for
+dual-session login failures.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
