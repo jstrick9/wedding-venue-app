@@ -232,10 +232,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (username: string, password: string): Promise<boolean> => {
     if (shouldUseSupabaseAuth()) {
       const session = await signInWithSupabase(username, password, undefined, 'platform');
-      if (!session) return false;
+      if (!session) {
+        setPlatformAuth(await restoreSupabaseSession(undefined, 'platform'));
+        return false;
+      }
       const role = session.platformRole;
       if (role !== 'platform_owner' && role !== 'platform_admin' && role !== 'platform_support') {
-        await signOutSupabase('platform');
+        await signOutSupabase('platform', { scope: 'local' });
+        setPlatformAuth(null);
         return false;
       }
       setPlatformAuth(session);
@@ -296,7 +300,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loginForOrganization: AuthContextType['loginForOrganization'] = async (organizationId, username, password) => {
     if (!shouldUseSupabaseAuth()) return false;
     const session = await signInWithSupabase(username, password, organizationId, 'venue');
-    if (!session) return false;
+    if (!session) {
+      setVenueAuth(await restoreSupabaseSession(undefined, 'venue'));
+      return false;
+    }
     setVenueAuth(session);
     return true;
   };

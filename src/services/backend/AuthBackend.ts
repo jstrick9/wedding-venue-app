@@ -93,7 +93,10 @@ export async function signInWithSupabase(
     : membershipQuery.limit(1)
   ).maybeSingle();
 
-  if (requiredOrganizationId && !membership) return null;
+  if (requiredOrganizationId && !membership) {
+    await supabase.auth.signOut({ scope: 'local' });
+    return null;
+  }
 
   const { data: organization } = membership?.organization_id
     ? await supabase
@@ -103,7 +106,10 @@ export async function signInWithSupabase(
       .maybeSingle()
     : { data: null };
   const organizationActive = !organization?.status || organization.status === 'active';
-  if (requiredOrganizationId && !organizationActive) return null;
+  if (requiredOrganizationId && !organizationActive) {
+    await supabase.auth.signOut({ scope: 'local' });
+    return null;
+  }
   const effectiveMembership = organizationActive ? membership : null;
   const platformRole = await loadPlatformRole(data.user.id, target);
   const user = mapProfileToUser(
@@ -178,9 +184,12 @@ export async function restoreSupabaseSession(
   };
 }
 
-export async function signOutSupabase(surface?: AuthSurface): Promise<void> {
+export async function signOutSupabase(
+  surface?: AuthSurface,
+  options?: { scope?: 'local' | 'global' },
+): Promise<void> {
   if (!isSupabaseConfigured()) return;
-  await getSupabaseClient(surface).auth.signOut();
+  await getSupabaseClient(surface).auth.signOut({ scope: options?.scope ?? 'global' });
 }
 
 export interface SignUpParams {
