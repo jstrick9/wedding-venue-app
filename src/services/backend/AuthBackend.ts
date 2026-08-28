@@ -442,12 +442,9 @@ export async function completeSupabasePasswordRecovery(params: {
     });
     if (error) throw new Error(error.message || 'This reset link is invalid or already used.');
   } else {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      throw new Error(
-        'This reset link is missing or incomplete. Request a new password reset and open the newest email in this same browser.',
-      );
-    }
+    throw new Error(
+      'This reset link is missing or incomplete. Request a new password reset and open the newest email in this same browser.',
+    );
   }
   const { error } = await supabase.auth.updateUser({ password: params.password });
   if (error) throw new Error(error.message || 'Could not update the password.');

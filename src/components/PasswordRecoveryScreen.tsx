@@ -27,14 +27,20 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
   const [confirmPassword, setConfirmPassword] = useState('');
   const [state, setState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [hasRecoveryProof, setHasRecoveryProof] = useState(false);
 
   useEffect(() => {
     applyLoginBranding(branding);
-    payloadRef.current = {
-      code: readRecoveryCode(window.location.search),
-      ...readRecoveryTokensFromHash(window.location.hash),
-    };
+    const code = readRecoveryCode(window.location.search);
+    const tokens = readRecoveryTokensFromHash(window.location.hash);
+    payloadRef.current = { code, ...tokens };
     stripRecoveryParamsFromUrl(window.location);
+    const ok = Boolean(code || (tokens?.accessToken && tokens?.refreshToken));
+    setHasRecoveryProof(ok);
+    if (!ok) {
+      setState('error');
+      setMessage('This reset link is missing or incomplete. Request a new password reset and open the newest email in this same browser.');
+    }
   }, [branding]);
 
   const leave = () => {
@@ -100,7 +106,7 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
             </p>
           </div>
 
-          <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-3">
+          {hasRecoveryProof && <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-3">
             <div>
               <label htmlFor="recovery-password" className="mb-1 block text-xs font-semibold text-gray-700">New password</label>
               <input
@@ -131,7 +137,7 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
             >
               {state === 'saving' ? 'Saving password…' : 'Save new password'}
             </button>
-          </form>
+          </form>}
 
           {message && (
             <div

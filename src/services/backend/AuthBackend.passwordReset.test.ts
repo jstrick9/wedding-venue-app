@@ -63,5 +63,18 @@ describe('Supabase password recovery', () => {
       completeSupabasePasswordRecovery({ surface: 'platform', password: 'Newpass12' }),
     ).rejects.toThrow(/missing or incomplete/i);
     expect(mockAuth.updateUser).not.toHaveBeenCalled();
+    expect(mockAuth.getSession).not.toHaveBeenCalled();
+  });
+
+  it('does not change the password of an already signed-in session without a recovery token', async () => {
+    mockAuth.getSession.mockResolvedValue({
+      data: { session: { access_token: 'existing-platform-jwt' } },
+      error: null,
+    });
+    await expect(
+      completeSupabasePasswordRecovery({ surface: 'platform', password: 'Newpass12' }),
+    ).rejects.toThrow(/missing or incomplete/i);
+    expect(mockAuth.updateUser).not.toHaveBeenCalled();
+    expect(mockAuth.exchangeCodeForSession).not.toHaveBeenCalled();
   });
 });
