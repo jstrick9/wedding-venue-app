@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { signInWithPassword, signOut, db } = vi.hoisted(() => ({
+const { signInWithPassword, signOut, getSession, db } = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
   signOut: vi.fn(),
+  getSession: vi.fn(),
   db: {
     membershipRow: null as Record<string, unknown> | null,
     organizationRow: null as Record<string, unknown> | null,
@@ -24,7 +25,7 @@ function tableApi(result: { data: unknown; error: null }) {
 vi.mock('./supabaseClient', () => ({
   isSupabaseConfigured: () => true,
   getSupabaseClient: () => ({
-    auth: { signInWithPassword, signOut },
+    auth: { signInWithPassword, signOut, getSession },
     from: (table: string) => {
       if (table === 'profiles') {
         return tableApi({ data: { email: 'ada@sevenpaths.com', full_name: 'Ada' }, error: null });
@@ -43,7 +44,7 @@ vi.mock('./supabaseClient', () => ({
   }),
 }));
 
-import { signInWithSupabase } from './AuthBackend';
+import { restoreSupabaseSession, signInWithSupabase } from './AuthBackend';
 
 describe('signInWithSupabase unauthorized discard', () => {
   beforeEach(() => {
@@ -52,6 +53,10 @@ describe('signInWithSupabase unauthorized discard', () => {
     db.organizationRow = { slug: 'seven-paths-manor', status: 'active' };
     db.platformRow = null;
     signOut.mockResolvedValue({ error: null });
+    getSession.mockResolvedValue({
+      data: { session: { access_token: 'tok', user: { id: 'user-1', email: 'ada@sevenpaths.com' } } },
+      error: null,
+    });
     signInWithPassword.mockResolvedValue({
       data: {
         session: { access_token: 'tok' },
@@ -87,5 +92,28 @@ describe('signInWithSupabase unauthorized discard', () => {
     expect(session?.organizationId).toBe('org-1');
     expect(session?.organizationSlug).toBe('seven-paths-manor');
     expect(session?.user.email).toBe('ada@sevenpaths.com');
+  });
+
+  it('allows venue login while the organization is still provisioning', async () => {
+    db.membershipRow = { role: 'owner', status: 'active', organization_id: 'org-1' };
+    db.organizationRow = { slug: 'hilltop-barn', status: 'provisioning' };
+    const session = await signInWithSupabase('ada@sevenpaths.com', 'secret', 'org-1', 'venue');
+    expect(signOut).not.toHaveBeenCalled();
+    expect(session?.organizationId).toBe('org-1');
+    expect(session?.organizationSlug).toBe('hilltop-barn');
+  });
+
+  it('locally signs out when the venue is archived', async () => {
+    db.membershipRow = { role: 'owner', status: 'active', organization_id: 'org-1' };
+    db.organizationRow = { slug: 'seven-paths-manor', status: 'archived' };
+    await expect(signInWithSupabase('ada@sevenpaths.com', 'secret', 'org-1', 'venue')).resolves.toBeNull();
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('drops a restored venue session when the organization is suspended', async () => {
+    db.membershipRow = { role: 'owner', status: 'active', organization_id: 'org-1' };
+    db.organizationRow = { slug: 'seven-paths-manor', status: 'suspended' };
+    await expect(restoreSupabaseSession(undefined, 'venue')).resolves.toBeNull();
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 });

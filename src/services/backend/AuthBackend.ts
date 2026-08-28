@@ -66,6 +66,11 @@ function hasPlatformAdminAuthority(platformRole?: PlatformRole): boolean {
   return platformRole === 'platform_owner' || platformRole === 'platform_admin';
 }
 
+/** Provisioning venues must stay sign-in-able after the invitee claims them. */
+function isVenueAccessBlocked(status?: string | null): boolean {
+  return status === 'suspended' || status === 'archived';
+}
+
 export async function signInWithSupabase(
   email: string,
   password: string,
@@ -105,12 +110,12 @@ export async function signInWithSupabase(
       .eq('id', membership.organization_id)
       .maybeSingle()
     : { data: null };
-  const organizationActive = !organization?.status || organization.status === 'active';
-  if (requiredOrganizationId && !organizationActive) {
+  const blocked = isVenueAccessBlocked(organization?.status);
+  if (requiredOrganizationId && blocked) {
     await supabase.auth.signOut({ scope: 'local' });
     return null;
   }
-  const effectiveMembership = organizationActive ? membership : null;
+  const effectiveMembership = blocked ? null : membership;
   const platformRole = await loadPlatformRole(data.user.id, target);
   const user = mapProfileToUser(
     {
@@ -125,7 +130,7 @@ export async function signInWithSupabase(
     user,
     accessToken: data.session.access_token,
     organizationId: effectiveMembership?.organization_id,
-    organizationSlug: organizationActive ? organization?.slug : undefined,
+    organizationSlug: blocked ? undefined : organization?.slug,
     platformRole,
   };
 }
@@ -164,9 +169,13 @@ export async function restoreSupabaseSession(
       .eq('id', membership.organization_id)
       .maybeSingle()
     : { data: null };
-  const organizationActive = !organization?.status || organization.status === 'active';
-  if (requiredOrganizationId && !organizationActive) return null;
-  const effectiveMembership = organizationActive ? membership : null;
+  const blocked = isVenueAccessBlocked(organization?.status);
+  if (blocked && surface === 'venue') {
+    await supabase.auth.signOut({ scope: 'local' });
+    return null;
+  }
+  if (requiredOrganizationId && blocked) return null;
+  const effectiveMembership = blocked ? null : membership;
   const platformRole = await loadPlatformRole(session.user.id, surface);
   return {
     user: mapProfileToUser(
@@ -179,7 +188,7 @@ export async function restoreSupabaseSession(
     ),
     accessToken: session.access_token,
     organizationId: effectiveMembership?.organization_id,
-    organizationSlug: organizationActive ? organization?.slug : undefined,
+    organizationSlug: blocked ? undefined : organization?.slug,
     platformRole,
   };
 }
