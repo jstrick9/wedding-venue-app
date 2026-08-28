@@ -338,6 +338,17 @@ describe('PlatformAdminPortal console', () => {
     expect(await screen.findByText('Seven Paths Manor')).toBeInTheDocument();
     expect(screen.getByText('Hilltop Barn')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Open / edit' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/couples: —/i).length).toBeGreaterThan(0);
+  });
+
+  it('does not show zero couple KPIs while metrics are pending', async () => {
+    metricsMock.mockImplementation(() => new Promise(() => {}));
+    window.location.hash = '#/platform-admin';
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+
+    expect(await screen.findByRole('button', { name: /—\s*couples/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^0\s*couples$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /1\s*managed admins/i })).toBeInTheDocument();
   });
 
   it('opens venue detail from the map Open / edit action', async () => {

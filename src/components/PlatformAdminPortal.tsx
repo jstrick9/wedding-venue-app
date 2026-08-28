@@ -130,6 +130,17 @@ function hasCompleteStreetAddress(value: {
   return Boolean(value.addressLine1?.trim() && value.city?.trim() && value.stateRegion?.trim() && value.postalCode?.trim());
 }
 
+function pendingCount(value: number | undefined, ready: boolean): string {
+  return ready ? String(value ?? 0) : '—';
+}
+
+function countManagedAdmins(organizations: PlatformOrganizationSummary[]): number {
+  return organizations.reduce(
+    (total, organization) => total + organization.admins.filter((admin) => admin.status === 'active').length,
+    0,
+  );
+}
+
 export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAdminPortalProps) {
   const { user, hasVenueSession, logout } = useAuth();
   const config = useBrandingConfig();
@@ -137,6 +148,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const route = parsePlatformConsoleHash(hash);
   const [organizations, setOrganizations] = useState<PlatformOrganizationSummary[]>([]);
   const [metrics, setMetrics] = useState<PlatformConsoleMetrics>(EMPTY_METRICS);
+  const [metricsReady, setMetricsReady] = useState(false);
   const [auditLogs, setAuditLogs] = useState<PlatformAuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -166,7 +178,12 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     void getPlatformBranding()
       .then((next) => setPlatformBranding({ ...defaultPlatformConfig, ...next }))
       .catch(() => undefined);
-    void getPlatformConsoleMetrics().then(setMetrics).catch(() => undefined);
+    void getPlatformConsoleMetrics()
+      .then((next) => {
+        setMetrics(next);
+        setMetricsReady(true);
+      })
+      .catch(() => undefined);
     void listPlatformAuditLogs(80).then(setAuditLogs).catch(() => undefined);
   }, []);
 
@@ -466,16 +483,16 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     [organizations],
   );
 
-  const metricCards: { label: string; value: number; filter?: { status?: OrganizationStatus | 'all'; queue?: VenueQueueFilter } }[] = [
+  const metricCards: { label: string; value: number | null; filter?: { status?: OrganizationStatus | 'all'; queue?: VenueQueueFilter } }[] = [
     { label: 'Venues', value: organizations.length },
     { label: 'Active', value: organizations.filter((organization) => organization.status === 'active').length, filter: { status: 'active' } },
     { label: 'Awaiting admin', value: awaitingAdmin.length, filter: { queue: 'awaiting-admin' } },
     { label: 'Suspended', value: suspended.length, filter: { status: 'suspended' } },
     { label: 'Pending invites', value: pendingInviteVenues.length, filter: { queue: 'pending-invite' } },
-    { label: 'Managed admins', value: metrics.activeAdmins },
-    { label: 'Couples', value: metrics.totalCouples },
-    { label: 'Guests', value: metrics.totalGuests },
-    { label: 'RSVPs', value: metrics.totalRsvps },
+    { label: 'Managed admins', value: countManagedAdmins(organizations) },
+    { label: 'Couples', value: metricsReady ? metrics.totalCouples : null },
+    { label: 'Guests', value: metricsReady ? metrics.totalGuests : null },
+    { label: 'RSVPs', value: metricsReady ? metrics.totalRsvps : null },
   ];
 
   return (
@@ -541,7 +558,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               <section aria-label="Platform executive metrics" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {metricCards.map((card) => (
                   <button key={card.label} type="button" onClick={() => go('venues', undefined, card.filter)} className="rounded-xl border border-indigo-100 bg-white p-3 text-center shadow-sm hover:border-indigo-300">
-                    <p className="text-2xl font-extrabold text-indigo-950">{card.value}</p>
+                    <p className="text-2xl font-extrabold text-indigo-950">{card.value === null ? '—' : card.value}</p>
                     <p className="mt-1 text-[11px] font-semibold text-indigo-800">{card.label}</p>
                   </button>
                 ))}
@@ -616,6 +633,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               venues={filteredVenues}
               allCount={organizations.length}
               metrics={metrics}
+              metricsReady={metricsReady}
               query={query}
               statusFilter={statusFilter}
               queueFilter={queueFilter}
@@ -636,6 +654,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               <VenueDetail
                 organization={selectedVenue}
                 metric={metrics.venues.find((metric) => metric.id === selectedVenue.id)}
+                metricsReady={metricsReady}
                 busy={actionId === selectedVenue.id}
                 inviteCompose={inviteCompose}
                 onBack={() => go('venues', undefined, { status: statusFilter, queue: queueFilter })}
@@ -760,6 +779,7 @@ function VenueDirectory({
   venues,
   allCount,
   metrics,
+  metricsReady,
   query,
   statusFilter,
   queueFilter,
@@ -777,6 +797,7 @@ function VenueDirectory({
   venues: PlatformOrganizationSummary[];
   allCount: number;
   metrics: PlatformConsoleMetrics;
+  metricsReady: boolean;
   query: string;
   statusFilter: OrganizationStatus | 'all';
   queueFilter: VenueQueueFilter;
@@ -866,9 +887,9 @@ function VenueDirectory({
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600 sm:grid-cols-5">
                   <span>Admins: {venueMetric?.adminCount ?? organization.admins.length}</span>
-                  <span>Couples: {venueMetric?.coupleCount ?? 0}</span>
-                  <span>Guests: {venueMetric?.guestCount ?? 0}</span>
-                  <span>RSVPs: {venueMetric?.rsvpCount ?? 0}</span>
+                  <span>Couples: {pendingCount(venueMetric?.coupleCount, metricsReady)}</span>
+                  <span>Guests: {pendingCount(venueMetric?.guestCount, metricsReady)}</span>
+                  <span>RSVPs: {pendingCount(venueMetric?.rsvpCount, metricsReady)}</span>
                   <span>Created: {new Date(organization.createdAt).toLocaleDateString()}</span>
                 </div>
               </article>
@@ -883,6 +904,7 @@ function VenueDirectory({
 function VenueDetail({
   organization,
   metric,
+  metricsReady,
   busy,
   onBack,
   onCopyLogin,
@@ -897,6 +919,7 @@ function VenueDetail({
 }: {
   organization: PlatformOrganizationSummary;
   metric?: PlatformConsoleMetrics['venues'][number];
+  metricsReady: boolean;
   busy: boolean;
   inviteCompose: InviteComposeMessage | null;
   onBack: () => void;
@@ -1030,9 +1053,9 @@ function VenueDetail({
         </div>
         <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-gray-600 sm:grid-cols-4">
           <span>Admins: {metric?.adminCount ?? organization.admins.length}</span>
-          <span>Couples: {metric?.coupleCount ?? 0}</span>
-          <span>Guests: {metric?.guestCount ?? 0}</span>
-          <span>RSVPs: {metric?.rsvpCount ?? 0}</span>
+          <span>Couples: {pendingCount(metric?.coupleCount, metricsReady)}</span>
+          <span>Guests: {pendingCount(metric?.guestCount, metricsReady)}</span>
+          <span>RSVPs: {pendingCount(metric?.rsvpCount, metricsReady)}</span>
         </div>
         {organization.admins.length > 0 && (
           <ul className="mb-4 space-y-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700" aria-label="Venue administrators">
