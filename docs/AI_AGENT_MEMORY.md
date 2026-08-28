@@ -881,6 +881,17 @@ React so `platformAuth` / `venueAuth` match storage.
 **Rule going forward:** treat #218 + §9.12–9.42 as current truth for
 dual-session login failures.
 
+### 9.43 Console KPIs must not show 0 while metrics are pending (Review #219, 2026-08-28)
+
+See `docs/reviews/219-console-kpis-pending-not-zero-2026-08-28.md`.
+
+After first paint without waiting on metrics, do not initialize
+Couples/Guests/RSVPs at 0. Show **—** until `get_platform_console_metrics`
+succeeds. Managed admins come from the loaded organization admin list.
+
+**Rule going forward:** treat #219 + §9.12–9.43 as current truth for
+platform console KPIs.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
