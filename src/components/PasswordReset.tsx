@@ -10,6 +10,7 @@ interface PasswordResetProps {
   onClose: () => void;
   onSuccess: () => void;
   branding?: Config;
+  authSurface?: 'platform' | 'venue';
 }
 
 type ResetStep = 'request' | 'verify' | 'reset' | 'success';
@@ -34,7 +35,7 @@ interface StoredResetCodeRecord {
   expiry: string;
 }
 
-const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, branding }) => {
+const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, branding, authSurface = 'platform' }) => {
   const config = branding || getConfig();
   const chrome = resolveLoginChrome(config);
   const primaryButtonStyle = { backgroundColor: chrome.primary, color: chrome.headerText };
@@ -146,7 +147,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
           setLoading(false);
           return;
         }
-        await requestSupabasePasswordReset(email.trim());
+        await requestSupabasePasswordReset(email.trim(), authSurface);
         setStep('verify');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not send a password reset email.');

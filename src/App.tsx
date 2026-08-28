@@ -15,6 +15,7 @@ import PlatformLoginScreen from './components/PlatformLoginScreen';
 import { getActiveOrganizationSlug } from './services/platform/organizationContext';
 import { isVenueStaffRoute } from './utils/authSurface';
 import { isPlatformConsoleHash } from './utils/platformConsoleRoute';
+import { passwordResetSurfaceFromLocation, shouldShowPasswordRecovery } from './utils/passwordResetRoute';
 import { captureVenueAdminInviteToken, shouldShowVenueAdminOnboarding } from './utils/venueAdminInviteRoute';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
@@ -25,6 +26,7 @@ const AcceptInvite = lazy(() => import('./components/AcceptInvite').then((m) => 
 const PlatformAdminPortal = lazy(() => import('./components/PlatformAdminPortal'));
 const VenueAdminOnboarding = lazy(() => import('./components/VenueAdminOnboarding'));
 const VenueLoginScreen = lazy(() => import('./components/VenueLoginScreen'));
+const PasswordRecoveryScreen = lazy(() => import('./components/PasswordRecoveryScreen'));
 
 /**
  * Surfaces `spm_storage_error` events as toasts no matter which screen is
@@ -79,6 +81,17 @@ function AppContent() {
   // First venue administrator onboarding is a public invitation route. The
   // invitee creates an Auth account and claims the platform-created tenant.
   // Path /i/<token> is the email-safe URL; ?va= and hash links still work.
+  if (shouldShowPasswordRecovery({
+    hash,
+    pathname: pathname || window.location.pathname,
+  })) {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <PasswordRecoveryScreen surface={passwordResetSurfaceFromLocation({ pathname: pathname || window.location.pathname })} />
+      </Suspense>
+    );
+  }
+
   if (shouldShowVenueAdminOnboarding({
     hash,
     locationHash: window.location.hash,

@@ -1,3 +1,4 @@
+import { isPasswordResetPath, passwordResetSurfaceFromLocation } from './passwordResetRoute';
 import { shouldShowVenueAdminOnboarding } from './venueAdminInviteRoute';
 
 export type AuthSurface = 'platform' | 'venue';
@@ -29,6 +30,9 @@ export function surfacesForLegacySession(hasPlatformRole: boolean, hasOrgMembers
 export function detectAuthSurface(input: { hash?: string; pathname?: string } = {}): AuthSurface {
   const hash = input.hash ?? (typeof window !== 'undefined' ? window.location.hash : '');
   const pathname = input.pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
+  if (isPasswordResetPath(pathname)) {
+    return passwordResetSurfaceFromLocation({ pathname });
+  }
   if (shouldShowVenueAdminOnboarding({ hash, locationHash: hash, pathname })) {
     return 'venue';
   }

@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/i/:token", "destination": "/index.html" },
-    { "source": "/venue-onboarding/:token", "destination": "/index.html" }
+    { "source": "/venue-onboarding/:token", "destination": "/index.html" },
+    { "source": "/reset", "destination": "/index.html" },
+    { "source": "/reset/:surface", "destination": "/index.html" }
   ]
 }

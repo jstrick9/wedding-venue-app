@@ -1,3 +1,4 @@
+import { isPasswordResetPath } from './passwordResetRoute';
 import { isVenueOnboardingPath } from './venueAdminInviteRoute';
 
 /**
@@ -11,7 +12,7 @@ export function loginHashAfterLogout(
   pathname?: string,
 ): string {
   const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
-  if (isVenueOnboardingPath(path)) {
+  if (isVenueOnboardingPath(path) || isPasswordResetPath(path)) {
     return hash || '';
   }
 
@@ -19,6 +20,7 @@ export function loginHashAfterLogout(
 
   if (
     route.startsWith('#/venue-onboarding') ||
+    route.startsWith('#/password-reset') ||
     route.startsWith('#/accept-invite') ||
     route.startsWith('#/couples-portal') ||
     route.startsWith('#/guest-portal')

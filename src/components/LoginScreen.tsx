@@ -596,6 +596,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
       {showPasswordReset && (
         <PasswordReset
           branding={config}
+          authSurface={loginScope}
           onClose={() => setShowPasswordReset(false)}
           onSuccess={() => {
             setShowPasswordReset(false);

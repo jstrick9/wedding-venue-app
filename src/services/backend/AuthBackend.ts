@@ -2,6 +2,7 @@ import type { User, UserRole } from '../../types';
 import type { AuthSurface } from '../../utils/authSurface';
 import type { PlatformRole } from '../platform/platformTypes';
 import { claimVenueAdminAccount, isClaimFunctionMissingError } from '../platform/claimVenueAdminAccount';
+import { buildPasswordResetRedirectUrl, type PasswordResetSurface } from '../../utils/passwordResetRoute';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
 export interface BackendAuthSession {
@@ -400,10 +401,45 @@ export async function signUpOrganizationInvite({
   return session;
 }
 
-export async function requestSupabasePasswordReset(email: string): Promise<void> {
-  const redirectTo = `${window.location.origin}${window.location.pathname}#/password-reset`;
-  const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email, {
+export async function requestSupabasePasswordReset(
+  email: string,
+  surface: PasswordResetSurface = 'platform',
+): Promise<void> {
+  const redirectTo = buildPasswordResetRedirectUrl(surface);
+  const { error } = await getSupabaseClient(surface).auth.resetPasswordForEmail(email, {
     redirectTo,
   });
   if (error) throw error;
+}
+
+export async function completeSupabasePasswordRecovery(params: {
+  surface: PasswordResetSurface;
+  password: string;
+  code?: string;
+  accessToken?: string;
+  refreshToken?: string;
+}): Promise<void> {
+  if (params.password.length < 8) {
+    throw new Error('Password must be at least 8 characters.');
+  }
+  const supabase = getSupabaseClient(params.surface);
+  if (params.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(params.code);
+    if (error) throw new Error(error.message || 'This reset link is invalid or already used.');
+  } else if (params.accessToken && params.refreshToken) {
+    const { error } = await supabase.auth.setSession({
+      access_token: params.accessToken,
+      refresh_token: params.refreshToken,
+    });
+    if (error) throw new Error(error.message || 'This reset link is invalid or already used.');
+  } else {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      throw new Error(
+        'This reset link is missing or incomplete. Request a new password reset and open the newest email in this same browser.',
+      );
+    }
+  }
+  const { error } = await supabase.auth.updateUser({ password: params.password });
+  if (error) throw new Error(error.message || 'Could not update the password.');
 }
