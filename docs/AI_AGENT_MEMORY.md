@@ -903,6 +903,17 @@ recovery `code` or implicit tokens from the reset email. Never call
 **Rule going forward:** treat #220 + §9.12–9.44 as current truth for
 staff password recovery.
 
+### 9.45 Provisioning venues must allow venue login (Review #221, 2026-08-28)
+
+See `docs/reviews/221-provisioning-venue-login-allowed-2026-08-28.md`.
+
+Venue login and session restore must allow **provisioning** (claimed but
+not yet Activate). Block only **suspended** and **archived**. A restored
+venue session for a suspended tenant must local-sign-out that surface.
+
+**Rule going forward:** treat #221 + §9.12–9.45 as current truth for
+venue login vs console lifecycle.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
