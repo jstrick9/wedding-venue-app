@@ -1001,6 +1001,16 @@ stuck after the tenant already exists, when the RPC or email stalls.
 platform console invite/lifecycle mutations. Hunt continues on
 platform console + invite/auth.
 
+### 9.53 Platform chat load and send must not hang (Review #229, 2026-08-28)
+
+See `docs/reviews/229-platform-chat-timeout-2026-08-28.md`.
+
+Platform ↔ venue chat list and send must `withTimeout` at 20s. Do not
+leave Loading chat… or Sending… stuck when the thread RPC stalls.
+
+**Rule going forward:** treat #229 + §9.12–9.53 as current truth for
+platform chat. Hunt continues on platform console + invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
