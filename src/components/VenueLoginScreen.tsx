@@ -58,7 +58,7 @@ function VenueAuthStatusCard({
 }
 
 export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
-  const { user, organizationId, loginForOrganization, logout } = useAuth();
+  const { user, organizationId, organizationSlug, loginForOrganization, logout } = useAuth();
   const [venue, setVenue] = useState<PublicVenueBranding | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -90,6 +90,25 @@ export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
     })();
     return () => { cancelled = true; };
   }, [slug, retryId]);
+
+  // Already signed in to this venue: do not block Open Workspace on public branding.
+  const signedInHere = Boolean(user && organizationSlug && organizationSlug === slug.trim());
+  const venueBlocked = venue?.status === 'suspended' || venue?.status === 'archived';
+  if (signedInHere && !venueBlocked) {
+    const branding = venue?.config || NEUTRAL_LOGIN_CONFIG;
+    const venueName = venue?.config.venueName || slug;
+    return (
+      <VenueAuthStatusCard
+        branding={branding}
+        icon="✅"
+        title={`You are signed in to ${venueName}`}
+        body="Continue to the venue-managed workspace."
+        actionLabel="Open Venue Workspace →"
+        onAction={() => { window.location.hash = '#/home'; }}
+        secondary={{ label: 'Sign out', onClick: logout }}
+      />
+    );
+  }
 
   if (loading) {
     return (

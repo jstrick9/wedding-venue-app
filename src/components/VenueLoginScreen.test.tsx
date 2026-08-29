@@ -5,13 +5,16 @@ import { NEUTRAL_LOGIN_CONFIG } from '../utils/loginBranding';
 
 const getPublicVenueBrandingMock = vi.fn();
 
+const authState = {
+  user: null as { id: string; email: string; name: string; role: 'admin' } | null,
+  organizationId: null as string | null,
+  organizationSlug: null as string | null,
+  loginForOrganization: vi.fn(),
+  logout: vi.fn(),
+};
+
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: null,
-    organizationId: null,
-    loginForOrganization: vi.fn(),
-    logout: vi.fn(),
-  }),
+  useAuth: () => authState,
 }));
 
 vi.mock('../services/platform/publicVenueService', () => ({
@@ -29,6 +32,10 @@ import VenueLoginScreen from './VenueLoginScreen';
 describe('VenueLoginScreen branding', () => {
   beforeEach(() => {
     getPublicVenueBrandingMock.mockReset();
+    authState.user = null;
+    authState.organizationId = null;
+    authState.organizationSlug = null;
+    authState.logout = vi.fn();
   });
 
   it('uses the neutral login palette while loading and when a venue is missing', async () => {
@@ -86,5 +93,32 @@ describe('VenueLoginScreen branding', () => {
     await userEvent.click(await screen.findByRole('button', { name: /try again/i }));
     expect(await screen.findByText(/venue login for hilltop barn/i)).toBeInTheDocument();
     expect(getPublicVenueBrandingMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens the workspace card without waiting on branding when already signed in to that venue", () => {
+    authState.user = { id: 'venue-admin', email: 'ada@hilltop.com', name: 'Ada', role: 'admin' };
+    authState.organizationId = 'org-2';
+    authState.organizationSlug = 'hilltop-barn';
+    getPublicVenueBrandingMock.mockImplementation(() => new Promise(() => {}));
+
+    render(<VenueLoginScreen slug="hilltop-barn" />);
+
+    expect(screen.getByRole('heading', { name: /you are signed in to hilltop-barn/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /open venue workspace/i })).toBeInTheDocument();
+    expect(screen.queryByText(/loading venue sign-in/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps Open Workspace when branding times out for a signed-in venue session", async () => {
+    authState.user = { id: 'venue-admin', email: 'ada@hilltop.com', name: 'Ada', role: 'admin' };
+    authState.organizationId = 'org-2';
+    authState.organizationSlug = 'hilltop-barn';
+    getPublicVenueBrandingMock.mockRejectedValue(
+      new Error('Loading venue sign-in timed out. Check the venue link and try again.'),
+    );
+
+    render(<VenueLoginScreen slug="hilltop-barn" />);
+
+    expect(await screen.findByRole('button', { name: /open venue workspace/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /venue sign-in timed out/i })).not.toBeInTheDocument();
   });
 });

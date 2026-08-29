@@ -13,4 +13,14 @@ describe('VenueLoginScreen hang guards', () => {
     expect(source).toContain('setLoading(false)');
     expect(source).toContain('Try again');
   });
+
+  it('does not wait on branding before Open Workspace when already signed in', () => {
+    const source = readFileSync(join(process.cwd(), 'src/components/VenueLoginScreen.tsx'), 'utf8');
+    const signedIn = source.indexOf('signedInHere');
+    const loading = source.indexOf('if (loading)');
+    expect(signedIn).toBeGreaterThan(-1);
+    expect(signedIn).toBeLessThan(loading);
+    expect(source).toContain('organizationSlug === slug.trim()');
+    expect(source).toContain('Open Venue Workspace');
+  });
 });
