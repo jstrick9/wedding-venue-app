@@ -939,6 +939,19 @@ the list succeeds, same as Couples/Guests/RSVPs vs metrics (#219).
 **Rule going forward:** treat #223 + §9.12–9.47 as current truth for
 platform console load. Hunt continues on platform console + invite/auth.
 
+### 9.48 Invite lookup and claim must not hang (Review #224, 2026-08-28)
+
+See `docs/reviews/224-invite-lookup-claim-timeout-2026-08-28.md`.
+
+`/i/<token>` must show the claim form as soon as invite lookup returns.
+Do not wait on `get_public_venue_branding`. Timeout lookup at 20s and
+claim at 30s. Do not leave Checking invitation… or Claiming venue…
+stuck.
+
+**Rule going forward:** treat #224 + §9.12–9.48 as current truth for
+venue-admin invite setup. Hunt continues on platform console +
+invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

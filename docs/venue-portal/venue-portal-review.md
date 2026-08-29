@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Invite lookup/claim timeout (#224, 2026-08-28)** — `/i/<token>` shows the claim form without waiting on venue branding; lookup 20s / claim 30s timeouts. Full report: **`docs/reviews/224-invite-lookup-claim-timeout-2026-08-28.md`**.
 - ✅ **Console venue list timeout + pending KPIs (#223, 2026-08-28)** — first paint no longer waits on the organization list before metrics; list-derived KPIs show — until venues load; list times out at 20s. Full report: **`docs/reviews/223-console-venue-list-timeout-pending-kpis-2026-08-28.md`**.
 - ✅ **Onboard geocode/create timeout (#222, 2026-08-28)** — Create Venue no longer hangs forever if Geoapify or the create RPC stalls. Full report: **`docs/reviews/222-onboard-geocode-create-timeout-2026-08-28.md`**.
 - ✅ **Provisioning venue login allowed (#221, 2026-08-28)** — claimed admins can sign in before Activate; Suspend/Archive still block. Full report: **`docs/reviews/221-provisioning-venue-login-allowed-2026-08-28.md`**.
