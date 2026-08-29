@@ -1034,6 +1034,23 @@ Save Platform Branding (invite templates and TTL) and logo upload must
 platform branding save. Hunt continues on platform console +
 invite/auth.
 
+
+### 9.56 Platform support must not open the venue workspace (Review #232, 2026-08-29)
+
+See `docs/reviews/232-platform-support-must-not-open-workspace-2026-08-29.md`.
+
+`platform_support` may sign in on the platform door. Console RPCs stay
+owner/admin (`isPlatformAdmin`). A support session on `#/platform-login`
+(or other console hashes) must deny with **Sign out**, not fall through
+to `AuthenticatedApp`. Do not deny every console hash with
+`user && !isPlatformAdmin` — local-mode has a user and no platformRole
+and must still open the workspace.
+
+**Rule going forward:** treat #232 + §9.12–9.56 as current truth for
+platform login vs console routing. Hunt continues on platform console +
+invite/auth, then expands to the next adjacent staff surface after
+P0/P1 exhaustion.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
