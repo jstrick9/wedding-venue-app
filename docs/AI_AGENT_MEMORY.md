@@ -1171,6 +1171,18 @@ out at 15s (#222).
 **Rule going forward:** treat #241 + §9.12–9.65 as current truth for
 platform address lookup. Hunt continues on venue admin invite/auth.
 
+
+### 9.66 Map tiles must not hang (Review #242, 2026-08-29)
+
+See `docs/reviews/242-map-tiles-timeout-2026-08-29.md`.
+
+Console Map must `withTimeout` `fetchGeoapifyTile` at 15s so Leaflet
+does not wait forever on `done()`. Timeout or throw shows tileError.
+Street autocomplete already timed out at 15s (#241).
+
+**Rule going forward:** treat #242 + §9.12–9.66 as current truth for
+platform map tiles. Hunt continues on venue admin invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
