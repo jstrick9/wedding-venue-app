@@ -57,8 +57,43 @@ function GlobalStorageErrorListener() {
   return null;
 }
 
+function PlatformAccessDeniedCard({
+  body,
+  actionLabel,
+  onAction,
+}: {
+  body: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
+      <div className="max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-lg">
+        <div className="text-4xl">🔒</div>
+        <h1 className="mt-3 text-lg font-bold text-gray-900">Platform administrator access required</h1>
+        <p className="mt-2 text-sm text-gray-600">{body}</p>
+        <button
+          type="button"
+          onClick={onAction}
+          className="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white"
+        >
+          {actionLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
-  const { user, continueAsGuest, isPlatformAdmin, registerWithInvite, organizationSlug } = useAuth();
+  const {
+    user,
+    continueAsGuest,
+    isPlatformAdmin,
+    hasPlatformSession,
+    registerWithInvite,
+    organizationSlug,
+    logout,
+  } = useAuth();
   const [hash, setHash] = useState(window.location.hash);
   const [pathname, setPathname] = useState(window.location.pathname);
   const [venueAdminToken, setVenueAdminToken] = useState(() => captureVenueAdminInviteToken());
@@ -221,16 +256,27 @@ function AppContent() {
     );
   }
 
+  // platform_support can sign in on the platform door, but console RPCs are
+  // owner/admin only. Do not dump that session into AuthenticatedApp (#216
+  // complement). Do not use `user && !isPlatformAdmin` on every console hash —
+  // local-mode has a user and no platformRole, and must still open the workspace.
+  if (isPlatformConsoleHash(hash) && hasPlatformSession && !isPlatformAdmin) {
+    return (
+      <PlatformAccessDeniedCard
+        body="This platform login is not a platform administrator account. Sign out and use a platform owner or administrator login."
+        actionLabel="Sign out"
+        onAction={logout}
+      />
+    );
+  }
+
   if (hash.startsWith('#/platform-admin') && user && !isPlatformAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
-        <div className="max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-lg">
-          <div className="text-4xl">🔒</div>
-          <h1 className="mt-3 text-lg font-bold text-gray-900">Platform administrator access required</h1>
-          <p className="mt-2 text-sm text-gray-600">This account is not assigned a platform administrator role.</p>
-          <button type="button" onClick={() => { window.location.hash = ''; }} className="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white">Return to workspace</button>
-        </div>
-      </div>
+      <PlatformAccessDeniedCard
+        body="This account is not assigned a platform administrator role."
+        actionLabel="Return to workspace"
+        onAction={() => { window.location.hash = ''; }}
+      />
     );
   }
 
