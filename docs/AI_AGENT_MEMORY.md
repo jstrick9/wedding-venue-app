@@ -1145,6 +1145,19 @@ still parses. Create/accept use `wvip-auth-venue`.
 **Rule going forward:** treat #239 + §9.12–9.63 as current truth for
 staff org invites. Hunt continues on venue admin invite/auth.
 
+
+### 9.64 Platform login branding must not hang (Review #240, 2026-08-29)
+
+See `docs/reviews/240-platform-login-branding-timeout-2026-08-29.md`.
+
+`#/platform-login` must `withTimeout` `getPublicPlatformBranding` at 20s.
+Do not block Sign In on that RPC. Timeout or throw keeps default navy.
+Venue login branding already timed out at 20s (#233) because unsigned
+visitors need `organizationId`.
+
+**Rule going forward:** treat #240 + §9.12–9.64 as current truth for
+platform login branding. Hunt continues on venue admin invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

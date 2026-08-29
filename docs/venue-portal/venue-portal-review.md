@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Platform login branding timeout (#240, 2026-08-29)** — `#/platform-login` times out public branding at 20s and keeps default navy; Sign In already paints first. Full report: **`docs/reviews/240-platform-login-branding-timeout-2026-08-29.md`**.
 - ✅ **Staff invite timeout + path URL (#239, 2026-08-29)** — Invite Members times out send at 20s instead of staying on Sending invite…; emailed links are path-only `/accept-invite/<token>`. Full report: **`docs/reviews/239-staff-invite-timeout-path-2026-08-29.md`**.
 - ✅ **Forced password-change timeout (#238, 2026-08-29)** — Set a New Password times out changePassword at 20s instead of staying on Updating…. Full report: **`docs/reviews/238-force-password-timeout-2026-08-29.md`**.
 - ✅ **Create Account timeout (#237, 2026-08-29)** — `#/accept-invite/…` Create Account times out register at 20s instead of staying on Creating account…. Full report: **`docs/reviews/237-signup-timeout-2026-08-29.md`**.
