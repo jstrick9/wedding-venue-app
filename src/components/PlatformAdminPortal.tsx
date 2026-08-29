@@ -298,9 +298,14 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     setInviteCompose(null);
     try {
       setGeocoding(true);
-      const coordinates = await geocodeVenueAddress({ ...form, country: 'US' });
+      const coordinates = await withTimeout(
+        geocodeVenueAddress({ ...form, country: 'US' }),
+        15000,
+        'Address verification timed out. Select the street suggestion again, then create the venue.',
+      );
       setGeocoding(false);
-      const created = await createVenueOrganization({
+      const created = await withTimeout(
+        createVenueOrganization({
         ...form,
         country: 'US',
         primaryContactName: joinContactName(form.primaryContactFirstName, form.primaryContactLastName),
@@ -310,7 +315,10 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
         expiresAt: inviteExpiresAt(platformBranding.venueAdminInviteTtlDays, DEFAULT_NEW_INVITE_TTL_DAYS),
-      });
+      }),
+        20000,
+        'Creating the venue timed out. Sign in again at Platform login if this keeps happening.',
+      );
       setResult(created);
       const composeInput = {
         to: adminEmail.value,
