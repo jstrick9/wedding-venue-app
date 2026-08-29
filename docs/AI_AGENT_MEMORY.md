@@ -1080,6 +1080,19 @@ for this load.
 **Rule going forward:** treat #234 + §9.12–9.58 as current truth for
 staff session restore. Hunt continues on venue login / workspace auth.
 
+
+### 9.59 Signed-in venue login must not wait on branding (Review #235, 2026-08-29)
+
+See `docs/reviews/235-signed-in-venue-login-before-branding-2026-08-29.md`.
+
+`#/venue-login/<slug>` must show **Open Venue Workspace** as soon as the
+venue session slug matches, without waiting on `getPublicVenueBranding`.
+Do not replace that card with the branding timeout. Unsigned visitors
+still need the RPC for `organizationId` and keep the 20s timeout (#233).
+
+**Rule going forward:** treat #235 + §9.12–9.59 as current truth for
+venue login. Hunt continues on venue login / workspace auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
