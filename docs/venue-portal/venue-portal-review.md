@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Chat prefers live venue (#230, 2026-08-28)** — Chat tab no longer auto-selects an archived/suspended first row; active then provisioning is the default thread. Full report: **`docs/reviews/230-chat-prefer-live-venue-2026-08-28.md`**.
 - ✅ **Platform chat timeout (#229, 2026-08-28)** — Chat list and send time out at 20s instead of staying on Loading chat… / Sending…. Full report: **`docs/reviews/229-platform-chat-timeout-2026-08-28.md`**.
 - ✅ **Invite/lifecycle timeout (#228, 2026-08-28)** — reissue, revoke, suspend, and invite email send time out at 20s instead of leaving the operator on a disabled button. Full report: **`docs/reviews/228-invite-lifecycle-timeout-2026-08-28.md`**.
 - ✅ **Staff login/reset timeout (#227, 2026-08-28)** — Sign In, forgot-password send, and recovery save time out at 20s instead of staying on Signing in…. Full report: **`docs/reviews/227-login-and-reset-timeout-2026-08-28.md`**.

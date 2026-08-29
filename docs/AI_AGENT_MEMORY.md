@@ -1011,6 +1011,18 @@ leave Loading chat… or Sending… stuck when the thread RPC stalls.
 **Rule going forward:** treat #229 + §9.12–9.53 as current truth for
 platform chat. Hunt continues on platform console + invite/auth.
 
+### 9.54 Chat tab must not auto-select archived venues (Review #230, 2026-08-28)
+
+See `docs/reviews/230-chat-prefer-live-venue-2026-08-28.md`.
+
+Console Chat must default to an **active** (then provisioning) venue.
+Do not auto-open `organizations[0]` when that row is archived or
+suspended. Those tenants stay selectable by hand.
+
+**Rule going forward:** treat #230 + §9.12–9.54 as current truth for
+platform chat defaults. Hunt continues on platform console +
+invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
