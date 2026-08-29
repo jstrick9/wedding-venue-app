@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Staff invite timeout + path URL (#239, 2026-08-29)** — Invite Members times out send at 20s instead of staying on Sending invite…; emailed links are path-only `/accept-invite/<token>`. Full report: **`docs/reviews/239-staff-invite-timeout-path-2026-08-29.md`**.
 - ✅ **Forced password-change timeout (#238, 2026-08-29)** — Set a New Password times out changePassword at 20s instead of staying on Updating…. Full report: **`docs/reviews/238-force-password-timeout-2026-08-29.md`**.
 - ✅ **Create Account timeout (#237, 2026-08-29)** — `#/accept-invite/…` Create Account times out register at 20s instead of staying on Creating account…. Full report: **`docs/reviews/237-signup-timeout-2026-08-29.md`**.
 - ✅ **Accept invite timeout (#236, 2026-08-29)** — `#/accept-invite/…` times out accept at 20s instead of staying on Accepting invite…; refreshSession times out the same way. Full report: **`docs/reviews/236-accept-invite-timeout-2026-08-29.md`**.

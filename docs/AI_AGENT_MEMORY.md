@@ -1131,6 +1131,20 @@ already timed out at 20s (#227). Cloud venue users do not set
 **Rule going forward:** treat #238 + §9.12–9.62 as current truth for
 forced password change. Hunt continues on venue login / workspace auth.
 
+
+### 9.63 Staff invite send must not hang (Review #239, 2026-08-29)
+
+See `docs/reviews/239-staff-invite-timeout-path-2026-08-29.md`.
+
+Venue Admin Invite Members must `withTimeout` `createInvite` at 20s and
+must `try/finally` so Sending invite… does not last forever. Emailed
+staff invite URLs must be path-only `/accept-invite/<token>` (same
+Outlook/Brevo stripping as `/i/<token>`). Hash `#/accept-invite/<token>`
+still parses. Create/accept use `wvip-auth-venue`.
+
+**Rule going forward:** treat #239 + §9.12–9.63 as current truth for
+staff org invites. Hunt continues on venue admin invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
