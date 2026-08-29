@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getPublicVenueBranding, type PublicVenueBranding } from '../services/platform/publicVenueService';
+import { withTimeout } from '../utils/withTimeout';
 import { LoginScreen } from './LoginScreen';
 import { NEUTRAL_LOGIN_CONFIG, applyLoginBranding, loginBackgroundStyle, resolveLoginChrome } from '../utils/loginBranding';
 import type { Config } from '../types';
@@ -60,19 +61,35 @@ export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
   const { user, organizationId, loginForOrganization, logout } = useAuth();
   const [venue, setVenue] = useState<PublicVenueBranding | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retryId, setRetryId] = useState(0);
 
   useEffect(() => {
     applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
     let cancelled = false;
     setLoading(true);
-    void getPublicVenueBranding(slug).then((result) => {
-      if (cancelled) return;
-      setVenue(result);
-      if (result) applyLoginBranding(result.config);
-      setLoading(false);
-    });
+    setVenue(null);
+    setLoadError('');
+    void (async () => {
+      try {
+        const result = await withTimeout(
+          getPublicVenueBranding(slug),
+          20000,
+          'Loading venue sign-in timed out. Check the venue link and try again.',
+        );
+        if (cancelled) return;
+        setVenue(result);
+        if (result) applyLoginBranding(result.config);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        setVenue(null);
+        setLoadError(err instanceof Error ? err.message : 'Could not load venue sign-in.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => { cancelled = true; };
-  }, [slug]);
+  }, [slug, retryId]);
 
   if (loading) {
     return (
@@ -81,6 +98,20 @@ export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
         icon="🏛️"
         title="Loading venue sign-in"
         body="Preparing this venue’s branded login…"
+      />
+    );
+  }
+
+  if (loadError) {
+    return (
+      <VenueAuthStatusCard
+        branding={NEUTRAL_LOGIN_CONFIG}
+        icon="🏛️"
+        title="Venue sign-in timed out"
+        body={loadError}
+        actionLabel="Try again"
+        onAction={() => { setRetryId((current) => current + 1); }}
+        secondary={{ label: 'Platform login', onClick: () => { window.location.hash = '#/platform-login'; } }}
       />
     );
   }
