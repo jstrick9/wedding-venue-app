@@ -989,6 +989,18 @@ so a thrown error still clears the busy state.
 staff login and password reset. Hunt continues on platform console +
 invite/auth.
 
+### 9.52 Reissue, revoke, suspend, and invite email must not hang (Review #228, 2026-08-28)
+
+See `docs/reviews/228-invite-lifecycle-timeout-2026-08-28.md`.
+
+Reissue, revoke, suspend, and Brevo invite send must `withTimeout` at
+20s. Do not leave Reissue & email invite disabled, or Creating venue…
+stuck after the tenant already exists, when the RPC or email stalls.
+
+**Rule going forward:** treat #228 + §9.12–9.52 as current truth for
+platform console invite/lifecycle mutations. Hunt continues on
+platform console + invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

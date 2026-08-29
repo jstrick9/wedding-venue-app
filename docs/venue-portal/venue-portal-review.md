@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Invite/lifecycle timeout (#228, 2026-08-28)** — reissue, revoke, suspend, and invite email send time out at 20s instead of leaving the operator on a disabled button. Full report: **`docs/reviews/228-invite-lifecycle-timeout-2026-08-28.md`**.
 - ✅ **Staff login/reset timeout (#227, 2026-08-28)** — Sign In, forgot-password send, and recovery save time out at 20s instead of staying on Signing in…. Full report: **`docs/reviews/227-login-and-reset-timeout-2026-08-28.md`**.
 - ✅ **Invite preview scoped to venue (#226, 2026-08-28)** — onboard/reissue HTML preview no longer follows the operator onto another venue’s detail. Full report: **`docs/reviews/226-invite-preview-scoped-to-venue-2026-08-28.md`**.
 - ✅ **Archived venues restorable (#225, 2026-08-28)** — archived venue detail has Restore venue (existing reactivate RPC). Full report: **`docs/reviews/225-archived-venues-restorable-2026-08-28.md`**.
