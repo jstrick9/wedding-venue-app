@@ -952,6 +952,18 @@ stuck.
 venue-admin invite setup. Hunt continues on platform console +
 invite/auth.
 
+### 9.49 Archived venues must be restorable (Review #225, 2026-08-28)
+
+See `docs/reviews/225-archived-venues-restorable-2026-08-28.md`.
+
+Archived venue detail must show **Restore venue**, which calls
+`reactivate_venue_organization`. Do not leave Archive as a one-way
+door. Suspended still uses Reactivate. No new SQL.
+
+**Rule going forward:** treat #225 + §9.12–9.49 as current truth for
+platform console lifecycle. Hunt continues on platform console +
+invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
