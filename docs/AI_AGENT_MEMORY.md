@@ -1093,6 +1093,19 @@ still need the RPC for `organizationId` and keep the 20s timeout (#233).
 **Rule going forward:** treat #235 + §9.12–9.59 as current truth for
 venue login. Hunt continues on venue login / workspace auth.
 
+
+### 9.60 Accepting a staff invite must not hang (Review #236, 2026-08-29)
+
+See `docs/reviews/236-accept-invite-timeout-2026-08-29.md`.
+
+`#/accept-invite/<token>` must `withTimeout` `acceptInvite` at 20s and
+must catch thrown errors so Accepting invite… does not last forever.
+Cloud `refreshSession` must `withTimeout` dual-session restore at 20s.
+Refresh after a successful accept stays best-effort.
+
+**Rule going forward:** treat #236 + §9.12–9.60 as current truth for
+staff org invites. Hunt continues on venue login / workspace auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
