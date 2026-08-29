@@ -29,6 +29,7 @@ import {
 import { migrateLegacyAuthSessions, setAuthSurface } from '../services/backend/supabaseClient';
 import { detectAuthSurface, type AuthSurface } from '../utils/authSurface';
 import { loginHashAfterLogout } from '../utils/loginRoute';
+import { withTimeout } from '../utils/withTimeout';
 
 export interface AuthRegistrationParams {
   email: string;
@@ -160,26 +161,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (shouldUseSupabaseAuth()) {
       let cancelled = false;
       void (async () => {
-        await migrateLegacyAuthSessions();
-        const [platform, venue] = await Promise.all([
-          restoreSupabaseSession(undefined, 'platform'),
-          restoreSupabaseSession(undefined, 'venue'),
-        ]);
-        if (cancelled) return;
-        setPlatformAuth(platform);
-        setVenueAuth(venue);
-        const active = detectAuthSurface() === 'venue' ? venue : platform;
-        if (active?.user) {
-          applyCloudSession(active, setUser, setOrganizationId, setOrganizationSlug, setPlatformRole);
-          if (venue?.organizationSlug) setActiveOrganizationSlug(venue.organizationSlug);
-        } else {
+        try {
+          const [platform, venue] = await withTimeout((async () => {
+            await migrateLegacyAuthSessions();
+            return Promise.all([
+              restoreSupabaseSession(undefined, 'platform'),
+              restoreSupabaseSession(undefined, 'venue'),
+            ]);
+          })(), 20000, 'Restoring sign-in timed out.');
+          if (cancelled) return;
+          setPlatformAuth(platform);
+          setVenueAuth(venue);
+          const active = detectAuthSurface() === 'venue' ? venue : platform;
+          if (active?.user) {
+            applyCloudSession(active, setUser, setOrganizationId, setOrganizationSlug, setPlatformRole);
+            if (venue?.organizationSlug) setActiveOrganizationSlug(venue.organizationSlug);
+          } else {
+            clearSession();
+            setOrganizationId(venue?.organizationId ?? null);
+            setOrganizationSlug(venue?.organizationSlug ?? null);
+            setActiveOrganizationSlug(venue?.organizationSlug ?? getActiveOrganizationSlug() ?? null);
+            setPlatformRole(platform?.platformRole ?? null);
+          }
+        } catch {
+          if (cancelled) return;
+          setPlatformAuth(null);
+          setVenueAuth(null);
           clearSession();
-          setOrganizationId(venue?.organizationId ?? null);
-          setOrganizationSlug(venue?.organizationSlug ?? null);
-          setActiveOrganizationSlug(venue?.organizationSlug ?? getActiveOrganizationSlug() ?? null);
-          setPlatformRole(platform?.platformRole ?? null);
+        } finally {
+          if (!cancelled) setInitialized(true);
         }
-        setInitialized(true);
       })();
       return () => {
         cancelled = true;
