@@ -1106,8 +1106,21 @@ Refresh after a successful accept stays best-effort.
 **Rule going forward:** treat #236 + §9.12–9.60 as current truth for
 staff org invites. Hunt continues on venue login / workspace auth.
 
+
+### 9.61 Creating a staff invite account must not hang (Review #237, 2026-08-29)
+
+See `docs/reviews/237-signup-timeout-2026-08-29.md`.
+
+`LoginScreen` Create Account (`handleSignUpSubmit`) must `withTimeout`
+`register` at 20s and must `try/finally` so Creating account… does not
+last forever. Sign In already timed out at 20s (#227).
+
+**Rule going forward:** treat #237 + §9.12–9.61 as current truth for
+staff invite sign-up. Hunt continues on venue login / workspace auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
+
 
 
 

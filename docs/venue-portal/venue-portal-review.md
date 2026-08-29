@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Create Account timeout (#237, 2026-08-29)** — `#/accept-invite/…` Create Account times out register at 20s instead of staying on Creating account…. Full report: **`docs/reviews/237-signup-timeout-2026-08-29.md`**.
 - ✅ **Accept invite timeout (#236, 2026-08-29)** — `#/accept-invite/…` times out accept at 20s instead of staying on Accepting invite…; refreshSession times out the same way. Full report: **`docs/reviews/236-accept-invite-timeout-2026-08-29.md`**.
 - ✅ **Signed-in venue login before branding (#235, 2026-08-29)** — a matching venue session shows Open Venue Workspace immediately instead of waiting on public branding. Full report: **`docs/reviews/235-signed-in-venue-login-before-branding-2026-08-29.md`**.
 - ✅ **Session restore timeout (#234, 2026-08-29)** — cloud boot restore times out at 20s instead of leaving venue/platform login on Loading…; init always finishes. Full report: **`docs/reviews/234-session-restore-timeout-2026-08-29.md`**.
