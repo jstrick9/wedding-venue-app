@@ -1118,6 +1118,19 @@ last forever. Sign In already timed out at 20s (#227).
 **Rule going forward:** treat #237 + §9.12–9.61 as current truth for
 staff invite sign-up. Hunt continues on venue login / workspace auth.
 
+
+### 9.62 Forced password change must not hang (Review #238, 2026-08-29)
+
+See `docs/reviews/238-force-password-timeout-2026-08-29.md`.
+
+`ForcePasswordChange` Update Password must `withTimeout` `changePassword`
+at 20s and must `try/finally` so Updating… does not last forever. Sign In
+already timed out at 20s (#227). Cloud venue users do not set
+`requiresPasswordChange`; this gate is the local first-login path.
+
+**Rule going forward:** treat #238 + §9.12–9.62 as current truth for
+forced password change. Hunt continues on venue login / workspace auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
