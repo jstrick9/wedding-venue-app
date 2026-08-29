@@ -18,4 +18,14 @@ describe('AuthContext hang guards', () => {
     expect(init).toContain('finally');
     expect(init).toContain('setInitialized(true)');
   });
+
+  it('times out cloud refreshSession', () => {
+    const source = readFileSync(join(process.cwd(), 'src/contexts/AuthContext.tsx'), 'utf8');
+    const refresh = source.slice(source.indexOf('const refreshSession'), source.indexOf('const changePassword'));
+    expect(refresh).toContain('Refreshing sign-in timed out.');
+    expect(refresh).toContain('withTimeout');
+    expect(refresh).toContain('20000');
+    expect(refresh).toContain("restoreSupabaseSession(undefined, 'platform')");
+    expect(refresh).toContain("restoreSupabaseSession(undefined, 'venue')");
+  });
 });

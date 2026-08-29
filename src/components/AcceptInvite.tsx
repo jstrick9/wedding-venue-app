@@ -3,6 +3,7 @@ import { acceptInvite } from '../services/org/inviteService';
 import { getConfig } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { resolveLoginChrome } from '../utils/loginBranding';
+import { withTimeout } from '../utils/withTimeout';
 
 interface AcceptInviteProps {
   token: string;
@@ -24,27 +25,37 @@ export function AcceptInvite({ token, onDone }: AcceptInviteProps) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const res = await acceptInvite(token);
-      if (cancelled) return;
-      if (res.ok) {
-        try {
-          await refreshSession();
-        } catch {
-          // Session refresh is best-effort; onDone still navigates home.
-        }
+    void (async () => {
+      try {
+        const res = await withTimeout(
+          acceptInvite(token),
+          20000,
+          'Accepting this invite timed out. Check your connection and try again.',
+        );
         if (cancelled) return;
-        setState('success');
-        setMessage('You have joined the workspace.');
-        setTimeout(() => {
-          if (!cancelled && !doneRef.current) {
-            doneRef.current = true;
-            onDone();
+        if (res.ok) {
+          try {
+            await refreshSession();
+          } catch {
+            // Session refresh is best-effort; onDone still navigates home.
           }
-        }, 800);
-      } else {
+          if (cancelled) return;
+          setState('success');
+          setMessage('You have joined the workspace.');
+          setTimeout(() => {
+            if (!cancelled && !doneRef.current) {
+              doneRef.current = true;
+              onDone();
+            }
+          }, 800);
+        } else {
+          setState('error');
+          setMessage(res.error || 'Could not accept this invite.');
+        }
+      } catch (err: unknown) {
+        if (cancelled) return;
         setState('error');
-        setMessage(res.error || 'Could not accept this invite.');
+        setMessage(err instanceof Error ? err.message : 'Could not accept this invite.');
       }
     })();
     return () => { cancelled = true; };

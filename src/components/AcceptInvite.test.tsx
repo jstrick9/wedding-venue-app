@@ -55,4 +55,17 @@ describe('AcceptInvite', () => {
     });
     expect(refreshSessionMock).not.toHaveBeenCalled();
   });
+
+  it("clears Accepting invite when accept times out", async () => {
+    acceptInviteMock.mockRejectedValue(
+      new Error('Accepting this invite timed out. Check your connection and try again.'),
+    );
+
+    render(<AcceptInvite token="invite-token" onDone={vi.fn()} />);
+
+    expect(await screen.findByRole('heading', { name: /invite issue/i })).toBeInTheDocument();
+    expect(screen.getByText(/accepting this invite timed out/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to workspace/i })).toBeInTheDocument();
+    expect(refreshSessionMock).not.toHaveBeenCalled();
+  });
 });

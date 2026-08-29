@@ -487,10 +487,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshSession = useCallback(async (): Promise<void> => {
     if (shouldUseSupabaseAuth()) {
-      const [platform, venue] = await Promise.all([
-        restoreSupabaseSession(undefined, 'platform'),
-        restoreSupabaseSession(undefined, 'venue'),
-      ]);
+      const [platform, venue] = await withTimeout(
+        Promise.all([
+          restoreSupabaseSession(undefined, 'platform'),
+          restoreSupabaseSession(undefined, 'venue'),
+        ]),
+        20000,
+        'Refreshing sign-in timed out.',
+      );
       setPlatformAuth(platform);
       setVenueAuth(venue);
       return;
