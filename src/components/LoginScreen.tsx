@@ -239,14 +239,23 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
       return;
     }
     setIsSigningUp(true);
-    const err = await register({
-      email: signUpForm.email.trim(),
-      password: signUpForm.password,
-      fullName: signUpForm.fullName.trim(),
-      organizationName: signUpForm.organizationName.trim() || undefined,
-    });
-    setIsSigningUp(false);
-    if (err) setSignUpError(err);
+    try {
+      const err = await withTimeout(
+        register({
+          email: signUpForm.email.trim(),
+          password: signUpForm.password,
+          fullName: signUpForm.fullName.trim(),
+          organizationName: signUpForm.organizationName.trim() || undefined,
+        }),
+        20000,
+        'Creating the account timed out. Check your connection and try again.',
+      );
+      if (err) setSignUpError(err);
+    } catch (err) {
+      setSignUpError(err instanceof Error ? err.message : 'Unable to create your account.');
+    } finally {
+      setIsSigningUp(false);
+    }
   };
 
   return (

@@ -11,6 +11,12 @@ describe('Staff login hang guards', () => {
     expect(submit).toContain('finally');
     expect(submit).toContain('setIsLoading(false)');
 
+    const signup = login.slice(login.indexOf('const handleSignUpSubmit'), login.indexOf('relative min-h-screen'));
+    expect(signup).toContain('Creating the account timed out');
+    expect(signup).toContain('withTimeout');
+    expect(signup).toContain('finally');
+    expect(signup).toContain('setIsSigningUp(false)');
+
     const reset = readFileSync(join(process.cwd(), 'src/components/PasswordReset.tsx'), 'utf8');
     expect(reset).toContain('Sending the reset email timed out');
     expect(reset).toContain('requestSupabasePasswordReset');
