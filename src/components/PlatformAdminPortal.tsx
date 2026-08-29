@@ -48,6 +48,7 @@ import {
   isInviteExpired,
   isPendingInviteLive,
   listVenueRegions,
+  preferredChatOrganization,
 } from '../utils/platformVenueFilters';
 import { applyDocumentBranding } from '../utils/documentBranding';
 
@@ -253,7 +254,8 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
 
   useEffect(() => {
     if (route.section !== 'chat' || chatOrganizationId || organizations.length === 0) return;
-    setChatOrganizationId(organizations[0].id);
+    const preferred = preferredChatOrganization(organizations);
+    if (preferred) setChatOrganizationId(preferred.id);
   }, [route.section, chatOrganizationId, organizations]);
 
   const regions = useMemo(() => listVenueRegions(organizations), [organizations]);

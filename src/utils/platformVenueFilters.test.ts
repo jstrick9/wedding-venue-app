@@ -6,6 +6,7 @@ import {
   isInviteExpired,
   isPendingInviteLive,
   listVenueRegions,
+  preferredChatOrganization,
   venueRegionLabel,
 } from './platformVenueFilters';
 
@@ -98,5 +99,16 @@ describe('platform venue filters', () => {
     expect(filterPlatformVenues([live, expired, claimed], { queue: 'awaiting-admin' }).map((venue) => venue.id)).toEqual(['org-live']);
     expect(filterPlatformVenues([live, expired, claimed], { queue: 'pending-invite' }).map((venue) => venue.id)).toEqual(['org-live']);
     expect(filterPlatformVenues([live, expired, claimed], { queue: 'expired-invite' }).map((venue) => venue.id)).toEqual(['org-expired']);
+  });
+
+  it('prefers an active venue for Chat instead of archived or suspended', () => {
+    const archived = org({ id: 'org-archived', name: 'River Hall', status: 'archived' });
+    const suspended = org({ id: 'org-suspended', name: 'Lakeside Chapel', status: 'suspended' });
+    const provisioning = org({ id: 'org-provisioning', name: 'Hilltop Barn', status: 'provisioning' });
+    const active = org({ id: 'org-active', name: 'Seven Paths Manor', status: 'active' });
+    expect(preferredChatOrganization([archived, suspended, provisioning, active])?.id).toBe('org-active');
+    expect(preferredChatOrganization([archived, provisioning])?.id).toBe('org-provisioning');
+    expect(preferredChatOrganization([archived, suspended])?.id).toBe('org-archived');
+    expect(preferredChatOrganization([])).toBeNull();
   });
 });

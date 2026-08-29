@@ -441,4 +441,17 @@ describe('PlatformAdminPortal console', () => {
     expect(screen.getByRole('button', { name: /reissue & email invite/i })).toBeEnabled();
   });
 
+
+  it('does not auto-select an archived venue on the Chat tab', async () => {
+    listOrganizationsMock.mockResolvedValue([
+      org({ id: 'org-3', name: 'River Hall', slug: 'river-hall', status: 'archived' }),
+      org(),
+    ]);
+    window.location.hash = '#/platform-admin/chat';
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+    expect(await screen.findByText('Chat stub Seven Paths Manor')).toBeInTheDocument();
+    expect(screen.queryByText('Chat stub River Hall')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'River Hall' })).toBeInTheDocument();
+  });
+
 });

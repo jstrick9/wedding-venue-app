@@ -52,6 +52,19 @@ export function isPendingInviteLive(organization: PlatformOrganizationSummary, n
   return Boolean(organization.pendingInvite) && !isInviteExpired(organization, now);
 }
 
+/** Chat tab default: live tenants first. Archived/suspended stay selectable, not auto-opened. */
+export function preferredChatOrganization<T extends { status: OrganizationStatus }>(
+  organizations: T[],
+): T | null {
+  if (organizations.length === 0) return null;
+  return (
+    organizations.find((organization) => organization.status === 'active')
+    || organizations.find((organization) => organization.status === 'provisioning')
+    || organizations.find((organization) => organization.status !== 'archived' && organization.status !== 'suspended')
+    || organizations[0]
+  );
+}
+
 export function filterPlatformVenues(
   organizations: PlatformOrganizationSummary[],
   filter: PlatformVenueFilter = {},
