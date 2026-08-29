@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Branding save timeout (#231, 2026-08-28)** — Save Platform Branding and logo upload time out at 20s instead of staying on Saving…. Full report: **`docs/reviews/231-branding-save-timeout-2026-08-28.md`**.
 - ✅ **Chat prefers live venue (#230, 2026-08-28)** — Chat tab no longer auto-selects an archived/suspended first row; active then provisioning is the default thread. Full report: **`docs/reviews/230-chat-prefer-live-venue-2026-08-28.md`**.
 - ✅ **Platform chat timeout (#229, 2026-08-28)** — Chat list and send time out at 20s instead of staying on Loading chat… / Sending…. Full report: **`docs/reviews/229-platform-chat-timeout-2026-08-28.md`**.
 - ✅ **Invite/lifecycle timeout (#228, 2026-08-28)** — reissue, revoke, suspend, and invite email send time out at 20s instead of leaving the operator on a disabled button. Full report: **`docs/reviews/228-invite-lifecycle-timeout-2026-08-28.md`**.

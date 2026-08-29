@@ -1023,6 +1023,17 @@ suspended. Those tenants stay selectable by hand.
 platform chat defaults. Hunt continues on platform console +
 invite/auth.
 
+### 9.55 Branding save and logo upload must not hang (Review #231, 2026-08-28)
+
+See `docs/reviews/231-branding-save-timeout-2026-08-28.md`.
+
+Save Platform Branding (invite templates and TTL) and logo upload must
+`withTimeout` at 20s. Do not leave Saving… stuck when storage stalls.
+
+**Rule going forward:** treat #231 + §9.12–9.55 as current truth for
+platform branding save. Hunt continues on platform console +
+invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
