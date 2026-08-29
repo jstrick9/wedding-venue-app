@@ -1066,6 +1066,20 @@ paint first the way platform login hydrates branding in the background.
 venue login branding. Hunt continues on platform console + invite/auth,
 then the next adjacent staff surface (venue login/workspace auth).
 
+
+### 9.58 Session restore must not hang boot (Review #234, 2026-08-29)
+
+See `docs/reviews/234-session-restore-timeout-2026-08-29.md`.
+
+Cloud AuthProvider boot must `withTimeout` legacy migrate + platform and
+venue `restoreSupabaseSession` at 20s. Do not leave the app on
+Loading... when `getSession` stalls. Always `setInitialized(true)` so
+venue and platform login can paint. A timed-out restore is signed-out
+for this load.
+
+**Rule going forward:** treat #234 + §9.12–9.58 as current truth for
+staff session restore. Hunt continues on venue login / workspace auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
