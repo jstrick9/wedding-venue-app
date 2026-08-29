@@ -269,7 +269,11 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const handleSavePlatformBranding = async (next: typeof platformBranding) => {
     setBrandingSaving(true);
     try {
-      await savePlatformBranding(next);
+      await withTimeout(
+        savePlatformBranding(next),
+        20000,
+        'Saving platform branding timed out. Sign in again at Platform login if this keeps happening.',
+      );
       setPlatformBranding(next);
       showToast('Platform branding saved.', 'success');
     } catch (err) {
@@ -283,11 +287,17 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
     if (!file) return;
+    setBrandingSaving(true);
     try {
-      const logoUrl = await uploadPublicBrandingAsset(file, 'platform');
+      const logoUrl = await withTimeout(
+        uploadPublicBrandingAsset(file, 'platform'),
+        20000,
+        'Uploading the platform logo timed out. Try a smaller image, or sign in again at Platform login if this keeps happening.',
+      );
       await handleSavePlatformBranding({ ...platformBranding, logoUrl });
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not upload platform logo.', 'warning');
+      setBrandingSaving(false);
     }
   };
 

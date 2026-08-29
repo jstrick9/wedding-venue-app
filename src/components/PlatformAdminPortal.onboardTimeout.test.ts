@@ -43,3 +43,15 @@ describe('PlatformAdminPortal invite and lifecycle hang guards', () => {
     expect(mailSlice).toContain('withTimeout');
   });
 });
+
+describe('PlatformAdminPortal branding hang guards', () => {
+  it('times out branding save and logo upload', () => {
+    const source = readFileSync(join(process.cwd(), 'src/components/PlatformAdminPortal.tsx'), 'utf8');
+    expect(source).toContain('Saving platform branding timed out');
+    expect(source).toContain('Uploading the platform logo timed out');
+    const saveSlice = source.slice(source.indexOf('const handleSavePlatformBranding'), source.indexOf('const handleCreateVenue'));
+    expect(saveSlice).toContain('savePlatformBranding');
+    expect(saveSlice).toContain('uploadPublicBrandingAsset');
+    expect(saveSlice).toContain('withTimeout');
+  });
+});

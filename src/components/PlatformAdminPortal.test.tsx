@@ -9,6 +9,7 @@ const updateVenueMock = vi.fn();
 const reactivateMock = vi.fn();
 const reissueMock = vi.fn();
 const geocodeMock = vi.fn();
+const saveBrandingMock = vi.fn();
 const logoutMock = vi.fn();
 const authState = {
   user: { email: 'platform@example.com', name: 'Platform Admin' },
@@ -56,7 +57,7 @@ vi.mock('../services/platform/platformAdminService', () => ({
 
 vi.mock('../services/platform/platformBrandingService', () => ({
   getPlatformBranding: () => Promise.resolve({}),
-  savePlatformBranding: vi.fn(),
+  savePlatformBranding: (...args: unknown[]) => saveBrandingMock(...args),
 }));
 
 vi.mock('../services/platform/geocodingService', () => ({
@@ -203,6 +204,7 @@ describe('PlatformAdminPortal console', () => {
       inviteUrl: 'https://weddingvip.vercel.app/i/va-newtoken',
       expiresAt: '2026-09-10T00:00:00.000Z',
     });
+    saveBrandingMock.mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -452,6 +454,22 @@ describe('PlatformAdminPortal console', () => {
     expect(await screen.findByText('Chat stub Seven Paths Manor')).toBeInTheDocument();
     expect(screen.queryByText('Chat stub River Hall')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'River Hall' })).toBeInTheDocument();
+  });
+
+
+  it('does not stay on Saving when platform branding never returns', async () => {
+    window.location.hash = '#/platform-admin/branding';
+    saveBrandingMock.mockImplementation(() => new Promise(() => {}));
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+    const save = await screen.findByRole('button', { name: /save platform branding/i });
+    vi.useFakeTimers();
+    fireEvent.click(save);
+    expect(screen.getByRole('button', { name: /saving/i })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(21000);
+    });
+    vi.useRealTimers();
+    expect(screen.getByRole('button', { name: /save platform branding/i })).toBeEnabled();
   });
 
 });
