@@ -976,6 +976,19 @@ the operator onto the next venue’s detail.
 platform console invite preview. Hunt continues on platform console +
 invite/auth.
 
+### 9.51 Staff login and password reset must not hang (Review #227, 2026-08-28)
+
+See `docs/reviews/227-login-and-reset-timeout-2026-08-28.md`.
+
+Platform Sign In, forgot-password send, and `/reset/…` save must
+`withTimeout` at 20s. Do not leave Signing in… / Sending Reset Link /
+Saving password… stuck when Auth stalls. Sign In must `try/finally`
+so a thrown error still clears the busy state.
+
+**Rule going forward:** treat #227 + §9.12–9.51 as current truth for
+staff login and password reset. Hunt continues on platform console +
+invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
