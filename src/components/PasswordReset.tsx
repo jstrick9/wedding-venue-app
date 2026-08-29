@@ -139,13 +139,12 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
     setError('');
     setLoading(true);
 
-    // Cloud mode: delegate to Supabase Auth recovery so real accounts can reset
-    // their password by email. No local code is generated.
-    if (usingSupabaseAuth) {
-      try {
+    try {
+      // Cloud mode: delegate to Supabase Auth recovery so real accounts can reset
+      // their password by email. No local code is generated.
+      if (usingSupabaseAuth) {
         if (!email.trim()) {
           setError('Enter the email address for your Supabase account.');
-          setLoading(false);
           return;
         }
         await withTimeout(
@@ -154,104 +153,113 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
           'Sending the reset email timed out. Try again, or check your connection.',
         );
         setStep('verify');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not send a password reset email.');
-      } finally {
-        setLoading(false);
+        return;
       }
-      return;
-    }
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const users = getUsers();
-    const normalizedUsername = username.trim().toLowerCase();
-    const normalizedEmail = email.trim().toLowerCase();
+      const users = getUsers();
+      const normalizedUsername = username.trim().toLowerCase();
+      const normalizedEmail = email.trim().toLowerCase();
 
-    const matchedUser = users.find(
-      (u) =>
-        u.username.toLowerCase() === normalizedUsername ||
-        (u.email && u.email.toLowerCase() === normalizedEmail),
-    ) as
-      | (typeof users[number] & {
-          securityQuestion?: string;
-          securityAnswer?: string;
-        })
-      | undefined;
+      const matchedUser = users.find(
+        (u) =>
+          u.username.toLowerCase() === normalizedUsername ||
+          (u.email && u.email.toLowerCase() === normalizedEmail),
+      ) as
+        | (typeof users[number] & {
+            securityQuestion?: string;
+            securityAnswer?: string;
+          })
+        | undefined;
 
-    if (!matchedUser) {
-      setError('No account found with that username or email.');
+      if (!matchedUser) {
+        setError('No account found with that username or email.');
+        return;
+      }
+
+      setResolvedUsername(matchedUser.username);
+
+      if (matchedUser.securityQuestion) {
+        setUserSecurityQuestion(matchedUser.securityQuestion);
+      } else {
+        setUserSecurityQuestion('');
+      }
+
+      const code = generateCode();
+      setCodeGenerated(true);
+      setDisplayCode(isDemoMode ? code : '');
+
+      const expiry = new Date(Date.now() + 10 * 60 * 1000);
+      setCodeExpiry(expiry);
+      setTimeRemaining(600);
+
+      const secretRecord = await createSecretRecord(code);
+
+      const storedRecord: StoredResetCodeRecord = {
+        codeHash: secretRecord.hash,
+        codeSalt: secretRecord.salt,
+        username: matchedUser.username,
+        expiry: expiry.toISOString(),
+      };
+
+      localStorage.setItem(
+        STORAGE_KEYS.PASSWORD_RESET_CODE,
+        JSON.stringify(storedRecord),
+      );
+
+      setStep('verify');
+      setResendCooldown(60);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : usingSupabaseAuth
+            ? 'Could not send a password reset email.'
+            : 'Could not send a verification code.',
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setResolvedUsername(matchedUser.username);
-
-    if (matchedUser.securityQuestion) {
-      setUserSecurityQuestion(matchedUser.securityQuestion);
-    } else {
-      setUserSecurityQuestion('');
-    }
-
-    const code = generateCode();
-    setCodeGenerated(true);
-    setDisplayCode(isDemoMode ? code : '');
-
-    const expiry = new Date(Date.now() + 10 * 60 * 1000);
-    setCodeExpiry(expiry);
-    setTimeRemaining(600);
-
-    const secretRecord = await createSecretRecord(code);
-
-    const storedRecord: StoredResetCodeRecord = {
-      codeHash: secretRecord.hash,
-      codeSalt: secretRecord.salt,
-      username: matchedUser.username,
-      expiry: expiry.toISOString(),
-    };
-
-    localStorage.setItem(
-      STORAGE_KEYS.PASSWORD_RESET_CODE,
-      JSON.stringify(storedRecord),
-    );
-
-    setLoading(false);
-    setStep('verify');
-    setResendCooldown(60);
   };
 
   const handleResendCode = async () => {
     if (resendCooldown > 0) return;
 
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const code = generateCode();
-    setCodeGenerated(true);
-    setDisplayCode(isDemoMode ? code : '');
+      const code = generateCode();
+      setCodeGenerated(true);
+      setDisplayCode(isDemoMode ? code : '');
 
-    const expiry = new Date(Date.now() + 10 * 60 * 1000);
-    setCodeExpiry(expiry);
-    setTimeRemaining(600);
+      const expiry = new Date(Date.now() + 10 * 60 * 1000);
+      setCodeExpiry(expiry);
+      setTimeRemaining(600);
 
-    const secretRecord = await createSecretRecord(code);
+      const secretRecord = await createSecretRecord(code);
 
-    const storedRecord: StoredResetCodeRecord = {
-      codeHash: secretRecord.hash,
-      codeSalt: secretRecord.salt,
-      username: (resolvedUsername || username).trim(),
-      expiry: expiry.toISOString(),
-    };
+      const storedRecord: StoredResetCodeRecord = {
+        codeHash: secretRecord.hash,
+        codeSalt: secretRecord.salt,
+        username: (resolvedUsername || username).trim(),
+        expiry: expiry.toISOString(),
+      };
 
-    localStorage.setItem(
-      STORAGE_KEYS.PASSWORD_RESET_CODE,
-      JSON.stringify(storedRecord),
-    );
+      localStorage.setItem(
+        STORAGE_KEYS.PASSWORD_RESET_CODE,
+        JSON.stringify(storedRecord),
+      );
 
-    setResendCooldown(60);
-    setVerificationCode('');
-    setError('');
-    setLoading(false);
+      setResendCooldown(60);
+      setVerificationCode('');
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend the verification code.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerifyCode = async () => {
@@ -323,48 +331,52 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
     }
 
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const users = getUsers();
-    const storedResetRaw = localStorage.getItem(STORAGE_KEYS.PASSWORD_RESET_CODE);
-    const storedReset = storedResetRaw
-      ? (JSON.parse(storedResetRaw) as { username?: string })
-      : null;
+      const users = getUsers();
+      const storedResetRaw = localStorage.getItem(STORAGE_KEYS.PASSWORD_RESET_CODE);
+      const storedReset = storedResetRaw
+        ? (JSON.parse(storedResetRaw) as { username?: string })
+        : null;
 
-    const effectiveUsername = (
-      resolvedUsername ||
-      storedReset?.username ||
-      username
-    )
-      .trim()
-      .toLowerCase();
+      const effectiveUsername = (
+        resolvedUsername ||
+        storedReset?.username ||
+        username
+      )
+        .trim()
+        .toLowerCase();
 
-    const userIndex = users.findIndex(
-      (u) => u.username.toLowerCase() === effectiveUsername,
-    );
+      const userIndex = users.findIndex(
+        (u) => u.username.toLowerCase() === effectiveUsername,
+      );
 
-    if (userIndex === -1) {
-      setError('User not found. Please try again.');
+      if (userIndex === -1) {
+        setError('User not found. Please try again.');
+        return;
+      }
+
+      const passwordRecord = await createPasswordRecord(newPassword);
+
+      (users as any[])[userIndex] = {
+        ...users[userIndex],
+        password: '',
+        ...passwordRecord,
+        sessionVersion: (((users[userIndex] as any).sessionVersion) ?? 1) + 1,
+        passwordResetCompletedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setUsers(users);
+      localStorage.removeItem(STORAGE_KEYS.PASSWORD_RESET_CODE);
+
+      setStep('success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update the password.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const passwordRecord = await createPasswordRecord(newPassword);
-
-    (users as any[])[userIndex] = {
-      ...users[userIndex],
-      password: '',
-      ...passwordRecord,
-      sessionVersion: (((users[userIndex] as any).sessionVersion) ?? 1) + 1,
-      passwordResetCompletedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setUsers(users);
-    localStorage.removeItem(STORAGE_KEYS.PASSWORD_RESET_CODE);
-
-    setLoading(false);
-    setStep('success');
   };
 
   return (
