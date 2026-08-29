@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // N-5: geocoding service must call the server Edge Function with the caller's
 // token and translate success/failure. N-6/N-7: chat service must scope reads
@@ -33,7 +33,7 @@ vi.mock('../backend/supabaseClient', () => {
   };
 });
 
-import { geocodeVenueAddress } from './geocodingService';
+import { fetchGeoapifyTile, geocodeVenueAddress } from './geocodingService';
 import { chatAuthSurface, listPlatformVenueMessages, sendPlatformVenueMessage } from './platformChatService';
 
 describe('platform geocoding (N-5)', () => {
@@ -118,5 +118,30 @@ describe('platform chat (N-6/N-7)', () => {
     chatClientCalls.surfaces = [];
     await expect(listPlatformVenueMessages('org1', 'venue')).resolves.toEqual([]);
     expect(chatClientCalls.surfaces).toEqual(['venue']);
+  });
+});
+
+describe('platform map tiles hang guard', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('returns a blob when the tile Edge Function succeeds', async () => {
+    const blob = new Blob(['png'], { type: 'image/png' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(blob),
+    }));
+    await expect(fetchGeoapifyTile(6, 18, 24)).resolves.toBe(blob);
+  });
+
+  it('times out when the tile Edge Function never returns', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
+    const pending = fetchGeoapifyTile(6, 18, 24);
+    const assertion = expect(pending).rejects.toThrow(/timed out/i);
+    await vi.advanceTimersByTimeAsync(15000);
+    await assertion;
   });
 });

@@ -1,6 +1,7 @@
 import { getCurrentAccessToken, isSupabaseConfigured } from '../backend/supabaseClient';
 import { mapGeoapifyResult, type StandardizedAddress } from '../../utils/geoapifyAddress';
 import { normalizeUsPostalCode, normalizeUsState } from '../../utils/contactQuality';
+import { withTimeout } from '../../utils/withTimeout';
 
 export interface VenueAddressInput {
   addressLine1: string;
@@ -100,13 +101,15 @@ export async function geocodeVenueAddress(address: VenueAddressInput): Promise<G
 }
 
 export async function fetchGeoapifyTile(z: number, x: number, y: number, retina = false): Promise<Blob> {
-  const response = await authorizedFetch({
-    method: 'POST',
-    body: JSON.stringify({ action: 'tile', z, x, y, retina }),
-  });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(String((data as { error?: string }).error || 'Could not load map tiles.'));
-  }
-  return response.blob();
+  return withTimeout((async () => {
+    const response = await authorizedFetch({
+      method: 'POST',
+      body: JSON.stringify({ action: 'tile', z, x, y, retina }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(String((data as { error?: string }).error || 'Could not load map tiles.'));
+    }
+    return response.blob();
+  })(), 15000, 'Loading map tiles timed out. Check your connection and try again.');
 }
