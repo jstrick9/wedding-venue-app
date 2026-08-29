@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Venue login branding timeout (#233, 2026-08-29)** — `#/venue-login/<slug>` times out public branding at 20s instead of staying on Loading venue sign-in; Try again is offered. Full report: **`docs/reviews/233-venue-login-branding-timeout-2026-08-29.md`**.
 - ✅ **Platform support must not open workspace (#232, 2026-08-29)** — `platform_support` on `#/platform-login` is denied with Sign out instead of dumping into the venue workspace; local-mode is unchanged. Full report: **`docs/reviews/232-platform-support-must-not-open-workspace-2026-08-29.md`**.
 - ✅ **Branding save timeout (#231, 2026-08-28)** — Save Platform Branding and logo upload time out at 20s instead of staying on Saving…. Full report: **`docs/reviews/231-branding-save-timeout-2026-08-28.md`**.
 - ✅ **Chat prefers live venue (#230, 2026-08-28)** — Chat tab no longer auto-selects an archived/suspended first row; active then provisioning is the default thread. Full report: **`docs/reviews/230-chat-prefer-live-venue-2026-08-28.md`**.

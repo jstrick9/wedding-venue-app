@@ -1051,6 +1051,21 @@ platform login vs console routing. Hunt continues on platform console +
 invite/auth, then expands to the next adjacent staff surface after
 P0/P1 exhaustion.
 
+
+### 9.57 Venue login branding must not hang (Review #233, 2026-08-29)
+
+See `docs/reviews/233-venue-login-branding-timeout-2026-08-29.md`.
+
+`#/venue-login/<slug>` must `withTimeout` `getPublicVenueBranding` at
+20s. Do not leave Loading venue sign-in stuck when the public RPC stalls.
+Always clear the busy card (`try/finally`). Timeout offers Try again.
+The branded form still needs `organizationId` from that RPC, so it cannot
+paint first the way platform login hydrates branding in the background.
+
+**Rule going forward:** treat #233 + §9.12–9.57 as current truth for
+venue login branding. Hunt continues on platform console + invite/auth,
+then the next adjacent staff surface (venue login/workspace auth).
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
