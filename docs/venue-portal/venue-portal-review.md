@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Invite preview scoped to venue (#226, 2026-08-28)** — onboard/reissue HTML preview no longer follows the operator onto another venue’s detail. Full report: **`docs/reviews/226-invite-preview-scoped-to-venue-2026-08-28.md`**.
 - ✅ **Archived venues restorable (#225, 2026-08-28)** — archived venue detail has Restore venue (existing reactivate RPC). Full report: **`docs/reviews/225-archived-venues-restorable-2026-08-28.md`**.
 - ✅ **Invite lookup/claim timeout (#224, 2026-08-28)** — `/i/<token>` shows the claim form without waiting on venue branding; lookup 20s / claim 30s timeouts. Full report: **`docs/reviews/224-invite-lookup-claim-timeout-2026-08-28.md`**.
 - ✅ **Console venue list timeout + pending KPIs (#223, 2026-08-28)** — first paint no longer waits on the organization list before metrics; list-derived KPIs show — until venues load; list times out at 20s. Full report: **`docs/reviews/223-console-venue-list-timeout-pending-kpis-2026-08-28.md`**.

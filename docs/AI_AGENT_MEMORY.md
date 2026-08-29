@@ -964,7 +964,20 @@ door. Suspended still uses Reactivate. No new SQL.
 platform console lifecycle. Hunt continues on platform console +
 invite/auth.
 
+### 9.50 Invite preview must match the current venue (Review #226, 2026-08-28)
+
+See `docs/reviews/226-invite-preview-scoped-to-venue-2026-08-28.md`.
+
+Onboard/reissue HTML preview must be scoped to the organization that
+produced it. Do not keep a portal-wide `inviteCompose` that follows
+the operator onto the next venue’s detail.
+
+**Rule going forward:** treat #226 + §9.12–9.50 as current truth for
+platform console invite preview. Hunt continues on platform console +
+invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
+
 
 
