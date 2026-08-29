@@ -149,6 +149,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const [organizations, setOrganizations] = useState<PlatformOrganizationSummary[]>([]);
   const [metrics, setMetrics] = useState<PlatformConsoleMetrics>(EMPTY_METRICS);
   const [metricsReady, setMetricsReady] = useState(false);
+  const [venuesReady, setVenuesReady] = useState(false);
   const [auditLogs, setAuditLogs] = useState<PlatformAuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -190,14 +191,19 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const loadConsole = useCallback(async () => {
     setLoading(true);
     setError('');
+    loadSecondaryConsoleData();
     try {
-      setOrganizations(await listPlatformOrganizations());
+      setOrganizations(await withTimeout(
+        listPlatformOrganizations(),
+        20000,
+        'Loading venues timed out. Use Refresh, or sign in again at Platform login if this keeps happening.',
+      ));
+      setVenuesReady(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load platform console data.');
     } finally {
       setLoading(false);
     }
-    loadSecondaryConsoleData();
   }, [loadSecondaryConsoleData]);
 
   useEffect(() => { void loadConsole(); }, [loadConsole]);
@@ -209,12 +215,17 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   }, [route.section, route.venueStatus, route.venueQueue]);
 
   const refreshVenuesAfterSave = useCallback(async () => {
+    loadSecondaryConsoleData();
     try {
-      setOrganizations(await listPlatformOrganizations());
+      setOrganizations(await withTimeout(
+        listPlatformOrganizations(),
+        20000,
+        'Refreshing venues timed out. Use Refresh, or sign in again at Platform login if this keeps happening.',
+      ));
+      setVenuesReady(true);
     } catch {
       // Keep the form's saved values visible; a later Refresh retries.
     }
-    loadSecondaryConsoleData();
   }, [loadSecondaryConsoleData]);
 
   const sendInviteEmail = async (composeInput: Parameters<typeof deliverVenueAdminInvite>[0], successMessage: string) => {
@@ -492,12 +503,12 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   );
 
   const metricCards: { label: string; value: number | null; filter?: { status?: OrganizationStatus | 'all'; queue?: VenueQueueFilter } }[] = [
-    { label: 'Venues', value: organizations.length },
-    { label: 'Active', value: organizations.filter((organization) => organization.status === 'active').length, filter: { status: 'active' } },
-    { label: 'Awaiting admin', value: awaitingAdmin.length, filter: { queue: 'awaiting-admin' } },
-    { label: 'Suspended', value: suspended.length, filter: { status: 'suspended' } },
-    { label: 'Pending invites', value: pendingInviteVenues.length, filter: { queue: 'pending-invite' } },
-    { label: 'Managed admins', value: countManagedAdmins(organizations) },
+    { label: 'Venues', value: venuesReady ? organizations.length : null },
+    { label: 'Active', value: venuesReady ? organizations.filter((organization) => organization.status === 'active').length : null, filter: { status: 'active' } },
+    { label: 'Awaiting admin', value: venuesReady ? awaitingAdmin.length : null, filter: { queue: 'awaiting-admin' } },
+    { label: 'Suspended', value: venuesReady ? suspended.length : null, filter: { status: 'suspended' } },
+    { label: 'Pending invites', value: venuesReady ? pendingInviteVenues.length : null, filter: { queue: 'pending-invite' } },
+    { label: 'Managed admins', value: venuesReady ? countManagedAdmins(organizations) : null },
     { label: 'Couples', value: metricsReady ? metrics.totalCouples : null },
     { label: 'Guests', value: metricsReady ? metrics.totalGuests : null },
     { label: 'RSVPs', value: metricsReady ? metrics.totalRsvps : null },

@@ -351,6 +351,17 @@ describe('PlatformAdminPortal console', () => {
     expect(screen.getByRole('button', { name: /1\s*managed admins/i })).toBeInTheDocument();
   });
 
+  it('does not show zero venue KPIs while the organization list is pending', async () => {
+    listOrganizationsMock.mockImplementation(() => new Promise(() => {}));
+    window.location.hash = '#/platform-admin';
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+
+    expect(await screen.findByRole('button', { name: /—\s*venues/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^0\s*venues$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^0\s*managed admins$/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /4\s*couples/i })).toBeInTheDocument();
+  });
+
   it('opens venue detail from the map Open / edit action', async () => {
     window.location.hash = '#/platform-admin/map';
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
