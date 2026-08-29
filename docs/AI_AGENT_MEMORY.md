@@ -914,6 +914,18 @@ venue session for a suspended tenant must local-sign-out that surface.
 **Rule going forward:** treat #221 + §9.12–9.45 as current truth for
 venue login vs console lifecycle.
 
+### 9.46 Onboard must not hang on geocode or create (Review #222, 2026-08-28)
+
+See `docs/reviews/222-onboard-geocode-create-timeout-2026-08-28.md`.
+
+Onboard venue must `withTimeout` geocode (15s) and
+`create_venue_organization` (20s), same class of hang as venue Save
+(#212). Do not leave Create Venue stuck on Verifying address… or
+Creating venue….
+
+**Rule going forward:** treat #222 + §9.12–9.46 as current truth for
+platform onboard.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

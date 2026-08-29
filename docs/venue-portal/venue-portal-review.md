@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Onboard geocode/create timeout (#222, 2026-08-28)** — Create Venue no longer hangs forever if Geoapify or the create RPC stalls. Full report: **`docs/reviews/222-onboard-geocode-create-timeout-2026-08-28.md`**.
 - ✅ **Provisioning venue login allowed (#221, 2026-08-28)** — claimed admins can sign in before Activate; Suspend/Archive still block. Full report: **`docs/reviews/221-provisioning-venue-login-allowed-2026-08-28.md`**.
 - ✅ **Recovery must not use existing session (#220, 2026-08-28)** — `/reset/…` without a recovery code cannot change the signed-in account’s password. Full report: **`docs/reviews/220-recovery-must-not-use-existing-session-2026-08-28.md`**.
 - ✅ **Console KPIs pending not zero (#219, 2026-08-28)** — Couples/Guests/RSVPs show — until metrics return; Managed admins come from the venue list. Full report: **`docs/reviews/219-console-kpis-pending-not-zero-2026-08-28.md`**.
