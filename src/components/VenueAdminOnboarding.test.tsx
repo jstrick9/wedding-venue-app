@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const lookupMock = vi.fn();
+const brandingMock = vi.fn();
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -35,7 +36,7 @@ vi.mock('../services/backend/supabaseClient', () => ({
 }));
 
 vi.mock('../services/platform/publicVenueService', () => ({
-  getPublicVenueBranding: () => Promise.resolve(null),
+  getPublicVenueBranding: (...args: unknown[]) => brandingMock(...args),
 }));
 
 import VenueAdminOnboarding from './VenueAdminOnboarding';
@@ -43,6 +44,7 @@ import VenueAdminOnboarding from './VenueAdminOnboarding';
 describe('VenueAdminOnboarding venue-only claim', () => {
   beforeEach(() => {
     lookupMock.mockReset();
+    brandingMock.mockReset().mockResolvedValue(null);
     sessionStorage.clear();
   });
 
@@ -75,5 +77,25 @@ describe('VenueAdminOnboarding venue-only claim', () => {
     expect(screen.queryByRole('button', { name: /return to platform console/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /return to platform login/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/sign out of the platform administrator account/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the claim form even if venue branding never returns', async () => {
+    lookupMock.mockResolvedValue({
+      context: {
+        organizationId: 'org-1',
+        organizationName: 'Seven Paths Manor',
+        organizationSlug: 'seven-paths-manor',
+        email: 'stricklandjoshua01@gmail.com',
+        role: 'owner',
+        expiresAt: '2026-08-31T00:00:00.000Z',
+      },
+    });
+    brandingMock.mockImplementation(() => new Promise(() => {}));
+
+    render(<VenueAdminOnboarding token="va-abc123def4567890" />);
+
+    expect(await screen.findByRole('button', { name: /claim venue workspace/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/invited email address/i)).toHaveValue('stricklandjoshua01@gmail.com');
+    expect(screen.queryByText(/checking invitation/i)).not.toBeInTheDocument();
   });
 });

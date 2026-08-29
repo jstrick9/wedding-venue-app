@@ -3,6 +3,7 @@ import { signUpVenueAdminWithInvite } from '../services/backend/AuthBackend';
 import { isSupabaseConfigured } from '../services/backend/supabaseClient';
 import type { VenueAdminInviteContext } from '../services/platform/platformAdminService';
 import { lookupVenueAdminInvite } from '../services/platform/platformAdminService';
+import { withTimeout } from '../utils/withTimeout';
 import { getPublicVenueBranding } from '../services/platform/publicVenueService';
 import { setActiveOrganizationSlug } from '../services/platform/organizationContext';
 import { claimVenueWorkspaceTitle } from '../utils/claimVenueTitle';
@@ -54,29 +55,42 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
       setLoadingInvite(false);
       return;
     }
-    void lookupVenueAdminInvite(resolvedToken).then(async ({ context, error }) => {
-      if (cancelled) return;
-      setInvite(context);
-      setInviteError(context ? '' : (error || 'not_found'));
-      if (context) setForm((current) => ({ ...current, email: context.email }));
-      if (context?.organizationSlug) {
-        const publicBrand = await getPublicVenueBranding(context.organizationSlug);
-        if (!cancelled && publicBrand) {
-          setBranding(publicBrand.config);
-          applyLoginBranding(publicBrand.config);
-        } else if (!cancelled) {
+    void (async () => {
+      try {
+        const { context, error } = await withTimeout(
+          lookupVenueAdminInvite(resolvedToken),
+          20000,
+          'Checking this invitation timed out. Refresh this page, or ask the platform administrator to reissue the invitation.',
+        );
+        if (cancelled) return;
+        setInvite(context);
+        setInviteError(context ? '' : (error || 'not_found'));
+        if (context) setForm((current) => ({ ...current, email: context.email }));
+        setLoadingInvite(false);
+        if (!context?.organizationSlug) {
           applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
+          return;
         }
-      } else {
-        applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
+        void getPublicVenueBranding(context.organizationSlug)
+          .then((publicBrand) => {
+            if (cancelled) return;
+            if (publicBrand) {
+              setBranding(publicBrand.config);
+              applyLoginBranding(publicBrand.config);
+            } else {
+              applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
+            }
+          })
+          .catch(() => {
+            if (!cancelled) applyLoginBranding(NEUTRAL_LOGIN_CONFIG);
+          });
+      } catch (err: unknown) {
+        if (cancelled) return;
+        setInvite(null);
+        setInviteError(err instanceof Error ? err.message : 'not_found');
+        setLoadingInvite(false);
       }
-      setLoadingInvite(false);
-    }).catch((err: unknown) => {
-      if (cancelled) return;
-      setInvite(null);
-      setInviteError(err instanceof Error ? err.message : 'not_found');
-      setLoadingInvite(false);
-    });
+    })();
     return () => { cancelled = true; };
   }, [resolvedToken]);
 
@@ -127,12 +141,16 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
     setState('saving');
     setMessage(`Setting your password and claiming ${invite.organizationName}…`);
     try {
-      const session = await signUpVenueAdminWithInvite({
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        fullName: form.fullName.trim(),
-        inviteToken: resolvedToken,
-      });
+      const session = await withTimeout(
+        signUpVenueAdminWithInvite({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          fullName: form.fullName.trim(),
+          inviteToken: resolvedToken,
+        }),
+        30000,
+        'Claiming the venue timed out. Wait a moment and try Claim Venue Workspace again, or ask the platform administrator to reissue the invitation.',
+      );
       clearVenueAdminInviteToken();
       finish(session.organizationSlug || invite.organizationSlug);
     } catch (error) {
