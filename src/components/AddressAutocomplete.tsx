@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { autocompleteVenueAddress } from '../services/platform/geocodingService';
 import { suggestionLabel, type StandardizedAddress } from '../utils/geoapifyAddress';
+import { withTimeout } from '../utils/withTimeout';
 
 export interface AddressValue {
   addressLine1: string;
@@ -56,7 +57,11 @@ export default function AddressAutocomplete({
     debounceRef.current = setTimeout(() => {
       setLoading(true);
       setLookupError('');
-      void autocompleteVenueAddress(text)
+      void withTimeout(
+        autocompleteVenueAddress(text),
+        15000,
+        'Looking up addresses timed out. Check your connection and try again.',
+      )
         .then((results) => {
           setSuggestions(results);
           setOpen(true);
