@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlatformConsoleMetrics, PlatformOrganizationSummary } from '../services/platform/platformTypes';
 
@@ -206,6 +206,7 @@ describe('PlatformAdminPortal console', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -424,4 +425,20 @@ describe('PlatformAdminPortal console', () => {
     });
     expect(screen.queryByTitle('Invite email preview')).not.toBeInTheDocument();
   });
+
+  it('does not stay busy when reissue never returns', async () => {
+    window.location.hash = '#/platform-admin/venues/org-2';
+    reissueMock.mockImplementation(() => new Promise(() => {}));
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+    const reissue = await screen.findByRole('button', { name: /reissue & email invite/i });
+    vi.useFakeTimers();
+    fireEvent.click(reissue);
+    expect(screen.getByRole('button', { name: /reissue & email invite/i })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(21000);
+    });
+    vi.useRealTimers();
+    expect(screen.getByRole('button', { name: /reissue & email invite/i })).toBeEnabled();
+  });
+
 });

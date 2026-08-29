@@ -231,7 +231,11 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const sendInviteEmail = async (composeInput: Parameters<typeof deliverVenueAdminInvite>[0], successMessage: string) => {
     setInviteCompose({ organizationId: composeInput.organizationId, message: buildVenueAdminInviteCompose(composeInput) });
     try {
-      await deliverVenueAdminInvite(composeInput);
+      await withTimeout(
+        deliverVenueAdminInvite(composeInput),
+        20000,
+        'Sending the invite email timed out.',
+      );
       showToast(successMessage, 'success');
     } catch (mailErr) {
       const mailMessage = mailErr instanceof Error ? mailErr.message : 'Email delivery failed.';
@@ -381,10 +385,14 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     }
     setActionId(organization.id);
     try {
-      const next = await reissueVenueAdminInvite(
-        organization.id,
-        normalized.value,
-        inviteExpiresAt(platformBranding.venueAdminReissueTtlDays, DEFAULT_REISSUE_INVITE_TTL_DAYS),
+      const next = await withTimeout(
+        reissueVenueAdminInvite(
+          organization.id,
+          normalized.value,
+          inviteExpiresAt(platformBranding.venueAdminReissueTtlDays, DEFAULT_REISSUE_INVITE_TTL_DAYS),
+        ),
+        20000,
+        'Reissuing the invite timed out. Sign in again at Platform login if this keeps happening.',
       );
       void navigator.clipboard?.writeText(next.inviteUrl);
       const contact = splitContactName(organization.primaryContactName || '');
@@ -413,7 +421,11 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     if (!invite || !window.confirm(`Revoke the pending administrator invite for ${organization.name}?`)) return;
     setActionId(organization.id);
     try {
-      await revokeVenueAdminInvite(invite.id, 'Revoked by platform administrator');
+      await withTimeout(
+        revokeVenueAdminInvite(invite.id, 'Revoked by platform administrator'),
+        20000,
+        'Revoking the invite timed out. Sign in again at Platform login if this keeps happening.',
+      );
       showToast('Pending venue-admin invite revoked.', 'success');
       void refreshVenuesAfterSave();
     } catch (err) {
@@ -427,7 +439,11 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     if (!window.confirm(`Suspend ${organization.name}? Venue staff, couples, and guests will lose access, but data will be retained.`)) return;
     setActionId(organization.id);
     try {
-      await suspendVenueOrganization(organization.id, 'Suspended by platform administrator');
+      await withTimeout(
+        suspendVenueOrganization(organization.id, 'Suspended by platform administrator'),
+        20000,
+        'Suspending the venue timed out. Sign in again at Platform login if this keeps happening.',
+      );
       showToast(`${organization.name} suspended; tenant data was retained.`, 'success');
       void refreshVenuesAfterSave();
     } catch (err) {

@@ -27,3 +27,19 @@ describe('PlatformAdminPortal venue list hang guards', () => {
     expect(source).toContain('venuesReady ? organizations.length : null');
   });
 });
+
+describe('PlatformAdminPortal invite and lifecycle hang guards', () => {
+  it('times out reissue, revoke, suspend, and invite email delivery', () => {
+    const source = readFileSync(join(process.cwd(), 'src/components/PlatformAdminPortal.tsx'), 'utf8');
+    expect(source).toContain('Reissuing the invite timed out');
+    expect(source).toContain('Revoking the invite timed out');
+    expect(source).toContain('Suspending the venue timed out');
+    expect(source).toContain('Sending the invite email timed out');
+    const reissueSlice = source.slice(source.indexOf('const handleReissue'), source.indexOf('const handleRevoke'));
+    expect(reissueSlice).toContain('withTimeout');
+    expect(reissueSlice).toContain('reissueVenueAdminInvite');
+    const mailSlice = source.slice(source.indexOf('const sendInviteEmail'), source.indexOf('const handleCreateVenue'));
+    expect(mailSlice).toContain('deliverVenueAdminInvite');
+    expect(mailSlice).toContain('withTimeout');
+  });
+});
