@@ -7,6 +7,7 @@ import { getUsers } from '../hooks/useLayoutState';
 import PasswordReset from './PasswordReset';
 import Logo from './Logo';
 import { shouldUseSupabaseAuth } from '../services/backend/AuthBackend';
+import { withTimeout } from '../utils/withTimeout';
 import {
   applyLoginBranding,
   loginBackgroundAnimationClass,
@@ -163,47 +164,55 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
     setError('');
     setIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 250));
 
-    const success = await (onLogin ? onLogin(username, password) : login(username, password));
+      const success = await withTimeout(
+        onLogin ? onLogin(username, password) : login(username, password),
+        20000,
+        'Sign-in timed out. Check your connection and try again.',
+      );
 
-    if (success) {
-      if (rememberMe) {
-        localStorage.setItem(STORAGE_KEYS.REMEMBERED_USER, username);
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.REMEMBERED_USER);
-      }
-      setLockoutSecondsLeft(0);
-    } else if (usingSupabaseAuth) {
-      setError('Sign-in failed. Use the email address and password for your Supabase account. Local admin credentials do not apply in cloud mode.');
-    } else {
-      // The AuthContext.login() call already persisted the failed-login state
-      // (via recordFailedLogin → setUsers). Re-read to get the up-to-date
-      // lockedUntil value and drive the countdown from it.
-      try {
-        const users = getUsers();
-        const found = users.find(
-          (u) => u.username.toLowerCase() === username.trim().toLowerCase(),
-        );
-        if (found && isUserLocked(found as any)) {
-          const msLeft = new Date((found as any).lockedUntil!).getTime() - Date.now();
-          const sLeft = Math.max(1, Math.ceil(msLeft / 1000));
-          setLockoutSecondsLeft(sLeft);
-          setError(`Too many failed attempts. Please wait ${sLeft} seconds.`);
-        } else if (found && (found as any).failedLoginCount >= MAX_FAILED_LOGINS - 2) {
-          const remaining = MAX_FAILED_LOGINS - ((found as any).failedLoginCount ?? 0);
-          setError(
-            `Invalid credentials. ${Math.max(0, remaining)} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`,
-          );
+      if (success) {
+        if (rememberMe) {
+          localStorage.setItem(STORAGE_KEYS.REMEMBERED_USER, username);
         } else {
+          localStorage.removeItem(STORAGE_KEYS.REMEMBERED_USER);
+        }
+        setLockoutSecondsLeft(0);
+      } else if (usingSupabaseAuth) {
+        setError('Sign-in failed. Use the email address and password for your Supabase account. Local admin credentials do not apply in cloud mode.');
+      } else {
+        // The AuthContext.login() call already persisted the failed-login state
+        // (via recordFailedLogin → setUsers). Re-read to get the up-to-date
+        // lockedUntil value and drive the countdown from it.
+        try {
+          const users = getUsers();
+          const found = users.find(
+            (u) => u.username.toLowerCase() === username.trim().toLowerCase(),
+          );
+          if (found && isUserLocked(found as any)) {
+            const msLeft = new Date((found as any).lockedUntil!).getTime() - Date.now();
+            const sLeft = Math.max(1, Math.ceil(msLeft / 1000));
+            setLockoutSecondsLeft(sLeft);
+            setError(`Too many failed attempts. Please wait ${sLeft} seconds.`);
+          } else if (found && (found as any).failedLoginCount >= MAX_FAILED_LOGINS - 2) {
+            const remaining = MAX_FAILED_LOGINS - ((found as any).failedLoginCount ?? 0);
+            setError(
+              `Invalid credentials. ${Math.max(0, remaining)} attempt${remaining === 1 ? '' : 's'} remaining before lockout.`,
+            );
+          } else {
+            setError('Invalid username or password.');
+          }
+        } catch {
           setError('Invalid username or password.');
         }
-      } catch {
-        setError('Invalid username or password.');
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign-in failed. Check your connection and try again.');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleGuestAccess = () => {

@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const completeMock = vi.fn();
 
@@ -17,6 +17,10 @@ describe('PasswordRecoveryScreen', () => {
   beforeEach(() => {
     completeMock.mockReset().mockResolvedValue(undefined);
     window.history.replaceState(null, '', '/reset/platform?code=pkce-code');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('saves the new password with the captured recovery code', async () => {
@@ -50,4 +54,20 @@ describe('PasswordRecoveryScreen', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/do not match/i);
     expect(completeMock).not.toHaveBeenCalled();
   });
+
+  it('does not stay on Saving password when recovery never returns', async () => {
+    completeMock.mockImplementation(() => new Promise(() => {}));
+    vi.useFakeTimers();
+    render(<PasswordRecoveryScreen surface="platform" />);
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'Newpass12' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'Newpass12' } });
+    fireEvent.click(screen.getByRole('button', { name: /save new password/i }));
+    expect(screen.getByRole('button', { name: /saving password/i })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(21000);
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(/timed out/i);
+    expect(screen.getByRole('button', { name: /save new password/i })).toBeEnabled();
+  });
+
 });

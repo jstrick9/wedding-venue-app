@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { completeSupabasePasswordRecovery } from '../services/backend/AuthBackend';
+import { withTimeout } from '../utils/withTimeout';
 import { isSupabaseConfigured } from '../services/backend/supabaseClient';
 import {
   applyLoginBranding,
@@ -69,13 +70,17 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
     setState('saving');
     setMessage('Saving your new password…');
     try {
-      await completeSupabasePasswordRecovery({
-        surface,
-        password,
-        code: payloadRef.current.code,
-        accessToken: payloadRef.current.accessToken,
-        refreshToken: payloadRef.current.refreshToken,
-      });
+      await withTimeout(
+        completeSupabasePasswordRecovery({
+          surface,
+          password,
+          code: payloadRef.current.code,
+          accessToken: payloadRef.current.accessToken,
+          refreshToken: payloadRef.current.refreshToken,
+        }),
+        20000,
+        'Saving the new password timed out. Request a new reset and open the newest email in this same browser.',
+      );
       setState('success');
       setMessage('Password updated. Opening sign-in…');
       window.setTimeout(leave, 600);

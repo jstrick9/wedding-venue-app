@@ -5,6 +5,7 @@ import { getUsers, setUsers } from '../hooks/useLayoutState';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { createPasswordRecord, createSecretRecord, verifySecret } from '../utils/auth';
 import { shouldUseSupabaseAuth, requestSupabasePasswordReset } from '../services/backend/AuthBackend';
+import { withTimeout } from '../utils/withTimeout';
 
 interface PasswordResetProps {
   onClose: () => void;
@@ -147,7 +148,11 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
           setLoading(false);
           return;
         }
-        await requestSupabasePasswordReset(email.trim(), authSurface);
+        await withTimeout(
+          requestSupabasePasswordReset(email.trim(), authSurface),
+          20000,
+          'Sending the reset email timed out. Try again, or check your connection.',
+        );
         setStep('verify');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not send a password reset email.');

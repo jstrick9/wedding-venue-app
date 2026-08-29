@@ -1,6 +1,6 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockLogin = vi.fn();
 const mockContinueAsGuest = vi.fn();
@@ -72,6 +72,10 @@ describe('LoginScreen', () => {
     vi.clearAllMocks();
     localStorage.clear();
     window.location.hash = '';
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('loads remembered username on mount', async () => {
@@ -238,4 +242,30 @@ describe('LoginScreen', () => {
     expect(screen.queryByText(/^or$/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /continue as planner guest/i })).not.toBeInTheDocument();
   });
+
+  it('does not stay on Signing in when login never returns', async () => {
+    mockLogin.mockImplementation(() => new Promise(() => {}));
+    vi.useFakeTimers();
+    render(<LoginScreen loginScope="platform" showPublicPortalLinks={false} />);
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(21000);
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(/timed out/i);
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeEnabled();
+  });
+
+  it('clears Signing in when login throws', async () => {
+    mockLogin.mockRejectedValue(new Error('Auth service unavailable'));
+    render(<LoginScreen loginScope="platform" showPublicPortalLinks={false} />);
+    fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/auth service unavailable/i);
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeEnabled();
+  });
+
 });
