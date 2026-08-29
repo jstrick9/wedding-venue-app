@@ -438,13 +438,30 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   };
 
   const handleReactivate = async (organization: PlatformOrganizationSummary) => {
+    const restoring = organization.status === 'archived';
+    if (restoring && !window.confirm(`Restore ${organization.name}? Staff, couples, and guests will be able to sign in again. Data was retained.`)) {
+      return;
+    }
     setActionId(organization.id);
     try {
-      await reactivateVenueOrganization(organization.id);
-      showToast(`${organization.name} reactivated.`, 'success');
+      await withTimeout(
+        reactivateVenueOrganization(organization.id),
+        20000,
+        restoring
+          ? 'Restoring the venue timed out. Sign in again at Platform login if this keeps happening.'
+          : 'Reactivating the venue timed out. Sign in again at Platform login if this keeps happening.',
+      );
+      showToast(restoring ? `${organization.name} restored.` : `${organization.name} reactivated.`, 'success');
       void refreshVenuesAfterSave();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not reactivate the venue.', 'warning');
+      showToast(
+        err instanceof Error
+          ? err.message
+          : restoring
+            ? 'Could not restore the venue.'
+            : 'Could not reactivate the venue.',
+        'warning',
+      );
     } finally {
       setActionId(null);
     }
@@ -1124,9 +1141,13 @@ function VenueDetail({
             {organization.status === 'provisioning' && (
               <button type="button" disabled={busy} onClick={onActivate} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60">Activate venue</button>
             )}
-            {organization.status === 'suspended' ? (
+            {organization.status === 'suspended' && (
               <button type="button" disabled={busy} onClick={onReactivate} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60">Reactivate venue</button>
-            ) : organization.status !== 'archived' && (
+            )}
+            {organization.status === 'archived' && (
+              <button type="button" disabled={busy} onClick={onReactivate} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60">Restore venue</button>
+            )}
+            {organization.status !== 'archived' && organization.status !== 'suspended' && (
               <button type="button" disabled={busy} onClick={onSuspend} className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60">Suspend venue access</button>
             )}
             {organization.status !== 'archived' && (

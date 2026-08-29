@@ -6,6 +6,7 @@ const listOrganizationsMock = vi.fn();
 const metricsMock = vi.fn();
 const auditMock = vi.fn();
 const updateVenueMock = vi.fn();
+const reactivateMock = vi.fn();
 const geocodeMock = vi.fn();
 const logoutMock = vi.fn();
 const authState = {
@@ -26,7 +27,7 @@ vi.mock('../services/platform/platformAdminService', () => ({
   listPlatformAuditLogs: (...args: unknown[]) => auditMock(...args),
   updateVenueOrganization: (...args: unknown[]) => updateVenueMock(...args),
   createVenueOrganization: vi.fn(),
-  reactivateVenueOrganization: vi.fn(),
+  reactivateVenueOrganization: (...args: unknown[]) => reactivateMock(...args),
   reissueVenueAdminInvite: vi.fn(),
   revokeVenueAdminInvite: vi.fn(),
   suspendVenueOrganization: vi.fn(),
@@ -186,6 +187,7 @@ describe('PlatformAdminPortal console', () => {
     });
     geocodeMock.mockReset();
     logoutMock.mockReset();
+    reactivateMock.mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -367,5 +369,28 @@ describe('PlatformAdminPortal console', () => {
     render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Open / edit' }));
     expect(window.location.hash).toBe('#/platform-admin/venues/org-1');
+  });
+
+  it('restores an archived venue with the existing reactivate RPC', async () => {
+    const archived = org({
+      id: 'org-3',
+      name: 'River Hall',
+      slug: 'river-hall',
+      status: 'archived',
+    });
+    listOrganizationsMock.mockResolvedValue([archived]);
+    window.location.hash = '#/platform-admin/venues/org-3';
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+
+    const restore = await screen.findByRole('button', { name: /restore venue/i });
+    expect(screen.queryByRole('button', { name: /archive venue/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /suspend venue access/i })).not.toBeInTheDocument();
+    fireEvent.click(restore);
+
+    await waitFor(() => {
+      expect(reactivateMock).toHaveBeenCalledWith('org-3');
+    });
   });
 });
