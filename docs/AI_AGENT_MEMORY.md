@@ -1183,6 +1183,18 @@ Street autocomplete already timed out at 15s (#241).
 **Rule going forward:** treat #242 + §9.12–9.66 as current truth for
 platform map tiles. Hunt continues on venue admin invite/auth.
 
+
+### 9.67 Local password reset must not hang (Review #243, 2026-08-29)
+
+See `docs/reviews/243-local-password-reset-finally-2026-08-29.md`.
+
+Local PasswordReset send, resend, and reset must `try/finally` so
+Sending Code… / Updating... do not last forever if hashing throws.
+Cloud send already timed out at 20s (#227).
+
+**Rule going forward:** treat #243 + §9.12–9.67 as current truth for
+staff password reset. Hunt continues on venue admin invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
