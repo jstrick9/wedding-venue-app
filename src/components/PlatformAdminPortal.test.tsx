@@ -7,6 +7,7 @@ const metricsMock = vi.fn();
 const auditMock = vi.fn();
 const updateVenueMock = vi.fn();
 const reactivateMock = vi.fn();
+const reissueMock = vi.fn();
 const geocodeMock = vi.fn();
 const logoutMock = vi.fn();
 const authState = {
@@ -28,7 +29,7 @@ vi.mock('../services/platform/platformAdminService', () => ({
   updateVenueOrganization: (...args: unknown[]) => updateVenueMock(...args),
   createVenueOrganization: vi.fn(),
   reactivateVenueOrganization: (...args: unknown[]) => reactivateMock(...args),
-  reissueVenueAdminInvite: vi.fn(),
+  reissueVenueAdminInvite: (...args: unknown[]) => reissueMock(...args),
   revokeVenueAdminInvite: vi.fn(),
   suspendVenueOrganization: vi.fn(),
   venueLifecycleUpdateInput: (organization: PlatformOrganizationSummary, status: PlatformOrganizationSummary['status']) => ({
@@ -60,6 +61,16 @@ vi.mock('../services/platform/platformBrandingService', () => ({
 
 vi.mock('../services/platform/geocodingService', () => ({
   geocodeVenueAddress: (...args: unknown[]) => geocodeMock(...args),
+}));
+
+vi.mock('../services/platform/venueAdminInviteMail', () => ({
+  buildVenueAdminInviteCompose: (input: { organizationId: string; to: string }) => ({
+    to: input.to,
+    subject: 'Invite',
+    body: 'plain',
+    html: `<p>Invite preview for ${input.organizationId}</p>`,
+  }),
+  deliverVenueAdminInvite: vi.fn().mockResolvedValue('sent'),
 }));
 
 vi.mock('./PlatformVenueChatPanel', () => ({
@@ -188,6 +199,10 @@ describe('PlatformAdminPortal console', () => {
     geocodeMock.mockReset();
     logoutMock.mockReset();
     reactivateMock.mockReset().mockResolvedValue(undefined);
+    reissueMock.mockReset().mockResolvedValue({
+      inviteUrl: 'https://weddingvip.vercel.app/i/va-newtoken',
+      expiresAt: '2026-09-10T00:00:00.000Z',
+    });
   });
 
   afterEach(() => {
@@ -392,5 +407,21 @@ describe('PlatformAdminPortal console', () => {
     await waitFor(() => {
       expect(reactivateMock).toHaveBeenCalledWith('org-3');
     });
+  });
+
+  it('does not show another venue invite email preview on venue detail', async () => {
+    window.location.hash = '#/platform-admin/venues/org-2';
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /reissue & email invite/i }));
+    expect(await screen.findByTitle('Invite email preview')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /back to directory/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Seven Paths Manor' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/slug is immutable: seven-paths-manor/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByTitle('Invite email preview')).not.toBeInTheDocument();
   });
 });

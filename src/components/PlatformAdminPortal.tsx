@@ -156,7 +156,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [result, setResult] = useState<CreateVenueOrganizationResult | null>(null);
-  const [inviteCompose, setInviteCompose] = useState<InviteComposeMessage | null>(null);
+  const [inviteCompose, setInviteCompose] = useState<{ organizationId: string; message: InviteComposeMessage } | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [onboardVerified, setOnboardVerified] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
@@ -229,7 +229,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   }, [loadSecondaryConsoleData]);
 
   const sendInviteEmail = async (composeInput: Parameters<typeof deliverVenueAdminInvite>[0], successMessage: string) => {
-    setInviteCompose(buildVenueAdminInviteCompose(composeInput));
+    setInviteCompose({ organizationId: composeInput.organizationId, message: buildVenueAdminInviteCompose(composeInput) });
     try {
       await deliverVenueAdminInvite(composeInput);
       showToast(successMessage, 'success');
@@ -692,7 +692,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
                 metric={metrics.venues.find((metric) => metric.id === selectedVenue.id)}
                 metricsReady={metricsReady}
                 busy={actionId === selectedVenue.id}
-                inviteCompose={inviteCompose}
+                inviteCompose={inviteCompose?.organizationId === selectedVenue.id ? inviteCompose.message : null}
                 onBack={() => go('venues', undefined, { status: statusFilter, queue: queueFilter })}
                 onCopyLogin={copyVenueLogin}
                 onReissue={(email) => void handleReissue(selectedVenue, email)}
@@ -723,7 +723,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               geocoding={geocoding}
               error={error}
               result={result}
-              inviteCompose={inviteCompose}
+              inviteCompose={result && inviteCompose?.organizationId === result.organizationId ? inviteCompose.message : null}
               onSubmit={(event) => void handleCreateVenue(event)}
               onCopyInvite={copyInvite}
               primaryColor={config.primaryColor || '#4A1942'}
