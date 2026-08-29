@@ -19,7 +19,8 @@ describe('admin & system settings — invites (venue admin)', () => {
       organizationName: 'Seven Paths Manor',
     });
     expect(res.ok).toBe(true);
-    expect(res.inviteUrl).toContain('#/accept-invite/');
+    expect(res.inviteUrl).toContain('/accept-invite/');
+    expect(res.inviteUrl).not.toContain('#');
     const stored = JSON.parse(localStorage.getItem('spm_org_invites') || '[]');
     expect(stored).toHaveLength(1);
     expect(stored[0].email).toBe('staff@venue.com');

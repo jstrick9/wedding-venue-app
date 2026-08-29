@@ -4,6 +4,7 @@ import { getConfig } from '../../config';
 import { createInvite } from '../../services/org/inviteService';
 import { showToast } from '../Toast';
 import { normalizeEmail } from '../../utils/contactQuality';
+import { withTimeout } from '../../utils/withTimeout';
 
 const ROLES = [
   { id: 'admin', label: 'Admin' },
@@ -43,28 +44,37 @@ export function InviteMembers() {
     const trimmed = normalized.value;
     setIsSending(true);
     setResult(null);
-    const res = await createInvite({
-      organizationId,
-      inviterUserId: user.id,
-      email: trimmed,
-      role,
-      organizationName: config.venueName || 'your venue',
-      inviteeName: inviteeName.trim() || undefined,
-    });
-    setIsSending(false);
+    try {
+      const res = await withTimeout(
+        createInvite({
+          organizationId,
+          inviterUserId: user.id,
+          email: trimmed,
+          role,
+          organizationName: config.venueName || 'your venue',
+          inviteeName: inviteeName.trim() || undefined,
+        }),
+        20000,
+        'Sending the invite timed out. Check your connection and try again.',
+      );
 
-    if (!res.ok) {
-      showToast(res.error || 'Could not send the invite.', 'warning');
-      return;
+      if (!res.ok) {
+        showToast(res.error || 'Could not send the invite.', 'warning');
+        return;
+      }
+      if (res.error) {
+        showToast(`${res.error} Copy the invitation link below.`, 'warning');
+      } else {
+        showToast(`Invitation emailed to ${trimmed}.`, 'success');
+      }
+      setEmail('');
+      setInviteeName('');
+      setResult(res);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not send the invite.', 'warning');
+    } finally {
+      setIsSending(false);
     }
-    if (res.error) {
-      showToast(`${res.error} Copy the invitation link below.`, 'warning');
-    } else {
-      showToast(`Invitation emailed to ${trimmed}.`, 'success');
-    }
-    setEmail('');
-    setInviteeName('');
-    setResult(res);
   };
 
   return (

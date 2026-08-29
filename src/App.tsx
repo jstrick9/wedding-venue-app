@@ -17,6 +17,7 @@ import { isVenueStaffRoute } from './utils/authSurface';
 import { isPlatformConsoleHash } from './utils/platformConsoleRoute';
 import { passwordResetSurfaceFromLocation, shouldShowPasswordRecovery } from './utils/passwordResetRoute';
 import { captureVenueAdminInviteToken, shouldShowVenueAdminOnboarding } from './utils/venueAdminInviteRoute';
+import { getStaffInviteTokenFromLocation, isStaffAcceptInvitePath, shouldShowStaffAcceptInvite } from './utils/staffInviteRoute';
 
 const AuthenticatedApp = lazy(() => import('./components/AuthenticatedApp'));
 const CouplesPortal = lazy(() => import('./components/CouplesPortal'));
@@ -142,8 +143,9 @@ function AppContent() {
   }
 
   // Accept-invite route: requires the user to be signed in.
-  if (hash.startsWith('#/accept-invite/')) {
-    const token = hash.slice('#/accept-invite/'.length).split('/')[0];
+  // Path /accept-invite/<token> is the email-safe URL; hash links still work.
+  if (shouldShowStaffAcceptInvite({ hash, pathname: pathname || window.location.pathname })) {
+    const token = getStaffInviteTokenFromLocation({ hash, pathname: pathname || window.location.pathname });
     if (!user) {
       return (
         <LoginScreen
@@ -157,7 +159,14 @@ function AppContent() {
       <Suspense fallback={<LoadingScreen />}>
         <AcceptInvite
           token={token}
-          onDone={() => { window.location.hash = ''; }}
+          onDone={() => {
+            const path = pathname || window.location.pathname;
+            if (isStaffAcceptInvitePath(path)) {
+              window.location.replace(`${window.location.origin}/#/home`);
+              return;
+            }
+            window.location.hash = '';
+          }}
         />
       </Suspense>
     );

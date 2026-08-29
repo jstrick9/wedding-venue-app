@@ -1,5 +1,6 @@
 import { isPasswordResetPath } from './passwordResetRoute';
 import { isVenueOnboardingPath } from './venueAdminInviteRoute';
+import { isStaffAcceptInvitePath } from './staffInviteRoute';
 
 /**
  * Hash to show after signing out of a staff/platform session.
@@ -12,7 +13,7 @@ export function loginHashAfterLogout(
   pathname?: string,
 ): string {
   const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
-  if (isVenueOnboardingPath(path) || isPasswordResetPath(path)) {
+  if (isVenueOnboardingPath(path) || isPasswordResetPath(path) || isStaffAcceptInvitePath(path)) {
     return hash || '';
   }
 

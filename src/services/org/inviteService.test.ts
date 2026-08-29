@@ -23,7 +23,9 @@ describe('inviteService (local)', () => {
   it('creates a local invite and returns an accept URL', async () => {
     const res = await createInvite(params);
     expect(res.ok).toBe(true);
-    expect(res.inviteUrl).toContain('#/accept-invite/');
+    expect(res.inviteUrl).toContain('/accept-invite/');
+    expect(res.inviteUrl).not.toContain('#');
+    expect(res.inviteUrl).not.toContain('?');
     expect(JSON.parse(localStorage.getItem('spm_org_invites') || '[]')).toHaveLength(1);
   });
 

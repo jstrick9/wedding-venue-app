@@ -3,6 +3,7 @@ import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClie
 import { sendTransactionalEmail, buildInvitationTemplateData } from '../backend/EmailService';
 import { createOpaqueToken } from '../../utils/secureTokens';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
+import { buildStaffInviteUrl } from '../../utils/staffInviteRoute';
 
 /**
  * Organization invite service.
@@ -59,11 +60,10 @@ export async function createInvite(params: InviteParams): Promise<InviteResult> 
       status: 'pending',
       createdAt: new Date().toISOString(),
     }]);
-    const base = params.appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
-    return { ok: true, inviteUrl: `${base}#/accept-invite/${token}` };
+    return { ok: true, inviteUrl: buildStaffInviteUrl(token, params.appBaseUrl) };
   }
 
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient('venue');
   const token = crypto.getRandomValues ? (() => {
     const bytes = crypto.getRandomValues(new Uint8Array(24));
     return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -82,8 +82,7 @@ export async function createInvite(params: InviteParams): Promise<InviteResult> 
   });
   if (error) return { ok: false, error: error.message };
 
-  const base = params.appBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
-  const inviteUrl = `${base}#/accept-invite/${token}`;
+  const inviteUrl = buildStaffInviteUrl(token, params.appBaseUrl);
 
   try {
     await sendTransactionalEmail({
@@ -95,7 +94,7 @@ export async function createInvite(params: InviteParams): Promise<InviteResult> 
         organizationName: params.organizationName,
         inviteUrl,
       }),
-    });
+    }, 'venue');
   } catch (err) {
     return { ok: true, inviteUrl, error: `Invite created but email failed: ${err instanceof Error ? err.message : 'unknown'}` };
   }
@@ -116,7 +115,7 @@ export async function acceptInvite(token: string): Promise<InviteResult> {
     return { ok: true };
   }
 
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient('venue');
   const { data, error } = await supabase.rpc('accept_invite', { p_token: token });
   if (error) return { ok: false, error: error.message };
   if (!data?.ok) return { ok: false, error: data?.error || 'Could not accept invite.' };

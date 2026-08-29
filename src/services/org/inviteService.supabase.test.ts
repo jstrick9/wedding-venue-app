@@ -61,7 +61,9 @@ describe('inviteService (supabase)', () => {
       purpose: 'invitation',
       organizationId: 'org1',
     }));
-    expect(res.inviteUrl).toContain('#/accept-invite/');
+    expect(res.inviteUrl).toContain('/accept-invite/');
+    expect(res.inviteUrl).not.toContain('#');
+    expect(res.inviteUrl).not.toContain('?');
   });
 
   it('acceptInvite calls the accept_invite RPC', async () => {

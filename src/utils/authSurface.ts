@@ -1,5 +1,6 @@
 import { isPasswordResetPath, passwordResetSurfaceFromLocation } from './passwordResetRoute';
 import { shouldShowVenueAdminOnboarding } from './venueAdminInviteRoute';
+import { isStaffAcceptInvitePath } from './staffInviteRoute';
 
 export type AuthSurface = 'platform' | 'venue';
 
@@ -34,6 +35,9 @@ export function detectAuthSurface(input: { hash?: string; pathname?: string } = 
     return passwordResetSurfaceFromLocation({ pathname });
   }
   if (shouldShowVenueAdminOnboarding({ hash, locationHash: hash, pathname })) {
+    return 'venue';
+  }
+  if (isStaffAcceptInvitePath(pathname)) {
     return 'venue';
   }
   const route = (hash || '').split('?')[0];

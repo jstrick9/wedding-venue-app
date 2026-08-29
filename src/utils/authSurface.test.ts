@@ -14,6 +14,7 @@ describe('authSurface', () => {
     expect(detectAuthSurface({ hash: '#/admin/venues', pathname: '/' })).toBe('venue');
     expect(detectAuthSurface({ hash: '#/venue-login/seven-paths-manor', pathname: '/' })).toBe('venue');
     expect(detectAuthSurface({ hash: '', pathname: '/i/va-abc123def4567890' })).toBe('venue');
+    expect(detectAuthSurface({ hash: '', pathname: '/accept-invite/abcdef0123456789' })).toBe('venue');
     expect(detectAuthSurface({ hash: '#/venue-onboarding', pathname: '/' })).toBe('venue');
     expect(detectAuthSurface({ hash: '', pathname: '/reset/venue' })).toBe('venue');
     expect(isVenueStaffRoute('#/home')).toBe(true);
