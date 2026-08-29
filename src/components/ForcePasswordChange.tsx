@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getConfig } from '../config';
 import { resolveLoginChrome } from '../utils/loginBranding';
 import { applyDocumentBranding } from '../utils/documentBranding';
+import { withTimeout } from '../utils/withTimeout';
 
 /**
  * Forced "change your password on first login" gate.
@@ -51,14 +52,22 @@ export default function ForcePasswordChange() {
     setError('');
     setIsLoading(true);
 
-    const ok = await changePassword(user.id, newPassword);
-    if (!ok) {
-      setError('Unable to update your password. Please try again.');
+    try {
+      const ok = await withTimeout(
+        changePassword(user.id, newPassword),
+        20000,
+        'Updating the password timed out. Check your connection and try again.',
+      );
+      if (!ok) {
+        setError('Unable to update your password. Please try again.');
+      }
+      // On success, AuthContext.user updates and clears requiresPasswordChange,
+      // which unmounts this gate and reveals the workspace.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update your password. Please try again.');
+    } finally {
       setIsLoading(false);
-      return;
     }
-    // On success, AuthContext.user updates and clears requiresPasswordChange,
-    // which unmounts this gate and reveals the workspace.
   };
 
   return (
