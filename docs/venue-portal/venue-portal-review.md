@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Console venue list timeout + pending KPIs (#223, 2026-08-28)** — first paint no longer waits on the organization list before metrics; list-derived KPIs show — until venues load; list times out at 20s. Full report: **`docs/reviews/223-console-venue-list-timeout-pending-kpis-2026-08-28.md`**.
 - ✅ **Onboard geocode/create timeout (#222, 2026-08-28)** — Create Venue no longer hangs forever if Geoapify or the create RPC stalls. Full report: **`docs/reviews/222-onboard-geocode-create-timeout-2026-08-28.md`**.
 - ✅ **Provisioning venue login allowed (#221, 2026-08-28)** — claimed admins can sign in before Activate; Suspend/Archive still block. Full report: **`docs/reviews/221-provisioning-venue-login-allowed-2026-08-28.md`**.
 - ✅ **Recovery must not use existing session (#220, 2026-08-28)** — `/reset/…` without a recovery code cannot change the signed-in account’s password. Full report: **`docs/reviews/220-recovery-must-not-use-existing-session-2026-08-28.md`**.

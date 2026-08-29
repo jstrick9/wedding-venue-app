@@ -926,6 +926,19 @@ Creating venue….
 **Rule going forward:** treat #222 + §9.12–9.46 as current truth for
 platform onboard.
 
+### 9.47 Venue list must not hang first paint (Review #223, 2026-08-28)
+
+See `docs/reviews/223-console-venue-list-timeout-pending-kpis-2026-08-28.md`.
+
+Opening the platform console (and directory **Refresh**) must not wait
+on `listPlatformOrganizations` before starting metrics. Timeout that
+list at 20s. List-derived overview KPIs (Venues / Active / Awaiting
+admin / Suspended / Pending invites / Managed admins) show **—** until
+the list succeeds, same as Couples/Guests/RSVPs vs metrics (#219).
+
+**Rule going forward:** treat #223 + §9.12–9.47 as current truth for
+platform console load. Hunt continues on platform console + invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
