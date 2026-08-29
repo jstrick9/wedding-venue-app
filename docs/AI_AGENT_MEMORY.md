@@ -1158,6 +1158,19 @@ visitors need `organizationId`.
 **Rule going forward:** treat #240 + §9.12–9.64 as current truth for
 platform login branding. Hunt continues on venue admin invite/auth.
 
+
+### 9.65 Address lookup must not hang (Review #241, 2026-08-29)
+
+See `docs/reviews/241-address-lookup-timeout-2026-08-29.md`.
+
+Onboard and venue-edit street typeahead must `withTimeout`
+`autocompleteVenueAddress` at 15s and must `finally` so Looking up
+addresses… does not last forever. Create Venue geocode already timed
+out at 15s (#222).
+
+**Rule going forward:** treat #241 + §9.12–9.65 as current truth for
+platform address lookup. Hunt continues on venue admin invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
