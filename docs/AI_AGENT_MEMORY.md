@@ -1195,6 +1195,19 @@ Cloud send already timed out at 20s (#227).
 **Rule going forward:** treat #243 + §9.12–9.67 as current truth for
 staff password reset. Hunt continues on venue admin invite/auth.
 
+
+### 9.68 Branding load must not hang (Review #244, 2026-08-29)
+
+See `docs/reviews/244-branding-load-timeout-2026-08-29.md`.
+
+Console secondary load must `withTimeout` `getPlatformBranding`,
+`getPlatformConsoleMetrics`, and `listPlatformAuditLogs` at 20s. Do not
+enable Save Platform Branding until branding has loaded. Timeout or throw
+must not leave default navy Save-able over live templates.
+
+**Rule going forward:** treat #244 + §9.12–9.68 as current truth for
+platform branding load. Hunt continues on venue admin invite/auth.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

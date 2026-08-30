@@ -7,6 +7,7 @@ codebase. Items are prioritized (P0 = high impact / directly requested,
 P1 = valuable, P2 = polish).*
 
 ## Status
+- ✅ **Branding load timeout (#244, 2026-08-29)** — console Branding times out load at 20s and blocks Save until live templates load so defaults cannot overwrite. Full report: **`docs/reviews/244-branding-load-timeout-2026-08-29.md`**.
 - ✅ **Local password-reset finally (#243, 2026-08-29)** — local send/resend/reset clear Sending Code… / Updating... if hashing throws. Cloud send already timed out at 20s. Full report: **`docs/reviews/243-local-password-reset-finally-2026-08-29.md`**.
 - ✅ **Map tile timeout (#242, 2026-08-29)** — console Map times out Geoapify tiles at 15s instead of staying blank. Full report: **`docs/reviews/242-map-tiles-timeout-2026-08-29.md`**.
 - ✅ **Address lookup timeout (#241, 2026-08-29)** — onboard/edit street typeahead times out Geoapify at 15s instead of staying on Looking up addresses…. Full report: **`docs/reviews/241-address-lookup-timeout-2026-08-29.md`**.
