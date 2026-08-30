@@ -10,6 +10,7 @@ const reactivateMock = vi.fn();
 const reissueMock = vi.fn();
 const geocodeMock = vi.fn();
 const saveBrandingMock = vi.fn();
+const getBrandingMock = vi.fn();
 const logoutMock = vi.fn();
 const authState = {
   user: { email: 'platform@example.com', name: 'Platform Admin' },
@@ -56,7 +57,7 @@ vi.mock('../services/platform/platformAdminService', () => ({
 }));
 
 vi.mock('../services/platform/platformBrandingService', () => ({
-  getPlatformBranding: () => Promise.resolve({}),
+  getPlatformBranding: (...args: unknown[]) => getBrandingMock(...args),
   savePlatformBranding: (...args: unknown[]) => saveBrandingMock(...args),
 }));
 
@@ -205,6 +206,7 @@ describe('PlatformAdminPortal console', () => {
       expiresAt: '2026-09-10T00:00:00.000Z',
     });
     saveBrandingMock.mockReset().mockResolvedValue(undefined);
+    getBrandingMock.mockReset().mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -470,6 +472,16 @@ describe('PlatformAdminPortal console', () => {
     });
     vi.useRealTimers();
     expect(screen.getByRole('button', { name: /save platform branding/i })).toBeEnabled();
+  });
+
+
+  it('does not allow saving platform branding before it has loaded', async () => {
+    getBrandingMock.mockImplementation(() => new Promise(() => {}));
+    window.location.hash = '#/platform-admin/branding';
+    render(<PlatformAdminPortal onOpenVenueWorkspace={() => {}} />);
+    const save = await screen.findByRole('button', { name: /loading branding/i });
+    expect(save).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /save platform branding/i })).not.toBeInTheDocument();
   });
 
 });

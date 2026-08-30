@@ -55,3 +55,20 @@ describe('PlatformAdminPortal branding hang guards', () => {
     expect(saveSlice).toContain('withTimeout');
   });
 });
+
+describe('PlatformAdminPortal secondary console load hang guards', () => {
+  it('times out branding, metrics, and audit and does not save before branding loads', () => {
+    const source = readFileSync(join(process.cwd(), 'src/components/PlatformAdminPortal.tsx'), 'utf8');
+    const loadSlice = source.slice(source.indexOf('const loadSecondaryConsoleData'), source.indexOf('const loadConsole'));
+    expect(loadSlice).toContain('withTimeout');
+    expect(loadSlice).toContain('getPlatformBranding');
+    expect(loadSlice).toContain('20000');
+    expect(loadSlice).toContain('Loading platform branding timed out');
+    expect(loadSlice).toContain('getPlatformConsoleMetrics');
+    expect(loadSlice).toContain('listPlatformAuditLogs');
+    expect(loadSlice).toContain('setBrandingReady(true)');
+    expect(loadSlice).toContain('setBrandingReady(false)');
+    expect(source).toContain('Loading branding…');
+    expect(source).toContain('brandingBusy');
+  });
+});

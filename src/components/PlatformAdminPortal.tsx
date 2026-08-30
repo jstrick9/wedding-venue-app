@@ -163,6 +163,8 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const [geocoding, setGeocoding] = useState(false);
   const [platformBranding, setPlatformBranding] = useState(defaultPlatformConfig);
   const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingReady, setBrandingReady] = useState(false);
+  const [brandingLoadError, setBrandingLoadError] = useState('');
   const [chatOrganizationId, setChatOrganizationId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrganizationStatus | 'all'>('all');
@@ -177,16 +179,37 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   }, []);
 
   const loadSecondaryConsoleData = useCallback(() => {
-    void getPlatformBranding()
-      .then((next) => setPlatformBranding({ ...defaultPlatformConfig, ...next }))
-      .catch(() => undefined);
-    void getPlatformConsoleMetrics()
+    void withTimeout(
+      getPlatformBranding(),
+      20000,
+      'Loading platform branding timed out. Use Refresh, or sign in again at Platform login if this keeps happening.',
+    )
+      .then((next) => {
+        setPlatformBranding({ ...defaultPlatformConfig, ...next });
+        setBrandingReady(true);
+        setBrandingLoadError('');
+      })
+      .catch((err) => {
+        setBrandingReady(false);
+        setBrandingLoadError(err instanceof Error ? err.message : 'Could not load platform branding.');
+      });
+    void withTimeout(
+      getPlatformConsoleMetrics(),
+      20000,
+      'Loading console metrics timed out.',
+    )
       .then((next) => {
         setMetrics(next);
         setMetricsReady(true);
       })
       .catch(() => undefined);
-    void listPlatformAuditLogs(80).then(setAuditLogs).catch(() => undefined);
+    void withTimeout(
+      listPlatformAuditLogs(80),
+      20000,
+      'Loading the audit log timed out.',
+    )
+      .then(setAuditLogs)
+      .catch(() => undefined);
   }, []);
 
   const loadConsole = useCallback(async () => {
@@ -267,6 +290,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
   const activeNav = route.section === 'venue-detail' ? 'venues' : route.section;
 
   const handleSavePlatformBranding = async (next: typeof platformBranding) => {
+    if (!brandingReady) return;
     setBrandingSaving(true);
     try {
       await withTimeout(
@@ -287,6 +311,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
     if (!file) return;
+    if (!brandingReady) return;
     setBrandingSaving(true);
     try {
       const logoUrl = await withTimeout(
@@ -763,6 +788,9 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
               platformBranding={platformBranding}
               setPlatformBranding={setPlatformBranding}
               brandingSaving={brandingSaving}
+              brandingReady={brandingReady}
+              brandingLoadError={brandingLoadError}
+              onRetry={() => loadSecondaryConsoleData()}
               onSave={() => void handleSavePlatformBranding(platformBranding)}
               onLogo={handlePlatformLogoUpload}
             />
@@ -1287,19 +1315,32 @@ function BrandingSection({
   platformBranding,
   setPlatformBranding,
   brandingSaving,
+  brandingReady,
+  brandingLoadError,
+  onRetry,
   onSave,
   onLogo,
 }: {
   platformBranding: typeof defaultPlatformConfig;
   setPlatformBranding: (next: typeof defaultPlatformConfig) => void;
   brandingSaving: boolean;
+  brandingReady: boolean;
+  brandingLoadError: string;
+  onRetry: () => void;
   onSave: () => void;
   onLogo: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const brandingBusy = brandingSaving || !brandingReady;
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Platform identity</p>
       <h2 className="mt-1 text-lg font-bold text-gray-900">Platform login and console branding</h2>
+      {brandingLoadError && (
+        <p role="alert" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {brandingLoadError}{' '}
+          <button type="button" onClick={onRetry} className="font-bold underline">Try again</button>
+        </p>
+      )}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div className="space-y-3">
           <label className="block text-xs font-semibold text-gray-700">Platform name<input value={platformBranding.venueName} onChange={(event) => setPlatformBranding({ ...platformBranding, venueName: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
@@ -1307,8 +1348,8 @@ function BrandingSection({
           <label className="block text-xs font-semibold text-gray-700">Login welcome message<textarea value={platformBranding.loginWelcomeMessage || ''} onChange={(event) => setPlatformBranding({ ...platformBranding, loginWelcomeMessage: event.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={2} /></label>
           <InviteEmailTemplateEditor branding={platformBranding} onChange={setPlatformBranding} />
           <div className="flex items-center gap-3">
-            <input id="platform-logo-upload" type="file" accept="image/*" className="sr-only" onChange={(event) => void onLogo(event)} />
-            <label htmlFor="platform-logo-upload" className="cursor-pointer rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-800">Upload platform logo</label>
+            <input id="platform-logo-upload" type="file" accept="image/*" className="sr-only" disabled={brandingBusy} onChange={(event) => void onLogo(event)} />
+            <label htmlFor="platform-logo-upload" className={`rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-800 ${brandingBusy ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}>Upload platform logo</label>
             {platformBranding.logoUrl && <img src={platformBranding.logoUrl} alt="Platform logo" className="h-10 w-10 rounded-lg border object-contain" />}
           </div>
         </div>
@@ -1317,7 +1358,7 @@ function BrandingSection({
           <label className="text-xs font-semibold text-gray-700">Animation<select value={platformBranding.loginBackgroundAnimation || 'none'} onChange={(event) => setPlatformBranding({ ...platformBranding, loginBackgroundAnimation: event.target.value as typeof platformBranding.loginBackgroundAnimation })} className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"><option value="none">None</option><option value="drift">Drift</option><option value="shimmer">Shimmer</option><option value="float">Float</option></select></label>
           <label className="text-xs font-semibold text-gray-700">Primary color<input type="color" value={platformBranding.loginBackgroundColor || platformBranding.primaryColor} onChange={(event) => setPlatformBranding({ ...platformBranding, loginBackgroundColor: event.target.value, primaryColor: event.target.value })} className="mt-1 h-10 w-full rounded-lg border" /></label>
           <label className="text-xs font-semibold text-gray-700">Secondary color<input type="color" value={platformBranding.loginBackgroundSecondaryColor || platformBranding.primaryLight} onChange={(event) => setPlatformBranding({ ...platformBranding, loginBackgroundSecondaryColor: event.target.value, primaryLight: event.target.value })} className="mt-1 h-10 w-full rounded-lg border" /></label>
-          <button type="button" disabled={brandingSaving} onClick={onSave} className="col-span-2 rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">{brandingSaving ? 'Saving…' : 'Save Platform Branding'}</button>
+          <button type="button" disabled={brandingBusy} onClick={onSave} className="col-span-2 rounded-lg bg-indigo-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">{brandingSaving ? 'Saving…' : brandingReady ? 'Save Platform Branding' : 'Loading branding…'}</button>
         </div>
       </div>
     </section>
