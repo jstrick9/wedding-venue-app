@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { emitDataChanged, on } from '../../utils/appEvents';
@@ -111,7 +110,7 @@ export function saveOperationsSettings(
 }
 
 export function OperationsSettingsManagement(props: AdminCommonProps) {
-  const { config, onShowSuccess } = props;
+  const { config, showSuccess } = props;
   const [checklist, setChecklist] = useState<OperationsChecklistItem[]>(() =>
     getOperationsChecklistDefaults()
   );
@@ -152,14 +151,14 @@ export function OperationsSettingsManagement(props: AdminCommonProps) {
     setChecklist(updated);
     saveOperationsSettings(updated, zones);
     setNewItem({ text: '', phase: 'pre-event', isRequired: true });
-    onShowSuccess?.('Default checklist item added!');
+    showSuccess('Default checklist item added!');
   };
 
   const handleDeleteChecklist = (id: string) => {
     const updated = checklist.filter((i) => i.id !== id);
     setChecklist(updated);
     saveOperationsSettings(updated, zones);
-    onShowSuccess?.('Checklist item removed!');
+    showSuccess('Checklist item removed!');
   };
 
   const handleAddZone = (e: React.FormEvent) => {
@@ -174,21 +173,21 @@ export function OperationsSettingsManagement(props: AdminCommonProps) {
     setZones(updated);
     saveOperationsSettings(checklist, updated);
     setNewZone({ name: '', description: '' });
-    onShowSuccess?.('Operational zone added!');
+    showSuccess('Operational zone added!');
   };
 
   const handleDeleteZone = (id: string) => {
     const updated = zones.filter((z) => z.id !== id);
     setZones(updated);
     saveOperationsSettings(checklist, updated);
-    onShowSuccess?.('Operational zone removed!');
+    showSuccess('Operational zone removed!');
   };
 
   const handleResetDefaults = () => {
     setChecklist(DEFAULT_CHECKLIST);
     setZones(DEFAULT_ZONES);
     saveOperationsSettings(DEFAULT_CHECKLIST, DEFAULT_ZONES);
-    onShowSuccess?.('Reset to Seven Paths Manor operations defaults.');
+    showSuccess('Reset to Seven Paths Manor operations defaults.');
   };
 
   const filteredChecklist =

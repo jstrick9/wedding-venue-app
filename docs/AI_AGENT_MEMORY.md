@@ -1445,6 +1445,12 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #255 (2026-08-31): units 1.16-1.17 done; ratchet 5 (19/24). F-255-1
+  (P3): OperationsSettingsManagement destructured onShowSuccess but the
+  AdminCommonProps prop is showSuccess — always undefined, so all 5 action
+  toasts never fired (silent saves since creation; ?. defused the crash).
+  Same wrong-prop-name family as F-252-1. Pinned by
+  OperationsSettingsManagement.typing.test.ts. Unit 1.16 clean.
 - #254 (2026-08-31): units 1.14-1.15 done; ratchet 7 (17/24). Both clean
   (clone-stamp prunes only; AccessControlPanel hierarchy-optional guard
   preserved semantics). Process: ratchet ceiling edits must update the

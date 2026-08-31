@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useMemo, useEffect } from 'react';
 import { buildCoupleInviteUrl, getCoupleEvents } from '../services/couples/coupleService';
 import {
@@ -9,7 +8,7 @@ import {
 } from '../services/couples/coupleChatService';
 import { DirectMessagePanel } from './DirectMessagePanel';
 import { on, emitDataChanged } from '../utils/appEvents';
-import { getConfig, useBrandingConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import { showToast } from './Toast';
 import type { CoupleEvent, User } from '../types';
 
@@ -54,7 +53,6 @@ export function VenueChatPanel({
   const [messageText, setMessageText] = useState('');
   const [threadSearch, setThreadSearch] = useState('');
   const [threadFilter, setThreadFilter] = useState<'all' | 'unread' | 'approved' | 'pending'>('all');
-  const [showQuickReplies, setShowQuickReplies] = useState(false);
 
   // Internal Team DMs state
   const [selectedMasterUserId, setSelectedMasterUserId] = useState<string>('');
@@ -137,7 +135,6 @@ export function VenueChatPanel({
       message: messageText.trim(),
     });
     setMessageText('');
-    setShowQuickReplies(false);
     emitDataChanged('coupleMessages');
   };
 

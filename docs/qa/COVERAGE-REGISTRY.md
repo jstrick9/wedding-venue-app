@@ -4,7 +4,7 @@
 **Legend:** `open` → not yet examined · `in-progress` → unit started · `done` → examined, findings fixed/declined with evidence · `certified` → previously proven (review # cited)
 **Rule:** a row may only move to `done`/`certified` with evidence (review # + what was proven). "Declined" findings need a written reason. This file is the single source of truth for campaign state; session review docs cite registry deltas.
 
-**Phase 1 progress: 17/24 files retyped · ratchet ceiling 7 (#254). The ceiling must equal the open count at all times.**
+**Phase 1 progress: 19/24 files retyped · ratchet ceiling 5 (#255). The ceiling must equal the open count at all times.**
 
 ---
 
@@ -29,8 +29,8 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 | 1.13 | components/VenueCalendar.tsx | 713 | done | #253: F-253-1 (P1) — CalendarEventForm read out-of-scope `config` → ReferenceError on render; add/edit event form crashed on open; fixed via own useBrandingConfig() call. F-253-2 (P4) endTime never shown (EventItem lacked the field). Pinned by VenueCalendar.typing.test.ts |
 | 1.14 | components/admin/GuidelineManagement.tsx | 697 | done | #254: clean — 57 invalid + 204 unused names (none used in body); types import 16→1; 697→429 L |
 | 1.15 | components/admin/AccessControlPanel.tsx | 609 | done | #254: clean — hierarchy-optional guard (semantics preserved); dead copy-permissions handler + 4 unused names pruned; 609→601 L |
-| 1.16 | components/VenueChatPanel.tsx | 595 | open | — |
-| 1.17 | components/admin/OperationsSettingsManagement.tsx | 436 | open | — |
+| 1.16 | components/VenueChatPanel.tsx | 595 | done | #255: clean — 0 tsc errors; dead showQuickReplies state (never read) + getConfig import pruned; 595→592 L |
+| 1.17 | components/admin/OperationsSettingsManagement.tsx | 436 | done | #255: F-255-1 (P3) — destructured onShowSuccess but prop is showSuccess; all 5 action toasts never fired since creation (silent saves). Pinned by OperationsSettingsManagement.typing.test.ts |
 | 1.18 | components/admin/SecurityAuditManagement.tsx | 345 | open | — |
 | 1.19 | components/admin/CommunicationTemplatesManagement.tsx | 345 | open | — |
 | 1.20 | components/CoupleLayoutEditor.tsx | 310 | open | — |
