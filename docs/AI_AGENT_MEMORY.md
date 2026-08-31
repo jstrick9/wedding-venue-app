@@ -1445,6 +1445,10 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #251c (2026-08-31): unit 1.6 TableManagement done; ratchet 16. F-251-4:
+  SAME discard bug as F-251-2 — venue-category chips on tables computed next
+  value then saved unchanged; never worked. Blast radius of that clone scanned
+  repo-wide: exactly 2 files (Fixture + Table), both now fixed.
 - #251b (2026-08-31): unit 1.5 VenueManagement done; ratchet 17. No new
   defects — first panel where the nocheck hid only clone-stamp garbage
   (57 invalid + 197 unused names), zero tsc errors after removal.
