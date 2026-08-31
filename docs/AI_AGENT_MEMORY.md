@@ -1243,8 +1243,16 @@ atomicity + throttle (P2-G), CI bundle budget (P2-H), `@ts-nocheck` ratchet
 (P2-I), guest-RPC rate limit (P3-J). Live RLS smoke tests still pending —
 run the §9 checklist in review 245 against the live project.
 
+**CI gate inversion (P1-K, fixed 14ca5bc):** the workflow's unused-locals
+step piped tsc through grep -v, so a CLEAN scan exited 1 and failed CI —
+39 of the last 40 runs were red and the single green run had violations to
+print. The step now fails only when violations are printed. Rule: a grep
+pipeline in CI must end with `|| true` + an explicit emptiness check; a
+green local gate is not evidence CI is green — check the Actions tab.
+
 **Rule going forward:** treat #245 + §9.12–9.68 as current truth for
-reliability, hooks ordering, snapshot concurrency, and storage MIME policy.
+reliability, hooks ordering, snapshot concurrency, storage MIME policy, and
+CI gate semantics.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*

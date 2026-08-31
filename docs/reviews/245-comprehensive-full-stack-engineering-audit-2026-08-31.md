@@ -146,6 +146,16 @@ Single-file: 409 kB (#173) → 481 kB (#180) → **557 kB gzip (HEAD)** — +15%
 
 24 `@ts-nocheck` files — the entire venue-admin surface (`UserManagement` 1,825 lines, `BrandingManagement` 1,716, `AdminPanel` 1,693, …) — plus 124 `any`/`as any` elsewhere. The green `tsc` gate covers none of the console that writes `org_data`. **Recommendation:** a CI ratchet (fail if the count grows; ratchet down over time) and re-typing smallest-first (`AdminSharedComponents`, `SpacingManagement`, `LinenManagement`).
 
+### P1-K — CI has been failing on every clean commit: the unused-locals gate was inverted (found during this review's push; fixed in `14ca5bc`)
+
+The `Strict unused-locals scan (non-test)` step in `.github/workflows/ci.yml` ran:
+
+```
+npx tsc --noEmit --noUnusedLocals 2>&1 | grep -v "\.test\." | grep -v "node_modules"
+```
+
+When `tsc` is **clean** it prints nothing, the `grep -v` pipeline matches no lines and **exits 1**, which GitHub Actions treats as step failure. The gate was therefore inverted: it failed on every healthy commit and "passed" only when unused-local violations actually existed. Verified via the GitHub API: **39 of the last 40 CI runs failed on this step**, and the single green run (74abb2d) was green because violations were printed. Consequence: the entire #181–#244 remediation series shipped with a permanently red CI — every "record CI gate results" doc recorded *local* gates while the real workflow never went green, so CI provided zero regression protection. **Fixed in this review** (`14ca5bc`): the step now fails only when real violations are printed.
+
 ### P3-J — Minor / hygiene
 
 1. **`submit_guest_rsvp` has no per-call rate limit** — validation is good, but an anon caller can submit unbounded replacements for a valid token (idempotent-by-replace, so impact is bounded; a `venue_geocode_rate`-style slot or audit-log limiter like `send-email`'s would close it).
