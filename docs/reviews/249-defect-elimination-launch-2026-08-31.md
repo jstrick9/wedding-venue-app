@@ -13,7 +13,7 @@
 
 Also restructured the `BrandedStatCard` polymorphic render (`Comp = onClick ? 'button' : 'div'` + `type={...}` prop) into an explicit two-branch render — behavior-identical (div never received a `title`; button always `type="button"`), but now type-safe instead of relying on `@ts-nocheck` to not notice that a `div` was receiving a `type` attribute.
 
-**Finding F-249-2 (maintainability defect, registered not fixed — Phase 6.8/Phase 4): mixed adoption of the shared components.** 8 files import from `AdminSharedComponents` (BackupManagement, CoupleManagement, EventQuestionsManagement, GuestPortalManagement, PackageManagement, VenueWayfindingManagement, StudioLayoutsHome, AdminPanel.highDensity.test) while ~13 admin panels carry **private duplicate copies** of `BrandedSectionHeader`/`BrandedStatCard`/`BrandedTips`/`PatternColorPicker`. Consequence: a fix or a11y improvement to the shared component does not propagate to the duplicated panels — they can (and presumably already do) diverge. Also noted: three dead non-exported consts in the shared file (`chairLayoutOptions`, `shapeOptions`, `patternOptions`).
+**Finding F-249-2 (maintainability defect, registered not fixed — Phase 6.8/Phase 4): mixed adoption of the shared components.** 8 files import from `AdminSharedComponents` (BackupManagement, CoupleManagement, EventQuestionsManagement, GuestPortalManagement, PackageManagement, VenueWayfindingManagement, StudioLayoutsHome, AdminPanel.highDensity.test) while ~13 admin panels carry **private duplicate copies** of `BrandedSectionHeader`/`BrandedStatCard`/`BrandedTips`/`PatternColorPicker`. Consequence: a fix or a11y improvement to the shared component does not propagate to the duplicated panels — they can (and presumably already do) diverge. Also noted (then fixed): three dead non-exported consts in the shared file (`chairLayoutOptions`, `shapeOptions`, `patternOptions`) — initially left in place, which **failed CI's "Strict unused-locals scan" step** (`tsc --noUnusedLocals`, non-test files) on the first push of ed05148: `@ts-nocheck` had been hiding them too. Removed in the follow-up commit along with their now-unused type imports. Two campaign lessons codified: (1) **the gate chain is whatever `ci.yml` runs — enumerate it from the workflow file, not from habit** (the strict scan wasn't in my local routine); (2) de-nochecking a file makes its dead locals fail CI — delete them, don't carry them.
 
 **Process near-miss (recorded as a campaign rule):** an initial grep concluded the file was dead code; it was deleted; `tsc` immediately surfaced 8 importers and the deletion was reverted before commit. Lesson codified: **grep output is not evidence — compiler/test output is.** No registry verdict without the toolchain.
 
@@ -30,6 +30,7 @@ Simple live wrappers (imported by `AdminPanel.tsx`). Both de-nochecked; `tsc` cl
 | Gate | Result |
 |---|---|
 | ESLint | 0 errors / 30 warnings (baseline) |
+| Strict unused-locals scan (`tsc --noEmit --noUnusedLocals`, non-test) | clean (after dead-const removal — this step caught the first-push failure) |
 | `tsc --noEmit` | clean (whole repo, 3 files newly checked) |
 | Vitest | 1002 passed / 5 skipped (unchanged count — no behavior change) |
 | Build single/split + budgets | 556.99 kB gzip / chunks within budget |

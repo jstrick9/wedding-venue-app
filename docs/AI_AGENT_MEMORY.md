@@ -1448,10 +1448,16 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
 - #249 (2026-08-31): protocol + registry shipped; units 1.1, 1.23, 1.24 done;
   ratchet 21. F-249-1: AdminSharedComponents had 8 unimported type refs hidden
   by nocheck. F-249-2: mixed adoption — 8 importers of shared components vs ~13
-  panels with private duplicates (Phase 6.8 dedup). NEW RULE: grep output is
-  NOT evidence — a file was nearly deleted as "dead code" because a grep
-  missed 8 importers; tsc caught it. No registry verdict without the
-  compiler/tests.
+  panels with private duplicates (Phase 6.8 dedup). NEW RULES: (a) grep output
+  is NOT evidence — a file was nearly deleted as "dead code" because a grep
+  missed 8 importers; tsc caught it; (b) the local gate chain = whatever
+  ci.yml runs, enumerate it from the workflow file each session — it includes
+  a Strict unused-locals scan (tsc --noEmit --noUnusedLocals, non-test) that
+  de-nochecked files must pass, so dead locals get deleted not carried;
+  (c) .git/config is STRIPPED from workspace snapshots (credential policy) —
+  every fresh sandbox must re-add the origin remote
+  (git remote add origin https://TOKEN@github.com/jstrick9/… or pushes fail
+  with 'origin does not appear to be a git repository').
 
 ---
 *End of AI Agent Memory & Knowledge Base.*

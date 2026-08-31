@@ -7,8 +7,6 @@ import type {
   PatternType,
   PlacedFixture,
   PlacedTable,
-  RectangularChairLayout,
-  ShapeType,
 } from '../../../types';
 
 interface BrandedSectionHeaderProps {
@@ -143,13 +141,6 @@ export function BrandedTips({ title, tips, config, defaultOpen = false }: Brande
     </div>
   );
 }
-// Chair layout options for rectangular tables
-const chairLayoutOptions: { id: RectangularChairLayout; name: string; description: string }[] = [
-  { id: 'all-sides', name: 'All Sides', description: 'Chairs on all 4 sides' },
-  { id: 'long-sides-only', name: 'Long Sides Only', description: 'Chairs only on long sides (e.g., 4+4)' },
-  { id: 'head-table', name: 'Head Table', description: 'Chairs on one side only (facing out)' },
-];
-
 export interface AdminPanelProps {
   onClose: () => void;
   currentLayout?: {
@@ -160,9 +151,6 @@ export interface AdminPanelProps {
   };
   onLoadTemplateForEdit?: (template: LayoutTemplate) => void;
 }
-
-const shapeOptions: ShapeType[] = ['circle', 'rectangle', 'triangle', 'semicircle', 'oval', 'hexagon', 'octagon', 'polygon'];
-const patternOptions: PatternType[] = ['solid', 'checkered', 'gravel', 'concrete', 'grass', 'wood', 'tile', 'brick', 'marble', 'water', 'carpet'];
 
 // Default colors for each pattern type
 const defaultPatternColors: Record<PatternType, PatternColors> = {
