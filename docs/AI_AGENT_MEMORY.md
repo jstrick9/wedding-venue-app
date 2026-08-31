@@ -1412,6 +1412,38 @@ Closed the last open gap from #247 §6 in executable form:
    clean; they are runbook code — self-asserting, non-zero exit on failure,
    never print secrets.
 
+### 9.75 Defect-elimination campaign started (2026-08-31, Reviews #249+)
+
+Operator asked for "find and fix everything without stopping". Protocol
+shipped at `docs/qa/defect-elimination-protocol.md` (v1.0); the finite
+surface lives in `docs/qa/COVERAGE-REGISTRY.md` — THE source of truth for
+campaign state (update every unit; session review docs cite registry
+deltas). "Done" = every registry row carries evidence, not "no bugs exist".
+
+**Operator decisions:** live+throwaway test mode (rules: I mutate only
+operator-provisioned throwaway artifacts, log every live mutation,
+destructive SQL stays operator-run, artifact requests batched on the
+registry board) · continuous execution (interrupt anytime) · bug fixes +
+opportunistic refactor of touched files · risk-density phase order.
+
+**Phases:** 0 registry (done) → 1 de-blind 24 @ts-nocheck files/17,096 lines
+(shared foundation first, then size-desc; ratchet ceiling must equal the
+open count) → 2 RPC audit (46, fixed checklist) → 3 authz matrix (29 tables
+× anon/guest/couple/venue/platform) → 4 console flow audit (4 consoles,
+giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drift.
+
+**Rules going forward:**
+1. Every campaign unit: investigate → fix → pinning tests → FULL gate chain
+   → review doc + memory → push → CI green verified → registry row updated.
+   A unit is not done until CI is green and the registry says so.
+2. Never raise the @ts-nocheck ceiling; each Phase-1 unit lowers it by the
+   number of files closed. tsc errors found during de-blinding are triaged
+   as candidate REAL bugs (silent undefined, wrong field names), not noise.
+3. Registry artifact-request board is how live test artifacts arrive; batch
+   requests, never block a session on one — switch units if blocked.
+4. Session review docs cover the units completed in that session; registry
+   rows carry per-unit evidence with review numbers.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
