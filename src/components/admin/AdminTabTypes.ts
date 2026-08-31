@@ -47,6 +47,35 @@ export interface AdminCurrentLayout {
   category?: string;
 }
 
+/**
+ * Draft shape for the create-user form (mirrors AdminPanel's newUser state).
+ * Previously typed as Record<string, unknown>, which pushed `unknown` into
+ * every form input that read it (Review #250).
+ */
+export interface NewUserDraft {
+  username: string;
+  password: string;
+  name: string;
+  role: 'admin' | 'basic' | 'staff' | 'guest';
+  email: string;
+  phone: string;
+  contactPhoneNumber: string;
+  phoneType: 'Mobile' | 'Home' | 'Work' | 'Other';
+  preferredCommunication: ('call' | 'text' | 'email')[];
+  eventRole: string;
+  eventName: string;
+  userRole: 'admin' | 'master' | 'shared' | 'read-only' | 'staff';
+  isMasterUser: boolean;
+  parentUserId: string | undefined;
+  allowSharedAccess: boolean;
+  sharedUserLimit: number;
+  userStatus: 'invited' | 'pending' | 'active' | 'suspended' | 'disabled';
+  eventDate: string;
+  jobTitle: string;
+  department: string;
+  assignedRoles: string[];
+}
+
 export interface AdminCommonProps {
   config: Config;
   venues: Venue[];
@@ -258,8 +287,8 @@ export interface AdminCommonProps {
   handleUpdateEventQuestion: (id: string, updates: Partial<EventQuestion>) => void;
   handleDeleteEventQuestion: (id: string) => void;
   handleCreateUser: () => Promise<void>;
-  newUser: Record<string, unknown>;
-  setNewUser: Dispatch<SetStateAction<any>>;
+  newUser: NewUserDraft;
+  setNewUser: Dispatch<SetStateAction<NewUserDraft>>;
   getUserFieldErrors?: (u: any, requireAuthFields?: boolean) => Record<string, string>;
   createUserFieldErrors: Record<string, string>;
   setCreateUserFieldErrors: Dispatch<SetStateAction<Record<string, string>>>;

@@ -1445,6 +1445,16 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #250 (2026-08-31): unit 1.2 UserManagement done; ratchet 20. F-250-1 (P1
+  runtime bug): destructuring a nonexistent `FileReader` prop shadowed the
+  global → `new FileReader()` in the profile-image upload threw on every file
+  pick. F-250-2: showInfo(title, message) called with 1 arg → undefined dialog
+  body. F-250-3: 267-name destructure paste garbage (57 invalid, ~180 unused).
+  NewUserDraft typed on AdminTabTypes. LESSON: the giant-destructure pattern
+  (pull the whole admin universe off props) is a bug factory — expect the same
+  paste garbage in the other big admin panels (units 1.3-1.22); check for
+  global shadowing first (FileReader, alert, window, document, event, name,
+  status, length, options are the dangerous ones).
 - #249 (2026-08-31): protocol + registry shipped; units 1.1, 1.23, 1.24 done;
   ratchet 21. F-249-1: AdminSharedComponents had 8 unimported type refs hidden
   by nocheck. F-249-2: mixed adoption — 8 importers of shared components vs ~13
