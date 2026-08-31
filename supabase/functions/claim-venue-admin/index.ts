@@ -32,6 +32,47 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+/** Best-effort failure counter for the claim throttle (migration 0017). */
+async function registerClaimFailure(admin: SupabaseClient, token: string): Promise<void> {
+  try {
+    await admin.rpc('register_venue_admin_claim_failure', { p_token: token });
+  } catch {
+    // register_venue_admin_claim_failure is not deployed yet — skip.
+  }
+}
+
+/**
+ * Atomic claim (Review #247, requires migration 0017): consume the invite and
+ * transfer ownership in one transaction right after the password is set.
+ * Returns ok when the claim succeeded, `unavailable` when the RPC is missing
+ * (the client-side accept_venue_admin_invite fallback still completes the
+ * claim), and `error` when the claim was explicitly rejected.
+ */
+async function claimAtomically(
+  admin: SupabaseClient,
+  token: string,
+  userId: string,
+  email: string,
+): Promise<{ ok: boolean; unavailable?: boolean; error?: string }> {
+  try {
+    const { data, error } = await admin.rpc('claim_venue_admin_account', {
+      p_token: token,
+      p_user_id: userId,
+      p_email: email,
+    });
+    if (error) return { ok: false, unavailable: true };
+    const claim = asRecord(data);
+    if (!claim || claim.ok !== true) {
+      return { ok: false, error: String(claim?.error || 'claim_failed') };
+    }
+    return { ok: true };
+  } catch {
+    // claim_venue_admin_account is not deployed yet — fall back to the
+    // client-side accept flow.
+    return { ok: false, unavailable: true };
+  }
+}
+
 function alreadyRegistered(message: string): boolean {
   return /already registered|already been registered|user already exists|email_exists|already exists/i.test(message);
 }
@@ -100,16 +141,33 @@ serve(async (req) => {
     if (!fullName) return json({ error: 'Enter your name.' }, 400);
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Throttle gate (Review #247, requires migration 0017). Degrades
+    // gracefully when the RPC is not deployed yet: proceed without the lock.
+    try {
+      const { data: gate } = await admin.rpc('venue_admin_claim_gate', { p_token: token });
+      if (gate && typeof gate === 'object' && (gate as { locked?: boolean }).locked === true) {
+        return json(
+          { error: 'Too many attempts with this setup link. Wait a few minutes and try again.' },
+          429,
+        );
+      }
+    } catch {
+      // venue_admin_claim_gate is not deployed yet — skip throttling.
+    }
+
     const { data: contextRaw, error: contextError } = await admin.rpc('get_venue_admin_invite_context', {
       p_token: token,
     });
     if (contextError) {
+      await registerClaimFailure(admin, token);
       return json({ error: contextError.message || 'not_found' }, 400);
     }
     const context = typeof contextRaw === 'string'
       ? asRecord((() => { try { return JSON.parse(contextRaw); } catch { return null; } })())
       : asRecord(contextRaw);
     if (!context?.ok) {
+      await registerClaimFailure(admin, token);
       return json({ error: String(context?.error || 'not_found') }, 400);
     }
 
@@ -161,10 +219,19 @@ serve(async (req) => {
 
     await admin.from('profiles').update({ full_name: fullName, email }).eq('id', userId);
 
+    // Atomic claim (Review #247): consume the invite + transfer ownership in
+    // one transaction now that credentials are set, instead of leaving the
+    // invite pending until a client-side accept runs.
+    const claimResult = await claimAtomically(admin, token, userId, email);
+    if (claimResult.error) {
+      return json({ error: claimResult.error }, 400);
+    }
+
     return json({
       ok: true,
       email,
       existingUser,
+      claimed: claimResult.ok,
       organizationId,
       organizationName,
       organizationSlug,

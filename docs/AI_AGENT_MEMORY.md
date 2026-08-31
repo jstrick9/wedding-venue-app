@@ -1280,6 +1280,47 @@ out-of-band at least once.
 reliability, hooks ordering, snapshot concurrency, storage MIME policy, and
 CI gate semantics.
 
+### 9.71 P2 follow-up remediation: claim atomicity, bundle budget, ts-nocheck ratchet (Review #247, 2026-08-31)
+
+Post-0016 verification: regression suite all green; **live MIME allowlist is
+already exactly {png,jpeg,webp,gif}** (P2-E closed live regardless of 0016
+apply state, which is NOT anon-observable — PostgREST plan API returns 406
+PGRST107 on hosted Supabase). **LV-1 Graph cleanup still open** (§5 operator
+SQL from #246 not run; 0016 also assumed unapplied).
+
+Shipped in this review:
+- **P2-G claim atomicity** — migration `0017`: `venue_admin_claim_attempts`
+  table + 3 service-role-only RPCs (`venue_admin_claim_gate`,
+  `register_venue_admin_claim_failure`, `claim_venue_admin_account`) +
+  idempotent-accept patch to `accept_venue_admin_invite`. Edge Function
+  `claim-venue-admin` now gates (429) → counts failures on invalid tokens →
+  sets password → claims atomically, each step degrading gracefully when 0017
+  isn't applied yet. Response gains `claimed` boolean; client flow unchanged.
+  Order deliberately password-then-claim (failure leaves invite retryable).
+  Throttle: 10 failures / rolling 1h → 15-min lock.
+- **P2-H bundle budget** — `scripts/check-bundle-budget.mjs` (pure
+  `evaluateBudgets` + CLI `single|split`). Budgets: single-file gzip ≤ 620 KiB
+  (543.88 measured), split per-chunk raw ≤ 820 KiB (733.96 measured). **CI
+  order: build → budget single → build:split → budget split** (split
+  overwrites dist/index.html). npm: `budget:single`, `budget:split`.
+- **P2-I ratchet** — `scripts/check-ts-nocheck-ratchet.mjs`, ceiling 24
+  (exact current count, all venue-admin console files), CI step +
+  `npm run ratchet`. Ceiling only goes DOWN as files get retyped.
+
+**Rules going forward:**
+1. Never silently raise a budget or ratchet ceiling — same-commit justification
+   only; bundle/@ts-nocheck growth is now CI-enforced.
+2. Service-only RPCs (any function a client must never call) must ship with
+   `revoke execute … from public, anon, authenticated` in the same migration
+   that creates them, plus a scrape test pinning the revoke lines.
+3. Edge Functions must keep working when their backing migration isn't applied
+   yet — wrap every new RPC call in try/catch and fall back to prior behavior.
+4. Vite prints decimal kB; `gzipSync`-measured KiB ≈ ×1.024 smaller — same
+   file, don't "reconcile" the numbers.
+5. PostgREST query plans (vnd.pgrst.plan+json) are unavailable on hosted
+   Supabase (406 PGRST107, db-plan-enabled off) — index verification needs the
+   SQL editor, not REST.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

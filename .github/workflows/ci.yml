@@ -42,7 +42,13 @@ jobs:
         run: npm run test
       - name: Build (single-file)
         run: npm run build
+      - name: Bundle budget (single-file gzip)
+        run: node scripts/check-bundle-budget.mjs single
       - name: Build (split / code-split)
         run: npm run build:split
+      - name: Bundle budget (split chunks)
+        run: node scripts/check-bundle-budget.mjs split
+      - name: '@ts-nocheck ratchet'
+        run: node scripts/check-ts-nocheck-ratchet.mjs
       - name: Production dependency audit (no dev tooling)
         run: npm audit --omit=dev

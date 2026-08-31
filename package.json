@@ -16,7 +16,10 @@
     "lint:events": "node scripts/check-event-bus.mjs",
     "ci": "npm run typecheck && npm run lint:events && npm run lint && npm run test && npm run build",
     "build:split": "VITE_SPLIT=1 vite build",
-    "build:split:win": "cross-env VITE_SPLIT=1 vite build"
+    "build:split:win": "cross-env VITE_SPLIT=1 vite build",
+    "budget:single": "node scripts/check-bundle-budget.mjs single",
+    "budget:split": "node scripts/check-bundle-budget.mjs split",
+    "ratchet": "node scripts/check-ts-nocheck-ratchet.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.2",
