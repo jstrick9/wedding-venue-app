@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { canSyncLayouts, pullLayouts, pushLayouts } from '../services/sync/layoutSync';
 import { subscribeToLayoutChanges } from '../services/sync/layoutRealtime';
+import { emit } from '../utils/appEvents';
 
 export interface LayoutBackendSyncOptions {
   userId: string | null;
@@ -61,6 +62,13 @@ export function useLayoutBackendSync({
       await pushLayouts(context);
     } catch (err) {
       console.error('Failed to push layouts to backend:', err);
+      // Local saves succeeded but the shared backend did not get them — tell
+      // the user instead of failing silently (Review #245 P2-F).
+      emit('spm_cloud_sync_error', {
+        domain: 'layouts',
+        error: err instanceof Error ? err.message : String(err),
+        timestamp: new Date().toISOString(),
+      });
     }
   }, [enabled, context]);
 

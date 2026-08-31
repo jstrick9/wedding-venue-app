@@ -13,6 +13,46 @@ const clients: Partial<Record<AuthSurface, SupabaseClient>> = {};
 let currentSurface: AuthSurface = detectAuthSurface();
 let migratedLegacy = false;
 
+/**
+ * Hard deadline (ms) for every Supabase REST/Auth/Storage request made by the
+ * browser clients. This is the root fix for the "must not hang" class from
+ * Reviews #214–#244: a stalled request aborts instead of parking a pending
+ * promise forever. UI-level `withTimeout` calls remain for user-facing busy
+ * states, but no service call can hang past this deadline anymore.
+ */
+export const SUPABASE_FETCH_DEADLINE_MS = Number(
+  import.meta.env.VITE_SUPABASE_FETCH_DEADLINE_MS || 30_000,
+);
+
+/**
+ * Wraps `fetch` so every request aborts at the deadline. Built on a manual
+ * `AbortController` + timer (not `AbortSignal.timeout`) so behavior is
+ * identical across modern browsers and test environments. An explicit caller
+ * signal is bridged onto the same controller so caller-initiated aborts still
+ * work and still fire before the deadline.
+ */
+export function createDeadlineFetch(deadlineMs: number = SUPABASE_FETCH_DEADLINE_MS): typeof fetch {
+  return (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), deadlineMs);
+    const externalSignal = init?.signal;
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        controller.abort();
+      } else {
+        externalSignal.addEventListener(
+          'abort',
+          () => controller.abort(),
+          { once: true },
+        );
+      }
+    }
+    return fetch(input, { ...init, signal: controller.signal }).finally(() => {
+      clearTimeout(timer);
+    });
+  };
+}
+
 export const PLATFORM_SESSION_MISSING =
   'Your platform administrator session is missing or expired. Sign in again at Platform login. Venue setup uses a separate account and does not replace the platform login.';
 
@@ -39,6 +79,11 @@ function createSurfaceClient(surface: AuthSurface): SupabaseClient {
       autoRefreshToken: surface === currentSurface,
       detectSessionInUrl: false,
       storageKey: AUTH_STORAGE_KEYS[surface],
+    },
+    global: {
+      // Every request gets a hard abort deadline (Review #245 P1-A) so no
+      // service-layer call can hang forever, regardless of caller.
+      fetch: createDeadlineFetch(),
     },
   });
 }
@@ -98,6 +143,9 @@ export async function migrateLegacyAuthSessions(): Promise<void> {
       autoRefreshToken: false,
       detectSessionInUrl: false,
       storageKey: legacyKey,
+    },
+    global: {
+      fetch: createDeadlineFetch(),
     },
   });
   const { data } = await legacy.auth.getSession();

@@ -57,25 +57,10 @@ const StaffOperationsPanel: React.FC<Props> = ({
   const [beoCoupleId, setBeoCoupleId] = useState<string | null>(null);
   const { getTimelineForCouple } = useTimeline();
 
-  if (!canAccessPanel) {
-    return (
-      <div className="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg rounded-xl bg-white shadow-xl p-6">
-          <h2 className="text-xl font-semibold text-red-700">Access denied</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            You do not have permission to access staff operations.
-          </p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm text-white"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // NOTE (Review #245 P1-B): every hook below MUST run on every render. The
+  // access-denied guard moved AFTER the hook block — returning early before the
+  // hooks crashed the workspace with "Rendered fewer hooks than expected" when a
+  // user's permission was revoked while the panel was open.
   
   // Data State
   const [tasks, setTasks] = useState<StaffTask[]>([]);
@@ -1704,6 +1689,26 @@ const StaffOperationsPanel: React.FC<Props> = ({
       </div>
     );
   };
+
+  if (!canAccessPanel) {
+    return (
+      <div className="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4">
+        <div className="w-full max-w-lg rounded-xl bg-white shadow-xl p-6">
+          <h2 className="text-xl font-semibold text-red-700">Access denied</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            You do not have permission to access staff operations.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm text-white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={inline ? "h-full flex flex-col bg-gray-100" : "fixed inset-0 z-[10000] bg-gray-100/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300"}>

@@ -83,3 +83,34 @@ describe('spm_clear_undo_history event', () => {
     off();
   });
 });
+
+describe('spm_cloud_sync_error (Review #245 P2-F)', () => {
+  it('delivers the failing domain and error to subscribers', () => {
+    const handler = vi.fn();
+    const off = on('spm_cloud_sync_error', handler);
+    emit('spm_cloud_sync_error', {
+      domain: 'layouts',
+      error: 'row-level security policy violation',
+      timestamp: new Date().toISOString(),
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({ domain: 'layouts', error: 'row-level security policy violation' }),
+    );
+    off();
+  });
+
+  it('accepts entity domain keys so per-domain push failures can be reported', () => {
+    const handler = vi.fn();
+    const off = on('spm_cloud_sync_error', handler);
+    emit('spm_cloud_sync_error', {
+      domain: 'chairSpecs',
+      error: 'network request timed out',
+      timestamp: new Date().toISOString(),
+    });
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({ domain: 'chairSpecs' }),
+    );
+    off();
+  });
+});

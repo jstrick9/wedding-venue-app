@@ -198,12 +198,25 @@ All P1s and two P2s are fixed in the companion commit `fix(platform): Review #24
 
 | Finding | Fix | Validation |
 |---|---|---|
-| P1-A | Global 30 s abort deadline on every Supabase fetch (`createSurfaceClient` now passes a `fetch` wrapper); in-flight guards in the GuestPortal and CouplesPortal 5 s pollers (a stalled tick skips instead of stacking) | New `supabaseFetch.test.ts` (deadline fires, passes through, header preserved); both portals' existing hang tests still green |
-| P1-B | Hooks hoisted above the access guard in all 7 components | ESLint `rules-of-hooks` warnings drop to 0 for these files; access-denied tests still green |
+| P1-A | Global 30 s abort deadline on every Supabase fetch (`createSurfaceClient` now passes a `fetch` wrapper built on a manual `AbortController`+timer, portable across browsers and jsdom; `VITE_SUPABASE_FETCH_DEADLINE_MS` override); in-flight guards in the GuestPortal and CouplesPortal 5 s pollers (a stalled tick skips instead of stacking) | New `supabaseFetch.test.ts` (4 tests: pass-through with headers intact, deadline abort, caller-signal abort, pre-aborted signal); new `PortalPolling.singleFlight.test.ts` (4 guard assertions) |
+| P1-B | Hooks hoisted above the access guard in `StaffOperationsPanel` (the only file with actual `rules-of-hooks` violations; the other six names from the eslint context grep were false positives) | New permission-revoked-while-mounted regression test (old code threw "Rendered fewer hooks"); `react-hooks/rules-of-hooks` warnings: **14 → 0** |
 | P1-C | Migration `0016`: `select … for update` row lock in `submit_guest_couple_rsvp` (both base and `_for_venue` delegate) | Static SQL review; live verification script in §9 |
 | P1-D | Migration `0016`: `create index … on public.guests (portal_token_hash)` | Live verification script in §9 |
 | P2-E | Migration `0016`: `public-branding` bucket no longer accepts `image/svg+xml` | Live verification script in §9 |
-| P2-F | Failed entity/layout pushes now emit a typed `spm_cloud_sync_error` event surfaced as a toast (domain named) | New event-bus coverage; existing suite green |
+| P2-F | Failed entity/layout pushes now emit a typed `spm_cloud_sync_error` event surfaced as a warning toast (domain named) via `GlobalCloudSyncErrorListener` | New `appEvents.test.ts` cases (2) + `PortalPolling.singleFlight.test.ts` assertions |
+
+**Re-run CI gate results after remediation (commit-time):**
+
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | Pass |
+| `npm run lint:events` | Pass |
+| `npm run lint` | **0 errors / 30 warnings** (was 0/47) |
+| Strict unused-locals scan | Clean |
+| `npx vitest run` | **984 passed / 5 skipped** (989 total; 238 files passed / 4 skipped) |
+| `npm run build` | Pass — **2,332.51 kB / 556.94 kB gzip** (+0.2 kB for the reliability layer) |
+| `npm run build:split` | Pass |
+| `npm audit --omit=dev` | 0 vulnerabilities |
 
 Not remediated (filed with recommendations): P2-G (claim atomicity + throttle), P2-H (bundle budget CI gate), P2-I (`@ts-nocheck` ratchet), P3-J items. These need operator decisions on Edge Function redeploy cadence and CI policy; all are scoped for a follow-up review.
 

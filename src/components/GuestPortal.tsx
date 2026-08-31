@@ -171,39 +171,49 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
   useEffect(() => {
     if (!isCoupleCloudEnabled() || !isCouplePortal || !coupleEventId || !guestToken) return;
     let cancelled = false;
+    // In-flight guard (Review #245 P1-A): if a pull stalls, skip ticks instead
+    // of stacking another anonymous RPC every 5 seconds. The client-level fetch
+    // deadline eventually frees a stuck call; this keeps the interval honest.
+    let pulling = false;
 
     const hydrateGuest = async () => {
-      const remote = await pullGuestPortalSnapshot(coupleEventId, guestToken, venueSlug);
-      if (!remote || cancelled || !remote.guest) return;
-      const remoteEvent = remote.event?.find((candidate) => candidate.id === coupleEventId);
-      const remoteConfig = remote.portalConfig?.[coupleEventId]
-        || Object.values(remote.portalConfig || {})[0]
-        || null;
-      const guest = {
-        ...(remote.guest as unknown as GuestPortalGuestRecord),
-        token: guestToken,
-        eventName: coupleEventId,
-        eventKey: coupleEventId,
-        allowPortalAccess: true,
-      };
-      const rsvp = remote.rsvp ? { ...remote.rsvp, token: guestToken } : undefined;
-      if (remote.venueMap !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_MAP_CONFIGS, STORAGE_VERSIONS.VENUE_MAP_CONFIGS, remote.venueMap);
-      if (remote.venueRules !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_RULES, STORAGE_VERSIONS.VENUE_RULES, remote.venueRules);
-      if (remote.venueWeather !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_WEATHER, STORAGE_VERSIONS.VENUE_WEATHER, remote.venueWeather);
-      if (remoteEvent) setRemoteCouple(remoteEvent);
-      if (remoteConfig) setConfig(remoteConfig);
-      setPortalData((previous) => ({
-        venues: Array.isArray(remote.venues) ? remote.venues as Venue[] : previous.venues,
-        guests: [guest],
-        submissions: rsvp ? [rsvp] : [],
-        guestEvents: Array.isArray(remote.guestEvents)
-          ? (remote.guestEvents as CoupleGuestEvent[]).filter((item) => item.coupleEventId === coupleEventId)
-          : previous.guestEvents,
-      }));
-      setIsAuthed(true);
-      setActiveEventName(remoteConfig?.eventTitle || coupleEventId);
-      setResolvedGuestId(guest.id);
-      saveGuestPortalSession(remoteConfig, guestToken, remoteConfig?.eventTitle || coupleEventId, guest.id, coupleEventId);
+      if (pulling) return;
+      pulling = true;
+      try {
+        const remote = await pullGuestPortalSnapshot(coupleEventId, guestToken, venueSlug);
+        if (!remote || cancelled || !remote.guest) return;
+        const remoteEvent = remote.event?.find((candidate) => candidate.id === coupleEventId);
+        const remoteConfig = remote.portalConfig?.[coupleEventId]
+          || Object.values(remote.portalConfig || {})[0]
+          || null;
+        const guest = {
+          ...(remote.guest as unknown as GuestPortalGuestRecord),
+          token: guestToken,
+          eventName: coupleEventId,
+          eventKey: coupleEventId,
+          allowPortalAccess: true,
+        };
+        const rsvp = remote.rsvp ? { ...remote.rsvp, token: guestToken } : undefined;
+        if (remote.venueMap !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_MAP_CONFIGS, STORAGE_VERSIONS.VENUE_MAP_CONFIGS, remote.venueMap);
+        if (remote.venueRules !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_RULES, STORAGE_VERSIONS.VENUE_RULES, remote.venueRules);
+        if (remote.venueWeather !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_WEATHER, STORAGE_VERSIONS.VENUE_WEATHER, remote.venueWeather);
+        if (remoteEvent) setRemoteCouple(remoteEvent);
+        if (remoteConfig) setConfig(remoteConfig);
+        setPortalData((previous) => ({
+          venues: Array.isArray(remote.venues) ? remote.venues as Venue[] : previous.venues,
+          guests: [guest],
+          submissions: rsvp ? [rsvp] : [],
+          guestEvents: Array.isArray(remote.guestEvents)
+            ? (remote.guestEvents as CoupleGuestEvent[]).filter((item) => item.coupleEventId === coupleEventId)
+            : previous.guestEvents,
+        }));
+        setIsAuthed(true);
+        setActiveEventName(remoteConfig?.eventTitle || coupleEventId);
+        setResolvedGuestId(guest.id);
+        saveGuestPortalSession(remoteConfig, guestToken, remoteConfig?.eventTitle || coupleEventId, guest.id, coupleEventId);
+      } finally {
+        pulling = false;
+      }
     };
 
     void hydrateGuest();

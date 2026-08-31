@@ -227,21 +227,30 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   useEffect(() => {
     if (!isCoupleCloudEnabled() || !cloudToken) return;
     let cancelled = false;
+    // In-flight guard (Review #245 P1-A): skip a polling tick while the previous
+    // pull is still running so a stalled network cannot stack requests.
+    let pulling = false;
 
     const hydrateRemote = async () => {
-      const snapshot = await pullCouplePortalSnapshot(cloudToken, venueSlug);
-      if (!snapshot || cancelled) return;
-      cloudHydratingRef.current = true;
-      hydrateCouplePortalSnapshot(snapshot);
-      const latestEvents = getCoupleEvents();
-      setEvents(latestEvents);
-      const resolved = resolveCoupleInviteToken(cloudToken);
-      if (resolved) {
-        saveCoupleSession(resolved.event.id, resolved.collaborator.id);
-        setSession(loadCoupleSession());
-        setInvalidInvite(false);
+      if (pulling) return;
+      pulling = true;
+      try {
+        const snapshot = await pullCouplePortalSnapshot(cloudToken, venueSlug);
+        if (!snapshot || cancelled) return;
+        cloudHydratingRef.current = true;
+        hydrateCouplePortalSnapshot(snapshot);
+        const latestEvents = getCoupleEvents();
+        setEvents(latestEvents);
+        const resolved = resolveCoupleInviteToken(cloudToken);
+        if (resolved) {
+          saveCoupleSession(resolved.event.id, resolved.collaborator.id);
+          setSession(loadCoupleSession());
+          setInvalidInvite(false);
+        }
+        cloudHydratingRef.current = false;
+      } finally {
+        pulling = false;
       }
-      cloudHydratingRef.current = false;
     };
 
     const pushLocalSnapshot = async () => {

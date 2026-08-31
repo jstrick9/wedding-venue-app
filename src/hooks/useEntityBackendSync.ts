@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { canSyncEntities, pullEntities, pushEntities, pushEntityDomain } from '../services/sync/entitySync';
 import { subscribeToEntityChanges } from '../services/sync/entityRealtime';
+import { emit } from '../utils/appEvents';
 
 export interface EntityBackendSyncOptions {
   userId: string | null;
@@ -48,14 +49,26 @@ export function useEntityBackendSync({
     }
   }, [enabled, context, onLoaded]);
 
+  const reportPushFailure = useCallback((domain: string, err: unknown) => {
+    // A cloud push failed after the local write succeeded. The user's change is
+    // safe locally but did not reach the shared backend — surface it (Review
+    // #245 P2-F) instead of failing silently.
+    emit('spm_cloud_sync_error', {
+      domain,
+      error: err instanceof Error ? err.message : String(err),
+      timestamp: new Date().toISOString(),
+    });
+  }, []);
+
   const saveToBackend = useCallback(async () => {
     if (!enabled || !context) return;
     try {
       await pushEntities(context);
     } catch (err) {
       console.error('Failed to push entities to backend:', err);
+      reportPushFailure('entities', err);
     }
-  }, [enabled, context]);
+  }, [enabled, context, reportPushFailure]);
 
   const saveDomainToBackend = useCallback(
     async (domain: string) => {
@@ -64,9 +77,10 @@ export function useEntityBackendSync({
         await pushEntityDomain(context, domain);
       } catch (err) {
         console.error(`Failed to push domain ${domain} to backend:`, err);
+        reportPushFailure(domain, err);
       }
     },
-    [enabled, context],
+    [enabled, context, reportPushFailure],
   );
 
   // Reset the loaded flag whenever the org/user context changes so a venue

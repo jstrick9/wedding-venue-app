@@ -58,6 +58,29 @@ function GlobalStorageErrorListener() {
   return null;
 }
 
+/**
+ * Surfaces `spm_cloud_sync_error` events (a Supabase push failed after a local
+ * write succeeded) no matter which screen is mounted. Previously these failures
+ * were console-only, so a venue admin could believe a catalog/layout edit had
+ * reached the shared backend when it had not (Review #245 P2-F).
+ */
+function GlobalCloudSyncErrorListener() {
+  useEffect(
+    () =>
+      on('spm_cloud_sync_error', (detail) => {
+        const what = detail.domain === 'entities' || detail.domain === 'layouts'
+          ? detail.domain
+          : `"${detail.domain}"`;
+        showToast(
+          `Saved locally, but syncing ${what} to the cloud failed: ${detail.error}. Your change is still on this device.`,
+          'warning',
+        );
+      }),
+    [],
+  );
+  return null;
+}
+
 function PlatformAccessDeniedCard({
   body,
   actionLabel,
@@ -330,6 +353,7 @@ export default function App() {
       <AuthProvider>
         <ModalProvider>
           <GlobalStorageErrorListener />
+          <GlobalCloudSyncErrorListener />
           <LiveRegion />
           <AppContent />
           <ToastContainer />

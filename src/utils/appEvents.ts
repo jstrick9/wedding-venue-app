@@ -110,6 +110,16 @@ export interface StorageErrorDetail {
   timestamp: string;
 }
 
+/** Payload for the `spm_cloud_sync_error` event emitted by the backend-sync hooks. */
+export interface CloudSyncErrorDetail {
+  /** What was being synced: `'entities'` (catalog domains), `'layouts'`, or a specific domain key. */
+  domain: 'entities' | 'layouts' | (string & {});
+  /** Human-readable error message. */
+  error: string;
+  /** ISO 8601 timestamp of the failure. */
+  timestamp: string;
+}
+
 /** Snapshot pushed by the layout to the undo/redo stack. */
 export interface UndoSnapshot {
   tables: unknown[];
@@ -142,11 +152,17 @@ export interface AppEventMap {
   /** The working layout was replaced (venue switch / load-layout / load-template);
    *  undo history must be cleared so Undo can't restore a different layout. */
   spm_clear_undo_history: void;
-  /**
-   * The versioned storage layer hit a save/load error (e.g. quota exceeded,
-   * corrupt JSON). Subscribers (e.g. a global toast) should surface it to the user.
-   */
+/**
+ * The versioned storage layer hit a save/load error (e.g. quota exceeded,
+ * corrupt JSON). Subscribers (e.g. a global toast) should surface it to the user.
+ */
   spm_storage_error: StorageErrorDetail;
+  /**
+   * A cloud (Supabase) sync push failed after a local write succeeded. The
+   * user's change is safe locally but did NOT reach the shared backend —
+   * subscribers must surface it (Review #245 P2-F: never fail silently).
+   */
+  spm_cloud_sync_error: CloudSyncErrorDetail;
   /** Navigate AdminPanel directly to a specific category tab. */
   spm_open_admin_tab: string;
   /** Navigate VenueDashboard directly to an inline section (ops, vendors, timeline, etc.). */
