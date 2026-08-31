@@ -1445,6 +1445,14 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #253 (2026-08-31): units 1.11-1.13 done; ratchet 9 (15/24). F-253-1
+  (P1): VenueCalendar's CalendarEventForm sub-component read `config`
+  (branding) from the parent's scope only — Save-button style evaluates
+  config.primaryColor every render, so the add/edit event form threw
+  ReferenceError and crashed on open. Fix: own useBrandingConfig() call in
+  the sub-component. F-253-2 (P4): EventItem lacked endTime so end times
+  never displayed. Pinned by VenueCalendar.typing.test.ts. Units 1.11/1.12
+  clean (clone-stamp prunes only).
 - #252 (2026-08-31): units 1.8-1.10 done; ratchet 12 (halfway). F-252-1
   (P1): SpacingManagement's 12 controls all called setSpacingSettings — a
   name that exists only in AdminPanel's scope — ReferenceError on every

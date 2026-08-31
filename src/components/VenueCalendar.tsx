@@ -1,14 +1,11 @@
-// @ts-nocheck
 import { useMemo, useState } from 'react';
 import {
   VenueCalendarEvent,
   VenueCalendarCategory,
-  CoupleEvent,
   Venue,
 } from '../types';
 import {
   getVenueCalendarEvents,
-  getVenueCalendarEventsInRange,
   addVenueCalendarEvent,
   updateVenueCalendarEvent,
   removeVenueCalendarEvent,
@@ -61,6 +58,7 @@ interface EventItem {
   category: VenueCalendarCategory;
   date: string;
   startTime?: string;
+  endTime?: string;
   coupleEventId?: string;
   venue?: VenueCalendarEvent | null;
   /** Additional dates this item spans (e.g. multi-day couple events). */
@@ -132,6 +130,7 @@ export function VenueCalendar({
     category: e.category,
     date: e.date,
     startTime: e.startTime,
+    endTime: e.endTime,
     coupleEventId: e.category === 'couple' ? e.coupleEventId : undefined,
     venue: e,
   }));
@@ -151,17 +150,6 @@ export function VenueCalendar({
       }
       return false;
     });
-
-  const monthEvents = useMemo(
-    () =>
-      allItems.filter((e) => {
-        const monthPrefix = toDateKey(cursor).slice(0, 7);
-        if (e.date.startsWith(monthPrefix)) return true;
-        return (e.extraDates || []).some((d) => d.startsWith(monthPrefix));
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allItems, cursor, showForm, detail, editEv],
-  );
 
   // Month grid
   const grid = useMemo(() => {
@@ -433,7 +421,7 @@ export function VenueCalendar({
                   {e.coupleEventId && onOpenCouple ? (
                     <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Open</button>
                   ) : e.venue ? (
-                    <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
+                    <button type="button" onClick={() => setEditEv(e.venue ?? null)} className="text-xs text-gray-600 hover:underline">Edit</button>
                   ) : null}
                 </div>
               );
@@ -468,7 +456,7 @@ export function VenueCalendar({
                     {e.coupleEventId && onOpenCouple ? (
                       <button type="button" onClick={() => onOpenCouple(e.coupleEventId!)} className="text-xs hover:underline font-semibold" style={{ color: config.primaryColor || '#4A1942' }}>Open</button>
                     ) : e.venue ? (
-                      <button type="button" onClick={() => setEditEv(e.venue)} className="text-xs text-gray-600 hover:underline">Edit</button>
+                      <button type="button" onClick={() => setEditEv(e.venue ?? null)} className="text-xs text-gray-600 hover:underline">Edit</button>
                     ) : null}
                   </div>
                 );
@@ -563,6 +551,10 @@ function CalendarEventForm({
   onSave: (input: { title: string; category: VenueCalendarCategory; date: string; startTime?: string; endTime?: string; spaceId?: string; assignees?: string[]; notes?: string; recurrence?: 'weekly' | 'monthly' | 'yearly' }) => void;
 }) {
   const staff = getUsers();
+  // F-252-2 (Review #252): this component read `config` without defining it —
+  // the Save button's style evaluates config.primaryColor on every render,
+  // so opening the event form threw ReferenceError and crashed the tree.
+  const config = useBrandingConfig();
   const [f, setF] = useState({
     title: initial?.title || '',
     category: initial?.category || ('open-house' as VenueCalendarCategory),
