@@ -1,10 +1,9 @@
-// @ts-nocheck
 // src/components/admin/AccessControlPanel.tsx
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRBAC } from '../../hooks/useRBAC';
 import { useAuth } from '../../contexts/AuthContext';
 import { Role, PermissionDefinition } from '../../types/rbac';
-import { PERMISSIONS, getChildPermissions } from '../../constants/permissions';
+import { PERMISSIONS } from '../../constants/permissions';
 import ModalDialog from '../ModalDialog';
 import { useBrandingConfig } from '../../config';
 import { BrandedSectionHeader } from './shared/AdminSharedComponents';
@@ -22,12 +21,10 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
     groups,
     auditLog,
     createRole,
-    updateRole,
     deleteRole,
     addPermissionToRole,
     removePermissionFromRole,
     getRolePermissions,
-    copyPermissions,
   } = useRBAC();
 
   const [activeTab, setActiveTab] = useState<'roles' | 'permissions' | 'audit' | 'portal-access'>('roles');
@@ -100,11 +97,6 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
     } else {
       addPermissionToRole(selectedRoleId, permissionId, user.id, user.name);
     }
-  };
-
-  const handleCopyPermissions = (fromRoleId: string) => {
-    if (!selectedRoleId || !user) return;
-    copyPermissions(fromRoleId, selectedRoleId, user.id, user.name);
   };
 
   // Main content (extracted so we can conditionally wrap it)
@@ -225,7 +217,7 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                             color: config.accentColor || '#8B5A8B',
                           }}
                         >
-                          {selectedRole.hierarchy >= 90 ? '👑 Administrator Role' : selectedRole.hierarchy >= 40 ? '🛡️ Internal Staff Role' : '💍 External Portal Role'}
+                          {(selectedRole.hierarchy ?? 0) >= 90 ? '👑 Administrator Role' : (selectedRole.hierarchy ?? 0) >= 40 ? '🛡️ Internal Staff Role' : '💍 External Portal Role'}
                         </span>
                         {selectedRole.isImmutable && (
                           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
@@ -235,7 +227,7 @@ export function AccessControlPanel({ onClose, inline = false }: AccessControlPan
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      {/* Copy permissions + Delete buttons (kept from original) */}
+                      {/* Delete button (kept from original) */}
                       <button
                         onClick={() => setConfirmDeleteRole(selectedRole)}
                         disabled={selectedRole.isImmutable || selectedRole.isSystem}

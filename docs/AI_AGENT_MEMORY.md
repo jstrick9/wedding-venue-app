@@ -1445,6 +1445,11 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #254 (2026-08-31): units 1.14-1.15 done; ratchet 7 (17/24). Both clean
+  (clone-stamp prunes only; AccessControlPanel hierarchy-optional guard
+  preserved semantics). Process: ratchet ceiling edits must update the
+  script AND its baseline test in the same commit (cost a red CI cycle
+  in #253).
 - #253 (2026-08-31): units 1.11-1.13 done; ratchet 9 (15/24). F-253-1
   (P1): VenueCalendar's CalendarEventForm sub-component read `config`
   (branding) from the parent's scope only — Save-button style evaluates
