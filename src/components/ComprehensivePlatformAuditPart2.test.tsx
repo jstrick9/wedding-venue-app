@@ -41,7 +41,16 @@ describe('Comprehensive Platform Application & Functional Design Audit Part 2 (#
 
     render(
       <VenueDashboard
-        user={{ id: 'admin-1', username: 'admin', name: 'Jane Admin' }}
+        user={{
+          id: 'admin-1',
+          username: 'admin',
+          name: 'Jane Admin',
+          email: 'admin@example.com',
+          password: '',
+          role: 'admin',
+          isActive: true,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        }}
         isAdmin={true}
         isStaff={false}
         canAdmin={true}

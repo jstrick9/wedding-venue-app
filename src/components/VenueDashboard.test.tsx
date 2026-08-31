@@ -36,7 +36,16 @@ describe('VenueDashboard', () => {
   });
 
   const baseProps = {
-    user: { id: 'u1', name: 'Admin', username: 'admin' },
+    user: {
+      id: 'u1',
+      name: 'Admin',
+      username: 'admin',
+      email: 'admin@example.com',
+      password: '',
+      role: 'admin',
+      isActive: true,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    } satisfies import('../types').User,
     isAdmin: true,
     isStaff: true,
     canAdmin: true,

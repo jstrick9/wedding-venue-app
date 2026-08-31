@@ -1,32 +1,30 @@
-// @ts-nocheck
 import { useMemo, useState, useEffect } from 'react';
 import { VenueCalendar } from './VenueCalendar';
 import { buildCoupleInviteUrl, getCoupleEvents } from '../services/couples/coupleService';
 import { getCoupleSetupTasks } from '../services/couples/coupleSetupService';
 import { getCoupleGuestEvents, getAssignedGuestCount } from '../services/couples/coupleGuestEventService';
 import { getVenueCalendarEvents, recurringDatesForEvent } from '../services/calendar/venueCalendarService';
+import type { User, VenueCalendarEvent } from '../types';
 import { getUnreadCoupleMessageCounts } from '../services/couples/coupleChatService';
 import { findWeddingPackage } from '../services/couples/couplePackageService';
 import { getVenues } from '../hooks/useLayoutState';
-import { getConfig, useBrandingConfig } from '../config';
+import { useBrandingConfig } from '../config';
 import { Card, Button, EmptyState } from './ui';
-import { on, emit } from '../utils/appEvents';
+import { on } from '../utils/appEvents';
 import { VenueChatPanel } from './VenueChatPanel';
 import { sanitizeHref } from '../utils/safeUrl';
 
 type Section = 'home' | 'calendar' | 'couples' | 'vendors' | 'timeline' | 'admin' | 'ops' | 'chat';
 
-type InlineNode = React.ReactNode | undefined;
-
 type ReactNodeish = import('react').ReactNode;
 
 interface Props {
-  user: { id?: string; name?: string; username?: string };
+  user: User;
   isAdmin: boolean;
   isStaff: boolean;
   canAdmin: boolean;
   canOps: boolean;
-  users?: any[];
+  users?: User[];
   onOpenAdmin: (tab?: string) => void;
   onOpenOperations: () => void;
   onOpenVendors: () => void;
@@ -58,7 +56,7 @@ const dayKey = (d: Date) => {
 };
 
 export function VenueDashboard(props: Props) {
-  const { isAdmin, isStaff, user } = props;
+  const { user } = props;
   const [section, setSection] = useState<Section>('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(260);
@@ -143,14 +141,19 @@ export function VenueDashboard(props: Props) {
   }, [coupleEvents, calendarEvents]);
 
   const today = dayKey(new Date());
-  const in30 = dayKey(new Date(Date.now() + 30 * 86400000));
   const in60 = dayKey(new Date(Date.now() + 60 * 86400000));
 
   // Upcoming events (couple events + venue calendar) within 60 days. Multi-day
   // couple events are expanded to every booked day so non-primary days (e.g. the
   // rehearsal dinner before the ceremony day) show in the pipeline too.
   const upcoming = useMemo(() => {
-    const list = [];
+    const list: {
+      date: string;
+      title: string;
+      category: string;
+      id: string;
+      venueEv?: VenueCalendarEvent;
+    }[] = [];
     coupleEvents.forEach((e) => {
       const days = e.days && e.days.length > 0 ? e.days.map((d) => d.date).filter(Boolean) : [e.eventDate];
       days.forEach((d) => {
@@ -181,7 +184,7 @@ export function VenueDashboard(props: Props) {
   // used a 30-day window, so it silently showed events up to a month out.
   const next7 = upcoming.filter((e) => e.date <= dayKey(new Date(Date.now() + 7 * 86400000))).slice(0, 6);
 
-  const items: { id: string; label: string; icon: string; action: () => void }[] = [
+  const items: { id: string; label: string; icon: string; action: () => void; badgeCount?: number }[] = [
     { id: 'home', label: 'Home', icon: '🏠', action: () => setSection('home') },
     { id: 'calendar', label: 'Calendar', icon: '📅', action: () => setSection('calendar') },
     { id: 'couples', label: 'Couples Portal', icon: '💍', action: () => setSection('couples') },
@@ -354,13 +357,13 @@ export function VenueDashboard(props: Props) {
                     <span className="text-base shrink-0">{item.icon}</span>
                     {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                   </span>
-                  {(item as any).badgeCount > 0 && (
+                  {item.badgeCount != null && item.badgeCount > 0 && (
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
                         active ? 'bg-white text-rose-600' : 'bg-rose-500 text-white'
                       }`}
                     >
-                      {(item as any).badgeCount}
+                      {item.badgeCount}
                     </span>
                   )}
                 </button>
@@ -747,7 +750,7 @@ export function VenueDashboard(props: Props) {
                 <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-4">
                   <h2 className="font-semibold mb-3">Quick actions</h2>
                   <div className="space-y-2">
-                    <button type="button" onClick={props.onOpenAdmin} className="btn-primary w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
+                    <button type="button" onClick={() => props.onOpenAdmin()} className="btn-primary w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#4A1942] text-white text-sm font-medium hover:bg-[#3b1435]" style={{ backgroundColor: config.primaryColor || '#4A1942' }}>
                       <span>🔐</span><span>Admin &amp; System Settings</span>
                     </button>
                     <button

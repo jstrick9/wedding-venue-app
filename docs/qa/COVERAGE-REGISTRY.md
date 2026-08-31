@@ -4,7 +4,7 @@
 **Legend:** `open` → not yet examined · `in-progress` → unit started · `done` → examined, findings fixed/declined with evidence · `certified` → previously proven (review # cited)
 **Rule:** a row may only move to `done`/`certified` with evidence (review # + what was proven). "Declined" findings need a written reason. This file is the single source of truth for campaign state; session review docs cite registry deltas.
 
-**Phase 1 progress: 8/24 files retyped · ratchet ceiling 16 (#251). The ceiling must equal the open count at all times.**
+**Phase 1 progress: 9/24 files retyped · ratchet ceiling 15 (#251). The ceiling must equal the open count at all times.**
 
 ---
 
@@ -20,7 +20,7 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 | 1.4 | components/admin/FixtureManagement.tsx | 1383 | done | #251: F-251-2 venue-category toggle computed value discarded (feature never worked); F-251-1 FixtureType.description type gap |
 | 1.5 | components/admin/VenueManagement.tsx | 1162 | done | #251: clone-stamp garbage only (57 invalid + 197 unused names removed); no defects |
 | 1.6 | components/admin/TableManagement.tsx | 1161 | done | #251: F-251-4 same discard bug — Venue Category Availability chips on tables never worked (blast radius of the clone: exactly 2 files, both fixed) |
-| 1.7 | components/VenueDashboard.tsx | 957 | open | — |
+| 1.7 | components/VenueDashboard.tsx | 957 | done | #251: F-251-6 MouseEvent passed as tab → garbage admin hash + tab event; F-251-5 badgeCount type lie (as-any casts); F-251-7 user/users any-typed |
 | 1.8 | components/admin/ChairManagement.tsx | 876 | open | — |
 | 1.9 | components/admin/WallManagement.tsx | 803 | open | — |
 | 1.10 | components/admin/SpacingManagement.tsx | 792 | open | — |

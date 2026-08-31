@@ -1445,6 +1445,13 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #251d (2026-08-31): unit 1.7 VenueDashboard done; ratchet 15. F-251-6:
+  onClick={props.onOpenAdmin} passed the MouseEvent as `tab` → parent built
+  hash '#/admin/[object PointerEvent]' + garbage tab event. F-251-5/7 type
+  lies (badgeCount undeclared → as-any casts; user/users any-typed —
+  tightening the prop exposed partial-user fixtures in 3 test files).
+  NOTE: eslint flags multi-space regexes (no-regex-spaces) in tests — use
+  \s{2}, not literal spaces.
 - #251c (2026-08-31): unit 1.6 TableManagement done; ratchet 16. F-251-4:
   SAME discard bug as F-251-2 — venue-category chips on tables computed next
   value then saved unchanged; never worked. Blast radius of that clone scanned
