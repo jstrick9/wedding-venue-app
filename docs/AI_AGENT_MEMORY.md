@@ -1445,6 +1445,15 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #251 (2026-08-31): unit 1.4 FixtureManagement done; ratchet 18. F-251-2
+  (P1): venue-category toggle on fixtures computed next venueCategories then
+  saved fixtures UNCHANGED ({ ...f }) — feature never worked; tsc's
+  unused-locals would have caught it on day one. F-251-1: FixtureType lacked
+  `description` (data has it) — triage lesson: a tsc error can mean the TYPE
+  is wrong, not the code; check runtime data before deleting "dead" branches
+  (naive fix would have broken working search). Pre-scan: 8 more panels carry
+  phantom FileReader/alert destructure names but none call new FileReader()
+  (no more crash-class bugs of that type).
 - #250b (2026-08-31): unit 1.3 BrandingManagement done; ratchet 19. F-250-5:
   the SAME FileReader-shadow crash in both logo-upload paths (click +
   drag-drop) — branding panel is the platform's upload surface, so all logo

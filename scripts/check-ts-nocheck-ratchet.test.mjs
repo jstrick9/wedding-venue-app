@@ -25,6 +25,6 @@ describe('@ts-nocheck ratchet (Review #247 P2-I)', () => {
   });
 
   it('the shipped ceiling matches the current campaign baseline', () => {
-    expect(MAX_TS_NOCHECK_FILES).toBe(19);
+    expect(MAX_TS_NOCHECK_FILES).toBe(18);
   });
 });

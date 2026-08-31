@@ -542,6 +542,8 @@ export type LodgingUtilityType = 'furniture' | 'appliances' | 'electronics' | 'e
 export interface FixtureType {
   id: string;
   name: string;
+  /** Descriptive label for search/display (e.g. "17' 11\" opening" for screens). Present on defaultFixtureTypes data since inception but missing from the type until Review #251. */
+  description?: string;
   shape: ShapeType;
   width: number;
   height: number;
