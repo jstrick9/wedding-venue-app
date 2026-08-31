@@ -1445,6 +1445,14 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #252 (2026-08-31): units 1.8-1.10 done; ratchet 12 (halfway). F-252-1
+  (P1): SpacingManagement's 12 controls all called setSpacingSettings — a
+  name that exists only in AdminPanel's scope — ReferenceError on every
+  interaction; whole panel dead since creation. Fix: call the
+  handleSaveSpacing prop (persist+state+toast). Units 1.8/1.9 clean
+  (clone-stamp only). Process note: pure dead-code-removal units may share
+  one gate cycle/commit (zero behavior change), bug units always get
+  individual pinning tests.
 - #251d (2026-08-31): unit 1.7 VenueDashboard done; ratchet 15. F-251-6:
   onClick={props.onOpenAdmin} passed the MouseEvent as `tab` → parent built
   hash '#/admin/[object PointerEvent]' + garbage tab event. F-251-5/7 type

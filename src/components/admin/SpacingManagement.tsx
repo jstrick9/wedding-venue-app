@@ -1,283 +1,12 @@
-// @ts-nocheck
-import React from 'react';
-import { BrandedSectionHeader, BrandedStatCard, BrandedTips, PatternColorPicker } from './shared/AdminSharedComponents';
-import EmojiPicker from '../EmojiPicker';
-import MultiImageUpload from '../MultiImageUpload';
-import { CustomVenueBuilder } from '../CustomVenueBuilder';
-import { DirectMessagePanel } from '../DirectMessagePanel';
-import { LinenColor } from '../../data/venueData';
-import { LayoutCategory, PatternType, ShapeType, ChairType, RectangularChairLayout, WallStyle, ChairSpec, User, Config, Venue, TableSpec, FixtureType, Guideline, EventQuestion, DecorArrangement, DecorPackage } from '../../types';
+import { BrandedSectionHeader } from './shared/AdminSharedComponents';
 import type { AdminCommonProps } from './AdminTabTypes';
 
 export function SpacingManagement(props: AdminCommonProps) {
   const {
     config,
-    venues,
-    setVenues,
-    tables,
-    setTables,
-    fixtures,
-    setFixtures,
-    chairs,
-    setChairs,
-    wallStyles,
-    setWallStyles,
-    linenColors,
-    setLinenColors,
-    templates,
-    setTemplates,
-    guidelines,
-    setGuidelines,
-    users,
-    setUsers,
-    eventQuestions,
-    setEventQuestions,
-    decorItems,
-    setDecorItems,
-    decorCategories,
-    setDecorCategories,
-    decorArrangements,
-    setDecorArrangements,
-    decorPackages,
-    setDecorPackages,
-    layoutState,
-    directMessages,
-    handlers,
-    user,
-    isAdmin,
-    selectedMessageMasterUserId,
-    setSelectedMessageMasterUserId,
-    buildMessageThreadId,
-    setShowCreateUserModal,
-    setShowEditUserModal,
-    setEditingUser,
-    handleSaveUsers,
-    handleDeleteUser,
-    handleImpersonate,
-    submissionWorkflow,
-    showUserDirectMessagesSection,
-    setShowUserDirectMessagesSection,
-    showUserPendingApprovalsSection,
-    setShowUserPendingApprovalsSection,
-    showUserEventRolesSection,
-    setShowUserEventRolesSection,
-    showUserAccountsSection,
-    setShowUserAccountsSection,
-    newEventRoleName,
-    setNewEventRoleName,
-    handleAddEventRole,
-    eventRoles,
-    editingEventRoleName,
-    editingEventRoleValue,
-    setEditingEventRoleValue,
-    handleSaveEventRoleEdit,
-    setEditingEventRoleName,
-    handleStartEditEventRole,
-    handleDeleteEventRole,
-    handleImageUpload,
     showSuccess,
-    showInfo,
-    confirmAction,
-    createPasswordRecord,
-    tableTypes,
-    tableSpecs,
-    setTableSpecs,
-    fixtureTypes,
-    setFixtureTypes,
-    chairSpecs,
-    setChairSpecs,
-    defaultWallStyles,
-    patternColors,
-    defaultPatternColors,
-    patternOptions,
-    layoutCategories,
-    venueCategories,
-    seatingTypes,
-    expandedSeatingTypes,
-    setExpandedSeatingTypes,
-    getSeatingDimensions,
-    isSeatingType,
-    toggleSeatingTypeExpanded,
-    expandAllSeatingTypes,
-    collapseAllSeatingTypes,
-    shapeOptions,
-    chairLayoutOptions,
-    getChairSpecs,
-    setShowTableTypesSection,
-    showTableTypesSection,
-    setShowSeatingTypesSection,
-    showSeatingTypesSection,
-    setShowLodgingFixturesSection,
-    showLodgingFixturesSection,
-    expandAllLodgingFixtures,
-    collapseAllLodgingFixtures,
-    toggleLodgingFixtureExpanded,
-    expandedLodgingFixtures,
-    setShowExteriorFixturesSection,
-    showExteriorFixturesSection,
-    expandAllExteriorFixtures,
-    collapseAllExteriorFixtures,
-    toggleExteriorFixtureExpanded,
-    expandedExteriorFixtures,
-    setShowVenueFixturesSection,
-    showVenueFixturesSection,
-    expandAllVenueFixtures,
-    collapseAllVenueFixtures,
-    toggleVenueFixtureExpanded,
-    expandedVenueFixtures,
-    setShowDrawingTool,
-    renderShapePreview,
-    handleSaveVenues,
-    collapseAllVenues,
-    expandAllVenues,
-    toggleVenueExpanded,
-    setCustomShapeVenueId,
-    handleSaveTables,
-    collapseAllTables,
-    expandAllTables,
-    toggleTableExpanded,
-    handleSaveFixtures,
-    setChairSpecsState,
-    handleSaveWallStyles,
-    handleSaveLinenColors,
-    collapseAllLinens,
-    expandAllLinens,
-    toggleLinenExpanded,
-    handleSaveTemplates,
-    handleCreateTemplateFromLayout,
-    editingTemplateId,
-    handleLoadForEdit,
-    handleUpdateTemplateWithCurrentLayout,
-    setEditingTemplateId,
-    handleSaveGuidelines,
-    setDecorItemsState,
-    setDecorCategoriesState,
-    setDecorArrangementsState,
-    setDecorPackagesState,
-    getUserFieldErrors,
-    createUserFieldErrors,
-    setCreateUserFieldErrors,
-    newUser,
-    setNewUser,
-    handleCreateUser,
-    alert,
-    FileReader,
-    activeTab,
-    setActiveTab,
-    expandedVenues,
-    setExpandedVenues,
-    expandedTables,
-    setExpandedTables,
-    expandedFixtures,
-    setExpandedFixtures,
-    expandedChairs,
-    setExpandedChairs,
-    expandedWalls,
-    setExpandedWalls,
-    expandedLinens,
-    setExpandedLinens,
-    expandedTemplates,
-    setExpandedTemplates,
-    expandedGuidelines,
-    setExpandedGuidelines,
-    expandedUsers,
-    setExpandedUsers,
-    onClose,
-    currentLayout,
-    onLoadTemplateForEdit,
-    createUser,
-    deleteUser,
-    getAllUsers,
-    canAccessThisPanel,
-    EVENT_ROLES_STORAGE_KEY,
-    EVENT_QUESTIONS_STORAGE_KEY,
-    DEFAULT_EVENT_ROLES,
-    setVenuesState,
-    setTableSpecsState,
-    setFixtureTypesState,
-    setGuidelinesState,
-    setTemplatesState,
-    setLinenColorsState,
-    setConfigState,
-    setUsersState,
     spacingSettings,
-    setSpacingSettingsState,
-    setWallStylesState,
-    successMessage,
-    setSuccessMessage,
-    showDrawingTool,
-    logoInputRef,
-    customShapeVenueId,
-    setExpandedVenueFixtures,
-    setExpandedLodgingFixtures,
-    setExpandedExteriorFixtures,
-    expandedBrandingSections,
-    setExpandedBrandingSections,
-    showCreateUserModal,
-    setEventRoles,
-    raw,
-    parsed,
-    cleaned,
-    newQuestion,
-    setNewQuestion,
-    editingQuestionId,
-    setEditingQuestionId,
-    questionError,
-    setQuestionError,
-    showWelcomePreview,
-    setShowWelcomePreview,
-    showAccessControl,
-    setShowAccessControl,
-    rbac,
-    allRoles,
-    AVAILABLE_WELCOME_FEATURES,
-    currentWelcomeFeatures,
-    masterUsers,
-    next,
-    ids,
-    validateEventQuestion,
-    options,
-    handleAddEventQuestion,
-    err,
-    handleUpdateEventQuestion,
-    handleDeleteEventQuestion,
-    roleName,
-    exists,
-    duplicate,
-    handleSaveConfig,
-    mapUserRoleToLegacyRole,
-    validateUserForm,
-    normalizedUsername,
-    role,
-    selected,
-    today,
-    todayStart,
-    limit,
-    handleLogoUpload,
-    file,
-    reader,
-    dataUrl,
-    input,
-    usernameFromEmail,
-    normalizedDraft,
-    errors,
-    fieldErrors,
-    emailExists,
-    legacyRole,
-    effectiveUsername,
-    created,
-    updatedUsers,
-    displayName,
-    template,
-    handleReset,
-    size,
-    hx,
-    hexPoints,
-    angle,
-    ox,
-    octPoints,
-    tabs,
-    AdminPanel
+    handleSaveSpacing,
   } = props;
 
   return (
@@ -313,8 +42,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                           minItemSpacing: preset.item,
                           enableCollisionDetection: true
                         };
-                        setSpacingSettings(updated);
-                        setSpacingSettingsState(updated);
+                        // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                        // name that only exists in AdminPanel's scope (ReferenceError on
+                        // every use, so this whole panel's controls never worked).
+                        handleSaveSpacing(updated);
                         showSuccess(`Applied "${preset.name}" spacing preset!`);
                       }}
                       className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-800 rounded-md text-xs font-medium hover:bg-gray-100 transition-colors"
@@ -344,8 +75,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                       checked={spacingSettings.enableCollisionDetection}
                       onChange={(e) => {
                         const updated = { ...spacingSettings, enableCollisionDetection: e.target.checked };
-                        setSpacingSettings(updated);
-                        setSpacingSettingsState(updated);
+                        // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                        // name that only exists in AdminPanel's scope (ReferenceError on
+                        // every use, so this whole panel's controls never worked).
+                        handleSaveSpacing(updated);
                         showSuccess(e.target.checked ? 'Collision detection enabled!' : 'Collision detection disabled!');
                       }}
                       className="sr-only peer"
@@ -370,8 +103,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                       checked={spacingSettings.showCollisionWarnings !== false}
                       onChange={(e) => {
                         const updated = { ...spacingSettings, showCollisionWarnings: e.target.checked };
-                        setSpacingSettings(updated);
-                        setSpacingSettingsState(updated);
+                        // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                        // name that only exists in AdminPanel's scope (ReferenceError on
+                        // every use, so this whole panel's controls never worked).
+                        handleSaveSpacing(updated);
                       }}
                       className="sr-only peer"
                     />
@@ -432,8 +167,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                           onChange={(e) => {
                             const val = Math.max(0, Math.min(10, Math.round(Number(e.target.value) || 0)));
                             const updated = { ...spacingSettings, minTableSpacing: val };
-                            setSpacingSettings(updated);
-                            setSpacingSettingsState(updated);
+                            // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                            // name that only exists in AdminPanel's scope (ReferenceError on
+                            // every use, so this whole panel's controls never worked).
+                            handleSaveSpacing(updated);
                           }}
                           className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm text-right"
                         />
@@ -449,8 +186,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                       onChange={(e) => {
                         const val = Math.max(0, Math.min(10, Math.round(Number(e.target.value) || 0)));
                         const updated = { ...spacingSettings, minTableSpacing: val };
-                        setSpacingSettings(updated);
-                        setSpacingSettingsState(updated);
+                        // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                        // name that only exists in AdminPanel's scope (ReferenceError on
+                        // every use, so this whole panel's controls never worked).
+                        handleSaveSpacing(updated);
                       }}
                       className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#4A1942]"
                     />
@@ -468,8 +207,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                         key={val}
                         onClick={() => {
                           const updated = { ...spacingSettings, minTableSpacing: val };
-                          setSpacingSettings(updated);
-                          setSpacingSettingsState(updated);
+                          // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                          // name that only exists in AdminPanel's scope (ReferenceError on
+                          // every use, so this whole panel's controls never worked).
+                          handleSaveSpacing(updated);
                         }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                           (spacingSettings.minTableSpacing || 3) === val 
@@ -529,8 +270,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                       value={spacingSettings.minWallSpacing || 2}
                       onChange={(e) => {
                         const updated = { ...spacingSettings, minWallSpacing: parseFloat(e.target.value) };
-                        setSpacingSettings(updated);
-                        setSpacingSettingsState(updated);
+                        // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                        // name that only exists in AdminPanel's scope (ReferenceError on
+                        // every use, so this whole panel's controls never worked).
+                        handleSaveSpacing(updated);
                       }}
                       className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#4A1942]"
                     />
@@ -548,8 +291,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                         key={val}
                         onClick={() => {
                           const updated = { ...spacingSettings, minWallSpacing: val };
-                          setSpacingSettings(updated);
-                          setSpacingSettingsState(updated);
+                          // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                          // name that only exists in AdminPanel's scope (ReferenceError on
+                          // every use, so this whole panel's controls never worked).
+                          handleSaveSpacing(updated);
                         }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                           (spacingSettings.minWallSpacing || 2) === val 
@@ -607,8 +352,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                       value={spacingSettings.minFixtureSpacing || 4}
                       onChange={(e) => {
                         const updated = { ...spacingSettings, minFixtureSpacing: parseFloat(e.target.value) };
-                        setSpacingSettings(updated);
-                        setSpacingSettingsState(updated);
+                        // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                        // name that only exists in AdminPanel's scope (ReferenceError on
+                        // every use, so this whole panel's controls never worked).
+                        handleSaveSpacing(updated);
                       }}
                       className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#4A1942]"
                     />
@@ -626,8 +373,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                         key={val}
                         onClick={() => {
                           const updated = { ...spacingSettings, minFixtureSpacing: val };
-                          setSpacingSettings(updated);
-                          setSpacingSettingsState(updated);
+                          // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                          // name that only exists in AdminPanel's scope (ReferenceError on
+                          // every use, so this whole panel's controls never worked).
+                          handleSaveSpacing(updated);
                         }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                           (spacingSettings.minFixtureSpacing || 4) === val 
@@ -665,8 +414,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                       value={spacingSettings.minItemSpacing || 2}
                       onChange={(e) => {
                         const updated = { ...spacingSettings, minItemSpacing: parseFloat(e.target.value) };
-                        setSpacingSettings(updated);
-                        setSpacingSettingsState(updated);
+                        // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                        // name that only exists in AdminPanel's scope (ReferenceError on
+                        // every use, so this whole panel's controls never worked).
+                        handleSaveSpacing(updated);
                       }}
                       className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#4A1942]"
                     />
@@ -684,8 +435,10 @@ export function SpacingManagement(props: AdminCommonProps) {
                         key={val}
                         onClick={() => {
                           const updated = { ...spacingSettings, minItemSpacing: val };
-                          setSpacingSettings(updated);
-                          setSpacingSettingsState(updated);
+                          // F-252-1 (Review #252): was setSpacingSettings(updated) — a
+                          // name that only exists in AdminPanel's scope (ReferenceError on
+                          // every use, so this whole panel's controls never worked).
+                          handleSaveSpacing(updated);
                         }}
                         className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                           (spacingSettings.minItemSpacing || 2) === val 
