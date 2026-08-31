@@ -1394,6 +1394,8 @@ Closed the last open gap from #247 §6 in executable form:
   token dead: second claim 400 not_found).
 - `scripts/e2e-rsvp-concurrency.mjs`: P1-C row-lock probe (needs two guest
   tokens for one couple; concurrent RSVPs must both persist).
+- **Operator deferred both live runs (user decision, 2026-08-31)** — the
+  authenticated-path assertions are prepared, not executed.
 
 **Rules going forward:**
 1. `get_venue_admin_invite_context` matches ONLY `status='pending'` — a consumed

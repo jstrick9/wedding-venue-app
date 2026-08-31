@@ -59,6 +59,8 @@ Both scripts exit non-zero on any failed check and print a `[PASS]`/`[FAIL]` lin
 
 ## §5 Operator execution (the live run)
 
+**Status 2026-08-31: operator chose to defer both live runs.** The harness is shipped and ready; the runs below happen whenever convenient. Until then, the authenticated-path assertions remain *prepared*, not *executed* — everything else in this review (client fix, tests, gates) is done.
+
 1. **Claim E2E:** from the platform console, create a venue-admin invite for a throwaway email you control (or a test venue you're willing to reassign — the run *will* transfer its ownership to the test account). Pass the setup-link token from the invite email as `INVITE_TOKEN` and run the script. Cleanup afterwards = delete the test venue/membership from the console.
 2. **RSVP E2E:** take two guest-portal links for the same couple (venue console → guests), run the script with both tokens. Safe: submissions are tagged `e2e-concurrency-*` and can be removed from the snapshot by the venue.
 
