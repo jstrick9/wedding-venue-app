@@ -1445,6 +1445,9 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #251b (2026-08-31): unit 1.5 VenueManagement done; ratchet 17. No new
+  defects — first panel where the nocheck hid only clone-stamp garbage
+  (57 invalid + 197 unused names), zero tsc errors after removal.
 - #251 (2026-08-31): unit 1.4 FixtureManagement done; ratchet 18. F-251-2
   (P1): venue-category toggle on fixtures computed next venueCategories then
   saved fixtures UNCHANGED ({ ...f }) — feature never worked; tsc's

@@ -20,9 +20,9 @@ import { join } from 'node:path';
 
 /**
  * Maximum allowed runtime (non-test) files under src/ containing
- * `@ts-nocheck`. Baseline 24 at #247; 21 at #249; 20 at #250 (unit 1.2); 19 at #250 (unit 1.3); 18 at #251 (unit 1.4 FixtureManagement).
+ * `@ts-nocheck`. Baseline 24 at #247; 21 at #249; 20 at #250 (unit 1.2); 19 at #250 (unit 1.3); 18 at #251 (unit 1.4); 17 at #251 (unit 1.5 VenueManagement).
  */
-export const MAX_TS_NOCHECK_FILES = 18;
+export const MAX_TS_NOCHECK_FILES = 17;
 
 /** Pure evaluator: given the list of offending file paths, decide pass/fail. */
 export function evaluateRatchet(files, max = MAX_TS_NOCHECK_FILES) {

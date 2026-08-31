@@ -4,7 +4,7 @@
 **Legend:** `open` → not yet examined · `in-progress` → unit started · `done` → examined, findings fixed/declined with evidence · `certified` → previously proven (review # cited)
 **Rule:** a row may only move to `done`/`certified` with evidence (review # + what was proven). "Declined" findings need a written reason. This file is the single source of truth for campaign state; session review docs cite registry deltas.
 
-**Phase 1 progress: 6/24 files retyped · ratchet ceiling 18 (#251). The ceiling must equal the open count at all times.**
+**Phase 1 progress: 7/24 files retyped · ratchet ceiling 17 (#251). The ceiling must equal the open count at all times.**
 
 ---
 
@@ -18,7 +18,7 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 | 1.2 | components/admin/UserManagement.tsx | 1825 | done | #250: F-250-1 FileReader-shadow crash (profile-image upload), F-250-2 showInfo missing message arg; 267→~30-name destructure (57 invalid names incl. globals); NewUserDraft typed |
 | 1.3 | components/admin/BrandingManagement.tsx | 1716 | done | #250: F-250-5 same FileReader-shadow crash in BOTH logo upload paths (the branding panel IS the upload surface); 265→~30-name destructure; select values cast into Config unions |
 | 1.4 | components/admin/FixtureManagement.tsx | 1383 | done | #251: F-251-2 venue-category toggle computed value discarded (feature never worked); F-251-1 FixtureType.description type gap |
-| 1.5 | components/admin/VenueManagement.tsx | 1162 | open | — |
+| 1.5 | components/admin/VenueManagement.tsx | 1162 | done | #251: clone-stamp garbage only (57 invalid + 197 unused names removed); no defects |
 | 1.6 | components/admin/TableManagement.tsx | 1161 | open | — |
 | 1.7 | components/VenueDashboard.tsx | 957 | open | — |
 | 1.8 | components/admin/ChairManagement.tsx | 876 | open | — |
