@@ -26,7 +26,18 @@ jobs:
       - name: Lint (ESLint)
         run: npm run lint
       - name: Strict unused-locals scan (non-test)
-        run: npx tsc --noEmit --noUnusedLocals 2>&1 | grep -v "\.test\." | grep -v "node_modules"
+        run: |
+          # Fail only when the scan prints real violations. A plain
+          # `tsc ... | grep -v ...` pipeline exits 1 when tsc is CLEAN (grep
+          # matched nothing), which inverted this gate: CI failed on every
+          # clean commit and passed only when violations existed (Review #245).
+          output=$(npx tsc --noEmit --noUnusedLocals 2>&1 | grep -v "\.test\." | grep -v "node_modules" || true)
+          if [ -n "$output" ]; then
+            echo "$output"
+            echo "::error::Strict unused-locals scan found violations above."
+            exit 1
+          fi
+          echo "Strict unused-locals scan clean."
       - name: Run tests
         run: npm run test
       - name: Build (single-file)
