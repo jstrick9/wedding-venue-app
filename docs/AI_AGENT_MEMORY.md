@@ -1445,6 +1445,11 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #257 (2026-08-31): units 1.20-1.22 done — PHASE 1 COMPLETE (24/24,
+  ratchet ceiling 0: @ts-nocheck now forbidden repo-wide; ratchet test's
+  below-ceiling case adapted to explicit max). All 3 units clean.
+  Phase 1 totals: ~2,900 dead lines removed, 13 real defects fixed
+  (5 P1 dead-since-creation). Next: Phase 2 RPC audit (46 sites).
 - #256 (2026-08-31): units 1.18-1.19 done; ratchet 3 (21/24). F-256-1
   (P3): SecurityAuditManagement + CommunicationTemplatesManagement BOTH
   used the phantom onShowSuccess prop (real name: showSuccess) — 10

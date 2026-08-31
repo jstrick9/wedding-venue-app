@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from 'react';
 import { FloorPlanCanvas } from './FloorPlanCanvas';
 import { getTableSpecs } from '../hooks/useLayoutState';

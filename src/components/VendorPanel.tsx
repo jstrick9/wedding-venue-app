@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from 'react';
 import { useVendors } from '../hooks/useVendors';
 import { Vendor } from '../types/vendor';
@@ -12,7 +11,6 @@ import {
   addVendorCategory,
   removeVendorCategory,
   vendorCategoryLabel,
-  VendorCategoryDef,
 } from '../services/vendors/vendorCategoryService';
 import { useBrandingConfig } from '../config';
 import { sanitizeHref } from '../utils/safeUrl';

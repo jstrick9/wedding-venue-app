@@ -4,7 +4,9 @@ import { MAX_TS_NOCHECK_FILES, evaluateRatchet } from './check-ts-nocheck-ratche
 describe('@ts-nocheck ratchet (Review #247 P2-I)', () => {
   it('passes when the count is at or below the ceiling', () => {
     expect(evaluateRatchet([]).ok).toBe(true);
-    expect(evaluateRatchet(['a.tsx']).ok).toBe(true);
+    // At the Phase-1-complete ceiling (0) any single file must fail, so this
+    // "below ceiling" case uses an explicit hypothetical ceiling.
+    expect(evaluateRatchet(['a.tsx'], 2).ok).toBe(true);
     const atCeiling = evaluateRatchet(Array.from({ length: MAX_TS_NOCHECK_FILES }, (_, i) => `f${i}.tsx`));
     expect(atCeiling.ok).toBe(true);
     expect(atCeiling.count).toBe(MAX_TS_NOCHECK_FILES);
@@ -25,6 +27,6 @@ describe('@ts-nocheck ratchet (Review #247 P2-I)', () => {
   });
 
   it('the shipped ceiling matches the current campaign baseline', () => {
-    expect(MAX_TS_NOCHECK_FILES).toBe(3);
+    expect(MAX_TS_NOCHECK_FILES).toBe(0);
   });
 });
