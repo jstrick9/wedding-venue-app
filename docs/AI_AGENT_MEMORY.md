@@ -1380,6 +1380,36 @@ lock) — needs a signed-in session, not the anon key.
    names were guessed wrong — check the migration DDL and re-probe before
    reading it as an RLS result.
 
+### 9.74 Authenticated-path E2E harness + claimed-flag client wiring (Review #248, 2026-08-31)
+
+Closed the last open gap from #247 §6 in executable form:
+- Client now consumes the Edge Function's `claimed` flag: `claimVenueAdminAccount`
+  parses it (strict `=== true`, absent → false), and `signUpVenueAdminWithInvite`
+  SKIPS the client-side `accept_venue_admin_invite` RPC when `claimed` — session
+  built from the claim response instead. Removes a post-claim transient-failure
+  mode. Pre-0017 behavior preserved when `claimed` is false/absent.
+- `scripts/e2e-claim-flow.mjs`: live end-to-end claim probe (needs INVITE_TOKEN;
+  asserts claimed:true → sign-in → owner_id == user → membership role owner →
+  invites unreadable by venue session → accept idempotent already_accepted →
+  token dead: second claim 400 not_found).
+- `scripts/e2e-rsvp-concurrency.mjs`: P1-C row-lock probe (needs two guest
+  tokens for one couple; concurrent RSVPs must both persist).
+
+**Rules going forward:**
+1. `get_venue_admin_invite_context` matches ONLY `status='pending'` — a consumed
+   invite fails at the context step, so post-claim token reuse returns 400
+   not_found BEFORE the claim RPC runs. That is the P2-G kill working; don't
+   "fix" it by adding an accepted-invite branch to the context lookup.
+2. Keep the `accept_venue_admin_invite` idempotent branch even though the
+   client now skips it when `claimed:true` — it is the race safety net and the
+   pre-0017 fallback path.
+3. E2E probe scripts are the canonical way to verify authenticated paths with
+   only the publishable key: sign in via `/auth/v1/token?grant_type=password`
+   (works with the anon key), then call REST with the session bearer.
+4. Operational scripts live in `scripts/` as plain `.mjs` with `node --check`
+   clean; they are runbook code — self-asserting, non-zero exit on failure,
+   never print secrets.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

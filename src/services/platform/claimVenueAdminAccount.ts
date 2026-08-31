@@ -8,6 +8,14 @@ export const CLAIM_FUNCTION_MISSING =
 export interface ClaimVenueAdminAccountResult {
   email: string;
   existingUser: boolean;
+  /**
+   * True when the Edge Function consumed the invite atomically (migration
+   * 0017's claim_venue_admin_account ran server-side): ownership transfer,
+   * membership, and invite consumption are already complete. False when the
+   * claim service is not at that version yet — the client-side accept flow
+   * still has to run.
+   */
+  claimed: boolean;
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
@@ -75,6 +83,7 @@ export async function claimVenueAdminAccount(params: {
   return {
     email,
     existingUser: payload.existingUser === true,
+    claimed: payload.claimed === true,
     organizationId: String(payload.organizationId || payload.organization_id || ''),
     organizationName: String(payload.organizationName || payload.organization_name || ''),
     organizationSlug: String(payload.organizationSlug || payload.organization_slug || ''),

@@ -87,6 +87,67 @@ describe('signUpVenueAdminWithInvite', () => {
     expect(session.user.email).toBe('stricklandjoshua01@gmail.com');
   });
 
+  it('skips the client-side accept when the Edge Function already claimed atomically (0017)', async () => {
+    claimMock.mockResolvedValue({
+      email: 'stricklandjoshua01@gmail.com',
+      existingUser: true,
+      claimed: true,
+      organizationId: 'org-1',
+      organizationName: 'Seven Paths Manor',
+      organizationSlug: 'seven-paths-manor',
+    });
+    signInWithPassword.mockResolvedValue({
+      data: {
+        session: { access_token: 'tok' },
+        user: { id: 'user-1', email: 'stricklandjoshua01@gmail.com' },
+      },
+      error: null,
+    });
+
+    const session = await signUpVenueAdminWithInvite({
+      email: 'stricklandjoshua01@gmail.com',
+      password: 'new-pass-123',
+      fullName: 'Joshua Strickland',
+      inviteToken: 'va-abc123def4567890',
+    });
+
+    // The claim already transferred ownership server-side — no accept RPC.
+    expect(rpc).not.toHaveBeenCalled();
+    expect(signUp).not.toHaveBeenCalled();
+    expect(session.organizationId).toBe('org-1');
+    expect(session.organizationSlug).toBe('seven-paths-manor');
+    expect(session.accessToken).toBe('tok');
+    expect(session.user.email).toBe('stricklandjoshua01@gmail.com');
+  });
+
+  it('still runs the client-side accept when the claim was not atomic (pre-0017)', async () => {
+    claimMock.mockResolvedValue({
+      email: 'stricklandjoshua01@gmail.com',
+      existingUser: false,
+      claimed: false,
+      organizationId: 'org-1',
+      organizationName: 'Seven Paths Manor',
+      organizationSlug: 'seven-paths-manor',
+    });
+    signInWithPassword.mockResolvedValue({
+      data: {
+        session: { access_token: 'tok' },
+        user: { id: 'user-1', email: 'stricklandjoshua01@gmail.com' },
+      },
+      error: null,
+    });
+
+    const session = await signUpVenueAdminWithInvite({
+      email: 'stricklandjoshua01@gmail.com',
+      password: 'new-pass-123',
+      fullName: 'Joshua Strickland',
+      inviteToken: 'va-abc123def4567890',
+    });
+
+    expect(rpc).toHaveBeenCalledWith('accept_venue_admin_invite', { p_token: 'va-abc123def4567890' });
+    expect(session.organizationId).toBe('org-1');
+  });
+
   it('explains a reissue cannot reset the password until claim-venue-admin is deployed', async () => {
     claimMock.mockRejectedValue(new Error(CLAIM_FUNCTION_MISSING));
     signUp.mockResolvedValue({

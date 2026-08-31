@@ -373,6 +373,23 @@ export async function signUpVenueAdminWithInvite({
     if (error || !data.session || !data.user) {
       throw new Error(error?.message || 'Could not sign in with the new venue password.');
     }
+    // Migration 0017 path: the Edge Function consumed the invite atomically
+    // (ownership transfer + membership + audit) right after setting the
+    // password, so the client-side accept RPC would be redundant. Build the
+    // session from the claim response instead of another round-trip that
+    // could transiently fail after a successful claim.
+    if (prepared.claimed) {
+      return {
+        user: mapProfileToUser(
+          { full_name: fullName, app_role: 'admin' },
+          data.user.id,
+          data.user.email || prepared.email,
+        ),
+        accessToken: data.session.access_token,
+        organizationId: prepared.organizationId,
+        organizationSlug: prepared.organizationSlug || undefined,
+      };
+    }
     return acceptVenueAdminInviteAsSignedIn(inviteToken, fullName);
   } catch (error) {
     if (!isClaimFunctionMissingError(error)) throw error;

@@ -21,6 +21,7 @@ describe('claimVenueAdminAccount', () => {
         ok: true,
         email: 'stricklandjoshua01@gmail.com',
         existingUser: true,
+        claimed: true,
         organizationId: 'org-1',
         organizationName: 'Seven Paths Manor',
         organizationSlug: 'seven-paths-manor',
@@ -35,6 +36,7 @@ describe('claimVenueAdminAccount', () => {
 
     expect(result.email).toBe('stricklandjoshua01@gmail.com');
     expect(result.existingUser).toBe(true);
+    expect(result.claimed).toBe(true);
     expect(result.organizationSlug).toBe('seven-paths-manor');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
@@ -45,6 +47,30 @@ describe('claimVenueAdminAccount', () => {
       password: 'new-pass-123',
       fullName: 'Joshua Strickland',
     });
+  });
+
+  it('defaults claimed to false when the Edge Function predates 0017', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ok: true,
+        email: 'stricklandjoshua01@gmail.com',
+        existingUser: true,
+        organizationId: 'org-1',
+        organizationName: 'Seven Paths Manor',
+        organizationSlug: 'seven-paths-manor',
+      }),
+    } as Response);
+
+    const result = await claimVenueAdminAccount({
+      token: 'va-abc123def4567890',
+      password: 'new-pass-123',
+      fullName: 'Joshua Strickland',
+    });
+
+    expect(result.claimed).toBe(false);
   });
 
   it('explains a missing Edge Function so a reissue can still keep venue work', async () => {
