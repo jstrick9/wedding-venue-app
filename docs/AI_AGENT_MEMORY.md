@@ -1250,6 +1250,32 @@ print. The step now fails only when violations are printed. Rule: a grep
 pipeline in CI must end with `|| true` + an explicit emptiness check; a
 green local gate is not evidence CI is green — check the Actions tab.
 
+### 9.70 First live RLS/RPC smoke test (Review #246, 2026-08-31)
+
+See `docs/reviews/246-live-rls-smoke-test-2026-08-31.md`.
+
+Executed the §9 checklist from #245 against the operator's live project with
+the publishable (anon) key only. **Every reachable security check passed**:
+anon read isolation on all 16 tables, anon write denial (including a
+platform_memberships self-promotion attempt), platform-role `forbidden`
+enforcement, 0010 guest-RPC hardening (`invalid_submission`) and the
+server-side chat sender trigger firing for an anon insert, invite RPCs
+`auth_required`, all three Edge Functions deployed with correct auth.
+
+Live migration state: **0001–0015 substance is live**. Two operator actions
+remain: apply **0016** and run the **Graph cleanup drops** (the #207 SQL was
+applied live in its original 0016 form, before #208 added the drops, so
+`platform_mail_secrets` + 3 Outlook RPCs survive — LV-1). The live
+public-branding bucket already excludes SVG (created before 0009; the
+`on conflict do nothing` preserved it — LV-3 drift, normalized by 0016).
+
+**Rule going forward:** treat the live DB as certified for the anon-key
+security layer. Authenticated-user RLS paths (venue-member scoping,
+suspended-venue login, the 0016 row lock under two sessions) are the next
+verification gap. Never trust the migration ledger without checking
+`supabase_migrations.schema_migrations` — this project has applied SQL
+out-of-band at least once.
+
 **Rule going forward:** treat #245 + §9.12–9.68 as current truth for
 reliability, hooks ordering, snapshot concurrency, storage MIME policy, and
 CI gate semantics.
