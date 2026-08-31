@@ -9,7 +9,7 @@ describe('OperationsSettingsManagement (#147)', () => {
 
   const dummyProps: any = {
     config: { primaryColor: '#4A1942' },
-    onShowSuccess: vi.fn(),
+    showSuccess: vi.fn(),
   };
 
   it('renders default checklist items and allows adding a new checklist item', () => {
