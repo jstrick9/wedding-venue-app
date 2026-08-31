@@ -1445,6 +1445,13 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #250b (2026-08-31): unit 1.3 BrandingManagement done; ratchet 19. F-250-5:
+  the SAME FileReader-shadow crash in both logo-upload paths (click +
+  drag-drop) — branding panel is the platform's upload surface, so all logo
+  uploads crashed on file pick. 265->~30 destructure prune, identical 56-name
+  garbage list as unit 1.2 (clone-stamp confirmed). ESTABLISHED PATTERN: the
+  big admin panels share the same buggy destructure; check `new FileReader()`/
+  alert( usage FIRST in units 1.4-1.22.
 - #250 (2026-08-31): unit 1.2 UserManagement done; ratchet 20. F-250-1 (P1
   runtime bug): destructuring a nonexistent `FileReader` prop shadowed the
   global → `new FileReader()` in the profile-image upload threw on every file

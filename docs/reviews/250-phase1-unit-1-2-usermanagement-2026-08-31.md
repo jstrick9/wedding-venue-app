@@ -26,3 +26,19 @@ ESLint 0 errors / 30 warnings · tsc clean · strict unused-locals scan clean ·
 ## Registry delta
 
 Row 1.2 → `done` (#250). Phase 1: 4/24. Next: 1.3 `BrandingManagement.tsx` (1,716).
+
+---
+
+## Addendum — Unit 1.3: `admin/BrandingManagement.tsx` (1,716 → 1,455 lines), same session
+
+**F-250-5 (P1 runtime bug — fixed): the branding panel's logo upload was broken on BOTH paths.** Same clone-stamp origin as F-250-1: the destructure (265 names, 56 invalid — the *same* 56-name garbage list) contained the phantom `FileReader` prop, shadowing the global. `new FileReader()` appears twice here — the click-to-upload path (~line 364) and the drag-and-drop path (~line 844) — and the branding panel is the upload surface for the whole platform's logos. Every logo upload threw `TypeError: FileReader is not a constructor` on file selection.
+
+Typing-model fixes: `handleLogoDrop` widened from `DragEvent<HTMLDivElement>` to `DragEvent<HTMLElement>` (it is attached to a `<label>`); three `<select>` onChange handlers now cast into `Config['loginBackgroundType' | 'loginBackgroundAnimation' | 'loginBackgroundPattern']` literal unions instead of writing raw strings.
+
+Destructure pruned 265 → ~30 names; unused imports dropped (types import 12 → 1: `Config`). Pinned by `BrandingManagement.typing.test.ts` (3 tests).
+
+**Gates:** tsc + strict scan clean · eslint 0 errors / 30 warnings · vitest **1009 passed** / 5 skipped (+3) · single-file 555.34 kB gzip, split chunks within budget · audit clean · ratchet 20 → **19**.
+
+**Registry delta:** row 1.3 → `done` (#250). Phase 1: 5/24. Next: 1.4 `FixtureManagement.tsx` (1,383).
+
+**Pattern now established (2 of 2 big panels):** every large admin panel cloned the same 265-name destructure with the same 56 invalid names including the `FileReader` global shadow. Units 1.4–1.22 should assume the same bug is present and check for bare `new FileReader()`/`alert(` usage first — panels whose upload features are exercised by users have been crashing silently.

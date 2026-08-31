@@ -4,7 +4,7 @@
 **Legend:** `open` → not yet examined · `in-progress` → unit started · `done` → examined, findings fixed/declined with evidence · `certified` → previously proven (review # cited)
 **Rule:** a row may only move to `done`/`certified` with evidence (review # + what was proven). "Declined" findings need a written reason. This file is the single source of truth for campaign state; session review docs cite registry deltas.
 
-**Phase 1 progress: 4/24 files retyped · ratchet ceiling 20 (#250). The ceiling must equal the open count at all times.**
+**Phase 1 progress: 5/24 files retyped · ratchet ceiling 19 (#250). The ceiling must equal the open count at all times.**
 
 ---
 
@@ -16,7 +16,7 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 |---|------|------:|--------|----------|
 | 1.1 | components/admin/shared/AdminSharedComponents.tsx | 261 | done | #249 typed; found 8 unimported type refs hidden by nocheck; mixed-adoption dedup note → 6.8 |
 | 1.2 | components/admin/UserManagement.tsx | 1825 | done | #250: F-250-1 FileReader-shadow crash (profile-image upload), F-250-2 showInfo missing message arg; 267→~30-name destructure (57 invalid names incl. globals); NewUserDraft typed |
-| 1.3 | components/admin/BrandingManagement.tsx | 1716 | open | — |
+| 1.3 | components/admin/BrandingManagement.tsx | 1716 | done | #250: F-250-5 same FileReader-shadow crash in BOTH logo upload paths (the branding panel IS the upload surface); 265→~30-name destructure; select values cast into Config unions |
 | 1.4 | components/admin/FixtureManagement.tsx | 1383 | open | — |
 | 1.5 | components/admin/VenueManagement.tsx | 1162 | open | — |
 | 1.6 | components/admin/TableManagement.tsx | 1161 | open | — |
