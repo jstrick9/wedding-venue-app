@@ -1,7 +1,7 @@
 import React from 'react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from '../App';
 import { emit } from '../utils/appEvents';
@@ -41,13 +41,16 @@ describe('Venue Portal Navigation & Dashboard Inline Panels (#144)', () => {
     window.location.hash = '#/dashboard';
     const { unmount } = render(<App />);
     expect(await screen.findByText(/Welcome back/i, {}, { timeout: 4000 })).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/home');
+    // The rewrite is a mount passive effect (AuthenticatedApp.tsx); under
+    // concurrent React it can fire after findByText's MutationObserver
+    // resolves, so poll for the hash instead of asserting immediately.
+    await waitFor(() => expect(window.location.hash).toBe('#/home'));
     unmount();
 
     window.location.hash = '#/venue';
     render(<App />);
     expect(await screen.findByText(/Welcome back/i, {}, { timeout: 4000 })).toBeInTheDocument();
-    expect(window.location.hash).toBe('#/home');
+    await waitFor(() => expect(window.location.hash).toBe('#/home'));
   });
 
   it('keeps user on #/home when clicking Vendors and closing Vendors returns to dashboard home', async () => {
