@@ -101,13 +101,26 @@ CI now runs: lint → tsc → test → build → **budget single** → build:spl
 
 **Edge Function deploy:** `deploy-edge-functions.yml` triggers on `supabase/functions/**` changes and auto-deploys `claim-venue-admin`; the function is written to be correct whether or not 0017 is applied live yet (gate/claim/failure RPCs each individually optional).
 
-## §6 Open items for the operator (unchanged from #246 §5)
+## §6 Operator actions — APPLIED and live-verified (2026-08-31, post-#247)
 
-1. **Apply migration 0016** (snapshot-lock token index + branding MIME) via SQL editor — assumed still unapplied; idempotent.
-2. **Apply migration 0017** after the Edge Function deploys — enables the throttle + atomic claim.
-3. **Graph cleanup (LV-1):** the 4 idempotent drops (`platform_mail_secrets` is empty — verified live) + `supabase_migrations.schema_migrations` reconciliation.
-4. Re-run the MIME probe after 0016 (currently already conformant).
+The combined operator script (`0016` + Graph drops + `0017`, see the corrected #246 §5) was run in the Supabase SQL editor. Live verification with the anon key afterwards:
+
+| Check | Result |
+|---|---|
+| Graph RPCs dropped (LV-1 closed) | ✅ `get_platform_outlook_status` / `disconnect_platform_outlook` / `save_platform_outlook_connection` → 404 `PGRST202` (schema cache: not found) |
+| `platform_mail_secrets` dropped | ✅ → 404 `PGRST205` |
+| 0017 objects present | ✅ `venue_admin_claim_attempts` table + all 3 RPCs (operator V4 output + probes below) |
+| Service RPCs anon-locked | ✅ all three → 42501 `permission denied` (revoked from anon/authenticated) |
+| **Throttle end-to-end** | ✅ 10 bad-token claims → 400 `not_found`; attempts 11–12 → **429** "Too many attempts with this setup link…"; a *different* token unaffected (per-token lock) |
+| MIME allowlist (0016 / P2-E) | ✅ svg/bmp → 415 `mime type … not supported`; png/webp pass the allowlist and hit policy (403) — exactly {png, jpeg, webp, gif} |
+| Public branding read intact | ✅ `platform/1787167789563-agenticos-logo.png` → 200 `image/png`, 435,960 bytes (matches #246) |
+| Anon write denials | ✅ `org_data` and `venue_admin_invites` inserts → 42501 RLS |
+| Guest portal RPC | ✅ invalid token → `{"ok":false,"error":"not_found"}` |
+| Edge Functions | ✅ `geocode-venue` / `send-email` → 401; `claim-venue-admin` → throttle behavior above |
+| Attempt-counter table exposure | ✅ anon read → `[]` (RLS hides rows) |
+
+**Still unverified (needs an authenticated session / real invite, not anon-key reachable):** the full atomic claim E2E (real invite → password → `claimed:true` → client-side accept returns `already_accepted`), the 0016 snapshot row-lock under two concurrent sessions (#245 §9.7), and authenticated-user RLS paths generally — the standing gap from §9.70.
 
 ## §7 Verdict
 
-All three deferred P2 follow-ups are remediated and gated. The claim path is now atomic end-to-end (or safely falls back to the previous two-phase flow when 0017 isn't applied), token brute-force is throttled, bundle growth and `@ts-nocheck` growth are both CI-enforced ratchets. Remaining risk is operational, not code: the pending SQL operator actions in §6.
+All three deferred P2 follow-ups are remediated, gated, **and now live**: the claim path is atomic end-to-end with a working brute-force throttle (proven by the 429 probe), bundle growth and `@ts-nocheck` growth are both CI-enforced ratchets, LV-1/LV-2/LV-4 are closed, and 0016+0017 are applied. Remaining risk is the authenticated-path verification gap above, not code.

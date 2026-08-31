@@ -1350,8 +1350,35 @@ no ledger to reconcile; #246 §5 and the LV-4 body were corrected in-repo
    edit if migrations change).
 5. Anon-key RPC existence fingerprint: existing+revoked → 42501; existing and
    security-definer with internal role check → HTTP 200 with the function's
-   own `{"ok":false,"error":"forbidden"}` body (the Outlook RPCs behave this
+   own `{"ok":false,"error":"forbidden"}` body (the Outlook RPCs behaved this
    way); dropped → PGRST202/404. Table existence: 200 `[]` vs PGRST205.
+
+### 9.73 Operator SQL applied; post-apply live verification (2026-08-31)
+
+The combined script (0016 + Graph drops + 0017) ran cleanly. Verified live:
+Graph RPCs → PGRST202, `platform_mail_secrets` → PGRST205 (LV-1 closed);
+all three 0017 RPCs → 42501 for anon; **throttle proven end-to-end: 10×400
+then 429, per-token**; MIME = {png,jpeg,webp,gif} (svg/bmp 415, png/webp
+pass to policy); public logo read 200 image/png 435,960 B; anon insert
+denials 42501; guest RPC + Edge auth behaviors unchanged. LV-2/LV-4 closed.
+Review #247 §6 records the full table; the remaining gap is
+authenticated-path verification (real invite claim E2E, two-session row
+lock) — needs a signed-in session, not the anon key.
+
+**Rules going forward (probe-craft, learned the hard way this session):**
+1. Never share one curl header array between REST/JSON calls and storage
+   uploads — a duplicate `Content-Type: application/json` makes EVERY upload
+   fail the MIME allowlist (415) and fakes a regression. Storage probes get
+   their own minimal header set.
+2. PostgREST resolves RPCs by the FULL named-arg set: probing a 3-arg
+   function with 1 arg gives PGRST202 (looks like "missing function").
+   Always probe with all named args before concluding a function is absent.
+3. Storage 404 `NoSuchKey` = object missing (bucket fine); don't guess object
+   names — list first (`POST /storage/v1/object/list/<bucket>` works with the
+   anon key for public buckets) then GET the real path.
+4. When an insert probe returns PGRST204 (column not found), the column
+   names were guessed wrong — check the migration DDL and re-probe before
+   reading it as an RLS result.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*
