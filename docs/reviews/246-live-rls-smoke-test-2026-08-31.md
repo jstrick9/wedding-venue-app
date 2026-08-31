@@ -101,7 +101,7 @@ Today's `0016_review_245_snapshot_lock_token_index_and_branding_mime.sql` (RSVP 
 
 ### LV-4 (info) — The migration ledger has diverged from the repo
 
-At least one migration was applied out-of-band under a different number (the #207 SQL as `0016`, later renumbered to `0015` in the repo). Future drift of this kind is exactly what broke the Graph cleanup silently. Recommendation: after applying §5, run `select version, name from supabase_migrations.schema_migrations order by version;` and confirm the ledger matches `supabase/migrations/` exactly; treat any mismatch as a release blocker going forward.
+At least one migration was applied out-of-band under a different number (the #207 SQL as `0016`, later renumbered to `0015` in the repo). Future drift of this kind is exactly what broke the Graph cleanup silently. ~~Recommendation: after applying §5, run `select version, name from supabase_migrations.schema_migrations order by version;`~~ **Corrected 2026-08-31:** that table does not exist — this database was never CLI-managed, so there is no ledger at all (see §5 correction). Object-level verification replaces it. If the CLI is ever adopted, `supabase migration repair --status applied` must mark every repo migration first or `supabase db push` will re-apply 0001+ onto existing objects.
 
 ---
 
@@ -117,13 +117,29 @@ These remain the only unverified layer; everything reachable with the anon key p
 
 ## 5. Operator action list (run in the Supabase SQL editor)
 
+> **Correction (2026-08-31, after first operator attempt):** item 3 below as
+> originally written fails with `relation "supabase_migrations.schema_migrations"
+> does not exist`. That schema is created only by the Supabase CLI
+> (`supabase db push` / `migration up`) — this database has **never** been
+> CLI-managed (every migration was applied out-of-band via the SQL editor, per
+> §4), so there is no ledger to reconcile. Item 3 is replaced by object-level
+> verification. Note also: the SQL editor executes the whole paste as one
+> implicit transaction — when the ledger query errored at line 15, the §5.2
+> drops that ran earlier in the same paste were rolled back (verified live:
+> both Outlook RPCs still execute, `platform_mail_secrets` still exists). A
+> combined, paste-ready script now lives at
+> `docs/reviews/247-…md` §6 → workspace `operator-sql/apply-pending-changes-2026-08-31.sql`.
+
 ```sql
 -- 1. LV-2: apply Review #245's migration. Either run the file
 --    supabase/migrations/0016_review_245_snapshot_lock_token_index_and_branding_mime.sql
---    verbatim, or verify it was applied, then confirm:
+--    verbatim, or verify it was applied, then confirm (catalog check is
+--    authoritative — on a small guests table the planner may legitimately
+--    prefer a Seq Scan even when the index exists):
+select indexname from pg_indexes
+where tablename = 'public.guests' and indexname = 'idx_guests_portal_token_hash';
 explain analyze
 select * from public.guests where portal_token_hash = 'deadbeef'::text;
--- Expect: Index Scan using idx_guests_portal_token_hash (NOT Seq Scan).
 
 -- 2. LV-1: Graph cleanup (idempotent — mirrors the drops in 0015 that never ran live).
 drop function if exists public.get_platform_outlook_status();
@@ -131,13 +147,34 @@ drop function if exists public.save_platform_outlook_connection(text, text, text
 drop function if exists public.disconnect_platform_outlook();
 drop table if exists public.platform_mail_secrets;
 
--- 3. LV-4: reconcile the ledger.
-select version, name from supabase_migrations.schema_migrations order by version;
--- Every row should map 1:1 onto supabase/migrations/0001..0016.
+-- 3. LV-4 (REVISED): there is no CLI migration ledger in this database
+--    (supabase_migrations schema does not exist — never CLI-managed).
+--    Verify object-level state instead. Expect all four columns NULL
+--    after step 2:
+select
+  to_regprocedure('public.get_platform_outlook_status()')                    as outlook_status_fn,
+  to_regprocedure('public.save_platform_outlook_connection(text,text,text)') as save_connection_fn,
+  to_regprocedure('public.disconnect_platform_outlook()')                    as disconnect_fn,
+  to_regclass('public.platform_mail_secrets')                                as mail_secrets_table;
+-- Going forward: if the Supabase CLI is ever adopted, run
+--   supabase migration repair --status applied <version>...
+-- for every repo migration FIRST, or `supabase db push` will try to re-apply
+-- 0001+ onto existing objects.
 
 -- 4. Bucket MIME normalization check (from 0016):
 select allowed_mime_types from storage.buckets where id = 'public-branding';
 -- Expect: {image/png, image/jpeg, image/webp, image/gif} — no svg.
+
+-- 5. (From Review #247) migration 0017 — atomic venue-admin claim + throttle;
+--    pairs with the already-deployed claim-venue-admin Edge Function, which
+--    degrades gracefully until this runs. Apply
+--    supabase/migrations/0017_atomic_venue_admin_claim_and_throttle.sql
+--    verbatim, then confirm:
+select
+  to_regclass('public.venue_admin_claim_attempts')                        as attempts_table,
+  to_regprocedure('public.venue_admin_claim_gate(text)')                  as gate_fn,
+  to_regprocedure('public.register_venue_admin_claim_failure(text)')      as failure_fn,
+  to_regprocedure('public.claim_venue_admin_account(text,uuid,text)')     as claim_fn;
 ```
 
 After applying 0016, re-run the §2.4/§2.6 probes (they are all repeatable with the publishable key) and the two-session lock probe from Review #245 §9.7.

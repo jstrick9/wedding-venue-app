@@ -1311,8 +1311,8 @@ Shipped in this review:
 1. Never silently raise a budget or ratchet ceiling — same-commit justification
    only; bundle/@ts-nocheck growth is now CI-enforced.
 2. Service-only RPCs (any function a client must never call) must ship with
-   `revoke execute … from public, anon, authenticated` in the same migration
-   that creates them, plus a scrape test pinning the revoke lines.
+  `revoke execute … from public, anon, authenticated` in the same migration
+  that creates them, plus a scrape test pinning the revoke lines.
 3. Edge Functions must keep working when their backing migration isn't applied
    yet — wrap every new RPC call in try/catch and fall back to prior behavior.
 4. Vite prints decimal kB; `gzipSync`-measured KiB ≈ ×1.024 smaller — same
@@ -1320,6 +1320,38 @@ Shipped in this review:
 5. PostgREST query plans (vnd.pgrst.plan+json) are unavailable on hosted
    Supabase (406 PGRST107, db-plan-enabled off) — index verification needs the
    SQL editor, not REST.
+
+### 9.72 Operator SQL correction: no migration ledger exists (2026-08-31)
+
+The user's first run of Review #246 §5 failed at the ledger query with
+`42P01 relation "supabase_migrations.schema_migrations" does not exist`.
+Root cause: the `supabase_migrations` schema is created only by the Supabase
+CLI; this database has **never** been CLI-managed (all migrations applied via
+SQL editor) — confirmed by the same out-of-band forensics as LV-4. There is
+no ledger to reconcile; #246 §5 and the LV-4 body were corrected in-repo
+(replaced with `to_regprocedure`/`to_regclass` object checks + a
+`supabase migration repair` caveat for future CLI adoption).
+
+**Rules going forward:**
+1. The Supabase SQL editor runs an entire multi-statement paste as ONE
+   implicit transaction — an error anywhere rolls back everything before it
+   (verified live: the §5.2 drops rolled back; both Outlook RPCs still
+   executed, `platform_mail_secrets` still existed).
+2. Never hand-write operator SQL that references CLI-only metadata
+   (`supabase_migrations.*`) for a database confirmed to be SQL-editor
+   managed; verify with `to_regprocedure`/`to_regclass`/`pg_indexes` instead.
+3. `explain analyze` is NOT proof an index is absent on a small table — the
+   planner may legitimately prefer a Seq Scan; use `pg_indexes` as the
+   authoritative existence check.
+4. A paste-ready combined operator script (0016 + Graph drops + 0017 +
+   verification) lives in the workspace at
+   `operator-sql/apply-pending-changes-2026-08-31.sql` (assembled
+   programmatically from the repo migration files — regenerate rather than
+   edit if migrations change).
+5. Anon-key RPC existence fingerprint: existing+revoked → 42501; existing and
+   security-definer with internal role check → HTTP 200 with the function's
+   own `{"ok":false,"error":"forbidden"}` body (the Outlook RPCs behave this
+   way); dropped → PGRST202/404. Table existence: 200 `[]` vs PGRST205.
 
 ---
 *End of AI Agent Memory & Knowledge Base.*
