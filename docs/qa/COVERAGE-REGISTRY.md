@@ -4,7 +4,7 @@
 **Legend:** `open` → not yet examined · `in-progress` → unit started · `done` → examined, findings fixed/declined with evidence · `certified` → previously proven (review # cited)
 **Rule:** a row may only move to `done`/`certified` with evidence (review # + what was proven). "Declined" findings need a written reason. This file is the single source of truth for campaign state; session review docs cite registry deltas.
 
-**Phase 1 progress: 19/24 files retyped · ratchet ceiling 5 (#255). The ceiling must equal the open count at all times.**
+**Phase 1 progress: 21/24 files retyped · ratchet ceiling 3 (#256). The ceiling must equal the open count at all times.**
 
 ---
 
@@ -31,8 +31,8 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 | 1.15 | components/admin/AccessControlPanel.tsx | 609 | done | #254: clean — hierarchy-optional guard (semantics preserved); dead copy-permissions handler + 4 unused names pruned; 609→601 L |
 | 1.16 | components/VenueChatPanel.tsx | 595 | done | #255: clean — 0 tsc errors; dead showQuickReplies state (never read) + getConfig import pruned; 595→592 L |
 | 1.17 | components/admin/OperationsSettingsManagement.tsx | 436 | done | #255: F-255-1 (P3) — destructured onShowSuccess but prop is showSuccess; all 5 action toasts never fired since creation (silent saves). Pinned by OperationsSettingsManagement.typing.test.ts |
-| 1.18 | components/admin/SecurityAuditManagement.tsx | 345 | open | — |
-| 1.19 | components/admin/CommunicationTemplatesManagement.tsx | 345 | open | — |
+| 1.18 | components/admin/SecurityAuditManagement.tsx | 345 | done | #256: F-256-1 (P3) — phantom onShowSuccess prop; all 5 action toasts (save settings, clear cache ×2, export CSV/JSON) never fired since creation; test fixture had codified the phantom name. Pinned |
+| 1.19 | components/admin/CommunicationTemplatesManagement.tsx | 345 | done | #256: F-256-1 (P3) same phantom prop (5 sites) + F-256-2 (P3) — 'Save Wording Defaults' persisted nothing (edits lost on reload); now persists + loads. Pinned |
 | 1.20 | components/CoupleLayoutEditor.tsx | 310 | open | — |
 | 1.21 | components/VendorPanel.tsx | 296 | open | — |
 | 1.22 | components/CoupleLayoutPreview.tsx | 207 | open | — |

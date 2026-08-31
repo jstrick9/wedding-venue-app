@@ -1,8 +1,7 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { emitDataChanged, on } from '../../utils/appEvents';
-import { BrandedSectionHeader, BrandedTips } from './shared/AdminSharedComponents';
+import { BrandedSectionHeader } from './shared/AdminSharedComponents';
 import type { AdminCommonProps } from './AdminTabTypes';
 
 export interface CommunicationTemplateItem {
@@ -59,21 +58,41 @@ export function saveCommunicationTemplates(templates: CommunicationTemplateItem[
   }
 }
 
+interface EmailWordingDefaults {
+  subject: string;
+  body: string;
+}
+
+const DEFAULT_EMAIL_WORDING: EmailWordingDefaults = {
+  subject: 'You are invited to {coupleName}’s Wedding Portal at {venueName}',
+  body: 'Welcome! Please click the link below to access your Couples Portal for {coupleName} on {eventDate} at {venueName}.\n\nPortal Link: {portalUrl}',
+};
+
+export function loadEmailWording(): EmailWordingDefaults {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.EMAIL_WORDING_DEFAULTS);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<EmailWordingDefaults>;
+      if (typeof parsed.subject === 'string' && typeof parsed.body === 'string') {
+        return { subject: parsed.subject, body: parsed.body };
+      }
+    }
+  } catch {
+    // ignore corrupt storage — fall back to defaults
+  }
+  return DEFAULT_EMAIL_WORDING;
+}
+
 export function CommunicationTemplatesManagement(props: AdminCommonProps) {
-  const { config, onShowSuccess } = props;
+  const { config, showSuccess } = props;
   const [templates, setTemplates] = useState<CommunicationTemplateItem[]>(() =>
     getCommunicationTemplates()
   );
   const [activeTab, setActiveTab] = useState<'chat' | 'email'>('chat');
-  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Email wording defaults
-  const [emailSubject, setEmailSubject] = useState(
-    'You are invited to {coupleName}’s Wedding Portal at {venueName}'
-  );
-  const [emailBody, setEmailBody] = useState(
-    'Welcome! Please click the link below to access your Couples Portal for {coupleName} on {eventDate} at {venueName}.\n\nPortal Link: {portalUrl}'
-  );
+  const [emailSubject, setEmailSubject] = useState(() => loadEmailWording().subject);
+  const [emailBody, setEmailBody] = useState(() => loadEmailWording().body);
 
   const [newTemplate, setNewTemplate] = useState({
     label: '',
@@ -100,24 +119,33 @@ export function CommunicationTemplatesManagement(props: AdminCommonProps) {
     setTemplates(updated);
     saveCommunicationTemplates(updated);
     setNewTemplate({ label: '', text: '', category: 'chat' });
-    onShowSuccess?.('Communication template created!');
+    showSuccess('Communication template created!');
   };
 
   const handleDeleteTemplate = (id: string) => {
     const updated = templates.filter((t) => t.id !== id);
     setTemplates(updated);
     saveCommunicationTemplates(updated);
-    onShowSuccess?.('Template removed!');
+    showSuccess('Template removed!');
   };
 
   const handleResetToDefaults = () => {
     setTemplates(DEFAULT_TEMPLATES);
     saveCommunicationTemplates(DEFAULT_TEMPLATES);
-    onShowSuccess?.('Reset to default communication templates.');
+    showSuccess('Reset to default communication templates.');
   };
 
   const handleSaveEmailWording = () => {
-    onShowSuccess?.('Email invite wording defaults saved!');
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.EMAIL_WORDING_DEFAULTS,
+        JSON.stringify({ subject: emailSubject, body: emailBody })
+      );
+      emitDataChanged('all');
+      showSuccess('Email invite wording defaults saved!');
+    } catch {
+      // ignore quota error
+    }
   };
 
   const chatTemplates = templates.filter((t) => t.category === 'chat');
@@ -327,7 +355,7 @@ export function CommunicationTemplatesManagement(props: AdminCommonProps) {
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(item.tag);
-                    onShowSuccess?.(`Copied ${item.tag} to clipboard`);
+                    showSuccess(`Copied ${item.tag} to clipboard`);
                   }}
                   className="w-full text-left p-2.5 rounded-lg bg-white border border-purple-200 hover:border-purple-400 transition-colors flex items-center justify-between"
                 >

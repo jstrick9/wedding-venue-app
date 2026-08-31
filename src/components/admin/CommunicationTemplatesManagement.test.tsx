@@ -10,7 +10,7 @@ describe('CommunicationTemplatesManagement (#147)', () => {
 
   const dummyProps: any = {
     config: { primaryColor: '#4A1942' },
-    onShowSuccess: vi.fn(),
+    showSuccess: vi.fn(),
   };
 
   it('renders configured Quick Reply templates and allows adding a new template', () => {

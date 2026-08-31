@@ -75,6 +75,7 @@ export const STORAGE_KEYS = {
 
   LAYOUT_EDIT_SESSIONS: 'spm_layout_edit_sessions',
   COMMUNICATION_TEMPLATES: 'spm_communication_templates',
+  EMAIL_WORDING_DEFAULTS: 'spm_email_wording_defaults',
   OPERATIONS_SETTINGS: 'spm_operations_settings',
   SECURITY_SETTINGS: 'spm_security_settings',
   ORG_INVITES: 'spm_org_invites',

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { emitDataChanged, on } from '../../utils/appEvents';
@@ -43,7 +42,7 @@ export function saveSecuritySettings(settings: SecuritySettingsConfig): void {
 }
 
 export function SecurityAuditManagement(props: AdminCommonProps) {
-  const { config, onShowSuccess } = props;
+  const { config, showSuccess } = props;
   const { auditLog } = useRBAC();
   const [settings, setSettings] = useState<SecuritySettingsConfig>(() =>
     getSecuritySettings()
@@ -60,16 +59,16 @@ export function SecurityAuditManagement(props: AdminCommonProps) {
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     saveSecuritySettings(settings);
-    onShowSuccess?.('System security & privacy settings saved!');
+    showSuccess('System security & privacy settings saved!');
   };
 
   const handleClearCache = () => {
     try {
       localStorage.removeItem(STORAGE_KEYS.LAYOUT_EDIT_SESSIONS);
       localStorage.removeItem(STORAGE_KEYS.COUPLE_SESSION);
-      onShowSuccess?.('Cleared temporary edit sessions and cache cleanly.');
+      showSuccess('Cleared temporary edit sessions and cache cleanly.');
     } catch {
-      onShowSuccess?.('Cache cleared.');
+      showSuccess('Cache cleared.');
     }
   };
 
@@ -93,7 +92,7 @@ export function SecurityAuditManagement(props: AdminCommonProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    onShowSuccess?.('Exported audit log as CSV.');
+    showSuccess('Exported audit log as CSV.');
   };
 
   const exportAuditJSON = () => {
@@ -105,7 +104,7 @@ export function SecurityAuditManagement(props: AdminCommonProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    onShowSuccess?.('Exported audit log as JSON.');
+    showSuccess('Exported audit log as JSON.');
   };
 
   const filteredAudit = (auditLog || []).filter((entry) => {

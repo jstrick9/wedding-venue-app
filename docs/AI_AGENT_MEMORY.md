@@ -1445,6 +1445,16 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #256 (2026-08-31): units 1.18-1.19 done; ratchet 3 (21/24). F-256-1
+  (P3): SecurityAuditManagement + CommunicationTemplatesManagement BOTH
+  used the phantom onShowSuccess prop (real name: showSuccess) — 10
+  silent-action toasts across the two panels since creation; both test
+  fixtures had mocked/asserted the phantom name (codifying the bug).
+  F-256-2 (P3): 'Save Wording Defaults' persisted nothing — email
+  subject/body were hardcoded-initial state, edits lost on reload, success
+  toast lied. Now persists to spm_email_wording_defaults + loads back.
+  Process: write_file can deliver escaped parens in test regexes doubled
+  (\( -> \() — use [(] character classes or verify the written file.
 - #255 (2026-08-31): units 1.16-1.17 done; ratchet 5 (19/24). F-255-1
   (P3): OperationsSettingsManagement destructured onShowSuccess but the
   AdminCommonProps prop is showSuccess — always undefined, so all 5 action

@@ -27,7 +27,7 @@ describe('SecurityAuditManagement (#147)', () => {
 
   const dummyProps: any = {
     config: { primaryColor: '#4A1942' },
-    onShowSuccess: vi.fn(),
+    showSuccess: vi.fn(),
   };
 
   it('renders security settings controls and supports saving settings and clearing cache', () => {
@@ -41,7 +41,7 @@ describe('SecurityAuditManagement (#147)', () => {
       name: /save security settings/i,
     });
     fireEvent.click(saveBtn);
-    expect(dummyProps.onShowSuccess).toHaveBeenCalledWith(
+    expect(dummyProps.showSuccess).toHaveBeenCalledWith(
       'System security & privacy settings saved!'
     );
 
@@ -49,7 +49,7 @@ describe('SecurityAuditManagement (#147)', () => {
       name: /clear expired sessions & cache/i,
     });
     fireEvent.click(clearCacheBtn);
-    expect(dummyProps.onShowSuccess).toHaveBeenCalledWith(
+    expect(dummyProps.showSuccess).toHaveBeenCalledWith(
       'Cleared temporary edit sessions and cache cleanly.'
     );
   });
