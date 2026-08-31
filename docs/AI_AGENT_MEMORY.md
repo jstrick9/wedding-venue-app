@@ -1444,6 +1444,15 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
 4. Session review docs cover the units completed in that session; registry
    rows carry per-unit evidence with review numbers.
 
+**Campaign progress log (append per session):**
+- #249 (2026-08-31): protocol + registry shipped; units 1.1, 1.23, 1.24 done;
+  ratchet 21. F-249-1: AdminSharedComponents had 8 unimported type refs hidden
+  by nocheck. F-249-2: mixed adoption — 8 importers of shared components vs ~13
+  panels with private duplicates (Phase 6.8 dedup). NEW RULE: grep output is
+  NOT evidence — a file was nearly deleted as "dead code" because a grep
+  missed 8 importers; tsc caught it. No registry verdict without the
+  compiler/tests.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 

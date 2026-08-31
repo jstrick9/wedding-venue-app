@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import type { AdminCommonProps } from './AdminTabTypes';
 import { FixtureManagement } from './FixtureManagement';

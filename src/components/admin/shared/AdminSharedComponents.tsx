@@ -1,6 +1,15 @@
-// @ts-nocheck
 import React from 'react';
 import { Config } from '../../../config';
+import type {
+  LayoutCategory,
+  LayoutTemplate,
+  PatternColors,
+  PatternType,
+  PlacedFixture,
+  PlacedTable,
+  RectangularChairLayout,
+  ShapeType,
+} from '../../../types';
 
 interface BrandedSectionHeaderProps {
   icon: string;
@@ -56,22 +65,36 @@ export function BrandedStatCard({ icon, label, value, config, variant = 'primary
                     variant === 'accent' ? config.accentColor || '#8B5A8B' :
                     variant === 'success' ? '#059669' : '#d97706';
 
-  const Comp = onClick ? 'button' : 'div';
-
-  return (
-    <Comp
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      className="px-3 py-2 rounded-xl border flex items-center justify-between gap-2 transition-all hover:shadow-sm text-left"
-      style={{ backgroundColor: bgColor, borderColor: `${textColor}30` }}
-      title={onClick ? `Click to filter by ${label.toLowerCase()}` : undefined}
-    >
+  const content = (
+    <>
       <div className="flex items-center gap-1.5 min-w-0">
         <span className="text-base shrink-0">{icon}</span>
         <span className="text-xs font-medium text-gray-700 truncate">{label}</span>
       </div>
       <span className="text-sm font-bold shrink-0" style={{ color: textColor }}>{value}</span>
-    </Comp>
+    </>
+  );
+  const className =
+    'px-3 py-2 rounded-xl border flex items-center justify-between gap-2 transition-all hover:shadow-sm text-left';
+  const style = { backgroundColor: bgColor, borderColor: `${textColor}30` };
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={className}
+        style={style}
+        title={`Click to filter by ${label.toLowerCase()}`}
+      >
+        {content}
+      </button>
+    );
+  }
+  return (
+    <div className={className} style={style}>
+      {content}
+    </div>
   );
 }
 

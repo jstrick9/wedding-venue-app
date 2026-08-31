@@ -4,7 +4,7 @@
 **Legend:** `open` → not yet examined · `in-progress` → unit started · `done` → examined, findings fixed/declined with evidence · `certified` → previously proven (review # cited)
 **Rule:** a row may only move to `done`/`certified` with evidence (review # + what was proven). "Declined" findings need a written reason. This file is the single source of truth for campaign state; session review docs cite registry deltas.
 
-**Phase 1 progress: 0/24 files retyped (ratchet ceiling must equal the open count).**
+**Phase 1 progress: 3/24 files retyped · ratchet ceiling 21 (#249). The ceiling must equal the open count at all times.**
 
 ---
 
@@ -14,7 +14,7 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 
 | # | File | Lines | Status | Evidence |
 |---|------|------:|--------|----------|
-| 1.1 | components/admin/shared/AdminSharedComponents.tsx | 261 | open | — |
+| 1.1 | components/admin/shared/AdminSharedComponents.tsx | 261 | done | #249 typed; found 8 unimported type refs hidden by nocheck; mixed-adoption dedup note → 6.8 |
 | 1.2 | components/admin/UserManagement.tsx | 1825 | open | — |
 | 1.3 | components/admin/BrandingManagement.tsx | 1716 | open | — |
 | 1.4 | components/admin/FixtureManagement.tsx | 1383 | open | — |
@@ -36,8 +36,8 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 | 1.20 | components/CoupleLayoutEditor.tsx | 310 | open | — |
 | 1.21 | components/VendorPanel.tsx | 296 | open | — |
 | 1.22 | components/CoupleLayoutPreview.tsx | 207 | open | — |
-| 1.23 | components/admin/SeatingAndLinensManagement.tsx | 55 | open | — |
-| 1.24 | components/admin/StructuresManagement.tsx | 51 | open | — |
+| 1.23 | components/admin/SeatingAndLinensManagement.tsx | 55 | done | #249 typed, no defects |
+| 1.24 | components/admin/StructuresManagement.tsx | 51 | done | #249 typed, no defects |
 
 ## B. Phase 2 — RPC audit (46 functions)
 
@@ -165,7 +165,7 @@ Anon column largely certified for the core 16 tables (#246/#247); re-verify stra
 | 6.5 | Loading/error/empty-state completeness per screen | open (pairs with D) |
 | 6.6 | Oversized/adversarial input handling on every externally-reachable field | open |
 | 6.7 | Secrets & env hygiene sweep (no keys client-side; Edge env expectations documented) | open |
-| 6.8 | Dead code / superseded paths (e.g. create_venue_organization_v) | open |
+| 6.8 | Dead code / superseded paths (e.g. create_venue_organization_v); + shared-component private duplicates in ~13 admin panels vs 8 shared importers (#249 F-249-2) | open |
 
 ## G. Drift & config
 

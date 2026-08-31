@@ -25,6 +25,6 @@ describe('@ts-nocheck ratchet (Review #247 P2-I)', () => {
   });
 
   it('the shipped ceiling matches the Review #247 baseline', () => {
-    expect(MAX_TS_NOCHECK_FILES).toBe(24);
+    expect(MAX_TS_NOCHECK_FILES).toBe(21);
   });
 });
