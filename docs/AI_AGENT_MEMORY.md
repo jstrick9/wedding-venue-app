@@ -1208,6 +1208,44 @@ must not leave default navy Save-able over live templates.
 **Rule going forward:** treat #244 + §9.12–9.68 as current truth for
 platform branding load. Hunt continues on venue admin invite/auth.
 
+
+### 9.69 Comprehensive engineering audit #245 (2026-08-31)
+
+See `docs/reviews/245-comprehensive-full-stack-engineering-audit-2026-08-31.md`.
+
+Full-tree re-audit at `8e4486d`. All #173/#180 P0/P1 items verified fixed
+at HEAD. New P1 findings and their fixes (same-review remediation):
+
+- **Service-layer deadlines (P1-A):** `createSurfaceClient` now wraps every
+  Supabase fetch with a 30s abort deadline (`SUPABASE_FETCH_DEADLINE_MS`).
+  The GuestPortal and CouplesPortal 5s pollers skip a tick when the previous
+  pull is still in flight (in-flight guard). Do not add new bare-await cloud
+  calls; the client-level deadline is the root fix for the hang class —
+  UI-level `withTimeout` remains only for user-facing busy states.
+- **Conditional hooks crash (P1-B):** 7 components
+  (StaffOperationsPanel, DecorDesigner, DrawingTool,
+  EventQuestionsWizard, GuestPortal, LodgingBuilder, PlatformVenueMap)
+  returned access-denied BEFORE their hooks. All hooks now run before the
+  guard. Never early-return before hooks; `react-hooks/rules-of-hooks`
+  should stay at 0 warnings.
+- **RSVP lost-update race (P1-C):** `submit_guest_couple_rsvp` now locks the
+  snapshot row (`for update`) before computing `next_rsvps` (migration 0016).
+- **`guests.portal_token_hash` index (P1-D):** migration 0016 adds it —
+  anon token lookups no longer seq-scan all orgs' guests.
+- **Public-branding SVG (P2-E):** migration 0016 removes `image/svg+xml`
+  from the public bucket's allowed MIME types (stored-script risk).
+- **Silent cloud-sync failure (P2-F):** failed entity/layout pushes emit
+  `spm_cloud_sync_error` (surfaced as a toast). Do not `console.error`
+  cloud write failures silently.
+
+Open items filed for follow-up (not fixed in #245): claim-venue-admin
+atomicity + throttle (P2-G), CI bundle budget (P2-H), `@ts-nocheck` ratchet
+(P2-I), guest-RPC rate limit (P3-J). Live RLS smoke tests still pending —
+run the §9 checklist in review 245 against the live project.
+
+**Rule going forward:** treat #245 + §9.12–9.68 as current truth for
+reliability, hooks ordering, snapshot concurrency, and storage MIME policy.
+
 ---
 *End of AI Agent Memory & Knowledge Base.*
 
