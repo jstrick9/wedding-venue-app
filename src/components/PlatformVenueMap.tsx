@@ -33,11 +33,20 @@ function waitForMapSize(element: HTMLElement): Promise<boolean> {
   });
 }
 
+// Circle-marker radii: default vs. selected highlight (shared by the map
+// build and the selection-sync effect below).
+const MARKER_RADIUS_DEFAULT = 7;
+const MARKER_RADIUS_SELECTED = 10;
+
 export default function PlatformVenueMap({ organizations, onOpenVenue }: PlatformVenueMapProps) {
   const [view, setView] = useState<MapView>('points');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tileError, setTileError] = useState('');
   const mapNode = useRef<HTMLDivElement | null>(null);
+  // Leaflet circle markers by organization id, so the selection highlight can
+  // be updated WITHOUT rebuilding the map (a rebuild per click was the freeze
+  // risk; without refs the radius stayed frozen at build time — #263 P5).
+  const markersRef = useRef<Map<string, { setRadius: (radius: number) => void }>>(new Map());
   const located = organizations.flatMap((organization) => {
     const point = parseMapPoint(organization);
     return point ? [{ organization, ...point }] : [];
@@ -68,6 +77,7 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
     let cancelled = false;
     let map: { remove: () => void } | null = null;
     const pins = located;
+    const markers = markersRef.current;
     setTileError('');
     void import('leaflet').then(async (mod) => {
       const container = mapNode.current;
@@ -107,9 +117,10 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
         tileSize: 256,
         attribution: 'Powered by Geoapify | © OpenMapTiles © OpenStreetMap contributors',
       }).addTo(leafletMap);
+      markers.clear();
       pins.forEach((item) => {
         const marker = L.circleMarker([item.latitude, item.longitude], {
-          radius: selectedId === item.organization.id ? 10 : 7,
+          radius: selectedId === item.organization.id ? MARKER_RADIUS_SELECTED : MARKER_RADIUS_DEFAULT,
           color: '#ffffff',
           weight: 2,
           fillColor: markerColor(item.organization.status),
@@ -117,6 +128,7 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
         }).addTo(leafletMap);
         marker.bindPopup(`<strong>${item.organization.name}</strong><br/>${[item.organization.city, item.organization.stateRegion].filter(Boolean).join(', ')}`);
         marker.on('click', () => setSelectedId(item.organization.id));
+        markers.set(item.organization.id, marker);
       });
       if (pins.length > 0 && leafletMap.getSize().x > 0 && leafletMap.getSize().y > 0) {
         const group = L.latLngBounds(pins.map((item) => [item.latitude, item.longitude] as [number, number]));
@@ -129,8 +141,17 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
     return () => {
       cancelled = true;
       map?.remove();
+      markers.clear();
     };
   }, [useTiles, locatedKey]);
+
+  // Sync the selected-marker highlight when the selection changes — updating
+  // the existing markers instead of rebuilding the map (P5 from #263 fixed).
+  useEffect(() => {
+    markersRef.current.forEach((marker, id) => {
+      marker.setRadius(selectedId === id ? MARKER_RADIUS_SELECTED : MARKER_RADIUS_DEFAULT);
+    });
+  }, [selectedId]);
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" aria-label="Platform venue map">

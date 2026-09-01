@@ -1445,6 +1445,19 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #270 (2026-09-01): Phase 4 batch 8 — deferred P5 cleanup; backlog CLEARED.
+  PlatformVenueMap P5 fixed: map-build effect rightly excludes selectedId
+  (rebuild-per-click = freeze), but the marker radius highlight was baked in
+  with a stale closure — selection never enlarged the marker in tiled view.
+  Fix: markersRef (aliased to local inside effect for the exhaustive-deps
+  cleanup rule) + [selectedId] effect calling setRadius on existing markers.
+  Pin: platformVenueMapSelection.pin.test.ts (4). 4 remaining P5s formally
+  DECLINED with reasons (LodgingBuilder bounded drag; msgTick cadence;
+  shift-time '' cosmetic self-heal; clipboard fallbacks paired with toasts).
+  PHASE 4 FULLY COMPLETE including backlog. Campaign now blocked only on
+  operator items: Phase 3 artifacts (3.1), migrations 0018-0020 live apply,
+  live E2E journeys (8.x). Gates: 1064 pass/5 skip (+4), lint 0/28,
+  gzip 546.81 kB.
 - #269 (2026-09-01): Phase 4 batch 7 — optimistic-update rollback sweep;
   PHASE 4 COMPLETE (all protocol items closed). F-269-1 (P3): guest RSVP
   submit is optimistic local-first, but SupabaseGuestPortalBackend.submitRSVP
