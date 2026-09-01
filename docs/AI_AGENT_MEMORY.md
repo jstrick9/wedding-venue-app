@@ -1445,6 +1445,22 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #271 (2026-09-01): LIVE VERIFICATION — operator applied migrations
+  0018+0019+0020; all outcomes live-proven with the publishable key, ZERO
+  mutations (denials + token-gated not_found only). 0018: all *_unchecked
+  anon-denied (401 42501 permission denied = exists-but-revoked) and
+  submit_guest_couple_rsvp_unchecked DROPPED (404 PGRST202); new 3-arg CAS
+  save signature resolves 2-arg client calls (regression 200 not_found).
+  0019: geocode_try_acquire_slot anon-denied, NO slot acquired by the probe.
+  0020: audit_logs anon INSERT {} flipped 23502→42501 — F-262-1 CLOSED LIVE.
+  Regression pass: 9 anon-critical portal RPCs + branding all 200 with
+  expected denials. SIGNAL TAXONOMY (recorded): 404 PGRST202 = invisible/
+  dropped; 401 42501 "permission denied for function" = exists, EXECUTE
+  revoked; 42501 "row-level security" = RLS WITH CHECK deny; 23502 = passed
+  RLS (investigate); P0001 = BEFORE trigger. Nuance: get_platform_console_
+  metrics is anon-EXECUTABLE with in-body role gate (returns forbidden) —
+  not anon-hidden as the old grant-map note implied. Phase 3 remaining:
+  venue/platform authenticated sign-in proof — still request 3.1 artifacts.
 - #270 (2026-09-01): Phase 4 batch 8 — deferred P5 cleanup; backlog CLEARED.
   PlatformVenueMap P5 fixed: map-build effect rightly excludes selectedId
   (rebuild-per-click = freeze), but the marker radius highlight was baked in

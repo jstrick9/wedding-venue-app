@@ -41,7 +41,7 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 
 ## B. Phase 2 — RPC audit (46 functions)
 
-**Phase 2 progress: 46/46 — COMPLETE (#261). Migrations 0018 + 0019 pending live application (operator; re-probe after applying).**
+**Phase 2 progress: 46/46 — COMPLETE (#261). Migrations 0018 + 0019 + 0020 APPLIED and LIVE-VERIFIED (#271): *_unchecked revoked (42501) / dropped (PGRST202), geocode slot anon-denied with no slot acquired, audit_logs anon INSERT flipped 23502→42501 (F-262-1 closed live); full anon-surface regression pass green.**
 
 Per unit checklist: input validation/limits · authz derivation · row locking on read-modify-write · idempotency · error contract · grant hygiene · audit coverage. (`*` = service-only or trigger/internal — checklist applies with "who can call it" as the first question.)
 
@@ -132,7 +132,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | venue_geocode_rate | live: denied (no policies; slot via revoked RPC #261) | svc | svc | svc | svc |
 | venues | live: denied | n-a | n-a | pol: member select; owner/admin manage | n-a |
 
-**Phase 3 status:** anon column live-complete (29/29); guest/couple derived-complete; venue/platform policy-derived — **live sign-in proof pending request 3.1**. UPDATE/DELETE note: anon sees zero rows everywhere, so row-targeted writes are inert (204 no-ops on impossible filters, live-proven); all write policies additionally derive from auth.uid()/roles.
+**Phase 3 status:** anon column live-complete (29/29) and now re-verified against the LIVE post-migration database (#271); guest/couple derived-complete; venue/platform policy-derived — **live sign-in proof pending request 3.1**. UPDATE/DELETE note: anon sees zero rows everywhere, so row-targeted writes are inert (204 no-ops on impossible filters, live-proven); all write policies additionally derive from auth.uid()/roles.
 
 ## D. Phase 4 — console flow audit
 
