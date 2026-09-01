@@ -290,7 +290,14 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       cancelled = true;
       off();
       window.clearInterval(poll);
-      if (cloudSaveTimerRef.current) clearTimeout(cloudSaveTimerRef.current);
+      // F-264-1 (Review #264): a save was scheduled but never fired (the portal
+      // closed inside the 350ms debounce window) — flush it instead of dropping
+      // it, or the couple's last edit never reaches the cloud and other devices
+      // keep a stale snapshot until the next manual edit.
+      if (cloudSaveTimerRef.current) {
+        clearTimeout(cloudSaveTimerRef.current);
+        void pushLocalSnapshot();
+      }
       cloudSaveTimerRef.current = null;
     };
   }, [cloudToken, event?.id, session?.eventId, venueSlug]);

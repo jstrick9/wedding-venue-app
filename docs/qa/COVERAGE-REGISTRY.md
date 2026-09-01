@@ -150,7 +150,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | 4.10 | Couple portal: view, RSVP, layout editor/preview | CouplesPortal (3930), CoupleLayoutEditor/Preview | open | #263: F-263-1 fixed here (cloud-sync effect re-subscribes on venueSlug); deep flow pass pending |
 | 4.11 | Guest portal: view, submit RSVP | GuestPortal (2414) | open | #263: F-263-1 fixed here (hydration effect re-subscribes on venueSlug); deep flow pass pending |
 | 4.12 | Auth/session lifecycle: sign-in, restore, sign-out, role routing | AuthBackend, session persistence | open |
-| 4.13 | Event-bus + store correctness (cross-console) | event bus, stores, hooks (20) | in-progress | #263: listener cleanup 31+44 sites CLEAN; hooks surface triaged (0 rules-of-hooks errors; 28 exhaustive-deps triaged); F-263-1 (P4) stale-venueSlug pollers fixed+pinned. Stores/races remain |
+| 4.13 | Event-bus + store correctness (cross-console) | event bus, stores, hooks (20) | **complete** | #263: listener cleanup clean; hooks triaged; F-263-1 (P4) fixed. #264: 19 timer-cleanup sites swept (only real drop = F-264-1 (P4) debounced-save drop on unmount, FIXED+pinned); async pollers guarded (#245) except PlatformVenueChatPanel (P5 declined, self-healing); cross-tab store races none (storage-event refresh + server CAS). Closes 4.13 |
 
 ## E. Edge Functions (3)
 

@@ -1445,6 +1445,21 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #264 (2026-09-01): Phase 4 batch 2 — stores/race & timer-cleanup sweep;
+  4.13 COMPLETE. All 19 clearTimeout/clearInterval sites triaged for
+  dropped work: only real drop = F-264-1 (P4, fixed+pinned) — CouplesPortal
+  cleanup cleared the 350ms cloudSaveTimerRef debounce WITHOUT flushing
+  pushLocalSnapshot, so edit-then-close-within-350ms lost the upload
+  (remote stale until a later edit). Fix: flush in cleanup
+  (`if (cloudSaveTimerRef.current) { clearTimeout; void pushLocalSnapshot(); }`)
+  — safe, no setState; guarded so no-edit teardown stays no-op. Pin:
+  portalSaveFlush.pin.test.ts. Async poller overlap: both portal 5s
+  pollers already guarded (#245 P1-A); PlatformVenueChatPanel 10s load()
+  unguarded = P5 declined (state-replace self-heals, fetch deadline
+  bounds stacking). Cross-tab localStorage races: none (single-threaded
+  intra-tab RMW, storage-event refresh, server CAS for multi-device).
+  useLayoutBackendSync clean (no debounce). Gates: 1043 pass/5 skip (+2),
+  lint 0/28, gzip 546.51 kB.
 - #263 (2026-09-01): Phase 4 batch 1 — cross-cutting sweep. Listener
   cleanup: 31 event-bus + 44 raw addEventListener sites ALL clean (the
   typed on() bus pattern holds). Hooks: zero rules-of-hooks errors (the
