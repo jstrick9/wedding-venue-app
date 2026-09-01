@@ -1445,6 +1445,21 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #262 (2026-09-01): Phase 3 matrix, columns 1-3 of 5. Anon column
+  LIVE-COMPLETE (29/29): GET sweep all empty; INSERT {} discriminator
+  (42501=RLS-denied, 23502=passed RLS!, P0001=trigger gate). Guest/couple
+  columns derived (anon-inherited + Phase 2 RPC layer). Venue/platform
+  policy-derived pending request 3.1 (auth accounts + platform_membership
+  SQL provided in review). F-262-1 (P3, live-proven): audit_logs
+  'organization_id is null' free pass — anon could forge+read org-less
+  audit rows (INS probe returned 23502 not 42501). Fixed in 0020
+  (platform_audit_logs pattern). Declined: organizations self-insert
+  (intentional AuthBackend bootstrap). Probe lessons: PostgREST root
+  needs secret key on this gateway — probe tables directly; BEFORE
+  triggers run ahead of WITH CHECK (platform_venue_messages P0001 is the
+  correct first gate); impossible-filter UPDATE/DELETE 204s are zero-row
+  no-ops, not permission proof. Migrations 0018-0020 pending live
+  application.
 - #261 (2026-09-01): Phase 2 batch 4 — PHASE 2 COMPLETE (46/46 RPCs).
   F-261-1 (P3, live-proven): geocode_try_acquire_slot was anon-executable
   — polling it starves the Nominatim rate slot (probe acquired it).

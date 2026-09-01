@@ -96,39 +96,43 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 
 ## C. Phase 3 — authorization proof matrix (29 tables × 5 role classes)
 
-Anon column largely certified for the core 16 tables (#246/#247); re-verify stragglers and fill guest/couple/venue/platform columns via live sessions (see request board). Verdict per cell: `certified` (evidence) / `denied-by-RLS` (evidence) / `n-a` (not a client-reachable table).
+**Method (#262):** anon column live-proven with the publishable key (GET sweep + INSERT `{}` discriminator + trigger interplay); guest/couple are anon at the Postgres level, so direct access inherits the anon denial and their data flows only through the token-gated security-definer RPCs audited in Phase 2 (#258); venue/platform columns are **policy-derived** from the full migration policy inventory (#262) — live sign-in proof pending request 3.1. Verdicts: `certified` (live evidence) / `policy` (derived from the inventory, live proof pending) / `n-a`.
+
+Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived · `svc` = service-role only (no policies → deny-all for client roles).
 
 | Table | anon | guest | couple | venue | platform |
 |------|------|-------|--------|-------|----------|
-| audit_logs | open | n-a? | n-a? | open | open |
-| couple_portal_snapshots | open | open | open | open | open |
-| event_answers | open | open | open | open | open |
-| event_memberships | open | open | open | open | open |
-| event_questions | open | open | open | open | open |
-| events | open | open | open | open | open |
-| guest_portal_configs | open | open | open | open | open |
-| guests | open | open | open | open | open |
-| layout_versions | open | open | open | open | open |
-| layouts | open | open | open | open | open |
-| org_data | certified #246 | n-a? | n-a? | open | open |
-| org_invites | open | n-a? | n-a? | open | open |
-| organization_memberships | open | n-a? | n-a? | open | open |
-| organizations | open | n-a? | open | open | open |
-| platform_audit_logs | open | n-a? | n-a? | open | open |
-| platform_chat_read_markers | open | open | open | open | open |
-| platform_memberships | certified #246 | n-a? | n-a? | open | open |
-| platform_settings | open | n-a? | n-a? | open | open |
-| platform_venue_messages | certified #246 (trigger) | open | open | open | open |
-| profiles | open | open | open | open | open |
-| rsvp_submissions | open | open | open | open | open |
-| staff_tasks | open | open | open | open | open |
-| timeline_events | open | open | open | open | open |
-| vendors | open | open | open | open | open |
-| venue_admin_claim_attempts | certified #247 (RLS-hidden) | n-a | n-a | n-a | n-a |
-| venue_admin_invites | certified #246 | n-a? | n-a? | open | open |
-| venue_geocode_cache | open | n-a? | n-a? | open | open |
-| venue_geocode_rate | open | n-a? | n-a? | open | open |
-| venues | open | open | open | open | open |
+| audit_logs | **F-262-1 (P3) fixed in 0020**: null-org rows were anon-readable/writable (live: INS passed RLS, 23502); post-0020 denied — apply live | n-a | n-a | pol: admin select / member insert (org-scoped) | pol: support reads org-less rows |
+| couple_portal_snapshots | live: denied (INS 42501, GET empty) | RPC-only (#258): token-gated read/RSVP | RPC-only (#258): token-gated get/save + CAS | pol: owner/admin/planner select + all | pol: via org tables; RPC-only otherwise |
+| event_answers | live: denied | n-a | n-a | pol: event-member select/all | n-a |
+| event_memberships | live: denied | n-a | n-a | pol: event-member select; owner/admin/planner manage | pol: platform admin all |
+| event_questions | live: denied | n-a | n-a | pol: member select; owner/admin/planner manage | n-a |
+| events | live: denied | RPC-only (#258 snapshot payloads) | RPC-only (#258) | pol: member select; owner/admin/planner manage | pol: platform admin all |
+| guest_portal_configs | live: denied | RPC-only (#258/0010 window+deadline enforced server-side) | n-a | pol: member select; owner/admin/planner manage | n-a |
+| guests | live: denied | RPC-only (#258): token-hash lookup, own record only | RPC-only (#258) | pol: member select; +staff manage | pol: via org tables |
+| layout_versions | live: denied | n-a | n-a | pol: member select; owner/admin/planner/staff insert | n-a |
+| layouts | live: denied | n-a | n-a | pol: member select; owner/admin/planner/staff manage | n-a |
+| org_data | certified #246 + live re-proven #262 (GET empty, INS 42501) | n-a | n-a | pol: member read; write via org_data_write_allowed (admin domains gated) | pol: platform admin via RPCs |
+| org_invites | live: denied | n-a | n-a | pol: owner/admin manage | pol: platform admin select |
+| organization_memberships | live: denied | n-a | n-a | pol: member select self-org; owner/admin manage; self-signup owner insert | pol: platform admin all |
+| organizations | live: denied | n-a | pol: branding/login via get_public_venue_branding only | pol: member/owner select; **intentional** self-serve insert (AuthBackend bootstrap, declined as finding) | pol: platform admin select/all |
+| platform_audit_logs | live: denied (INS 42501) | n-a | n-a | n-a | pol: support select; support+auth.uid insert |
+| platform_chat_read_markers | live: denied | n-a | n-a | pol: self (auth.uid) only | pol: self |
+| platform_memberships | certified #246 + live re-proven #262 | n-a | n-a | n-a | pol: self select; admin all |
+| platform_settings | live: denied | pol: public branding via get_public_platform_branding only | n-a | n-a | pol: admin select/all |
+| platform_venue_messages | live: denied (INS reached trigger → P0001 raise; policy also requires auth.uid sender) | n-a | n-a | pol: member select + trigger-derived sender_side insert | pol: admin select/update; platform-side insert |
+| profiles | live: denied | n-a | n-a | pol: self + same-org select; self insert/update | pol: admin select |
+| rsvp_submissions | live: denied | RPC-only (#258): own submission, locked+validated | RPC-only (#258): snapshot submissions | pol: member select/insert; owner/admin/planner update | n-a |
+| staff_tasks | live: denied | n-a | n-a | pol: member select; +staff manage | n-a |
+| timeline_events | live: denied | n-a | n-a | pol: member select; +staff manage | n-a |
+| vendors | live: denied | n-a | n-a | pol: member select; owner/admin/planner manage | n-a |
+| venue_admin_claim_attempts | certified #247 (RLS-hidden) + live re-proven #262 | svc | svc | svc | svc |
+| venue_admin_invites | certified #246 + live re-proven #262 (INS 42501) | n-a | n-a | n-a | pol: platform admin all (creation/revocation via admin RPCs) |
+| venue_geocode_cache | live: denied (no policies) | svc | svc | svc | svc |
+| venue_geocode_rate | live: denied (no policies; slot via revoked RPC #261) | svc | svc | svc | svc |
+| venues | live: denied | n-a | n-a | pol: member select; owner/admin manage | n-a |
+
+**Phase 3 status:** anon column live-complete (29/29); guest/couple derived-complete; venue/platform policy-derived — **live sign-in proof pending request 3.1**. UPDATE/DELETE note: anon sees zero rows everywhere, so row-targeted writes are inert (204 no-ops on impossible filters, live-proven); all write policies additionally derive from auth.uid()/roles.
 
 ## D. Phase 4 — console flow audit
 
@@ -201,5 +205,6 @@ Anon column largely certified for the core 16 tables (#246/#247); re-verify stra
 | 2 guest-portal tokens for the same couple + its couple id | journey 8.5, C rows | requested |
 | 1 second invite → second throwaway email (cross-user negative tests) | Phase 3 (negative cells) | later |
 | 1 throwaway venue you are willing to have suspended | 8.4 suspension paths | later |
+| 3.1 throwaway auth accounts for sign-in probes: (a) claim the row-1 invite with a throwaway sign-up (covers venue column + journey 8.1), (b) one plain fresh sign-up (negative cells + signup bootstrap flow), (c) platform_memberships row for account (a) or a third account — SQL script provided in #262 (covers platform column) | Phase 3 venue/platform columns live proof | requested (#262) |
 
 **Session state:** *none yet — no live sessions created by the campaign so far.*
