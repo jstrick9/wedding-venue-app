@@ -1445,6 +1445,17 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #263 (2026-09-01): Phase 4 batch 1 — cross-cutting sweep. Listener
+  cleanup: 31 event-bus + 44 raw addEventListener sites ALL clean (the
+  typed on() bus pattern holds). Hooks: zero rules-of-hooks errors (the
+  old 7-file false-positive cluster is gone); all 28 exhaustive-deps
+  triaged — F-263-1 (P4) fixed: CouplesPortal cloud-sync + GuestPortal
+  hydration pollers closed over venueSlug without listing it (URL-hash
+  slug swaps don't remount → stale-venue sync until remount). 26
+  remaining warnings declined with reasons (stable setters/constants,
+  transitively-fresh via useLayoutState's per-render object, intentional
+  boolean deps, perf-only). PlatformVenueMap Leaflet radius freeze = P5
+  deferred to hotspot pass. Lint 30→28 warnings.
 - #262 (2026-09-01): Phase 3 matrix, columns 1-3 of 5. Anon column
   LIVE-COMPLETE (29/29): GET sweep all empty; INSERT {} discriminator
   (42501=RLS-denied, 23502=passed RLS!, P0001=trigger gate). Guest/couple

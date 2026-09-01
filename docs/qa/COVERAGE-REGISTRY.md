@@ -147,10 +147,10 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | 4.7 | Venue floor plan / layouts | FloorPlanCanvas (1890), layouts, layout_versions | open |
 | 4.8 | Venue admin panels (19 management screens) | admin/* | open (pairs with A.2–A.6, A.8–A.12, A.14–A.19, A.23–A.24) |
 | 4.9 | Venue operations: staff tasks, vendors, timeline | StaffOperationsPanel (2061), VendorPanel | open |
-| 4.10 | Couple portal: view, RSVP, layout editor/preview | CouplesPortal (3930), CoupleLayoutEditor/Preview | open |
-| 4.11 | Guest portal: view, submit RSVP | GuestPortal (2414) | open |
+| 4.10 | Couple portal: view, RSVP, layout editor/preview | CouplesPortal (3930), CoupleLayoutEditor/Preview | open | #263: F-263-1 fixed here (cloud-sync effect re-subscribes on venueSlug); deep flow pass pending |
+| 4.11 | Guest portal: view, submit RSVP | GuestPortal (2414) | open | #263: F-263-1 fixed here (hydration effect re-subscribes on venueSlug); deep flow pass pending |
 | 4.12 | Auth/session lifecycle: sign-in, restore, sign-out, role routing | AuthBackend, session persistence | open |
-| 4.13 | Event-bus + store correctness (cross-console) | event bus, stores, hooks (20) | open |
+| 4.13 | Event-bus + store correctness (cross-console) | event bus, stores, hooks (20) | in-progress | #263: listener cleanup 31+44 sites CLEAN; hooks surface triaged (0 rules-of-hooks errors; 28 exhaustive-deps triaged); F-263-1 (P4) stale-venueSlug pollers fixed+pinned. Stores/races remain |
 
 ## E. Edge Functions (3)
 

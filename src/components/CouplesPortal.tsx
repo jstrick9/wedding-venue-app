@@ -293,7 +293,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       if (cloudSaveTimerRef.current) clearTimeout(cloudSaveTimerRef.current);
       cloudSaveTimerRef.current = null;
     };
-  }, [cloudToken, event?.id, session?.eventId]);
+  }, [cloudToken, event?.id, session?.eventId, venueSlug]);
 
   const handleManualLaunch = (tokenInput: string) => {
     const token = tokenInput.trim();

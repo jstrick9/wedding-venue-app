@@ -222,7 +222,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       cancelled = true;
       window.clearInterval(poll);
     };
-  }, [coupleEventId, guestToken, isCouplePortal]);
+  }, [coupleEventId, guestToken, isCouplePortal, venueSlug]);
 
   useEffect(() => {
     try {
