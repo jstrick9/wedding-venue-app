@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useRef, useState, ReactNode } from 'react';
 import { on } from '../utils/appEvents';
 
 interface LayoutSnapshot {
@@ -38,72 +38,67 @@ interface UndoRedoProviderProps {
 export function UndoRedoProvider({ children, onRestore }: UndoRedoProviderProps) {
   const [past, setPast] = useState<LayoutSnapshot[]>([]);
   const [future, setFuture] = useState<LayoutSnapshot[]>([]);
-  const [currentSnapshot, setCurrentSnapshot] = useState<LayoutSnapshot | null>(null);
+  // F-267-1 (Review #267): the newest snapshot is internal bookkeeping (never
+  // rendered, not exposed on the context), so it lives in a ref. The previous
+  // implementation performed nested state updates (`setPast`/`setFuture`/
+  // `onRestore`) INSIDE state updaters — but React updaters must be pure:
+  // StrictMode double-invokes them in development (the app runs StrictMode in
+  // main.tsx) and concurrent rendering may replay them in production. Every
+  // double-invoke appended a duplicate undo-history entry, so one Ctrl+Z press
+  // restored twice and the next press appeared to do nothing.
+  const currentSnapshotRef = useRef<LayoutSnapshot | null>(null);
 
   const canUndo = past.length > 0;
   const canRedo = future.length > 0;
 
   const pushSnapshot = useCallback((snapshot: LayoutSnapshot) => {
-    setCurrentSnapshot((prev) => {
-      // Push current state to past before updating
-      if (prev) {
-        setPast((p) => {
-          const newPast = [...p, prev];
-          if (newPast.length > MAX_HISTORY) {
-            newPast.shift();
-          }
-          return newPast;
-        });
-      }
-      // Clear future when new action is taken
-      setFuture([]);
-      return snapshot;
-    });
+    const prev = currentSnapshotRef.current;
+    currentSnapshotRef.current = snapshot;
+    if (prev) {
+      setPast((p) => {
+        const newPast = [...p, prev];
+        if (newPast.length > MAX_HISTORY) {
+          newPast.shift();
+        }
+        return newPast;
+      });
+    }
+    // Clear future when a new action is taken.
+    setFuture([]);
   }, []);
 
   const undo = useCallback(() => {
     if (past.length === 0) return;
-
-    setPast((prev) => {
-      if (prev.length === 0) return prev;
-
-      const previous = prev[prev.length - 1];
-      const newPast = prev.slice(0, -1);
-
-      // Push current to future
-      setFuture((f) => [currentSnapshot!, ...f].filter(Boolean));
-
-      // Restore previous
-      setCurrentSnapshot(previous);
-      onRestore(previous);
-
-      return newPast;
-    });
-  }, [past, currentSnapshot, onRestore]);
+    const previous = past[past.length - 1];
+    const current = currentSnapshotRef.current;
+    setPast(past.slice(0, -1));
+    if (current) setFuture((f) => [current, ...f]);
+    currentSnapshotRef.current = previous;
+    onRestore(previous);
+  }, [past, onRestore]);
 
   const redo = useCallback(() => {
     if (future.length === 0) return;
-
-    setFuture((prev) => {
-      if (prev.length === 0) return prev;
-
-      const next = prev[0];
-      const newFuture = prev.slice(1);
-
-      // Push current to past
-      setPast((p) => [...p, currentSnapshot!].filter(Boolean));
-
-      // Restore next
-      setCurrentSnapshot(next);
-      onRestore(next);
-
-      return newFuture;
-    });
-  }, [future, currentSnapshot, onRestore]);
+    const next = future[0];
+    const current = currentSnapshotRef.current;
+    setFuture(future.slice(1));
+    if (current) {
+      setPast((p) => {
+        const newPast = [...p, current];
+        if (newPast.length > MAX_HISTORY) {
+          newPast.shift();
+        }
+        return newPast;
+      });
+    }
+    currentSnapshotRef.current = next;
+    onRestore(next);
+  }, [future, onRestore]);
 
   const clearHistory = useCallback(() => {
     setPast([]);
     setFuture([]);
+    currentSnapshotRef.current = null;
   }, []);
 
   // Listen for snapshot events from the app

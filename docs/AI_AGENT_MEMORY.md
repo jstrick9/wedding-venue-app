@@ -1445,6 +1445,23 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #267 (2026-09-01): Phase 4 batch 5 — FloorPlanCanvas/layout undo audit; 4.7
+  COMPLETE (last giant-file hotspot). F-267-1 (P4): UndoRedoContext did
+  nested setState + onRestore INSIDE state updaters (setPast within
+  setCurrentSnapshot's updater, etc.) — updaters must be pure: StrictMode
+  (main.tsx runs it) double-invokes in dev, concurrent rendering may replay
+  in prod → duplicate history entries, onRestore fired 2× per Ctrl+Z press
+  (proven by behavioral test failing pre-fix: 1 press = 2 restores; undo→redo
+  round-trip = 4). Fix: currentSnapshot moved to a ref (internal bookkeeping,
+  never rendered/exposed), all side effects hoisted out; updaters pure.
+  Pin: UndoRedoContext.strictmode.test.tsx — REAL behavioral test (StrictMode
+  render + event-bus pushes + keyboard events), not regex. Verified clean:
+  drag state machine (conditional listeners, one undo snapshot per drag via
+  dragMovedRef, discrete nudge steps), cursor-anchored wheel zoom + clamped
+  pan, consistent screenToVenue math, guarded drop/click-to-place,
+  explicit-save model (dirty baseline + beforeunload + venue-switch checks +
+  overwrite protection). LESSON: prefer behavioral tests over regex pins for
+  logic fixes — failing-first proof catches the defect class regex can't.
 - #266 (2026-09-01): Phase 4 batch 4 — StaffOperationsPanel deep audit; 4.9
   COMPLETE. F-266-1 (P4): operations JSON import staged data.tasks/areas/
   shifts with only a truthiness check — non-array values flowed into
