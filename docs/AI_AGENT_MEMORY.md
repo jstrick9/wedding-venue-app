@@ -1445,6 +1445,21 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #266 (2026-09-01): Phase 4 batch 4 — StaffOperationsPanel deep audit; 4.9
+  COMPLETE. F-266-1 (P4): operations JSON import staged data.tasks/areas/
+  shifts with only a truthiness check — non-array values flowed into
+  `[...pendingImport.tasks, ...tasks]` on confirm (strings spread
+  char-by-char → garbage persisted into the task store; objects throw
+  TypeError → crash). Fixed with Array.isArray coercion + reject-with-toast
+  (also fixes silent no-op on areas-only files). F-266-2 (P5): file input
+  never reset → same-file re-import fired no onChange. F-266-3 (P5): export
+  leaked blob object URL (only leak of 9 createObjectURL sites — layoutExport
+  defers 1s, recoveryDiagnostics immediate, both fine). Pin:
+  staffOpsImport.pin.test.ts (3). Verified clean: CRUD gated+stamped,
+  confirm dialogs capture only {kind,id} and filter live arrays, area delete
+  scrubs task references, shift conflicts warn-by-design, zero async code in
+  panel, BEO null-safe, datetime helpers tested. LESSON: regex literals with
+  2+ spaces trip no-regex-spaces — use \s+/\s{n} in pin-test regexes.
 - #265 (2026-09-01): Phase 4 batch 3 — portal deep-flow audit; 4.10 + 4.11
   COMPLETE. Twin P3s, one root cause: the 5s cloud polls rebuilt state with
   fresh identities even when remote content was identical, and the churn

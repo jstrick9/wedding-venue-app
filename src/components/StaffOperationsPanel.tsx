@@ -1643,6 +1643,9 @@ const StaffOperationsPanel: React.FC<Props> = ({
       a.href = url;
       a.download = `operations-${eventName || 'event'}-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
+      // F-266-3 (Review #266): the download is already initiated — release the
+      // blob URL instead of leaking it (and its blob) for the session.
+      URL.revokeObjectURL(url);
     };
 
     return (
@@ -1665,14 +1668,29 @@ const StaffOperationsPanel: React.FC<Props> = ({
                 aria-label="Import operations JSON"
                 onChange={e => {
                   const file = e.target.files?.[0];
+                  // F-266-2 (Review #266): reset the input so picking the SAME
+                  // file again still fires onChange (otherwise a re-import of
+                  // the same file silently does nothing).
+                  e.target.value = '';
                   if (!file) return;
                   const reader = new FileReader();
                   reader.onload = (event) => {
                     try {
                       const data = JSON.parse(event.target?.result as string);
-                      if (data.tasks) {
-                        setPendingImport({ tasks: data.tasks || [], areas: data.areas || [], shifts: data.shifts || [] });
+                      // F-266-1 (Review #266): validate shapes before staging the
+                      // import. A truthy-but-non-array `tasks` used to flow into
+                      // `[...pendingImport.tasks, ...tasks]` — corrupting the task
+                      // list with garbage entries (strings spread char-by-char) or
+                      // crashing the confirm handler outright (objects throw).
+                      const asArray = (v: unknown): any[] => (Array.isArray(v) ? v : []);
+                      const tasks = asArray(data?.tasks);
+                      const areas = asArray(data?.areas);
+                      const shifts = asArray(data?.shifts);
+                      if (!tasks.length && !areas.length && !shifts.length) {
+                        showToast('No operations tasks, areas, or shifts found in that file.', 'warning');
+                        return;
                       }
+                      setPendingImport({ tasks, areas, shifts });
                     } catch (err) {
                       showToast('Invalid JSON file.', 'warning');
                     }
