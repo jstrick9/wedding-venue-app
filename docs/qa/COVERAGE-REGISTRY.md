@@ -41,17 +41,17 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 
 ## B. Phase 2 — RPC audit (46 functions)
 
-**Phase 2 progress: 10/46 units done (#258). Migration 0018 pending live application (operator).**
+**Phase 2 progress: 18/46 units done (#259). Migration 0018 pending live application (operator).**
 
 Per unit checklist: input validation/limits · authz derivation · row locking on read-modify-write · idempotency · error contract · grant hygiene · audit coverage. (`*` = service-only or trigger/internal — checklist applies with "who can call it" as the first question.)
 
 | # | RPC | Status | Evidence |
 |---|-----|--------|----------|
-| 2.1 | accept_invite | open | — |
+| 2.1 | accept_invite | done | #259: clean — token+pending+expiry; auth.uid() AND JWT-email-match (exemplary); benign lockless race converges via on-conflict upsert |
 | 2.2 | accept_venue_admin_invite | done (re-audit for residual issues in Phase 2 pass) | #247 (idempotent branch); 0015 original |
 | 2.3 | claim_venue_admin_account | done (re-audit for residual issues) | #247 + live E2E throttle/claim probes |
-| 2.4 | create_venue_organization | open | — |
-| 2.5 | create_venue_organization_v | open | #258: real name is create_venue_organization_v2 (0014) — audit with the org-lifecycle batch |
+| 2.4 | create_venue_organization | done | #259: clean but superseded (client uses v2); kept — admin-gated, audited, handles unique_violation |
+| 2.5 | create_venue_organization_v2 | done | #259: clean — full validation, immutable slug, audit row; P5 notes (slug-race 500, unbounded name) declined w/ reasons |
 | 2.6 | geocode_try_acquire_slot | open | — |
 | 2.7 | get_couple_portal_snapshot | done | #258: wrapper authz ok (token/collab + active org); delegation target _unchecked was anon-callable (F-258-1) — revoked in 0018 |
 | 2.8 | get_couple_portal_snapshot_for_venue | done | #258: slug-scoped wrapper, delegates to checked getter; clean |
@@ -72,10 +72,10 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 | 2.23 | org_data_array_len * | open | — |
 | 2.24 | org_data_write_allowed * | open | — |
 | 2.25 | prevent_organization_slug_change * | open | — |
-| 2.26 | reactivate_venue_organization | open | — |
+| 2.26 | reactivate_venue_organization | done | #259: clean — owner-aware status, clears suspension fields, audited |
 | 2.27 | register_venue_admin_claim_failure * | done (re-audit residual) | #247 |
-| 2.28 | reissue_venue_admin_invite | open | — |
-| 2.29 | revoke_venue_admin_invite | open | — |
+| 2.28 | reissue_venue_admin_invite | done | #259: clean — org-state gate, validation, revoke-then-insert, audited; concurrent-reissue P5 declined |
+| 2.29 | revoke_venue_admin_invite | done | #259: clean — atomic UPDATE..RETURNING, no TOCTOU, audited |
 | 2.30 | save_couple_portal_snapshot | done | #258: F-258-2 (P2) whole-payload save lost concurrent guest writes — CAS via p_base_updated_at + client conflict-retry (0018) |
 | 2.31 | save_couple_portal_snapshot_for_venue | done | #258: F-258-2 CAS inherited via shared internal writer (0018) |
 | 2.32 | set_couple_snapshot_updated_at * | open | — |
@@ -87,9 +87,9 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 | 2.38 | submit_guest_couple_rsvp | done | #258 residual: locking ✓ (#245), deadline ✓ (0016); F-258-4 20 KB payload cap added (0018) |
 | 2.39 | submit_guest_couple_rsvp_for_venue | done | #258: thin wrapper (slug+couple+active-org gate) delegating to the hardened function; clean |
 | 2.40 | submit_guest_rsvp | done | #258: F-258-3 (P3) no lock/no unique(guest_id) → duplicate rows — FOR UPDATE added; F-258-4 unbounded text fields capped (0018) |
-| 2.41 | suspend_venue_organization | open | — |
+| 2.41 | suspend_venue_organization | done | #259: clean — atomic, cascades invite revocation, audited; double-suspend overwrite P5 declined |
 | 2.42 | sync_couple_projection * | open | — |
-| 2.43 | update_venue_organization | open | — |
+| 2.43 | update_venue_organization | done | #259: clean — 14-field validation, immutable slug, audit w/ previous status; unlocked read P5 declined |
 | 2.44 | upsert_couple_portal_snapshot | open | — |
 | 2.45 | upsert_platform_branding | open | — |
 | 2.46 | venue_admin_claim_gate * | done (re-audit residual) | #247 + live 429 proof |

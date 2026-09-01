@@ -1445,6 +1445,12 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #259 (2026-09-01): Phase 2 batch 2 (org lifecycle + invites, 8 units)
+  — ALL CLEAN, report-only, zero code changes. Live anon probes: every
+  internal admin gate fired before any write (forbidden / auth_required).
+  accept_invite is exemplary (auth.uid + JWT-email match). 5 P5 notes
+  declined with reasons (suspend double-invoke overwrite, v2 slug-race 500,
+  unbounded name, concurrent reissue, unlocked admin read).
 - #258 (2026-09-01): Phase 2 batch 1 (guest/couple RPC cluster, 10 units)
   done. F-258-1 (P1, live-proven): 0008's rename left four *_unchecked RPCs
   anon-executable (RENAME preserves grants); submit_guest_couple_rsvp_unchecked
