@@ -155,6 +155,10 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const [demoSelectToken, setDemoSelectToken] = useState('');
   const cloudHydratingRef = useRef(false);
   const cloudSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Compare-and-swap base (Review #258 F-258-2): the updated_at of the last
+  // pulled snapshot; the server refuses a save with 'conflict' when the row
+  // moved in between (e.g. a guest submitted after our pull).
+  const cloudSyncedAtRef = useRef<string | undefined>(undefined);
 
   const event = useMemo(
     () => events.find((e) => e.id === session?.eventId) || null,
@@ -235,8 +239,10 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       if (pulling) return;
       pulling = true;
       try {
-        const snapshot = await pullCouplePortalSnapshot(cloudToken, venueSlug);
-        if (!snapshot || cancelled) return;
+        const pulled = await pullCouplePortalSnapshot(cloudToken, venueSlug);
+        if (!pulled || cancelled) return;
+        cloudSyncedAtRef.current = pulled.updatedAt;
+        const snapshot = pulled.payload;
         cloudHydratingRef.current = true;
         hydrateCouplePortalSnapshot(snapshot);
         const latestEvents = getCoupleEvents();
@@ -258,7 +264,16 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       const activeEventId = event?.id || session?.eventId;
       if (!activeEventId) return;
       const snapshot = await buildCouplePortalSnapshot(activeEventId);
-      if (snapshot) await saveCouplePortalSnapshot(cloudToken, snapshot, venueSlug);
+      if (!snapshot) return;
+      const result = await saveCouplePortalSnapshot(cloudToken, snapshot, venueSlug, cloudSyncedAtRef.current);
+      if (result === 'conflict') {
+        // The snapshot moved since our last pull (a guest submitted, or another
+        // device saved). Re-hydrate so the rebuilt snapshot merges those writes,
+        // then retry once — instead of blindly overwriting and losing them.
+        await hydrateRemote();
+        const merged = await buildCouplePortalSnapshot(activeEventId);
+        if (merged) await saveCouplePortalSnapshot(cloudToken, merged, venueSlug, cloudSyncedAtRef.current);
+      }
     };
 
     void hydrateRemote();

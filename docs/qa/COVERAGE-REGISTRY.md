@@ -41,6 +41,8 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 
 ## B. Phase 2 — RPC audit (46 functions)
 
+**Phase 2 progress: 10/46 units done (#258). Migration 0018 pending live application (operator).**
+
 Per unit checklist: input validation/limits · authz derivation · row locking on read-modify-write · idempotency · error contract · grant hygiene · audit coverage. (`*` = service-only or trigger/internal — checklist applies with "who can call it" as the first question.)
 
 | # | RPC | Status | Evidence |
@@ -49,13 +51,13 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 | 2.2 | accept_venue_admin_invite | done (re-audit for residual issues in Phase 2 pass) | #247 (idempotent branch); 0015 original |
 | 2.3 | claim_venue_admin_account | done (re-audit for residual issues) | #247 + live E2E throttle/claim probes |
 | 2.4 | create_venue_organization | open | — |
-| 2.5 | create_venue_organization_v | open | — (superseded variant? verify dead code) |
+| 2.5 | create_venue_organization_v | open | #258: real name is create_venue_organization_v2 (0014) — audit with the org-lifecycle batch |
 | 2.6 | geocode_try_acquire_slot | open | — |
-| 2.7 | get_couple_portal_snapshot | open | — |
-| 2.8 | get_couple_portal_snapshot_for_venue | open | — |
-| 2.9 | get_guest_by_portal_token | open | — |
-| 2.10 | get_guest_couple_portal_snapshot | open | — |
-| 2.11 | get_guest_couple_portal_snapshot_for_venue | open | — |
+| 2.7 | get_couple_portal_snapshot | done | #258: wrapper authz ok (token/collab + active org); delegation target _unchecked was anon-callable (F-258-1) — revoked in 0018 |
+| 2.8 | get_couple_portal_snapshot_for_venue | done | #258: slug-scoped wrapper, delegates to checked getter; clean |
+| 2.9 | get_guest_by_portal_token | done | #258: clean — token-hash authz, enabled check, limited field set |
+| 2.10 | get_guest_couple_portal_snapshot | done | #258: clean — token/hash/allowPortalAccess + dual expiry checks; strips tokens from responses |
+| 2.11 | get_guest_couple_portal_snapshot_for_venue | done | #258: thin wrapper over checked getter; clean |
 | 2.12 | get_platform_console_metrics | open | — |
 | 2.13 | get_public_platform_branding | open | — |
 | 2.14 | get_public_venue_branding | open | — |
@@ -74,17 +76,17 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 | 2.27 | register_venue_admin_claim_failure * | done (re-audit residual) | #247 |
 | 2.28 | reissue_venue_admin_invite | open | — |
 | 2.29 | revoke_venue_admin_invite | open | — |
-| 2.30 | save_couple_portal_snapshot | open | — |
-| 2.31 | save_couple_portal_snapshot_for_venue | open | — |
+| 2.30 | save_couple_portal_snapshot | done | #258: F-258-2 (P2) whole-payload save lost concurrent guest writes — CAS via p_base_updated_at + client conflict-retry (0018) |
+| 2.31 | save_couple_portal_snapshot_for_venue | done | #258: F-258-2 CAS inherited via shared internal writer (0018) |
 | 2.32 | set_couple_snapshot_updated_at * | open | — |
 | 2.33 | set_org_data_updated_at * | open | — |
 | 2.34 | set_platform_chat_sender_side * | open | — |
 | 2.35 | set_updated_at * | open | — |
 | 2.36 | snapshot_guest_token_expires_at * | open | — |
 | 2.37 | snapshot_token_expires_at * | open | — |
-| 2.38 | submit_guest_couple_rsvp | done (re-audit residual: locking verified, rest of checklist pending) | #245 P1-C fix, 0016 |
-| 2.39 | submit_guest_couple_rsvp_for_venue | open | — |
-| 2.40 | submit_guest_rsvp | open | — |
+| 2.38 | submit_guest_couple_rsvp | done | #258 residual: locking ✓ (#245), deadline ✓ (0016); F-258-4 20 KB payload cap added (0018) |
+| 2.39 | submit_guest_couple_rsvp_for_venue | done | #258: thin wrapper (slug+couple+active-org gate) delegating to the hardened function; clean |
+| 2.40 | submit_guest_rsvp | done | #258: F-258-3 (P3) no lock/no unique(guest_id) → duplicate rows — FOR UPDATE added; F-258-4 unbounded text fields capped (0018) |
 | 2.41 | suspend_venue_organization | open | — |
 | 2.42 | sync_couple_projection * | open | — |
 | 2.43 | update_venue_organization | open | — |

@@ -171,25 +171,50 @@ export async function syncAllCouplePortalSnapshots(context: CoupleCloudContext):
   }
 }
 
-export async function pullCouplePortalSnapshot(token: string, venueSlug?: string): Promise<CouplePortalSnapshot | null> {
+/** Result of pulling a couple snapshot: the payload plus the row version the
+ * server reported, used as the compare-and-swap base for the next save. */
+export interface CouplePortalPull {
+  payload: CouplePortalSnapshot;
+  updatedAt?: string;
+}
+
+export async function pullCouplePortalSnapshot(token: string, venueSlug?: string): Promise<CouplePortalPull | null> {
   if (!isCoupleCloudEnabled() || !token) return null;
   const { data, error } = await getSupabaseClient().rpc(
     venueSlug ? 'get_couple_portal_snapshot_for_venue' : 'get_couple_portal_snapshot',
     venueSlug ? { p_venue_slug: venueSlug, p_token: token } : { p_token: token },
   );
   if (error || !data?.ok || !data.payload) return null;
-  return data.payload as CouplePortalSnapshot;
+  return { payload: data.payload as CouplePortalSnapshot, updatedAt: data.updated_at as string | undefined };
 }
 
-export async function saveCouplePortalSnapshot(token: string, payload: CouplePortalSnapshot, venueSlug?: string): Promise<boolean> {
-  if (!isCoupleCloudEnabled() || !token) return false;
+export type CouplePortalSaveResult = 'saved' | 'conflict' | 'error';
+
+/**
+ * Save the couple snapshot. When `baseUpdatedAt` (the updated_at from the last
+ * pull) is provided, the server refuses the write with 'conflict' if the
+ * snapshot moved in between — e.g. a guest submitted after our pull — so the
+ * caller can re-pull and merge instead of silently dropping that write
+ * (Review #258, F-258-2).
+ */
+export async function saveCouplePortalSnapshot(
+  token: string,
+  payload: CouplePortalSnapshot,
+  venueSlug?: string,
+  baseUpdatedAt?: string,
+): Promise<CouplePortalSaveResult> {
+  if (!isCoupleCloudEnabled() || !token) return 'error';
+  const args: Record<string, unknown> = venueSlug
+    ? { p_venue_slug: venueSlug, p_token: token, p_payload: payload }
+    : { p_token: token, p_payload: payload };
+  if (baseUpdatedAt) args.p_base_updated_at = baseUpdatedAt;
   const { data, error } = await getSupabaseClient().rpc(
     venueSlug ? 'save_couple_portal_snapshot_for_venue' : 'save_couple_portal_snapshot',
-    venueSlug
-      ? { p_venue_slug: venueSlug, p_token: token, p_payload: payload }
-      : { p_token: token, p_payload: payload },
+    args,
   );
-  return !error && Boolean(data?.ok);
+  if (error) return 'error';
+  if (data && data.ok === false && data.error === 'conflict') return 'conflict';
+  return data?.ok ? 'saved' : 'error';
 }
 
 /** Merge one event's remote data into the local one-venue browser cache. */

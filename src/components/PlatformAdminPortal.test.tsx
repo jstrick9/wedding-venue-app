@@ -118,6 +118,11 @@ function org(over: Partial<PlatformOrganizationSummary> = {}): PlatformOrganizat
   };
 }
 
+/** Absolute future dates in invite fixtures rot when the wall clock passes
+ * them (pending-invite liveness is `expiresAt > now`) — always use a
+ * relative future date. */
+const futureIso = (days: number): string => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
 const organizations: PlatformOrganizationSummary[] = [
   org(),
   org({
@@ -128,7 +133,7 @@ const organizations: PlatformOrganizationSummary[] = [
     city: 'Asheville',
     primaryContactEmail: 'owner@hilltop.com',
     ownerId: null,
-    pendingInvite: { id: 'inv-2', email: 'owner@hilltop.com', expiresAt: '2026-09-01T00:00:00.000Z', status: 'pending' },
+    pendingInvite: { id: 'inv-2', email: 'owner@hilltop.com', expiresAt: futureIso(7), status: 'pending' },
     admins: [],
   }),
 ];
@@ -203,7 +208,7 @@ describe('PlatformAdminPortal console', () => {
     reactivateMock.mockReset().mockResolvedValue(undefined);
     reissueMock.mockReset().mockResolvedValue({
       inviteUrl: 'https://weddingvip.vercel.app/i/va-newtoken',
-      expiresAt: '2026-09-10T00:00:00.000Z',
+      expiresAt: futureIso(7),
     });
     saveBrandingMock.mockReset().mockResolvedValue(undefined);
     getBrandingMock.mockReset().mockResolvedValue({});

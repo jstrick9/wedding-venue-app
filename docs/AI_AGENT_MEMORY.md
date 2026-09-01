@@ -1445,6 +1445,19 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #258 (2026-09-01): Phase 2 batch 1 (guest/couple RPC cluster, 10 units)
+  done. F-258-1 (P1, live-proven): 0008's rename left four *_unchecked RPCs
+  anon-executable (RENAME preserves grants); submit_guest_couple_rsvp_unchecked
+  still carried the PRE-#245 no-lock body. Fixed in 0018 (revoke x3, drop x1).
+  F-258-2 (P2): couple-side whole-payload save lost concurrent guest
+  submissions — added p_base_updated_at CAS + client conflict-retry.
+  F-258-3 (P3): submit_guest_rsvp no lock/no unique(guest_id) → duplicate
+  rows — FOR UPDATE added. F-258-4 (P3): unbounded anon input capped.
+  Live probe technique: anon RPC probe with exact named args; body-ran
+  ({"ok":false,...}) vs PGRST202 (hidden/revoked) is the grant oracle.
+  Date-rot lesson: absolute future dates in fixtures rot — use futureIso(days)
+  (PlatformAdminPortal invite fixtures broke when UTC crossed 2026-09-01).
+  Migration 0018 PENDING live application by operator.
 - #257 (2026-08-31): units 1.20-1.22 done — PHASE 1 COMPLETE (24/24,
   ratchet ceiling 0: @ts-nocheck now forbidden repo-wide; ratchet test's
   below-ceiling case adapted to explicit max). All 3 units clean.
