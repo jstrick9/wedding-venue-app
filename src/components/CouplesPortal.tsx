@@ -76,7 +76,7 @@ import { getPublicVenueBranding } from '../services/platform/publicVenueService'
 import { getActiveOrganizationSlug } from '../services/platform/organizationContext';
 import { isPortalAccessActive } from '../services/couples/accessLifecycle';
 import { STORAGE_KEYS } from '../constants/storageKeys';
-import { on } from '../utils/appEvents';
+import { emit, on } from '../utils/appEvents';
 import {
   buildCouplePortalSnapshot,
   hydrateCouplePortalSnapshot,
@@ -272,6 +272,12 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
           setInvalidInvite(false);
         }
         cloudHydratingRef.current = false;
+      } catch (err) {
+        // F-268-1 (Review #268): the RPC (or its fetch deadline) REJECTS on
+        // network failure/stall — with only try/finally this surfaced as an
+        // unhandled promise rejection every 5 seconds while offline. The poll
+        // retries on its own, so stay quiet.
+        console.debug('Couple portal cloud pull failed; retrying on the next poll.', err);
       } finally {
         pulling = false;
       }
@@ -281,16 +287,30 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       if (cloudHydratingRef.current) return;
       const activeEventId = event?.id || session?.eventId;
       if (!activeEventId) return;
-      const snapshot = await buildCouplePortalSnapshot(activeEventId);
-      if (!snapshot) return;
-      const result = await saveCouplePortalSnapshot(cloudToken, snapshot, venueSlug, cloudSyncedAtRef.current);
-      if (result === 'conflict') {
-        // The snapshot moved since our last pull (a guest submitted, or another
-        // device saved). Re-hydrate so the rebuilt snapshot merges those writes,
-        // then retry once — instead of blindly overwriting and losing them.
-        await hydrateRemote();
-        const merged = await buildCouplePortalSnapshot(activeEventId);
-        if (merged) await saveCouplePortalSnapshot(cloudToken, merged, venueSlug, cloudSyncedAtRef.current);
+      try {
+        const snapshot = await buildCouplePortalSnapshot(activeEventId);
+        if (!snapshot) return;
+        const result = await saveCouplePortalSnapshot(cloudToken, snapshot, venueSlug, cloudSyncedAtRef.current);
+        if (result === 'conflict') {
+          // The snapshot moved since our last pull (a guest submitted, or another
+          // device saved). Re-hydrate so the rebuilt snapshot merges those writes,
+          // then retry once — instead of blindly overwriting and losing them.
+          await hydrateRemote();
+          const merged = await buildCouplePortalSnapshot(activeEventId);
+          if (merged) await saveCouplePortalSnapshot(cloudToken, merged, venueSlug, cloudSyncedAtRef.current);
+        }
+      } catch (err) {
+        // F-268-1 (Review #268): a rejected save used to escape as an unhandled
+        // promise rejection (and the unmount flush in the cleanup would too).
+        // The edit is safe locally — localStorage owns it and the next change
+        // or visit re-pushes it — so surface the cloud failure through the
+        // established typed channel (App-level toast, Review #245 P2-F).
+        console.error('Couple portal cloud save failed:', err);
+        emit('spm_cloud_sync_error', {
+          domain: 'couple portal',
+          error: err instanceof Error ? err.message : String(err),
+          timestamp: new Date().toISOString(),
+        });
       }
     };
 

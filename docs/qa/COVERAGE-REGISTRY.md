@@ -151,6 +151,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | 4.11 | Guest portal: view, submit RSVP | GuestPortal (2414) | **complete** | #263: F-263-1 fixed. #265: deep flow pass — F-265-2 (P3) poll reset in-progress RSVP answers (attending/plusOne/name) every 5s FIXED+pinned; RSVP submit validated+service-backed (Phase 2 RPC layer); prefill/memo chain stabilized; expiry + password gate covered by 8 dedicated test files |
 | 4.12 | Auth/session lifecycle: sign-in, restore, sign-out, role routing | AuthBackend, session persistence | open |
 | 4.13 | Event-bus + store correctness (cross-console) | event bus, stores, hooks (20) | **complete** | #263: listener cleanup clean; hooks triaged; F-263-1 (P4) fixed. #264: 19 timer-cleanup sites swept (only real drop = F-264-1 (P4) debounced-save drop on unmount, FIXED+pinned); async pollers guarded (#245) except PlatformVenueChatPanel (P5 declined, self-healing); cross-tab store races none (storage-event refresh + server CAS). Closes 4.13 |
+| 4.14 | Unhandled rejections sweep (cross-cutting) | async surfaces codebase-wide | **complete** | #268: F-268-1 (P4) fixed — portal 5s pollers (try/finally w/o catch) + debounced save + unmount flush + public branding RPC all leaked unhandled rejections while offline (withTimeout REJECTS on stall); pulls catch quietly (retry built-in), save emits typed spm_cloud_sync_error (App toast), branding resolves null. 4 clean surfaces verified. Protocol checklist: cleanup/hooks/races/hotspots/rejections ALL done |
 
 ## E. Edge Functions (3)
 

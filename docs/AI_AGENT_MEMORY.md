@@ -1445,6 +1445,20 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #268 (2026-09-01): Phase 4 batch 6 — unhandled-rejections sweep; protocol
+  item COMPLETE. F-268-1 (P4): withTimeout REJECTS on stall, and the portal
+  pollers ran try/finally WITHOUT catch → unhandled promise rejection every
+  5s while offline (CouplesPortal hydrateRemote, GuestPortal hydrateGuest);
+  pushLocalSnapshot had no handling at all (debounce callback + conflict
+  retry + #264 unmount flush); getPublicVenueBranding awaited bare into
+  void .then() callers on both portals. Fix: pulls catch quietly (poll
+  retries), save catches + emits typed spm_cloud_sync_error (domain
+  'couple portal' — App-level GlobalCloudSyncErrorListener toasts "Saved
+  locally…"), branding service returns null on failure. Pin:
+  portalRejectionHandling.pin.test.ts (4). CORRECTION to #264:
+  PlatformVenueChatPanel load IS guarded (loadInFlight ref + withTimeout +
+  catch) — the #264 P5 was overstated. LESSON (2nd time): \n + literal
+  spaces in pin-test regexes trip no-regex-spaces — always use \s{n}.
 - #267 (2026-09-01): Phase 4 batch 5 — FloorPlanCanvas/layout undo audit; 4.7
   COMPLETE (last giant-file hotspot). F-267-1 (P4): UndoRedoContext did
   nested setState + onRestore INSIDE state updaters (setPast within

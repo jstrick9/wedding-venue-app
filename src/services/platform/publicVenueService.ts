@@ -11,10 +11,15 @@ export interface PublicVenueBranding {
 
 export async function getPublicVenueBranding(slug: string): Promise<PublicVenueBranding | null> {
   if (!isSupabaseConfigured() || !slug.trim()) return null;
-  const { data, error } = await getSupabaseClient().rpc('get_public_venue_branding', {
-    p_slug: slug.trim(),
-  });
-  if (error || !data?.ok) return null;
+  try {
+    // F-268-1 (Review #268): a network failure/stall REJECTS the RPC promise,
+    // and the portal callers run it as `void … .then(…)` with no catch — wrap
+    // here so branding (decorative) resolves null instead of surfacing an
+    // unhandled rejection on portal load.
+    const { data, error } = await getSupabaseClient().rpc('get_public_venue_branding', {
+      p_slug: slug.trim(),
+    });
+    if (error || !data?.ok) return null;
 
   const config = mergeVenueLoginBranding({
     venueName: String(data.venue_name || 'Venue'),
@@ -44,10 +49,14 @@ export async function getPublicVenueBranding(slug: string): Promise<PublicVenueB
     loginWelcomeMessage: data.login_welcome_message ? String(data.login_welcome_message) : undefined,
   });
 
-  return {
-    organizationId: String(data.organization_id),
-    slug: String(data.slug || slug),
-    status: (data.status || 'active') as PublicVenueBranding['status'],
-    config,
-  };
+    return {
+      organizationId: String(data.organization_id),
+      slug: String(data.slug || slug),
+      status: (data.status || 'active') as PublicVenueBranding['status'],
+      config,
+    };
+  } catch {
+    // F-268-1: branding is decorative — resolve null on fetch failure.
+    return null;
+  }
 }

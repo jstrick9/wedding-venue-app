@@ -222,6 +222,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         setActiveEventName(remoteConfig?.eventTitle || coupleEventId);
         setResolvedGuestId(guest.id);
         saveGuestPortalSession(remoteConfig, guestToken, remoteConfig?.eventTitle || coupleEventId, guest.id, coupleEventId);
+      } catch (err) {
+        // F-268-1 (Review #268): the RPC (or its fetch deadline) rejects on
+        // network failure/stall — try/finally alone turned that into an
+        // unhandled promise rejection every 5 seconds while offline. The poll
+        // retries on its own, so stay quiet.
+        console.debug('Guest portal cloud pull failed; retrying on the next poll.', err);
       } finally {
         pulling = false;
       }
