@@ -1445,6 +1445,23 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #269 (2026-09-01): Phase 4 batch 7 — optimistic-update rollback sweep;
+  PHASE 4 COMPLETE (all protocol items closed). F-269-1 (P3): guest RSVP
+  submit is optimistic local-first, but SupabaseGuestPortalBackend.submitRSVP
+  resolves FALSE on RPC error (rejects on network failure) and the handler
+  ignored both — false success screen while the couple's devices never got
+  the RSVP, AND the 5s poll then replaced submissions with the stale remote
+  (rsvp ? [rsvp] : []), wiping the visible local copy. Fix: both failure
+  paths emit typed spm_cloud_sync_error (domain 'guest rsvp', App toast);
+  poll keeps local submission when remote has none (remote wins when it HAS
+  one). Pin: guestRsvpSync.pin.test.ts (4). Other surfaces verified: platform
+  chat = pessimistic append-after-confirm; couple/venue/direct chats =
+  local-first sync services; entity/layout sync = error events (#245).
+  State-machine completeness closed on accumulated evidence (#265 portal
+  lifecycle, #267 drag/undo, #266 confirm dialogs). Campaign totals: Phase 4
+  = 9 findings (1 P3 pair portal drafts, 1 P3 guest RSVP, 4 P4, 2 P5 +
+  F-266-2/3). Remaining: P5 backlog, Phase 3 artifacts (3.1), migrations
+  0018-0020 operator apply, live E2E journeys (8.x).
 - #268 (2026-09-01): Phase 4 batch 6 — unhandled-rejections sweep; protocol
   item COMPLETE. F-268-1 (P4): withTimeout REJECTS on stall, and the portal
   pollers ran try/finally WITHOUT catch → unhandled promise rejection every

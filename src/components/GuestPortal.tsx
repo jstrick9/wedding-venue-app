@@ -58,6 +58,7 @@ import { applyDocumentBranding } from '../utils/documentBranding';
 import { getPublicVenueBranding } from '../services/platform/publicVenueService';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../constants/storageVersions';
+import { emit } from '../utils/appEvents';
 import { saveVersionedStorage } from '../utils/storage';
 import { deriveShades } from '../utils/color';
 import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
@@ -211,7 +212,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
           const next = {
             venues: Array.isArray(remote.venues) ? remote.venues as Venue[] : previous.venues,
             guests: [guest],
-            submissions: rsvp ? [rsvp] : [],
+            // F-269-1: when the remote has no RSVP but this device does (a
+            // submit whose cloud push failed), keep the local copy instead of
+            // wiping it from view on the next poll. The remote still wins when
+            // it HAS an RSVP (server canonicalization, couple edits).
+            submissions: rsvp ? [rsvp] : previous.submissions,
             guestEvents: Array.isArray(remote.guestEvents)
               ? (remote.guestEvents as CoupleGuestEvent[]).filter((item) => item.coupleEventId === coupleEventId)
               : previous.guestEvents,
@@ -668,10 +673,27 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
     } else {
       setPortalRSVPSubmissions(updatedSubmissions);
     }
+    // F-269-1 (Review #269): the RSVP is saved on this device (local-first),
+    // but the cloud submit can still fail (RPC error resolves false; a network
+    // failure rejects). The old handler ignored both — the guest saw the
+    // success screen while the couple's other devices never received the RSVP.
+    const warnRsvpSyncFailed = () => {
+      emit('spm_cloud_sync_error', {
+        domain: 'guest rsvp',
+        error: 'Saved on this device, but the RSVP could not reach the couple — check your connection and submit again.',
+        timestamp: new Date().toISOString(),
+      });
+    };
     void getGuestPortalBackend()
       .submitRSVP({ eventName, coupleEventId: isCouplePortal ? coupleEventId : undefined, venueSlug }, newSubmission)
-      .then(() => setIsSubmittingRSVP(false))
-      .catch(() => setIsSubmittingRSVP(false));
+      .then((ok) => {
+        setIsSubmittingRSVP(false);
+        if (!ok) warnRsvpSyncFailed();
+      })
+      .catch(() => {
+        setIsSubmittingRSVP(false);
+        warnRsvpSyncFailed();
+      });
 
     setRsvpSuccess(newSubmission);
   };
