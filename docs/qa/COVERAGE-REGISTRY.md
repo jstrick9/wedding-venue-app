@@ -41,27 +41,27 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 
 ## B. Phase 2 — RPC audit (46 functions)
 
-**Phase 2 progress: 35/46 units done (#260). Migration 0018 pending live application (operator).**
+**Phase 2 progress: 46/46 — COMPLETE (#261). Migrations 0018 + 0019 pending live application (operator; re-probe after applying).**
 
 Per unit checklist: input validation/limits · authz derivation · row locking on read-modify-write · idempotency · error contract · grant hygiene · audit coverage. (`*` = service-only or trigger/internal — checklist applies with "who can call it" as the first question.)
 
 | # | RPC | Status | Evidence |
 |---|-----|--------|----------|
 | 2.1 | accept_invite | done | #259: clean — token+pending+expiry; auth.uid() AND JWT-email-match (exemplary); benign lockless race converges via on-conflict upsert |
-| 2.2 | accept_venue_admin_invite | done (re-audit for residual issues in Phase 2 pass) | #247 (idempotent branch); 0015 original |
-| 2.3 | claim_venue_admin_account | done (re-audit for residual issues) | #247 + live E2E throttle/claim probes |
+| 2.2 | accept_venue_admin_invite | done | #261 residual: auth.uid + FOR UPDATE + idempotent re-accept + expiry/org gates + audit — clean |
+| 2.3 | claim_venue_admin_account | done | #261 residual: exemplary — FOR UPDATE, idempotent re-claim, email match, audit, unique_violation handler |
 | 2.4 | create_venue_organization | done | #259: clean but superseded (client uses v2); kept — admin-gated, audited, handles unique_violation |
 | 2.5 | create_venue_organization_v2 | done | #259: clean — full validation, immutable slug, audit row; P5 notes (slug-race 500, unbounded name) declined w/ reasons |
-| 2.6 | geocode_try_acquire_slot | open | — |
+| 2.6 | geocode_try_acquire_slot | done | #261: F-261-1 (P3) — anon-executable rate slot could starve platform geocoding (live-proven: probe acquired slot); revoked in 0019 |
 | 2.7 | get_couple_portal_snapshot | done | #258: wrapper authz ok (token/collab + active org); delegation target _unchecked was anon-callable (F-258-1) — revoked in 0018 |
 | 2.8 | get_couple_portal_snapshot_for_venue | done | #258: slug-scoped wrapper, delegates to checked getter; clean |
 | 2.9 | get_guest_by_portal_token | done | #258: clean — token-hash authz, enabled check, limited field set |
 | 2.10 | get_guest_couple_portal_snapshot | done | #258: clean — token/hash/allowPortalAccess + dual expiry checks; strips tokens from responses |
 | 2.11 | get_guest_couple_portal_snapshot_for_venue | done | #258: thin wrapper over checked getter; clean |
-| 2.12 | get_platform_console_metrics | open | — |
-| 2.13 | get_public_platform_branding | open | — |
-| 2.14 | get_public_venue_branding | open | — |
-| 2.15 | get_venue_admin_invite_context | done (re-audit for residual issues) | #245/#246/#248 semantics documented |
+| 2.12 | get_platform_console_metrics | done | #261: clean — is_platform_admin gate, greatest(relational,projection) counting |
+| 2.13 | get_public_platform_branding | done | #261: clean — public login branding by design |
+| 2.14 | get_public_venue_branding | done | #261: clean — slug-validated, branding-only fields, neutral defaults; suspended-org readability P5 declined |
+| 2.15 | get_venue_admin_invite_context | done | #261 residual: clean — pending-only, expiry, org-status gate; minimal pre-auth context |
 | 2.16 | handle_new_user * | done | #260: clean — trigger on auth.users, idempotent profile insert; returns trigger → not RPC-invocable |
 | 2.17 | has_org_role * | done | #260: clean — security-definer RLS predicate on auth.uid(); grant required for RLS evaluation |
 | 2.18 | has_platform_role * | done | #260: clean — same pattern vs platform_memberships |
@@ -73,7 +73,7 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 | 2.24 | org_data_write_allowed * | done | #260: clean — #180 admin-domain allowlist + has_org_role; wired into all org_data write policies |
 | 2.25 | prevent_organization_slug_change * | done | #260: clean — trigger raising organization_slug_immutable |
 | 2.26 | reactivate_venue_organization | done | #259: clean — owner-aware status, clears suspension fields, audited |
-| 2.27 | register_venue_admin_claim_failure * | done (re-audit residual) | #247 |
+| 2.27 | register_venue_admin_claim_failure * | done | #261 residual: clean — FOR UPDATE, rolling window, 10→15min lock; service-only |
 | 2.28 | reissue_venue_admin_invite | done | #259: clean — org-state gate, validation, revoke-then-insert, audited; concurrent-reissue P5 declined |
 | 2.29 | revoke_venue_admin_invite | done | #259: clean — atomic UPDATE..RETURNING, no TOCTOU, audited |
 | 2.30 | save_couple_portal_snapshot | done | #258: F-258-2 (P2) whole-payload save lost concurrent guest writes — CAS via p_base_updated_at + client conflict-retry (0018) |
@@ -90,9 +90,9 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 | 2.41 | suspend_venue_organization | done | #259: clean — atomic, cascades invite revocation, audited; double-suspend overwrite P5 declined |
 | 2.42 | sync_couple_projection * | done | #260: clean — org-role gate, idempotent on-conflict upserts, sha256-only tokens; P4 unbounded-payload note declined |
 | 2.43 | update_venue_organization | done | #259: clean — 14-field validation, immutable slug, audit w/ previous status; unlocked read P5 declined |
-| 2.44 | upsert_couple_portal_snapshot | open | — |
-| 2.45 | upsert_platform_branding | open | — |
-| 2.46 | venue_admin_claim_gate * | done (re-audit residual) | #247 + live 429 proof |
+| 2.44 | upsert_couple_portal_snapshot | done | #261: clean — role-gated venue writer, hashed tokens, idempotent upsert; P4 unbounded payload declined |
+| 2.45 | upsert_platform_branding | done | #261: clean — is_platform_admin gate, audit row w/ payload |
+| 2.46 | venue_admin_claim_gate * | done | #261 residual: clean — lock check only, no writes, service-only |
 
 ## C. Phase 3 — authorization proof matrix (29 tables × 5 role classes)
 

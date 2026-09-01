@@ -1445,6 +1445,16 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #261 (2026-09-01): Phase 2 batch 4 — PHASE 2 COMPLETE (46/46 RPCs).
+  F-261-1 (P3, live-proven): geocode_try_acquire_slot was anon-executable
+  — polling it starves the Nominatim rate slot (probe acquired it).
+  Fixed in 0019 via the 0017 service-only revoke pattern. Live mutation
+  log: one rate-slot acquisition by the probe (<=1.1s throttle). Phase 2
+  totals: 6 findings (1 P1, 1 P2, 3 P3 + date-rotted fixture), ~20
+  declined P4/P5s with reasons; 37/46 functions clean. Migrations 0018
+  AND 0019 pending live application. Next: Phase 3 authz proof matrix
+  (29 tables x 5 role classes) — needs the E2E-harness/disposable-project
+  decision from §7 Q1 (operator).
 - #260 (2026-09-01): Phase 2 batch 3 (helpers/triggers/predicates, 17
   units) — ALL CLEAN, report-only. Two architectural facts recorded:
   (1) returns-trigger functions are NOT RPC-invocable via PostgREST, so
