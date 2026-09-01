@@ -245,12 +245,30 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
         const snapshot = pulled.payload;
         cloudHydratingRef.current = true;
         hydrateCouplePortalSnapshot(snapshot);
+        // F-265-1 (Review #265): freshly parsed events/session objects get new
+        // identities on every poll even when their content is identical. That
+        // identity churn cascaded through the `event` → `portalConfig` memos
+        // into the portal-settings draft effect, silently wiping unsaved draft
+        // edits every 5 seconds while cloud sync was enabled. Swap state in
+        // only when the content actually changed (React keeps the old reference
+        // and skips the re-render when we return `prev`).
         const latestEvents = getCoupleEvents();
-        setEvents(latestEvents);
+        setEvents((prev) => (JSON.stringify(prev) === JSON.stringify(latestEvents) ? prev : latestEvents));
         const resolved = resolveCoupleInviteToken(cloudToken);
         if (resolved) {
           saveCoupleSession(resolved.event.id, resolved.collaborator.id);
-          setSession(loadCoupleSession());
+          // Compare semantic fields only: saveCoupleSession rewrites the
+          // rolling 30-day expiresAt on every call, so it always "changes".
+          const latestSession = loadCoupleSession();
+          setSession((prev) => (
+            prev && latestSession
+              && prev.eventId === latestSession.eventId
+              && prev.collaboratorId === latestSession.collaboratorId
+              && prev.role === latestSession.role
+              && prev.coupleName === latestSession.coupleName
+                ? prev
+                : latestSession
+          ));
           setInvalidInvite(false);
         }
         cloudHydratingRef.current = false;

@@ -1445,6 +1445,25 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #265 (2026-09-01): Phase 4 batch 3 — portal deep-flow audit; 4.10 + 4.11
+  COMPLETE. Twin P3s, one root cause: the 5s cloud polls rebuilt state with
+  fresh identities even when remote content was identical, and the churn
+  cascaded through memos into draft/prefill effects. F-265-1: CouplesPortal
+  setEvents/setSession churn → event → portalConfig memos → draft effect
+  wiped unsaved portal-personalization edits every 5s. F-265-2: GuestPortal
+  setPortalData churn → identifiedGuest/guestRSVP memos → RSVP prefill
+  effect reset attending→yes, plusOne→false, name edits every 5s mid-form.
+  Fix: content-comparing functional setters keep the previous state ref when
+  JSON-identical (session compare is SEMANTIC — saveCoupleSession rewrites
+  rolling expiresAt every poll, must not be compared). Bonus: React skips
+  the pointless 5s re-render when nothing changed. Pin:
+  portalPollChurn.pin.test.ts (4 tests). Verified clean: invite/session
+  lifecycle (URL token scrubbed on first read → logout can't be undone;
+  expiry can't oscillate), mutation→emit contract (auto-emit in
+  saveVersionedStorage; service setItem bypasses all benign), guest CRUD/
+  CSV/rotation, RSVP submit, tab CRUD patterns (20 tick sites), role tiers
+  = UX not boundary (settled #258). P5 backlog + portal chat msgTick
+  cadence. Gates: 1047 pass/5 skip (+4), lint 0/28, gzip 546.51 kB.
 - #264 (2026-09-01): Phase 4 batch 2 — stores/race & timer-cleanup sweep;
   4.13 COMPLETE. All 19 clearTimeout/clearInterval sites triaged for
   dropped work: only real drop = F-264-1 (P4, fixed+pinned) — CouplesPortal

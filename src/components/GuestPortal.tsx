@@ -197,16 +197,27 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         if (remote.venueMap !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_MAP_CONFIGS, STORAGE_VERSIONS.VENUE_MAP_CONFIGS, remote.venueMap);
         if (remote.venueRules !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_RULES, STORAGE_VERSIONS.VENUE_RULES, remote.venueRules);
         if (remote.venueWeather !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_WEATHER, STORAGE_VERSIONS.VENUE_WEATHER, remote.venueWeather);
-        if (remoteEvent) setRemoteCouple(remoteEvent);
-        if (remoteConfig) setConfig(remoteConfig);
-        setPortalData((previous) => ({
-          venues: Array.isArray(remote.venues) ? remote.venues as Venue[] : previous.venues,
-          guests: [guest],
-          submissions: rsvp ? [rsvp] : [],
-          guestEvents: Array.isArray(remote.guestEvents)
-            ? (remote.guestEvents as CoupleGuestEvent[]).filter((item) => item.coupleEventId === coupleEventId)
-            : previous.guestEvents,
-        }));
+        // F-265-2 (Review #265): every poll rebuilds these objects with fresh
+        // identities even when nothing changed remotely, and that churn flowed
+        // through the identifiedGuest/guestRSVP memos into the RSVP prefill
+        // effect — resetting the guest's in-progress answers (attending toggle,
+        // plus-one, name edits) every 5 seconds. Keep the previous state
+        // reference when the content is identical so the memos (and the prefill
+        // effect) only re-run when the remote snapshot actually moved.
+        const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+        setRemoteCouple((prev) => (sameJson(prev, remoteEvent) ? prev : remoteEvent));
+        setConfig((prev) => (sameJson(prev, remoteConfig) ? prev : remoteConfig));
+        setPortalData((previous) => {
+          const next = {
+            venues: Array.isArray(remote.venues) ? remote.venues as Venue[] : previous.venues,
+            guests: [guest],
+            submissions: rsvp ? [rsvp] : [],
+            guestEvents: Array.isArray(remote.guestEvents)
+              ? (remote.guestEvents as CoupleGuestEvent[]).filter((item) => item.coupleEventId === coupleEventId)
+              : previous.guestEvents,
+          };
+          return sameJson(previous, next) ? previous : next;
+        });
         setIsAuthed(true);
         setActiveEventName(remoteConfig?.eventTitle || coupleEventId);
         setResolvedGuestId(guest.id);
