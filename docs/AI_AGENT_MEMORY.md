@@ -1445,6 +1445,13 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #260 (2026-09-01): Phase 2 batch 3 (helpers/triggers/predicates, 17
+  units) — ALL CLEAN, report-only. Two architectural facts recorded:
+  (1) returns-trigger functions are NOT RPC-invocable via PostgREST, so
+  default PUBLIC grants on triggers are inert — no revokes needed;
+  (2) RLS predicates (is_*/has_*/org_data_write_allowed) MUST keep
+  anon/authenticated execute grants because policies evaluate as the
+  querying role. Live anon probes: all predicates false, no leaks.
 - #259 (2026-09-01): Phase 2 batch 2 (org lifecycle + invites, 8 units)
   — ALL CLEAN, report-only, zero code changes. Live anon probes: every
   internal admin gate fired before any write (forbidden / auth_required).

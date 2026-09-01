@@ -41,7 +41,7 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 
 ## B. Phase 2 — RPC audit (46 functions)
 
-**Phase 2 progress: 18/46 units done (#259). Migration 0018 pending live application (operator).**
+**Phase 2 progress: 35/46 units done (#260). Migration 0018 pending live application (operator).**
 
 Per unit checklist: input validation/limits · authz derivation · row locking on read-modify-write · idempotency · error contract · grant hygiene · audit coverage. (`*` = service-only or trigger/internal — checklist applies with "who can call it" as the first question.)
 
@@ -62,33 +62,33 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 | 2.13 | get_public_platform_branding | open | — |
 | 2.14 | get_public_venue_branding | open | — |
 | 2.15 | get_venue_admin_invite_context | done (re-audit for residual issues) | #245/#246/#248 semantics documented |
-| 2.16 | handle_new_user * | open | — |
-| 2.17 | has_org_role * | open | — |
-| 2.18 | has_platform_role * | open | — |
-| 2.19 | is_event_member * | open | — |
-| 2.20 | is_org_member * | open | — |
-| 2.21 | is_platform_admin * | open | — |
-| 2.22 | is_platform_support * | open | — |
-| 2.23 | org_data_array_len * | open | — |
-| 2.24 | org_data_write_allowed * | open | — |
-| 2.25 | prevent_organization_slug_change * | open | — |
+| 2.16 | handle_new_user * | done | #260: clean — trigger on auth.users, idempotent profile insert; returns trigger → not RPC-invocable |
+| 2.17 | has_org_role * | done | #260: clean — security-definer RLS predicate on auth.uid(); grant required for RLS evaluation |
+| 2.18 | has_platform_role * | done | #260: clean — same pattern vs platform_memberships |
+| 2.19 | is_event_member * | done | #260: clean — org-member OR active event-membership |
+| 2.20 | is_org_member * | done | #260: clean — membership lookup keyed on auth.uid(); anon probe → false |
+| 2.21 | is_platform_admin * | done | #260: clean — role-array wrapper; anon probe → false |
+| 2.22 | is_platform_support * | done | #260: clean — role-array wrapper |
+| 2.23 | org_data_array_len * | done | #260: clean — pure immutable jsonb computation, no table access |
+| 2.24 | org_data_write_allowed * | done | #260: clean — #180 admin-domain allowlist + has_org_role; wired into all org_data write policies |
+| 2.25 | prevent_organization_slug_change * | done | #260: clean — trigger raising organization_slug_immutable |
 | 2.26 | reactivate_venue_organization | done | #259: clean — owner-aware status, clears suspension fields, audited |
 | 2.27 | register_venue_admin_claim_failure * | done (re-audit residual) | #247 |
 | 2.28 | reissue_venue_admin_invite | done | #259: clean — org-state gate, validation, revoke-then-insert, audited; concurrent-reissue P5 declined |
 | 2.29 | revoke_venue_admin_invite | done | #259: clean — atomic UPDATE..RETURNING, no TOCTOU, audited |
 | 2.30 | save_couple_portal_snapshot | done | #258: F-258-2 (P2) whole-payload save lost concurrent guest writes — CAS via p_base_updated_at + client conflict-retry (0018) |
 | 2.31 | save_couple_portal_snapshot_for_venue | done | #258: F-258-2 CAS inherited via shared internal writer (0018) |
-| 2.32 | set_couple_snapshot_updated_at * | open | — |
-| 2.33 | set_org_data_updated_at * | open | — |
-| 2.34 | set_platform_chat_sender_side * | open | — |
-| 2.35 | set_updated_at * | open | — |
-| 2.36 | snapshot_guest_token_expires_at * | open | — |
-| 2.37 | snapshot_token_expires_at * | open | — |
+| 2.32 | set_couple_snapshot_updated_at * | done | #260: clean — updated_at trigger; returns trigger → not RPC-invocable |
+| 2.33 | set_org_data_updated_at * | done | #260: clean — updated_at trigger |
+| 2.34 | set_platform_chat_sender_side * | done | #260: clean — server-side sender derivation, raises for non-members (#180 N-6) |
+| 2.35 | set_updated_at * | done | #260: clean — updated_at trigger |
+| 2.36 | snapshot_guest_token_expires_at * | done | #260: clean — pure expiry derivation from caller-supplied payload |
+| 2.37 | snapshot_token_expires_at * | done | #260: clean — pure expiry derivation (collaborator-specific + event fallback) |
 | 2.38 | submit_guest_couple_rsvp | done | #258 residual: locking ✓ (#245), deadline ✓ (0016); F-258-4 20 KB payload cap added (0018) |
 | 2.39 | submit_guest_couple_rsvp_for_venue | done | #258: thin wrapper (slug+couple+active-org gate) delegating to the hardened function; clean |
 | 2.40 | submit_guest_rsvp | done | #258: F-258-3 (P3) no lock/no unique(guest_id) → duplicate rows — FOR UPDATE added; F-258-4 unbounded text fields capped (0018) |
 | 2.41 | suspend_venue_organization | done | #259: clean — atomic, cascades invite revocation, audited; double-suspend overwrite P5 declined |
-| 2.42 | sync_couple_projection * | open | — |
+| 2.42 | sync_couple_projection * | done | #260: clean — org-role gate, idempotent on-conflict upserts, sha256-only tokens; P4 unbounded-payload note declined |
 | 2.43 | update_venue_organization | done | #259: clean — 14-field validation, immutable slug, audit w/ previous status; unlocked read P5 declined |
 | 2.44 | upsert_couple_portal_snapshot | open | — |
 | 2.45 | upsert_platform_branding | open | — |
