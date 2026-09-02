@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CoupleEvent,
   CoupleCollaborator,
@@ -73,7 +73,7 @@ import { getVenueWeather, eventDates } from '../services/weather/venueWeatherSer
 import { useBrandingConfig } from '../config';
 import { applyDocumentBranding } from '../utils/documentBranding';
 import { getPublicVenueBranding } from '../services/platform/publicVenueService';
-import { getActiveOrganizationSlug } from '../services/platform/organizationContext';
+import { getActiveOrganizationSlug, setActiveOrganizationSlug } from '../services/platform/organizationContext';
 import { isPortalAccessActive } from '../services/couples/accessLifecycle';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { emit, on } from '../utils/appEvents';
@@ -92,6 +92,8 @@ import { CoupleLayoutEditor } from './CoupleLayoutEditor';
 import { VenueMapCanvas } from './VenueMapCanvas';
 import { LodgingAssignmentsModal } from './LodgingAssignmentsModal';
 import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
+import { PortalInviteAccountSetup } from './PortalInviteAccountSetup';
+import { signOutPortalAccount, type PortalInviteContext } from '../services/portal/portalInviteAccount';
 
 // Safe formatters that never throw on malformed/incomplete date strings, so the
 // couple portal can't crash with "Invalid time value" from bad schedule/guest data.
@@ -120,9 +122,9 @@ interface CouplesPortalProps {
 
 /**
  * Couples Portal — the portal a booked couple (and their invited collaborators)
- * use after the wedding venue creates their event. This is the foundation slice:
- * token-based access, an overview of the booked event, choosing venue spaces, and
- * inviting collaborators (planner / parents / vendors). Space-driven questions,
+ * use after the wedding venue creates their event. Personal-account invitations
+ * open an overview of the booked event, venue-space choices, and collaborator
+ * management (planner / parents / vendors). Space-driven questions,
  * layout design/approval, and a per-couple guest portal are layered on next.
  */
 export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: CouplesPortalProps) {
@@ -131,6 +133,25 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const config = publicVenueConfig || localConfig;
   const organizationSlug = getActiveOrganizationSlug();
   const linkVenueSlug = venueSlug || organizationSlug || undefined;
+  const [persistedInviteToken, setPersistedInviteToken] = useState(coupleToken || '');
+  const accountInviteToken = coupleToken || persistedInviteToken || undefined;
+  const cloudAccountInvite = isCoupleCloudEnabled() && Boolean(accountInviteToken);
+  const [portalAccountAccess, setPortalAccountAccess] = useState<'pending' | 'ready' | 'legacy'>(
+    () => cloudAccountInvite ? 'pending' : 'legacy',
+  );
+  const handlePortalAccountReady = useCallback((context: PortalInviteContext) => {
+    if (context.organizationSlug) setActiveOrganizationSlug(context.organizationSlug);
+    setPortalAccountAccess('ready');
+  }, []);
+  const handleLegacyPortalInvite = useCallback(() => setPortalAccountAccess('legacy'), []);
+
+  useEffect(() => {
+    if (coupleToken) setPersistedInviteToken(coupleToken);
+  }, [coupleToken]);
+
+  useEffect(() => {
+    setPortalAccountAccess(cloudAccountInvite ? 'pending' : 'legacy');
+  }, [accountInviteToken, cloudAccountInvite]);
 
   useEffect(() => {
     if (!venueSlug) return;
@@ -196,7 +217,8 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   // different couple or old test event, we must override it with the newly requested
   // token so the user can switch directly to their newly created test wedding event.
   useEffect(() => {
-    const tokenToResolve = coupleToken || getCoupleTokenFromLocation(window.location);
+    if (cloudAccountInvite && portalAccountAccess === 'pending') return;
+    const tokenToResolve = accountInviteToken || getCoupleTokenFromLocation(window.location);
     if (!tokenToResolve) return;
     // Refresh events from storage so any newly created couple event is available
     const latestEvents = getCoupleEvents();
@@ -204,7 +226,10 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
     const resolved = resolveCoupleInviteToken(tokenToResolve);
     if (!resolved) {
-      setInvalidInvite(true);
+      // In cloud mode the account gate runs before the private snapshot is
+      // hydrated onto this device. Let the authenticated pull resolve it rather
+      // than briefly declaring a valid personal invite invalid.
+      if (!isCoupleCloudEnabled()) setInvalidInvite(true);
       return;
     }
     // If our active session is already for this exact couple and collaborator, nothing to do.
@@ -221,14 +246,15 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
     const newSession = loadCoupleSession();
     setSession(newSession);
     setEvents(getCoupleEvents());
-  }, [coupleToken, session]);
+  }, [accountInviteToken, cloudAccountInvite, portalAccountAccess, session]);
 
-  // Cross-device couple sync: Supabase is optional, but when configured the
-  // invite token becomes the remote session key. The local services remain the
-  // immediate UI cache; a short polling interval keeps another device's edits
-  // visible without requiring the couple to create a Supabase Auth account.
-  const cloudToken = coupleToken || event?.inviteToken || '';
+  // Cross-device couple sync: Supabase is optional. New email-backed invites
+  // require the isolated personal Auth session above; historical no-email links
+  // retain token-only compatibility. Local services remain the immediate UI
+  // cache while polling keeps another device's edits visible.
+  const cloudToken = accountInviteToken || event?.inviteToken || '';
   useEffect(() => {
+    if (cloudAccountInvite && portalAccountAccess === 'pending') return;
     if (!isCoupleCloudEnabled() || !cloudToken) return;
     let cancelled = false;
     // In-flight guard (Review #245 P1-A): skip a polling tick while the previous
@@ -338,12 +364,20 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       }
       cloudSaveTimerRef.current = null;
     };
-  }, [cloudToken, event?.id, session?.eventId, venueSlug]);
+  }, [cloudAccountInvite, cloudToken, event?.id, portalAccountAccess, session?.eventId, venueSlug]);
 
   const handleManualLaunch = (tokenInput: string) => {
     const token = tokenInput.trim();
     if (!token) {
       showToast('Please enter or select an invitation token.', 'warning');
+      return;
+    }
+    if (isCoupleCloudEnabled()) {
+      // Manual QA entry must follow the same backend account gate as a clicked
+      // email link; it must never become a bearer-token bypass.
+      setPersistedInviteToken(token);
+      setPortalAccountAccess('pending');
+      setInvalidInvite(false);
       return;
     }
     const latestEvents = getCoupleEvents();
@@ -462,6 +496,14 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const handleLogout = () => {
     clearCoupleSession();
     setSession(null);
+    if (cloudAccountInvite) {
+      setActiveOrganizationSlug(null);
+      // Do not remount the account lookup until local Supabase sign-out has
+      // finished, or it can observe the still-valid JWT and reopen the portal.
+      void signOutPortalAccount('couple')
+        .catch(() => undefined)
+        .then(() => setPortalAccountAccess('pending'));
+    }
   };
 
   // ── Invite / collaborator handlers ─────────────────────────────────────────
@@ -493,7 +535,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const [guestForm, setGuestForm] = useState({ name: '', email: '', phone: '' });
   const [expandedGuestRsvp, setExpandedGuestRsvp] = useState<string | null>(null);
   const [guestError, setGuestError] = useState('');
-  const [editingGuest, setEditingGuest] = useState<{ id: string; name: string; email: string; phone: string; tableId?: string; roomId?: string } | null>(null);
+  const [editingGuest, setEditingGuest] = useState<{ id: string; name: string; email: string; emailLocked: boolean; phone: string; tableId?: string; roomId?: string } | null>(null);
   // Guest list search + RSVP filter so large weddings stay navigable.
   const [guestSearch, setGuestSearch] = useState('');
   const [guestFilter, setGuestFilter] = useState<'all' | 'attending' | 'not-attending' | 'no-response'>('all');
@@ -750,15 +792,26 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
     showToast(`RSVP recorded for ${guest.name}.`, 'success');
   };
 
-  const handleCopyGuestLink = (token: string) => {
+  const handleCopyGuestLink = (token: string, guestEmail?: string) => {
+    const email = normalizeEmail(guestEmail, { required: true });
+    if (!email.ok) {
+      showToast('Add a valid email address before copying this guest’s personal account invite.', 'warning');
+      return;
+    }
     void navigator.clipboard?.writeText(buildGuestInviteUrl(token, event?.id, linkVenueSlug)).then(
-      () => showToast('Guest invite link copied to clipboard.', 'success'),
-      () => showToast('Could not copy — copy the link below.', 'warning'),
+      () => showToast('Guest account invite link copied to clipboard.', 'success'),
+      () => showToast('Could not copy — try again.', 'warning'),
     );
   };
 
   const handleRotateGuestLink = (guestId: string, guestName: string) => {
     if (!event) return;
+    const guest = coupleGuests.find((candidate) => candidate.id === guestId);
+    const email = normalizeEmail(guest?.email, { required: true });
+    if (!email.ok) {
+      showToast('Add a valid email address before reissuing this guest’s personal account invite.', 'warning');
+      return;
+    }
     const nextToken = rotateCoupleGuestToken(event.id, guestId);
     if (!nextToken) {
       showToast('This guest link could not be reissued.', 'warning');
@@ -812,7 +865,6 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       (portalConfig.mealOptions.length !== (venueCfg?.mealOptions?.length ?? 0) ||
         portalConfig.mealOptions.some((o, i) => o.value !== venueCfg?.mealOptions?.[i]?.value));
     return hasHero || welcomeChanged || deadlineSet || themeSet || mealsChanged;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portalConfig]);
 
   const [portalDraft, setPortalDraft] = useState<GuestPortalConfig | null>(null);
@@ -888,7 +940,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const handleEmailCollaborator = (email: string, name: string, token: string) => {
     const url = buildCoupleInviteUrl(token, linkVenueSlug);
     const subject = 'Join our wedding planning portal';
-    const body = `Hi ${name},\n\nYou've been invited! Open this link to get started:\n\n${url}\n\n— ${coupleName}`;
+    const body = `Hi ${name},\n\nYou've been invited! Open this private link to create your own Wedding VIP password and join our planning portal:\n\n${url}\n\nThis invitation is fixed to ${email}; please do not forward it.\n\n— ${coupleName}`;
     void sendCoupleEmail(email, {
       name,
       url,
@@ -906,7 +958,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const handleEmailGuest = (email: string, name: string, token: string) => {
     const url = buildGuestInviteUrl(token, event?.id, linkVenueSlug);
     const subject = `RSVP for ${coupleName}`;
-    const body = `Hi ${name},\n\nYou've been invited! Please RSVP here:\n\n${url}\n\n— ${coupleName}`;
+    const body = `Hi ${name},\n\nYou've been invited! Open this private link to create your own Wedding VIP password and RSVP:\n\n${url}\n\nThis invitation is fixed to ${email}; please do not forward it.\n\n— ${coupleName}`;
     void sendCoupleEmail(email, {
       name,
       url,
@@ -968,6 +1020,14 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
   const handleRotateCoupleLink = () => {
     if (!event) return;
+    const ownerEmail = event.primaryEmail || event.collaborators.find((collaborator) => (
+      collaborator.id === `col-${event.id}-owner`
+      || collaborator.inviteToken === event.inviteToken
+    ))?.email;
+    if (!normalizeEmail(ownerEmail, { required: true }).ok) {
+      showToast('Add a valid primary couple email before reissuing a personal account invite.', 'warning');
+      return;
+    }
     const nextToken = rotateCoupleInviteToken(event.id);
     if (!nextToken) {
       showToast('This couple link could not be reissued because access has closed.', 'warning');
@@ -980,6 +1040,11 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
   const handleRotateCollaboratorLink = (collaboratorId: string, collaboratorName: string) => {
     if (!event) return;
+    const collaborator = event.collaborators.find((candidate) => candidate.id === collaboratorId);
+    if (!normalizeEmail(collaborator?.email, { required: true }).ok) {
+      showToast('Add a valid collaborator email before reissuing a personal account invite.', 'warning');
+      return;
+    }
     const nextToken = rotateCoupleCollaboratorToken(event.id, collaboratorId);
     if (!nextToken) {
       showToast('This collaborator link could not be reissued because access has closed.', 'warning');
@@ -991,6 +1056,31 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   // ── Render states ──────────────────────────────────────────────────────────
+  if (cloudAccountInvite && portalAccountAccess === 'pending' && accountInviteToken) {
+    return (
+      <PortalInviteAccountSetup
+        kind="couple"
+        token={accountInviteToken}
+        venueSlug={venueSlug}
+        branding={config}
+        onAuthenticated={handlePortalAccountReady}
+        onLegacyInvite={handleLegacyPortalInvite}
+        onExit={onExitPortal}
+      />
+    );
+  }
+
+  if (cloudAccountInvite && portalAccountAccess === 'ready' && (!session || !event || !me)) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-lg">
+          <div className="text-4xl animate-pulse">💍</div>
+          <p className="mt-3 text-sm font-semibold text-gray-700">Opening your Couples Portal…</p>
+        </div>
+      </div>
+    );
+  }
+
   if (invalidInvite || !session || !event || !me) {
     const allEvents = events.length > 0 ? events : getCoupleEvents();
     return (
@@ -3181,7 +3271,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                             {canManageGuests && g.token && (
                               <button
                                 type="button"
-                                onClick={() => handleCopyGuestLink(g.token!)}
+                                onClick={() => handleCopyGuestLink(g.token!, g.email)}
                                 className="text-xs text-[#4A1942] hover:underline"
                               >
                                 Copy link
@@ -3238,7 +3328,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                             {canManageGuests && (
                               <button
                                 type="button"
-                                onClick={() => setEditingGuest({ id: g.id, name: g.name, email: g.email || '', phone: g.phone || '', tableId: g.tableId || '', roomId: g.roomId || '' })}
+                                onClick={() => setEditingGuest({ id: g.id, name: g.name, email: g.email || '', emailLocked: Boolean(g.email?.trim()), phone: g.phone || '', tableId: g.tableId || '', roomId: g.roomId || '' })}
                                 className="text-xs text-gray-500 hover:underline"
                               >
                                 ✏️ Edit
@@ -3274,9 +3364,11 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                                 type="email"
                                 value={editingGuest.email}
                                 onChange={(e) => setEditingGuest({ ...editingGuest, email: e.target.value })}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                placeholder="Email"
+                                readOnly={editingGuest.emailLocked}
+                                className={`px-3 py-2 border border-gray-300 rounded-lg text-sm ${editingGuest.emailLocked ? 'bg-gray-100 text-gray-600' : ''}`}
+                                placeholder="Email required before inviting"
                                 aria-label="Edit guest email"
+                                title={editingGuest.emailLocked ? 'The email is fixed to this personal account invitation.' : undefined}
                               />
                               <input
                                 type="tel"

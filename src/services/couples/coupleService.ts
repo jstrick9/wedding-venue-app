@@ -26,6 +26,7 @@ import { emitDataChanged } from '../../utils/appEvents';
 import { createOpaqueToken } from '../../utils/secureTokens';
 import { calculatePortalExpiry, isPortalAccessActive } from './accessLifecycle';
 import { getActiveOrganizationSlug } from '../platform/organizationContext';
+import { normalizeEmail } from '../../utils/contactQuality';
 
 const COUPLE_EVENTS_KEY = STORAGE_KEYS.COUPLE_EVENTS;
 const COUPLE_EVENTS_VERSION = 1;
@@ -47,7 +48,7 @@ export function getCoupleTokenFromLocation(location: Location = window.location)
   return undefined;
 }
 
-/** Remove couple bearer tokens from browser history while preserving the route. */
+/** Remove couple invitation secrets from browser history while preserving the route. */
 function clearCoupleTokenFromUrl(location: Location): void {
   try {
     const url = new URL(location.href);
@@ -150,6 +151,7 @@ function saveCoupleEvents(events: CoupleEvent[]): void {
 
 export function createCoupleEvent(input: {
   coupleName: string;
+  primaryEmail?: string;
   eventDate?: string;
   eventEndDate?: string;
   guestCount?: number;
@@ -158,12 +160,22 @@ export function createCoupleEvent(input: {
   createdBy?: string;
 }): CoupleEvent {
   const issuedAt = new Date().toISOString();
+  const id = createOpaqueToken('couple');
+  const inviteToken = randomToken('cp');
+  const coupleName = input.coupleName.trim();
+  const normalizedPrimaryEmail = normalizeEmail(input.primaryEmail);
+  const primaryEmail = normalizedPrimaryEmail.ok && normalizedPrimaryEmail.value
+    ? normalizedPrimaryEmail.value
+    : undefined;
+  const inviteExpiresAt = calculatePortalExpiry(input.eventDate, input.eventEndDate, issuedAt);
   const event: CoupleEvent = {
-    id: createOpaqueToken('couple'),
-    coupleName: input.coupleName.trim(),
-    inviteToken: randomToken('cp'),
+    id,
+    coupleName,
+    primaryEmail,
+    personalAccountRequired: Boolean(primaryEmail),
+    inviteToken,
     inviteIssuedAt: issuedAt,
-    inviteExpiresAt: calculatePortalExpiry(input.eventDate, input.eventEndDate, issuedAt),
+    inviteExpiresAt,
     status: 'invited',
     eventDate: input.eventDate,
     eventEndDate: input.eventEndDate,
@@ -175,7 +187,18 @@ export function createCoupleEvent(input: {
     selectedSpaces: [],
     layoutStatus: 'none',
     layoutHistory: [],
-    collaborators: [],
+    collaborators: primaryEmail ? [{
+      id: `col-${id}-owner`,
+      name: coupleName,
+      email: primaryEmail,
+      role: 'couple',
+      inviteToken,
+      inviteIssuedAt: issuedAt,
+      inviteExpiresAt,
+      personalAccountRequired: true,
+      accepted: false,
+      invitedAt: issuedAt,
+    }] : [],
     createdBy: input.createdBy,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -313,15 +336,34 @@ export function findCoupleEventByInviteToken(token: string): CoupleEvent | undef
 export function rotateCoupleInviteToken(eventId: string): string | null {
   const current = findCoupleEventById(eventId);
   if (!current || !isPortalAccessActive(current.inviteExpiresAt)) return null;
+  const owner = current.collaborators.find((collaborator) => (
+    collaborator.id === `col-${current.id}-owner`
+    || collaborator.inviteToken === current.inviteToken
+  )) || current.collaborators.find((collaborator) => collaborator.role === 'couple');
+  const primaryEmail = normalizeEmail(current.primaryEmail || owner?.email, { required: true });
+  if (!primaryEmail.ok) return null;
   const nextToken = randomToken('cp');
   const issuedAt = new Date().toISOString();
   const next = getCoupleEvents().map((event) => event.id === eventId
     ? {
         ...event,
+        primaryEmail: primaryEmail.value,
         inviteToken: nextToken,
         inviteIssuedAt: issuedAt,
-        collaborators: event.collaborators.map((collaborator) => collaborator.role === 'couple'
-          ? { ...collaborator, inviteToken: nextToken, inviteIssuedAt: issuedAt, inviteExpiresAt: event.inviteExpiresAt }
+        personalAccountRequired: true,
+        collaborators: event.collaborators.map((collaborator) => (
+          collaborator.id === owner?.id
+          || collaborator.id === `col-${event.id}-owner`
+          || collaborator.inviteToken === event.inviteToken
+        )
+          ? {
+              ...collaborator,
+              email: primaryEmail.value,
+              inviteToken: nextToken,
+              inviteIssuedAt: issuedAt,
+              inviteExpiresAt: event.inviteExpiresAt,
+              personalAccountRequired: true,
+            }
           : collaborator),
         updatedAt: issuedAt,
       }
@@ -334,13 +376,24 @@ export function rotateCoupleInviteToken(eventId: string): string | null {
 export function rotateCoupleCollaboratorToken(eventId: string, collaboratorId: string): string | null {
   const event = findCoupleEventById(eventId);
   if (!event || !isPortalAccessActive(event.inviteExpiresAt)) return null;
+  const invitee = event.collaborators.find((collaborator) => collaborator.id === collaboratorId);
+  const email = normalizeEmail(invitee?.email, { required: true });
+  if (!invitee || !email.ok) return null;
   const nextToken = randomToken('cc');
   const issuedAt = new Date().toISOString();
   const next = getCoupleEvents().map((candidate) => candidate.id === eventId
     ? {
         ...candidate,
         collaborators: candidate.collaborators.map((collaborator) => collaborator.id === collaboratorId
-          ? { ...collaborator, inviteToken: nextToken, inviteIssuedAt: issuedAt, inviteExpiresAt: candidate.inviteExpiresAt, revokedAt: undefined }
+          ? {
+              ...collaborator,
+              email: email.value,
+              inviteToken: nextToken,
+              inviteIssuedAt: issuedAt,
+              inviteExpiresAt: candidate.inviteExpiresAt,
+              revokedAt: undefined,
+              personalAccountRequired: true,
+            }
           : collaborator),
         updatedAt: issuedAt,
       }
@@ -355,19 +408,22 @@ export function addCoupleCollaborator(
 ): CoupleCollaborator | null {
   const event = findCoupleEventById(eventId);
   if (!event) return null;
+  const email = normalizeEmail(input.email, { required: true });
+  if (!email.ok || !input.name.trim()) return null;
   // Prevent inviting the same email twice (e.g. planner already invited).
   const dup = event.collaborators.some(
-    (c) => c.email.trim().toLowerCase() === input.email.trim().toLowerCase(),
+    (collaborator) => collaborator.email.trim().toLowerCase() === email.value,
   );
   if (dup) return null;
   const collaborator: CoupleCollaborator = {
     id: `col-${Date.now()}`,
     name: input.name.trim(),
-    email: input.email.trim(),
+    email: email.value,
     role: input.role,
     inviteToken: randomToken('cc'),
     inviteIssuedAt: new Date().toISOString(),
     inviteExpiresAt: event.inviteExpiresAt,
+    personalAccountRequired: true,
     invitedAt: new Date().toISOString(),
   };
   updateCoupleEvent(eventId, {
@@ -447,7 +503,10 @@ export function resolveCoupleInviteToken(
       if (!isPortalAccessActive(event.inviteExpiresAt)) return null;
       // The couple invite token: the couple themselves. Create an implicit
       // collaborator if none exists yet.
-      let owner = event.collaborators.find((c) => c.role === 'couple');
+      let owner = event.collaborators.find((collaborator) => (
+        collaborator.id === `col-${event.id}-owner`
+        || collaborator.inviteToken === event.inviteToken
+      ));
       if (!owner) {
         owner = {
           id: `col-${event.id}-owner`,

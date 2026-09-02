@@ -18,6 +18,8 @@ import {
   setSpaceLayout,
   saveCoupleSpaceLayout,
   acceptCoupleInvite,
+  rotateCoupleInviteToken,
+  rotateCoupleCollaboratorToken,
   hasVenueCoordination,
 } from './coupleService';
 import { addCoupleGuest, getCoupleGuests } from './coupleGuestService';
@@ -36,6 +38,60 @@ describe('coupleService', () => {
     expect(ev.inviteToken.startsWith('cp-')).toBe(true);
     expect(ev.status).toBe('invited');
     expect(getCoupleEvents()).toHaveLength(1);
+  });
+
+  it('creates a stable email-backed owner for a new personal account invite', () => {
+    const ev = createCoupleEvent({
+      coupleName: 'Adams & Lee',
+      primaryEmail: '  Couple@Example.com ',
+    });
+    expect(ev.primaryEmail).toBe('couple@example.com');
+    expect(ev.personalAccountRequired).toBe(true);
+    expect(ev.collaborators).toHaveLength(1);
+    expect(ev.collaborators[0]).toEqual(expect.objectContaining({
+      id: `col-${ev.id}-owner`,
+      email: 'couple@example.com',
+      inviteToken: ev.inviteToken,
+      personalAccountRequired: true,
+    }));
+  });
+
+  it('rotates only the primary owner link and preserves a co-owner identity', () => {
+    const ev = createCoupleEvent({ coupleName: 'Stable & Owner', primaryEmail: 'owner@example.com' });
+    const coOwner = addCoupleCollaborator(ev.id, {
+      name: 'Second Partner',
+      email: 'second@example.com',
+      role: 'couple',
+    })!;
+    const oldPrimaryToken = ev.inviteToken;
+    const nextPrimaryToken = rotateCoupleInviteToken(ev.id);
+    const current = getCoupleEvents()[0];
+    expect(nextPrimaryToken).toBeTruthy();
+    expect(nextPrimaryToken).not.toBe(oldPrimaryToken);
+    expect(current.collaborators.find((item) => item.id === coOwner.id)?.inviteToken).toBe(coOwner.inviteToken);
+    expect(current.collaborators.find((item) => item.id === `col-${ev.id}-owner`)?.inviteToken).toBe(nextPrimaryToken);
+  });
+
+  it('does not issue a new personal-account token without a valid invitee email', () => {
+    const event = createCoupleEvent({ coupleName: 'Historical Couple' });
+    expect(rotateCoupleInviteToken(event.id)).toBeNull();
+
+    const collaborator = addCoupleCollaborator(event.id, {
+      name: 'Planner',
+      email: 'planner@example.com',
+      role: 'planner',
+    })!;
+    updateCoupleEvent(event.id, {
+      collaborators: getCoupleEvents()[0].collaborators.map((candidate) => (
+        candidate.id === collaborator.id ? { ...candidate, email: '' } : candidate
+      )),
+    });
+    expect(rotateCoupleCollaboratorToken(event.id, collaborator.id)).toBeNull();
+    expect(addCoupleCollaborator(event.id, {
+      name: 'Invalid',
+      email: 'not-an-email',
+      role: 'family',
+    })).toBeNull();
   });
 
   it('resolves the couple via the invite token and creates an implicit owner', () => {

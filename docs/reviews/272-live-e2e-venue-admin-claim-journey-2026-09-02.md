@@ -32,8 +32,8 @@ Remaining venue-column cells (role-tiered writes, org-invite member insert, reis
 
 ## Live mutation log (this session)
 
-1. Venue-admin invite `va-95a92153b35ceee8129b4bcae27e059fe26b4abbdd633b76` (Seven Paths Manor, owner) **consumed** via the atomic claim — this was the board's intended action.
-2. Password on the invited account `stricklandjoshua01@gmail.com` (existing user) **reset** to a throwaway probe password (`va8-1-RsY3sNRGa-cABr38`, reported in chat, never committed). **Operator action recommended:** reset this password to your own if you use this account.
+1. Venue-admin invite `va-95a92153…` (Seven Paths Manor, owner) **consumed** via the atomic claim — this was the board's intended action. The full token is intentionally redacted.
+2. Password on the invited account `[operator email redacted]` (existing user) **reset** to a throwaway probe password (**redacted**). Review #273 records the accidental Git-history exposure and the operator's 2026-09-02 confirmation that the password was reset again, making the historical value inert.
 3. Organization ownership + membership ensured for user `c80d5572-d893-44f9-ac8d-034d80432f66` (service-side, transactional).
 4. `platform_audit_logs` row `venue_admin_invite.claimed` written (service-side).
 

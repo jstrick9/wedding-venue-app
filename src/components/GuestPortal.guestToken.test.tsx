@@ -59,7 +59,7 @@ import * as guestPortalHelpers from '../utils/guestPortal';
 import * as coupleGuestService from '../services/couples/coupleGuestService';
 import * as coupleRsvpService from '../services/couples/coupleRsvpService';
 
-describe('GuestPortal guest-token auto-auth', () => {
+describe('GuestPortal legacy token compatibility when cloud accounts are unavailable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(guestPortalHelpers.getGuestPortalConfig).mockReturnValue({
@@ -77,10 +77,11 @@ describe('GuestPortal guest-token auto-auth', () => {
     ] as any);
   });
 
-  it('auto-authenticates a guest via their invite token (no sign-in gate)', async () => {
+  it('retains historical token auto-identification only in local/legacy mode', async () => {
     render(<GuestPortal guestToken="tok-123" coupleEventId="e1" onExitPortal={() => {}} />);
 
-    // After the mount effect runs, the gate should be bypassed (guest identifier input gone).
+    // With Supabase/account migration intentionally unavailable in this suite,
+    // the historical compatibility path bypasses the old identifier form.
     await waitFor(() => {
       expect(screen.queryByPlaceholderText('jane@example.com or Jane Smith')).toBeNull();
     });
@@ -117,7 +118,7 @@ describe('GuestPortal guest-token auto-auth', () => {
   it('shows the sign-in gate when the token matches no guest', () => {
     vi.mocked(coupleGuestService.getCoupleGuests).mockReturnValue([]);
     render(<GuestPortal guestToken="unknown" coupleEventId="e1" onExitPortal={() => {}} />);
-    // Should fall through to the gate (not auto-auth).
+    // Historical compatibility still rejects a token that identifies no guest.
     expect(screen.getByPlaceholderText(/jane@example.com or Jane Smith/i)).toBeTruthy();
   });
 });

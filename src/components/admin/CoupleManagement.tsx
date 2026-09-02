@@ -28,6 +28,7 @@ import { getCoupleSetupTasks, addCoupleSetupTask, updateCoupleSetupTask, removeC
 import { getActiveWeddingPackages, findWeddingPackage, suggestSetupTaskTitles } from '../../services/couples/couplePackageService';
 import { findPackageAddOn } from '../../services/couples/coupleAddOnService';
 import { BrandedSectionHeader, BrandedStatCard } from './shared/AdminSharedComponents';
+import { normalizeEmail } from '../../utils/contactQuality';
 
 interface CoupleManagementProps {
   config: AdminCommonProps['config'];
@@ -58,6 +59,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
     coupleName: '',
+    primaryEmail: '',
     eventDate: '',
     eventEndDate: '',
     guestCount: '',
@@ -66,7 +68,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   });
   const [error, setError] = useState('');
   const [editEventId, setEditEventId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ eventDate: '', eventEndDate: '', guestCount: '', packageId: '', availableSpaces: [] as string[] });
+  const [editForm, setEditForm] = useState({ primaryEmail: '', eventDate: '', eventEndDate: '', guestCount: '', packageId: '', availableSpaces: [] as string[] });
   const [openChat, setOpenChat] = useState<string | null>(null);
   const [openGuests, setOpenGuests] = useState<string | null>(null);
   const [openSetup, setOpenSetup] = useState<string | null>(null);
@@ -122,6 +124,12 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   };
 
   const handleReissueCouple = (event: CoupleEvent) => {
+    const ownerEmail = event.primaryEmail
+      || event.collaborators.find((collaborator) => collaborator.role === 'couple')?.email;
+    if (!normalizeEmail(ownerEmail, { required: true }).ok) {
+      onShowSuccess('Add a valid primary couple email before reissuing a personal account invite.');
+      return;
+    }
     const nextToken = rotateCoupleInviteToken(event.id);
     if (!nextToken) {
       onShowSuccess('This couple link cannot be reissued because portal access has closed.');
@@ -133,6 +141,12 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   };
 
   const handleReissueGuest = (event: CoupleEvent, guestId: string, guestName: string) => {
+    const guest = getCoupleGuests(event.id).find((candidate) => candidate.id === guestId);
+    const email = normalizeEmail(guest?.email, { required: true });
+    if (!email.ok) {
+      onShowSuccess('Add a valid guest email before reissuing a personal account invite.');
+      return;
+    }
     const nextToken = rotateCoupleGuestToken(event.id, guestId);
     if (!nextToken) {
       onShowSuccess('This guest link could not be reissued.');
@@ -146,6 +160,11 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
   const handleCreate = () => {
     if (!form.coupleName.trim()) {
       setError('Please enter the couple’s name.');
+      return;
+    }
+    const primaryEmail = normalizeEmail(form.primaryEmail, { required: true });
+    if (!primaryEmail.ok) {
+      setError(primaryEmail.error || 'Enter the email address that will own the primary couple account.');
       return;
     }
     if (form.eventDate && form.eventEndDate && form.eventEndDate < form.eventDate) {
@@ -164,6 +183,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
     }
     const created = createCoupleEvent({
       coupleName: form.coupleName,
+      primaryEmail: primaryEmail.value,
       eventDate: form.eventDate || undefined,
       eventEndDate: form.eventEndDate || undefined,
       guestCount,
@@ -178,7 +198,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
         addCoupleSetupTask(created.id, { title, spaceId: created.selectedSpaces?.[0], suggested: true });
       });
     }
-    setForm({ coupleName: '', eventDate: '', eventEndDate: '', guestCount: '', packageId: '', availableSpaces: [] });
+    setForm({ coupleName: '', primaryEmail: '', eventDate: '', eventEndDate: '', guestCount: '', packageId: '', availableSpaces: [] });
     setError('');
     setShowCreate(false);
     refresh();
@@ -196,6 +216,7 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
 
   const startEdit = (ev: CoupleEvent) => {
     setEditForm({
+      primaryEmail: ev.primaryEmail || ev.collaborators.find((collaborator) => collaborator.role === 'couple')?.email || '',
       eventDate: ev.eventDate || '',
       eventEndDate: ev.eventEndDate || '',
       guestCount: ev.guestCount != null ? String(ev.guestCount) : '',
@@ -230,8 +251,41 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
       guestCount = gc;
     }
     const updated = findCoupleEventById(editEventId);
+    if (!updated) return;
+    const primaryEmail = normalizeEmail(editForm.primaryEmail, { required: Boolean(updated.primaryEmail) });
+    if (!primaryEmail.ok) {
+      onShowSuccess(primaryEmail.error || 'Enter a valid primary couple email.');
+      return;
+    }
     const availableSet = new Set(editForm.availableSpaces);
+    const ownerIndex = updated.collaborators.findIndex((collaborator) => collaborator.role === 'couple');
+    const collaborators = [...updated.collaborators];
+    if (primaryEmail.value) {
+      if (ownerIndex >= 0) {
+        collaborators[ownerIndex] = {
+          ...collaborators[ownerIndex],
+          email: primaryEmail.value,
+          personalAccountRequired: true,
+        };
+      } else {
+        collaborators.push({
+          id: `col-${updated.id}-owner`,
+          name: updated.coupleName,
+          email: primaryEmail.value,
+          role: 'couple',
+          inviteToken: updated.inviteToken,
+          inviteIssuedAt: updated.inviteIssuedAt || updated.createdAt,
+          inviteExpiresAt: updated.inviteExpiresAt,
+          personalAccountRequired: true,
+          accepted: false,
+          invitedAt: updated.createdAt,
+        });
+      }
+    }
     updateCoupleEvent(editEventId, {
+      primaryEmail: primaryEmail.value || undefined,
+      personalAccountRequired: Boolean(primaryEmail.value) || updated.personalAccountRequired,
+      collaborators,
       eventDate: editForm.eventDate || undefined,
       eventEndDate: editForm.eventEndDate || undefined,
       guestCount,
@@ -558,6 +612,19 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
           </div>
+          <div>
+            <label htmlFor="new-couple-primary-email" className="block text-xs font-medium text-gray-600 mb-1">Primary couple email *</label>
+            <input
+              id="new-couple-primary-email"
+              type="email"
+              value={form.primaryEmail}
+              onChange={(e) => setForm({ ...form, primaryEmail: e.target.value })}
+              placeholder="couple@example.com"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              autoComplete="email"
+            />
+            <p className="mt-1 text-xs text-gray-500">This fixed address will create the primary personal account. Invite a second partner separately under People.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Start date</label>
@@ -718,6 +785,9 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                         <span>– {new Date(ev.eventEndDate).toLocaleDateString()}</span>
                       )}
                       {ev.guestCount && <span>👥 {ev.guestCount} guests</span>}
+                      {ev.primaryEmail
+                        ? <span>✉️ {ev.primaryEmail}</span>
+                        : <span className="font-semibold text-amber-700">Add a primary email before inviting</span>}
                       {ev.packageId && (() => { const p = findWeddingPackage(ev.packageId); return p ? <span>🎁 {p.name}</span> : null; })()}
                       {(() => {
                         // Flag when a couple's guest count exceeds their package's included
@@ -780,14 +850,19 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                     <button
                       type="button"
                       onClick={() => {
+                        const invitedEmail = normalizeEmail(ev.primaryEmail, { required: true });
+                        if (!invitedEmail.ok) {
+                          onShowSuccess('Add a valid primary couple email before sending the account invite.');
+                          return;
+                        }
                         const url = portalUrl(ev.inviteToken);
                         const subject = `Your Wedding Planning Portal — ${ev.coupleName}`;
-                        const body = `Hi ${ev.coupleName},\n\nWe're so excited to work with you on your wedding!\n\nHere is your private link to access your Couples Portal, where you can design your floor layouts, manage your guest list & RSVPs, view wedding packages, and chat directly with our venue team:\n\n${url}\n\nWarm regards,\nThe Seven Paths Manor Team`;
-                        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        const body = `Hi ${ev.coupleName},\n\nWe're so excited to work with you on your wedding! Use the private link below to create your personal Wedding VIP password and access your Couples Portal, where you can design floor layouts, manage your guest list & RSVPs, view wedding packages, and chat directly with our venue team.\n\n${url}\n\nThis link is fixed to ${invitedEmail.value}. Do not forward it; invite additional people from the portal so each person has a separate account.\n\nWarm regards,\nThe Seven Paths Manor Team`;
+                        window.location.href = `mailto:${encodeURIComponent(invitedEmail.value)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                         onShowSuccess(`Opened your email app with ${ev.coupleName}'s invite.`);
                       }}
                       className="text-xs text-gray-600 hover:underline"
-                      title="Open default email app with pre-drafted Couples Portal invite link"
+                      title="Open default email app with pre-drafted personal account invite"
                     >
                       ✉️ Email invite
                     </button>
@@ -976,9 +1051,14 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                                     <button
                                       type="button"
                                       onClick={() => {
+                                        const email = normalizeEmail(g.email, { required: true });
+                                        if (!email.ok) {
+                                          onShowSuccess('Add a valid guest email before copying a personal account invite.');
+                                          return;
+                                        }
                                         const url = buildGuestInviteUrl(g.token!, ev.id);
                                         void navigator.clipboard?.writeText(url).then(
-                                          () => onShowSuccess(`Guest invite link copied for ${g.name}.`),
+                                          () => onShowSuccess(`Guest account invite link copied for ${g.name}.`),
                                           () => {},
                                         );
                                       }}
@@ -1216,6 +1296,20 @@ export function CoupleManagement({ config, venues, user, isAdmin, onShowSuccess 
                 {editEventId === ev.id && (
                   <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
                     <div className="text-xs font-medium text-gray-500">Edit event</div>
+                    <div>
+                      <label htmlFor={`edit-couple-email-${ev.id}`} className="block text-xs text-gray-500 mb-1">Primary couple email</label>
+                      <input
+                        id={`edit-couple-email-${ev.id}`}
+                        type="email"
+                        value={editForm.primaryEmail}
+                        onChange={(e) => setEditForm({ ...editForm, primaryEmail: e.target.value })}
+                        readOnly={Boolean(ev.primaryEmail)}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm ${ev.primaryEmail ? 'bg-gray-100 text-gray-600' : ''}`}
+                        placeholder="Required before sending a personal account invite"
+                        title={ev.primaryEmail ? 'The email is fixed to this personal account invitation.' : undefined}
+                        autoComplete="email"
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Start date</label>

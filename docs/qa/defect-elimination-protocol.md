@@ -26,9 +26,9 @@ The registry is the whole trick. "All the bugs" is unfalsifiable; "every one of 
 |---|---|
 | App source | ~97,160 lines (203 components / 65,934; 88 services / 9,690; 119 utils / 11,751; 20 hooks / 3,215) |
 | Type-blind zone (`@ts-nocheck`) | 24 files, **17,096 lines** — the largest known unknown-bug reservoir |
-| Database RPCs | 46 unique functions |
-| Edge Functions | 3 (`claim-venue-admin`, `geocode-venue`, `send-email`) |
-| Tables × roles (RLS proof matrix) | ~16 tables × 5 role classes (anon / guest-token / couple / venue / platform) |
+| Database RPCs | 46 at baseline; **57 after migration 0021** (#273 extension) |
+| Edge Functions | 3 at baseline; **4 after `claim-portal-invite`** (#273) |
+| Tables × roles (RLS proof matrix) | **30 current tables** × 5 role classes (anon / guest-token / couple / venue / platform) |
 | Largest, highest-density files | CouplesPortal 3,930 · GuestPortal 2,414 · StaffOperationsPanel 2,061 · FloorPlanCanvas 1,890 · UserManagement 1,825 |
 
 ## §2 The coverage registry (built in Phase 0)
@@ -36,7 +36,7 @@ The registry is the whole trick. "All the bugs" is unfalsifiable; "every one of 
 A single living file, `docs/qa/COVERAGE-REGISTRY.md`, with one row per unit of work and columns: **unit · surface type · status (open/visited/fixed/declined) · evidence (review #) · notes**. Rows:
 
 1. Each of the 24 `@ts-nocheck` files (Phase 1 units)
-2. Each of the 46 RPCs (Phase 2 units)
+2. Each RPC (46 at campaign baseline; 11 migration-0021 additions audited in #273; 57 current)
 3. Each table × role cell in the authz matrix (Phase 3)
 4. Each console screen/flow per console — platform, venue, couple, guest (Phase 4)
 5. Each Edge Function (input validation, auth, abuse limits, error contracts)
@@ -52,7 +52,7 @@ A single living file, `docs/qa/COVERAGE-REGISTRY.md`, with one row per unit of w
 
 **Phase 1 — De-blind the type surface (the biggest known reservoir).** One file per unit: remove `@ts-nocheck` → run `tsc` → **every type error is a candidate real bug to triage** (silent `undefined`, wrong field names, broken invariants) → fix → all gates → ratchet ceiling lowered by 1 → commit. 24 units, est. 8–12 sessions. The ratchet guarantees monotonic progress even if a session ends mid-phase.
 
-**Phase 2 — RPC-by-RPC logic audit (46 units).** Per function, a fixed checklist: input validation & length limits · authz derivation (never trust client claims) · row locking on read-modify-write · idempotency · error contract shape · grant hygiene (`revoke` from anon/authenticated where service-only) · audit-log coverage. Findings fixed same-unit when safe.
+**Phase 2 — RPC-by-RPC logic audit (46 baseline units + 11 migration-0021 extensions).** Per function, a fixed checklist: input validation & length limits · authz derivation (never trust client claims) · row locking on read-modify-write · idempotency · error contract shape · grant hygiene (`revoke` from anon/authenticated where service-only) · audit-log coverage. Findings fixed same-unit when safe.
 
 **Phase 3 — Authorization proof matrix (the security close-out).** Every table × role cell gets a verdict with live evidence. Anon column: already certified (Reviews #246/#247). Authenticated columns: executed via the E2E-harness pattern (sign-in + REST probes) and/or a disposable test project (§7 Q1 — this decision determines whether I can run these autonomously).
 
@@ -62,7 +62,7 @@ A single living file, `docs/qa/COVERAGE-REGISTRY.md`, with one row per unit of w
 
 **Phase 6 — Concurrency, soak & adversarial input.** Extend the existing probe-script pattern: concurrent writers per RPC, duplicate submissions, expired/malformed tokens, oversized payloads, unicode/emoji edge cases. Time-boxed fuzz of every externally-reachable input.
 
-**Phase 7 — Drift & config close-out.** Re-run the drift fingerprints (MIME, schema cache, grants) and reconcile live ↔ repo; document env-var expectations for all 3 Edge Functions.
+**Phase 7 — Drift & config close-out.** Re-run the drift fingerprints (MIME, schema cache, grants) and reconcile live ↔ repo; document env-var expectations for all 4 Edge Functions.
 
 ## §4 The unit loop (unchanged convention, made explicit)
 

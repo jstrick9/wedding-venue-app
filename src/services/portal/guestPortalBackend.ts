@@ -11,14 +11,13 @@ import { pullGuestPortalSnapshot, submitGuestPortalRsvp, isCoupleCloudEnabled } 
 /**
  * Guest-portal persistence/identity abstraction.
  *
- * The portal is public-facing (wedding guests are not authenticated users), so
- * the backend layer is a separate concern from the main app:
- *  - `local`    → identity + RSVP stored in localStorage (current behavior).
- *  - `supabase` → identity is verified server-side via the
- *    `get_guest_by_portal_token` RPC (security-definer, token hashed at rest),
- *    and RSVPs are submitted via the `submit_guest_rsvp` RPC. This moves the
- *    security boundary from the browser to the server, as RLS policies never
- *    grant anonymous guests broad table access.
+ * The guest portal uses its own auth surface, separate from venue/platform
+ * sessions:
+ *  - `local`    → historical compatibility; identity + RSVP use localStorage.
+ *  - `supabase` → newly issued per-couple invitations authenticate a personal
+ *    guest account before account-bound RPCs resolve identity or accept an RSVP.
+ *    Explicitly historical records can still use the token compatibility path;
+ *    RLS never grants guests broad table access.
  */
 
 export interface GuestPortalContext {

@@ -2,7 +2,7 @@
 
 Opening a venue-admin invite while signed in as the platform administrator
 blocked setup with “signed in as punistricker@gmail.com, but this invitation
-was issued to stricklandjoshua01@gmail.com.”
+was issued to [operator email redacted].”
 
 Those are two products and two emails. They must not share one Supabase
 session.
@@ -23,7 +23,7 @@ session.
 1. Hard-refresh `https://weddingvip.vercel.app/`
 2. Stay signed in as the platform administrator
 3. Open the newest `/i/va-…` link in the same browser
-4. Create (or sign in as) **stricklandjoshua01@gmail.com**
+4. Create (or sign in as) **[operator email redacted]**
 5. `#/platform-admin` should still be the platform account
 
 Migration **0015** is still required in the live SQL Editor for lookup/reissue.

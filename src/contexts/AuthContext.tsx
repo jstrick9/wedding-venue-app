@@ -172,16 +172,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (cancelled) return;
           setPlatformAuth(platform);
           setVenueAuth(venue);
-          const active = detectAuthSurface() === 'venue' ? venue : platform;
+          const detectedSurface = detectAuthSurface();
+          const active = detectedSurface === 'venue'
+            ? venue
+            : detectedSurface === 'platform'
+              ? platform
+              : null;
           if (active?.user) {
             applyCloudSession(active, setUser, setOrganizationId, setOrganizationSlug, setPlatformRole);
             if (venue?.organizationSlug) setActiveOrganizationSlug(venue.organizationSlug);
           } else {
             clearSession();
-            setOrganizationId(venue?.organizationId ?? null);
-            setOrganizationSlug(venue?.organizationSlug ?? null);
-            setActiveOrganizationSlug(venue?.organizationSlug ?? getActiveOrganizationSlug() ?? null);
-            setPlatformRole(platform?.platformRole ?? null);
+            if (detectedSurface === 'couple' || detectedSurface === 'guest') {
+              setOrganizationId(null);
+              setOrganizationSlug(null);
+              setActiveOrganizationSlug(null);
+              setPlatformRole(null);
+            } else {
+              setOrganizationId(venue?.organizationId ?? null);
+              setOrganizationSlug(venue?.organizationSlug ?? null);
+              setActiveOrganizationSlug(venue?.organizationSlug ?? getActiveOrganizationSlug() ?? null);
+              setPlatformRole(platform?.platformRole ?? null);
+            }
           }
         } catch {
           if (cancelled) return;
@@ -231,12 +243,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (!supabaseMode) return;
-    const active = surface === 'venue' ? venueAuth : platformAuth;
+    const active = surface === 'venue'
+      ? venueAuth
+      : surface === 'platform'
+        ? platformAuth
+        : null;
+    const portalSurface = surface === 'couple' || surface === 'guest';
     setUser(active?.user ?? null);
-    setOrganizationId(venueAuth?.organizationId ?? null);
-    setOrganizationSlug(venueAuth?.organizationSlug ?? null);
-    setPlatformRole(platformAuth?.platformRole ?? null);
-    if (venueAuth?.organizationSlug) setActiveOrganizationSlug(venueAuth.organizationSlug);
+    setOrganizationId(portalSurface ? null : venueAuth?.organizationId ?? null);
+    setOrganizationSlug(portalSurface ? null : venueAuth?.organizationSlug ?? null);
+    setPlatformRole(portalSurface ? null : platformAuth?.platformRole ?? null);
+    if (portalSurface) setActiveOrganizationSlug(null);
+    else if (venueAuth?.organizationSlug) setActiveOrganizationSlug(venueAuth.organizationSlug);
     setAuthSurface(surface);
   }, [supabaseMode, surface, platformAuth, venueAuth]);
 
@@ -545,12 +563,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return true;
   };
 
+  const portalSurface = surface === 'couple' || surface === 'guest';
   const activeUser = supabaseMode
-    ? ((surface === 'venue' ? venueAuth?.user : platformAuth?.user) ?? null)
+    ? (surface === 'venue'
+        ? venueAuth?.user ?? null
+        : surface === 'platform'
+          ? platformAuth?.user ?? null
+          : null)
     : user;
-  const activeOrganizationId = supabaseMode ? (venueAuth?.organizationId ?? null) : organizationId;
-  const activeOrganizationSlug = supabaseMode ? (venueAuth?.organizationSlug ?? null) : organizationSlug;
-  const activePlatformRole = supabaseMode ? (platformAuth?.platformRole ?? null) : platformRole;
+  const activeOrganizationId = supabaseMode
+    ? (portalSurface ? null : venueAuth?.organizationId ?? null)
+    : organizationId;
+  const activeOrganizationSlug = supabaseMode
+    ? (portalSurface ? null : venueAuth?.organizationSlug ?? null)
+    : organizationSlug;
+  const activePlatformRole = supabaseMode
+    ? (portalSurface ? null : platformAuth?.platformRole ?? null)
+    : platformRole;
   const isPlatformAdmin = activePlatformRole === 'platform_owner' || activePlatformRole === 'platform_admin';
   const isPlatformSupport = isPlatformAdmin || activePlatformRole === 'platform_support';
   const isAdmin = activeUser?.role === 'admin';

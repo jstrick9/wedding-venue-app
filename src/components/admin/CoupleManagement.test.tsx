@@ -41,6 +41,7 @@ describe('CoupleManagement - manual testing without external infrastructure', ()
     localStorage.clear();
     createCoupleEvent({
       coupleName: 'Elena & Marcus',
+      primaryEmail: 'elena.marcus@example.com',
       eventDate: '2026-11-20',
       guestCount: 150,
       availableSpaces: ['v1'],

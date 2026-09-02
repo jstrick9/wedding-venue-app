@@ -33,7 +33,7 @@ describe('signUpVenueAdminWithInvite', () => {
     vi.clearAllMocks();
     updateEq.mockResolvedValue({ error: null });
     getUser.mockResolvedValue({
-      data: { user: { id: 'user-1', email: 'stricklandjoshua01@gmail.com' } },
+      data: { user: { id: 'user-1', email: 'venue.owner@example.com' } },
       error: null,
     });
     getSession.mockResolvedValue({
@@ -53,43 +53,43 @@ describe('signUpVenueAdminWithInvite', () => {
 
   it('sets a new password on an existing venue account and accepts without creating an organization', async () => {
     claimMock.mockResolvedValue({
-      email: 'stricklandjoshua01@gmail.com',
+      email: 'venue.owner@example.com',
       existingUser: true,
       organizationId: 'org-1',
       organizationName: 'Seven Paths Manor',
       organizationSlug: 'seven-paths-manor',
     });
     signInWithPassword.mockResolvedValue({
-      data: { session: { access_token: 'tok' }, user: { id: 'user-1', email: 'stricklandjoshua01@gmail.com' } },
+      data: { session: { access_token: 'tok' }, user: { id: 'user-1', email: 'venue.owner@example.com' } },
       error: null,
     });
 
     const session = await signUpVenueAdminWithInvite({
-      email: 'stricklandjoshua01@gmail.com',
-      password: 'new-pass-123',
+      email: 'venue.owner@example.com',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
       inviteToken: 'va-abc123def4567890',
     });
 
     expect(claimMock).toHaveBeenCalledWith({
       token: 'va-abc123def4567890',
-      password: 'new-pass-123',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
     });
     expect(signInWithPassword).toHaveBeenCalledWith({
-      email: 'stricklandjoshua01@gmail.com',
-      password: 'new-pass-123',
+      email: 'venue.owner@example.com',
+      password: 'New-pass-123',
     });
     expect(signUp).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledWith('accept_venue_admin_invite', { p_token: 'va-abc123def4567890' });
     expect(session.organizationSlug).toBe('seven-paths-manor');
     expect(session.organizationId).toBe('org-1');
-    expect(session.user.email).toBe('stricklandjoshua01@gmail.com');
+    expect(session.user.email).toBe('venue.owner@example.com');
   });
 
   it('skips the client-side accept when the Edge Function already claimed atomically (0017)', async () => {
     claimMock.mockResolvedValue({
-      email: 'stricklandjoshua01@gmail.com',
+      email: 'venue.owner@example.com',
       existingUser: true,
       claimed: true,
       organizationId: 'org-1',
@@ -99,14 +99,14 @@ describe('signUpVenueAdminWithInvite', () => {
     signInWithPassword.mockResolvedValue({
       data: {
         session: { access_token: 'tok' },
-        user: { id: 'user-1', email: 'stricklandjoshua01@gmail.com' },
+        user: { id: 'user-1', email: 'venue.owner@example.com' },
       },
       error: null,
     });
 
     const session = await signUpVenueAdminWithInvite({
-      email: 'stricklandjoshua01@gmail.com',
-      password: 'new-pass-123',
+      email: 'venue.owner@example.com',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
       inviteToken: 'va-abc123def4567890',
     });
@@ -117,12 +117,12 @@ describe('signUpVenueAdminWithInvite', () => {
     expect(session.organizationId).toBe('org-1');
     expect(session.organizationSlug).toBe('seven-paths-manor');
     expect(session.accessToken).toBe('tok');
-    expect(session.user.email).toBe('stricklandjoshua01@gmail.com');
+    expect(session.user.email).toBe('venue.owner@example.com');
   });
 
   it('still runs the client-side accept when the claim was not atomic (pre-0017)', async () => {
     claimMock.mockResolvedValue({
-      email: 'stricklandjoshua01@gmail.com',
+      email: 'venue.owner@example.com',
       existingUser: false,
       claimed: false,
       organizationId: 'org-1',
@@ -132,14 +132,14 @@ describe('signUpVenueAdminWithInvite', () => {
     signInWithPassword.mockResolvedValue({
       data: {
         session: { access_token: 'tok' },
-        user: { id: 'user-1', email: 'stricklandjoshua01@gmail.com' },
+        user: { id: 'user-1', email: 'venue.owner@example.com' },
       },
       error: null,
     });
 
     const session = await signUpVenueAdminWithInvite({
-      email: 'stricklandjoshua01@gmail.com',
-      password: 'new-pass-123',
+      email: 'venue.owner@example.com',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
       inviteToken: 'va-abc123def4567890',
     });
@@ -156,8 +156,8 @@ describe('signUpVenueAdminWithInvite', () => {
     });
 
     await expect(signUpVenueAdminWithInvite({
-      email: 'stricklandjoshua01@gmail.com',
-      password: 'new-pass-123',
+      email: 'venue.owner@example.com',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
       inviteToken: 'va-abc123def4567890',
     })).rejects.toThrow(/claim-venue-admin function must be deployed/i);

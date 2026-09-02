@@ -1428,8 +1428,9 @@ opportunistic refactor of touched files · risk-density phase order.
 
 **Phases:** 0 registry (done) → 1 de-blind 24 @ts-nocheck files/17,096 lines
 (shared foundation first, then size-desc; ratchet ceiling must equal the
-open count) → 2 RPC audit (46, fixed checklist) → 3 authz matrix (29 tables
-× anon/guest/couple/venue/platform) → 4 console flow audit (4 consoles,
+open count) → 2 RPC audit (46 baseline; 57 after #273 extension, fixed
+checklist) → 3 authz matrix (30 current tables ×
+anon/guest/couple/venue/platform) → 4 console flow audit (4 consoles,
 giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drift.
 
 **Rules going forward:**
@@ -1445,9 +1446,41 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #273 (2026-09-02): PERSONAL INVITEE ACCOUNTS implemented and locally
+  verified; rollout pending. Venue, couple/collaborator, and guest invite
+  setup now shares an accessible live password UI (8–128, uppercase,
+  lowercase, number, non-whitespace special, match status, independent
+  reveal controls) and both claim Edge Functions enforce the same policy
+  before Auth creation. FINAL-SCAN P0: #272 had accidentally committed the
+  exact throwaway password used on the operator's existing venue-owner account,
+  plus the full consumed invite token/real email. Reported immediately; current
+  tree redacted and touched test data moved to example.com. Commit 5bbc774
+  remains in pushed history, but operator confirmed password reset on 2026-09-02,
+  so the old value is inert; do not rewrite shared history without approval.
+  Four new P1s were found/reported/fixed
+  in feature scope: (1) six alternate public RPC surfaces bypassed an initial account gate;
+  all 10 public token variants are now wrapped and internal implementations
+  are ACL-revoked, behavior-proven in PGlite; (2) claim TOCTOU allowed stale
+  pre-lock context, fixed by participant advisory lock + post-lock context
+  re-resolution; (3) portal routes shared venue Auth storage/context, fixed
+  with isolated couple/guest clients and null staff-derived context; (4)
+  mutable role-based primary identity/reissue could collapse co-owner tokens,
+  fixed with stable `primary-couple` identity and owner-only rotation. P2s:
+  failed logout local-token retention, broad unavailable-RPC downgrade, and
+  invalid/mutable invite-email identity all fixed+pinned. Migration 0021 adds
+  portal_accounts (Auth passwords only), safe mapping lifecycle, hash-refresh
+  trigger/backfill, historical no-email compatibility, and account gates.
+  `nanoid` 3.3.17→3.3.18 clears the audit. Gates: full Vitest 272 files pass,
+  4 skip / 1111 tests pass, 5 skip; focused 7/52; typecheck, strict unused,
+  lint (0 errors/27 baseline warnings), event lint, ratchet 0, both Deno
+  checks, PGlite migration/authz/ACL/race/cascade harness, audit 0, sequential
+  single+split builds and both budgets, diff/secret checks all pass. NO LIVE
+  MUTATIONS. Compatibility-safe rollout: migration 0021 → both claim
+  Functions → frontend; then request live URL + anon key + fresh email-backed
+  throwaway couple and guest invitations for live proof.
 - #272 (2026-09-02): LIVE E2E — journey 8.1 venue-admin claim COMPLETE.
   Operator pasted the board's pending invite (va-95a92153…, Seven Paths
-  Manor, owner role, invited email stricklandjoshua01@gmail.com — operator's
+  Manor, owner role, invited email [operator email redacted] — operator's
   OWN email, deviation logged, warned first). Ran the app's exact flow:
   context RPC ok:true → claim-venue-admin Edge Function → claimed:true,
   existingUser:true (0017 atomic: ownership + membership + invite
@@ -1458,8 +1491,9 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
   legitimate path), platform_* negative cells all 0 rows, invite consumed
   (context → not_found), REPLAY BLOCKED (2nd claim → 400 not_found).
   MUTATIONS LOGGED: invite consumed; password on the operator's existing
-  account reset to throwaway va8-1-RsY3sNRGa-cABr38 (chat-reported; operator
-  advised to reset); ownership/membership ensured; platform audit row.
+  account reset to a now-redacted throwaway value (#273 found that #272 had
+  accidentally committed it; operator confirmed a subsequent reset 2026-09-02);
+  ownership/membership ensured; platform audit row.
   Venue column now PARTIALLY live-proven; matrix sweep + platform column
   skipped by user choice (3.1 remainder). Transient credential files
   deleted post-probe. Remaining live: journeys 8.2–8.6 (need throwaway

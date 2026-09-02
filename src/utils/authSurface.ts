@@ -2,12 +2,14 @@ import { isPasswordResetPath, passwordResetSurfaceFromLocation } from './passwor
 import { shouldShowVenueAdminOnboarding } from './venueAdminInviteRoute';
 import { isStaffAcceptInvitePath } from './staffInviteRoute';
 
-export type AuthSurface = 'platform' | 'venue';
+export type AuthSurface = 'platform' | 'venue' | 'couple' | 'guest';
 
-export const AUTH_STORAGE_KEYS = {
+export const AUTH_STORAGE_KEYS: Record<AuthSurface, string> = {
   platform: 'wvip-auth-platform',
   venue: 'wvip-auth-venue',
-} as const;
+  couple: 'wvip-auth-couple',
+  guest: 'wvip-auth-guest',
+};
 
 export function isVenueStaffRoute(hash = ''): boolean {
   const route = (hash || '').split('?')[0];
@@ -41,12 +43,12 @@ export function detectAuthSurface(input: { hash?: string; pathname?: string } = 
     return 'venue';
   }
   const route = (hash || '').split('?')[0];
+  if (route.startsWith('#/couples-portal')) return 'couple';
+  if (route.startsWith('#/guest-portal')) return 'guest';
   if (
     isVenueStaffRoute(hash) ||
     route.startsWith('#/venue-login') ||
-    route.startsWith('#/accept-invite') ||
-    route.startsWith('#/couples-portal') ||
-    route.startsWith('#/guest-portal')
+    route.startsWith('#/accept-invite')
   ) {
     return 'venue';
   }

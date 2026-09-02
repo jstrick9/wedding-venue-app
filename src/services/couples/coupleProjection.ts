@@ -14,9 +14,11 @@ import { getCoupleRsvpSubmissionsForBackup } from './coupleRsvpService';
  * tables / `org_data` domains. Until this projection runs, those surfaces read 0
  * even when the venue workspace is full of couple activity (P0-2 / N-4 / P1-9).
  *
- * Tokens remain in the local/org_data couple guest records (the couple portal
- * UI needs the raw bearer token after hydration — see N-3). The relational
- * `guests.portal_token_hash` column stores only the SHA-256 hash.
+ * Invitation tokens remain in local/org_data guest records because the couple
+ * UI must copy and safely reissue invitation links. Account-required cloud RPCs
+ * require both the token and its bound guest JWT; explicitly historical records
+ * retain token compatibility. Relational `guests.portal_token_hash` stores only
+ * the SHA-256 hash.
  */
 
 export type ProjectedEventStatus = 'lead' | 'hold' | 'booked' | 'planning' | 'completed' | 'cancelled' | 'lost';

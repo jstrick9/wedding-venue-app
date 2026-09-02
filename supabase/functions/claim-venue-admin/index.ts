@@ -9,6 +9,7 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import { invitePasswordPolicyError } from '../_shared/passwordPolicy.ts';
 
 function corsHeadersFor(request: Request): Record<string, string> {
   const origin = request.headers.get('Origin') || '*';
@@ -136,9 +137,10 @@ serve(async (req) => {
     const token = String(payload.token || '').trim();
     const password = String(payload.password || '');
     const fullName = String(payload.fullName || '').trim();
-    if (!token || token.length < 16) return json({ error: 'invalid_token' }, 400);
-    if (password.length < 8) return json({ error: 'Password must be at least 8 characters.' }, 400);
-    if (!fullName) return json({ error: 'Enter your name.' }, 400);
+    if (!token || token.length < 16 || token.length > 512) return json({ error: 'invalid_token' }, 400);
+    const passwordError = invitePasswordPolicyError(password);
+    if (passwordError) return json({ error: passwordError }, 400);
+    if (!fullName || fullName.length > 200) return json({ error: 'Enter your name (200 characters or fewer).' }, 400);
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
 

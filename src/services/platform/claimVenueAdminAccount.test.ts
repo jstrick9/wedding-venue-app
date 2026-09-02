@@ -19,7 +19,7 @@ describe('claimVenueAdminAccount', () => {
       status: 200,
       json: async () => ({
         ok: true,
-        email: 'stricklandjoshua01@gmail.com',
+        email: 'venue.owner@example.com',
         existingUser: true,
         claimed: true,
         organizationId: 'org-1',
@@ -30,11 +30,11 @@ describe('claimVenueAdminAccount', () => {
 
     const result = await claimVenueAdminAccount({
       token: 'va-abc123def4567890',
-      password: 'new-pass-123',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
     });
 
-    expect(result.email).toBe('stricklandjoshua01@gmail.com');
+    expect(result.email).toBe('venue.owner@example.com');
     expect(result.existingUser).toBe(true);
     expect(result.claimed).toBe(true);
     expect(result.organizationSlug).toBe('seven-paths-manor');
@@ -44,7 +44,7 @@ describe('claimVenueAdminAccount', () => {
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({
       token: 'va-abc123def4567890',
-      password: 'new-pass-123',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
     });
   });
@@ -56,7 +56,7 @@ describe('claimVenueAdminAccount', () => {
       status: 200,
       json: async () => ({
         ok: true,
-        email: 'stricklandjoshua01@gmail.com',
+        email: 'venue.owner@example.com',
         existingUser: true,
         organizationId: 'org-1',
         organizationName: 'Seven Paths Manor',
@@ -66,11 +66,20 @@ describe('claimVenueAdminAccount', () => {
 
     const result = await claimVenueAdminAccount({
       token: 'va-abc123def4567890',
-      password: 'new-pass-123',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
     });
 
     expect(result.claimed).toBe(false);
+  });
+
+  it('rejects weak passwords before calling the claim function', async () => {
+    await expect(claimVenueAdminAccount({
+      token: 'va-abc123def4567890',
+      password: 'lowercase1!',
+      fullName: 'Joshua Strickland',
+    })).rejects.toThrow(/uppercase letter/i);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('explains a missing Edge Function so a reissue can still keep venue work', async () => {
@@ -82,7 +91,7 @@ describe('claimVenueAdminAccount', () => {
 
     await expect(claimVenueAdminAccount({
       token: 'va-abc123def4567890',
-      password: 'new-pass-123',
+      password: 'New-pass-123',
       fullName: 'Joshua Strickland',
     })).rejects.toThrow(CLAIM_FUNCTION_MISSING);
   });

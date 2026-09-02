@@ -54,7 +54,7 @@ describe('VenueAdminOnboarding venue-only claim', () => {
         organizationId: 'org-1',
         organizationName: 'Seven Paths Manor',
         organizationSlug: 'seven-paths-manor',
-        email: 'stricklandjoshua01@gmail.com',
+        email: 'venue.owner@example.com',
         role: 'owner',
         expiresAt: '2026-08-31T00:00:00.000Z',
       },
@@ -65,10 +65,17 @@ describe('VenueAdminOnboarding venue-only claim', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /claim seven paths manor's venue workspace/i })).toBeInTheDocument();
     });
-    expect(screen.getByLabelText(/invited email address/i)).toHaveValue('stricklandjoshua01@gmail.com');
+    expect(screen.getByLabelText(/invited email address/i)).toHaveValue('venue.owner@example.com');
     expect(screen.getByLabelText(/^new password$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm new password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /claim venue workspace/i })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: /password requirements/i })).toHaveTextContent(/at least 8 characters/i);
+    expect(screen.getByRole('list', { name: /password requirements/i })).toHaveTextContent(/uppercase letter/i);
+    expect(screen.getByRole('list', { name: /password requirements/i })).toHaveTextContent(/lowercase letter/i);
+    expect(screen.getByRole('list', { name: /password requirements/i })).toHaveTextContent(/one number/i);
+    expect(screen.getByRole('list', { name: /password requirements/i })).toHaveTextContent(/special character/i);
+    expect(screen.getByRole('button', { name: /show new password/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /show confirmed password/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /claim venue workspace/i })).toBeDisabled();
     expect(screen.getByText(/existing events, layouts, guests, and team work stay with seven paths manor/i)).toBeInTheDocument();
     expect(screen.queryByText(/venue setup uses the invited email/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/platform administration stays signed in separately/i)).not.toBeInTheDocument();
@@ -85,7 +92,7 @@ describe('VenueAdminOnboarding venue-only claim', () => {
         organizationId: 'org-1',
         organizationName: 'Seven Paths Manor',
         organizationSlug: 'seven-paths-manor',
-        email: 'stricklandjoshua01@gmail.com',
+        email: 'venue.owner@example.com',
         role: 'owner',
         expiresAt: '2026-08-31T00:00:00.000Z',
       },
@@ -95,7 +102,7 @@ describe('VenueAdminOnboarding venue-only claim', () => {
     render(<VenueAdminOnboarding token="va-abc123def4567890" />);
 
     expect(await screen.findByRole('button', { name: /claim venue workspace/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/invited email address/i)).toHaveValue('stricklandjoshua01@gmail.com');
+    expect(screen.getByLabelText(/invited email address/i)).toHaveValue('venue.owner@example.com');
     expect(screen.queryByText(/checking invitation/i)).not.toBeInTheDocument();
   });
 });

@@ -10,6 +10,7 @@ import { loadVersionedStorage, saveVersionedStorage } from '../../utils/storage'
 import { createOpaqueToken } from '../../utils/secureTokens';
 import { calculatePortalExpiry } from './accessLifecycle';
 import { getActiveOrganizationSlug } from '../platform/organizationContext';
+import { normalizeEmail } from '../../utils/contactQuality';
 
 const GUESTS_KEY = STORAGE_KEYS.COUPLE_GUESTS;
 const GUESTS_VERSION = STORAGE_VERSIONS.COUPLE_GUESTS;
@@ -100,6 +101,7 @@ export function addCoupleGuest(
     tokenIssuedAt: new Date().toISOString(),
     tokenExpiresAt: getCoupleEventExpiry(coupleEventId),
     allowPortalAccess: true,
+    personalAccountRequired: true,
   };
   const all = readGuests();
   const existing = all.filter((g) => g.id !== guest.id);
@@ -112,18 +114,34 @@ export function updateCoupleGuest(
   guestId: string,
   updates: Partial<GuestPortalGuestRecord>,
 ): void {
-  const all = readGuests().map((g) =>
-    g.id === guestId && guestBelongsToCouple(g, coupleEventId) ? { ...g, ...updates } : g,
-  );
+  const all = readGuests().map((guest) => {
+    if (guest.id !== guestId || !guestBelongsToCouple(guest, coupleEventId)) return guest;
+    const safeUpdates = { ...updates };
+    // A personal invitation's email is its durable Auth identity. Permit adding
+    // a missing address, but do not silently transfer an issued account by
+    // editing an existing one; that requires a dedicated administrative flow.
+    if (
+      guest.personalAccountRequired
+      && guest.email?.trim()
+      && safeUpdates.email !== undefined
+      && safeUpdates.email.trim().toLowerCase() !== guest.email.trim().toLowerCase()
+    ) {
+      delete safeUpdates.email;
+    }
+    return { ...guest, ...safeUpdates };
+  });
   writeGuests(all);
 }
 
 /** Rotate a guest link without deleting their guest record or RSVP history. */
 export function rotateCoupleGuestToken(coupleEventId: string, guestId: string): string | null {
+  const current = readGuests();
+  const invitedGuest = current.find((guest) => guest.id === guestId && guestBelongsToCouple(guest, coupleEventId));
+  if (!normalizeEmail(invitedGuest?.email, { required: true }).ok) return null;
   const nextToken = createOpaqueToken('guest');
   const issuedAt = new Date().toISOString();
   let changed = false;
-  const all = readGuests().map((guest) => {
+  const all = current.map((guest) => {
     if (guest.id !== guestId || !guestBelongsToCouple(guest, coupleEventId)) return guest;
     changed = true;
     return {
@@ -132,6 +150,7 @@ export function rotateCoupleGuestToken(coupleEventId: string, guestId: string): 
       tokenIssuedAt: issuedAt,
       tokenExpiresAt: getCoupleEventExpiry(coupleEventId),
       tokenRevokedAt: undefined,
+      personalAccountRequired: Boolean(guest.email?.trim()) || guest.personalAccountRequired,
     };
   });
   if (!changed) return null;
@@ -216,6 +235,7 @@ export function importCoupleGuests(
       tokenIssuedAt: new Date().toISOString(),
       tokenExpiresAt: getCoupleEventExpiry(coupleEventId),
       allowPortalAccess: true,
+      personalAccountRequired: true,
     }));
   writeGuests([...existing, ...added]);
   return added.length;

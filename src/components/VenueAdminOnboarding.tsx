@@ -7,6 +7,8 @@ import { withTimeout } from '../utils/withTimeout';
 import { getPublicVenueBranding } from '../services/platform/publicVenueService';
 import { setActiveOrganizationSlug } from '../services/platform/organizationContext';
 import { claimVenueWorkspaceTitle } from '../utils/claimVenueTitle';
+import { describePasswordPolicyError } from '../utils/passwordPolicy';
+import { InvitePasswordFields } from './InvitePasswordFields';
 import {
   applyLoginBranding,
   loginBackgroundStyle,
@@ -96,6 +98,12 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
 
   const invitedEmail = invite?.email.trim().toLowerCase();
   const venueName = invite?.organizationName?.trim() || '';
+  const passwordError = describePasswordPolicyError(form.password);
+  const claimDisabled =
+    state === 'saving'
+    || !form.fullName.trim()
+    || Boolean(passwordError)
+    || form.password !== form.confirmPassword;
 
   const finish = (organizationSlug?: string) => {
     setState('success');
@@ -127,9 +135,10 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
       setMessage(`Use the invited email address: ${invite.email}`);
       return;
     }
-    if (form.password.length < 8) {
+    const passwordError = describePasswordPolicyError(form.password);
+    if (passwordError) {
       setState('error');
-      setMessage('Password must be at least 8 characters.');
+      setMessage(passwordError);
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -184,22 +193,22 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
             <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-3">
               <div>
                 <label htmlFor="venue-admin-full-name" className="mb-1 block text-xs font-semibold text-gray-700">Full name</label>
-                <input id="venue-admin-full-name" value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="name" />
+                <input id="venue-admin-full-name" value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="name" maxLength={200} required />
               </div>
               <div>
                 <label htmlFor="venue-admin-email" className="mb-1 block text-xs font-semibold text-gray-700">Invited email address</label>
                 <input id="venue-admin-email" type="email" value={form.email} readOnly className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2.5 text-sm" autoComplete="email" />
                 <p className="mt-1 text-[11px] text-gray-500">This address is fixed to the invitation for {invite.organizationName}.</p>
               </div>
-              <div>
-                <label htmlFor="venue-admin-password" className="mb-1 block text-xs font-semibold text-gray-700">New password</label>
-                <input id="venue-admin-password" type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="new-password" />
-              </div>
-              <div>
-                <label htmlFor="venue-admin-confirm-password" className="mb-1 block text-xs font-semibold text-gray-700">Confirm new password</label>
-                <input id="venue-admin-confirm-password" type="password" value={form.confirmPassword} onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm" autoComplete="new-password" />
-              </div>
-              <button type="submit" disabled={state === 'saving'} className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:opacity-60" style={{ backgroundColor: chrome.primary, color: chrome.headerText }}>
+              <InvitePasswordFields
+                idPrefix="venue-admin"
+                password={form.password}
+                confirmPassword={form.confirmPassword}
+                onPasswordChange={(password) => setForm((current) => ({ ...current, password }))}
+                onConfirmPasswordChange={(confirmPassword) => setForm((current) => ({ ...current, confirmPassword }))}
+                disabled={state === 'saving'}
+              />
+              <button type="submit" disabled={claimDisabled} className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60" style={{ backgroundColor: chrome.primary, color: chrome.headerText }}>
                 {state === 'saving' ? 'Claiming venue…' : 'Claim Venue Workspace'}
               </button>
             </form>

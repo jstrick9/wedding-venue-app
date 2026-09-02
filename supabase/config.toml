@@ -1,5 +1,10 @@
 # Used by `supabase functions deploy`. Project ref is still passed with --project-ref.
-# Invitees hit claim-venue-admin with only the invite token (no signed-in JWT).
+# Invite claim endpoints run before the invitee has a signed-in JWT.
 
 [functions.claim-venue-admin]
+verify_jwt = false
+
+# Couple/collaborator/guest invitees are not authenticated until this function
+# creates their account. The high-entropy invite token is validated by RPC 0021.
+[functions.claim-portal-invite]
 verify_jwt = false

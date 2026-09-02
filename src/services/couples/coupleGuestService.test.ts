@@ -11,6 +11,7 @@ import {
   getCoupleIdFromLocation,
   setCouplePortalConfig,
   pushSharedConfigToCouples,
+  rotateCoupleGuestToken,
 } from './coupleGuestService';
 
 describe('coupleGuestService', () => {
@@ -36,12 +37,26 @@ describe('coupleGuestService', () => {
     expect(buildGuestInviteUrl(g.token!, 'e1')).toContain('couple=e1');
   });
 
-  it('updates and removes guests', () => {
+  it('adds a missing invite email once, then keeps the personal-account identity fixed', () => {
     const g = addCoupleGuest('e1', { name: 'Alice' });
+    expect(g.personalAccountRequired).toBe(true);
     updateCoupleGuest('e1', g.id, { email: 'alice@x.com' });
+    expect(getCoupleGuests('e1')[0].email).toBe('alice@x.com');
+    updateCoupleGuest('e1', g.id, { email: 'someone-else@x.com' });
     expect(getCoupleGuests('e1')[0].email).toBe('alice@x.com');
     removeCoupleGuest('e1', g.id);
     expect(getCoupleGuests('e1')).toHaveLength(0);
+  });
+
+  it('requires a valid email before a personal guest invite can be reissued', () => {
+    const noEmail = addCoupleGuest('e1', { name: 'No Email' });
+    expect(rotateCoupleGuestToken('e1', noEmail.id)).toBeNull();
+
+    updateCoupleGuest('e1', noEmail.id, { email: 'guest@example.com' });
+    const oldToken = getCoupleGuests('e1')[0].token;
+    const nextToken = rotateCoupleGuestToken('e1', noEmail.id);
+    expect(nextToken).toBeTruthy();
+    expect(nextToken).not.toBe(oldToken);
   });
 
   it('imports guests from CSV-style rows', () => {

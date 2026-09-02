@@ -1,4 +1,5 @@
 import { isSupabaseConfigured } from '../backend/supabaseClient';
+import { describePasswordPolicyError } from '../../utils/passwordPolicy';
 
 export const CLAIM_VENUE_ADMIN_FUNCTION = 'claim-venue-admin';
 
@@ -49,9 +50,10 @@ export async function claimVenueAdminAccount(params: {
   const token = params.token.trim();
   const password = params.password;
   const fullName = params.fullName.trim();
-  if (!token) throw new Error('This setup link is missing or incomplete.');
-  if (password.length < 8) throw new Error('Password must be at least 8 characters.');
-  if (!fullName) throw new Error('Enter your name.');
+  if (token.length < 16 || token.length > 512) throw new Error('This setup link is missing or incomplete.');
+  const passwordError = describePasswordPolicyError(password);
+  if (passwordError) throw new Error(passwordError);
+  if (!fullName || fullName.length > 200) throw new Error('Enter your name (200 characters or fewer).');
 
   const anonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY || '');
   let response: Response;

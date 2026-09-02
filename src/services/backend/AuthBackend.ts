@@ -3,6 +3,7 @@ import type { AuthSurface } from '../../utils/authSurface';
 import type { PlatformRole } from '../platform/platformTypes';
 import { claimVenueAdminAccount, isClaimFunctionMissingError } from '../platform/claimVenueAdminAccount';
 import { buildPasswordResetRedirectUrl, type PasswordResetSurface } from '../../utils/passwordResetRoute';
+import { describePasswordPolicyError } from '../../utils/passwordPolicy';
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
 export interface BackendAuthSession {
@@ -359,6 +360,8 @@ export async function signUpVenueAdminWithInvite({
   fullName,
   inviteToken,
 }: VenueAdminInviteSignUpParams): Promise<BackendAuthSession> {
+  const passwordError = describePasswordPolicyError(password);
+  if (passwordError) throw new Error(passwordError);
   try {
     const prepared = await claimVenueAdminAccount({
       token: inviteToken,

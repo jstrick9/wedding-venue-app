@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectAuthSurface, isVenueStaffRoute, surfacesForLegacySession } from './authSurface';
+import { AUTH_STORAGE_KEYS, detectAuthSurface, isVenueStaffRoute } from './authSurface';
 
 describe('authSurface', () => {
   it('keeps platform console and login on the platform surface', () => {
@@ -9,7 +9,17 @@ describe('authSurface', () => {
     expect(detectAuthSurface({ hash: '', pathname: '/reset/platform' })).toBe('platform');
   });
 
-  it('keeps venue workspace, venue login, and invite links on the venue surface', () => {
+  it('isolates couple and guest portal sessions from staff authentication', () => {
+    expect(detectAuthSurface({ hash: '#/couples-portal?token=cp-secret', pathname: '/' })).toBe('couple');
+    expect(detectAuthSurface({ hash: '#/guest-portal?token=guest-secret', pathname: '/' })).toBe('guest');
+    expect(new Set(Object.values(AUTH_STORAGE_KEYS)).size).toBe(4);
+    expect(AUTH_STORAGE_KEYS.couple).not.toBe(AUTH_STORAGE_KEYS.venue);
+    expect(AUTH_STORAGE_KEYS.guest).not.toBe(AUTH_STORAGE_KEYS.venue);
+    expect(isVenueStaffRoute('#/couples-portal')).toBe(false);
+    expect(isVenueStaffRoute('#/guest-portal')).toBe(false);
+  });
+
+  it('keeps venue workspace, venue login, and staff invite links on the venue surface', () => {
     expect(detectAuthSurface({ hash: '#/home', pathname: '/' })).toBe('venue');
     expect(detectAuthSurface({ hash: '#/admin/venues', pathname: '/' })).toBe('venue');
     expect(detectAuthSurface({ hash: '#/venue-login/seven-paths-manor', pathname: '/' })).toBe('venue');

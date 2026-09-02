@@ -19,7 +19,7 @@ describe('CouplesPortal flushes a pending debounced cloud save on unmount (F-264
   const src = readFileSync(join(process.cwd(), 'src/components/CouplesPortal.tsx'), 'utf8');
 
   it('cleanup flushes the pending save instead of only clearing the timer', () => {
-    const cleanup = /return \(\) => \{[\s\S]*?\}, \[cloudToken, event\?\.id, session\?\.eventId, venueSlug\]\);/.exec(src)?.[0] ?? '';
+    const cleanup = /return \(\) => \{[\s\S]*?\}, \[cloudAccountInvite, cloudToken, event\?\.id, portalAccountAccess, session\?\.eventId, venueSlug\]\);/.exec(src)?.[0] ?? '';
     expect(cleanup).not.toBe('');
     // The timer clear and the flush must live inside the same cleanup block.
     expect(cleanup).toMatch(/if \(cloudSaveTimerRef\.current\) \{\s*clearTimeout\(cloudSaveTimerRef\.current\);\s*void pushLocalSnapshot\(\);/);

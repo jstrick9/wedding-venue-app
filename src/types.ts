@@ -960,6 +960,8 @@ export interface GuestPortalGuestRecord extends Guest {
   tokenIssuedAt?: string;
   tokenExpiresAt?: string;
   tokenRevokedAt?: string;
+  /** New invitations require a bound personal Auth account; absent on historical token-only links. */
+  personalAccountRequired?: boolean;
 }
 
 // ── Couples / Events platform ────────────────────────────────────────────────
@@ -977,11 +979,13 @@ export interface CoupleCollaborator {
   name: string;
   email: string;
   role: CoupleCollaboratorRole;
-  /** Opaque token used to access the couples portal for this collaborator. */
+  /** Opaque invitation secret paired with this collaborator's personal account. */
   inviteToken: string;
   inviteIssuedAt?: string;
   inviteExpiresAt?: string;
   revokedAt?: string;
+  /** New invitations require a bound personal Auth account; absent on historical token-only links. */
+  personalAccountRequired?: boolean;
   accepted?: boolean;
   invitedAt: string;
 }
@@ -1031,6 +1035,10 @@ export interface CoupleLayoutReview {
 export interface CoupleEvent {
   id: string;
   coupleName: string;
+  /** Fixed email used by the primary couple's personal invite account. */
+  primaryEmail?: string;
+  /** New invitations require a bound personal Auth account; absent on historical token-only links. */
+  personalAccountRequired?: boolean;
   /** Token embedded in the venue→couple invitation link. */
   inviteToken: string;
   /** When the current couple token was issued. */

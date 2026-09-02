@@ -1,5 +1,5 @@
 // src/components/GuestPortal.tsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SafeImage from './SafeImage';
 import { showToast } from './Toast';
 
@@ -85,6 +85,9 @@ import {
 import { VenueMapCanvas } from './VenueMapCanvas';
 import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
 import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
+import { PortalInviteAccountSetup } from './PortalInviteAccountSetup';
+import { signOutPortalAccount, type PortalInviteContext } from '../services/portal/portalInviteAccount';
+import { setActiveOrganizationSlug } from '../services/platform/organizationContext';
 import {
   guestCanAccessLodging,
   guestCanAccessPortal,
@@ -115,9 +118,40 @@ interface PortalData {
 
 const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, venueSlug, onExitPortal, preview = false }) => {
   const isPreview = preview;
+  const guestInviteTokenRef = useRef(guestToken);
+  if (guestToken) guestInviteTokenRef.current = guestToken;
+  const accountInviteToken = guestInviteTokenRef.current;
+  const cloudAccountInvite =
+    !isPreview
+    && isCoupleCloudEnabled()
+    && Boolean(coupleEventId)
+    && Boolean(accountInviteToken);
+  const [portalAccountAccess, setPortalAccountAccess] = useState<'pending' | 'ready' | 'legacy'>(
+    () => cloudAccountInvite ? 'pending' : 'legacy',
+  );
+  const handlePortalAccountReady = useCallback((context: PortalInviteContext) => {
+    if (context.organizationSlug) setActiveOrganizationSlug(context.organizationSlug);
+    setPortalAccountAccess('ready');
+  }, []);
+  const handleLegacyPortalInvite = useCallback(() => setPortalAccountAccess('legacy'), []);
+  const handlePortalExit = useCallback(() => {
+    clearGuestPortalSession();
+    if (cloudAccountInvite) {
+      setActiveOrganizationSlug(null);
+      void signOutPortalAccount('guest')
+        .catch(() => undefined)
+        .then(onExitPortal);
+      return;
+    }
+    onExitPortal();
+  }, [cloudAccountInvite, onExitPortal]);
   const localVenueConfig = useBrandingConfig();
   const [publicVenueConfig, setPublicVenueConfig] = useState<typeof localVenueConfig | null>(null);
   const venueConfig = publicVenueConfig || localVenueConfig;
+
+  useEffect(() => {
+    setPortalAccountAccess(cloudAccountInvite ? 'pending' : 'legacy');
+  }, [accountInviteToken, cloudAccountInvite]);
 
   useEffect(() => {
     if (!venueSlug) return;
@@ -170,7 +204,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
   // On a separate device the browser has no local CoupleEvent/guest record.
   // Hydrate the public, token-validated snapshot before relying on localStorage.
   useEffect(() => {
-    if (!isCoupleCloudEnabled() || !isCouplePortal || !coupleEventId || !guestToken) return;
+    if (cloudAccountInvite && portalAccountAccess === 'pending') return;
+    if (!isCoupleCloudEnabled() || !isCouplePortal || !coupleEventId || !accountInviteToken) return;
     let cancelled = false;
     // In-flight guard (Review #245 P1-A): if a pull stalls, skip ticks instead
     // of stacking another anonymous RPC every 5 seconds. The client-level fetch
@@ -181,7 +216,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       if (pulling) return;
       pulling = true;
       try {
-        const remote = await pullGuestPortalSnapshot(coupleEventId, guestToken, venueSlug);
+        const remote = await pullGuestPortalSnapshot(coupleEventId, accountInviteToken, venueSlug);
         if (!remote || cancelled || !remote.guest) return;
         const remoteEvent = remote.event?.find((candidate) => candidate.id === coupleEventId);
         const remoteConfig = remote.portalConfig?.[coupleEventId]
@@ -189,12 +224,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
           || null;
         const guest = {
           ...(remote.guest as unknown as GuestPortalGuestRecord),
-          token: guestToken,
+          token: accountInviteToken,
           eventName: coupleEventId,
           eventKey: coupleEventId,
           allowPortalAccess: true,
         };
-        const rsvp = remote.rsvp ? { ...remote.rsvp, token: guestToken } : undefined;
+        const rsvp = remote.rsvp ? { ...remote.rsvp, token: accountInviteToken } : undefined;
         if (remote.venueMap !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_MAP_CONFIGS, STORAGE_VERSIONS.VENUE_MAP_CONFIGS, remote.venueMap);
         if (remote.venueRules !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_RULES, STORAGE_VERSIONS.VENUE_RULES, remote.venueRules);
         if (remote.venueWeather !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_WEATHER, STORAGE_VERSIONS.VENUE_WEATHER, remote.venueWeather);
@@ -226,7 +261,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         setIsAuthed(true);
         setActiveEventName(remoteConfig?.eventTitle || coupleEventId);
         setResolvedGuestId(guest.id);
-        saveGuestPortalSession(remoteConfig, guestToken, remoteConfig?.eventTitle || coupleEventId, guest.id, coupleEventId);
+        saveGuestPortalSession(remoteConfig, accountInviteToken, remoteConfig?.eventTitle || coupleEventId, guest.id, coupleEventId);
       } catch (err) {
         // F-268-1 (Review #268): the RPC (or its fetch deadline) rejects on
         // network failure/stall — try/finally alone turned that into an
@@ -244,7 +279,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       cancelled = true;
       window.clearInterval(poll);
     };
-  }, [coupleEventId, guestToken, isCouplePortal, venueSlug]);
+  }, [accountInviteToken, cloudAccountInvite, coupleEventId, isCouplePortal, portalAccountAccess, venueSlug]);
 
   useEffect(() => {
     try {
@@ -266,10 +301,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
 
       if (loadedConfig && isGuestPortalEventActive(loadedConfig)) {
         const session = loadGuestPortalSession(loadedConfig, loadedConfig.eventTitle, coupleEventId);
-        // Auto-authenticate a guest who opened their invite link (guestToken) — the token
-        // identifies them, so they shouldn't need to re-enter their name.
-        const tokenGuest = guestToken
-          ? getCoupleGuests(coupleEventId || '').find((g) => g.token === guestToken && isPortalAccessActive(g.tokenExpiresAt))
+        // Historical/local compatibility: the token identifies the guest without
+        // re-entering a name. In cloud mode the personal-account gate renders
+        // first and backend RPCs still require the bound JWT.
+        const tokenGuest = accountInviteToken
+          ? getCoupleGuests(coupleEventId || '').find((g) => g.token === accountInviteToken && isPortalAccessActive(g.tokenExpiresAt))
           : undefined;
         if (session || tokenGuest) {
           setIsAuthed(true);
@@ -278,7 +314,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
             setResolvedGuestId(session.guestId || null);
           } else if (tokenGuest) {
             setResolvedGuestId(tokenGuest.id);
-            saveGuestPortalSession(loadedConfig, guestToken, loadedConfig.eventTitle, tokenGuest.id, coupleEventId);
+            saveGuestPortalSession(loadedConfig, accountInviteToken, loadedConfig.eventTitle, tokenGuest.id, coupleEventId);
           }
           setEventInput(loadedConfig.eventTitle || '');
         } else {
@@ -422,12 +458,12 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       return scopedGuests.find((g) => g.id === resolvedGuestId);
     }
 
-    if (guestToken) {
-      return scopedGuests.find((g) => g.token === guestToken);
+    if (accountInviteToken) {
+      return scopedGuests.find((g) => g.token === accountInviteToken);
     }
 
     return undefined;
-  }, [resolvedGuestId, guestToken, scopedGuests]);
+  }, [accountInviteToken, resolvedGuestId, scopedGuests]);
 
   const guestRSVP = useMemo(() => {
     if (!identifiedGuest) return undefined;
@@ -2012,7 +2048,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         <header className="px-4 pt-4 pb-2 flex items-center justify-between bg-white/60 backdrop-blur-sm border-b border-[var(--accent-light)]">
           <button
             type="button"
-            onClick={onExitPortal}
+            onClick={handlePortalExit}
             className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2 transition-colors"
             aria-label="Return to login screen"
           >
@@ -2165,9 +2201,37 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
     );
   };
 
-  // FIX: Show the sign-in gate first so guests always have a form to interact with.
-  // Config / activity errors are surfaced as form-level messages in handleGuestPortalSignIn.
-  // In preview mode the gate is skipped so the couple can see the portal as a visitor.
+  // Personal-account invites must authenticate before token-backed guest data is
+  // hydrated. Older deployments fall back to the historical sign-in gate until
+  // migration 0021 and the claim function are available together.
+  if (cloudAccountInvite && portalAccountAccess === 'pending' && accountInviteToken) {
+    return (
+      <PortalInviteAccountSetup
+        kind="guest"
+        token={accountInviteToken}
+        coupleId={coupleEventId}
+        venueSlug={venueSlug}
+        branding={venueConfig}
+        onAuthenticated={handlePortalAccountReady}
+        onLegacyInvite={handleLegacyPortalInvite}
+        onExit={handlePortalExit}
+      />
+    );
+  }
+
+  if (cloudAccountInvite && portalAccountAccess === 'ready' && !identifiedGuest) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-lg">
+          <div className="text-4xl animate-pulse">💌</div>
+          <p className="mt-3 text-sm font-semibold text-gray-700">Opening your Guest Portal…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // FIX: Show the historical sign-in gate first so legacy guests always have a
+  // form to interact with. Preview mode bypasses it for the couple's preview.
   if (needsEventScopedSignIn && !isPreview) {
     return renderSignInGate();
   }
@@ -2183,7 +2247,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
           </p>
           <button
             type="button"
-            onClick={onExitPortal}
+            onClick={handlePortalExit}
             className="mt-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
           >
             Return to Login
@@ -2206,7 +2270,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
           </p>
           <button
             type="button"
-            onClick={onExitPortal}
+            onClick={handlePortalExit}
             className="mt-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm"
           >
             Return to Login
@@ -2241,7 +2305,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       <header className="sticky top-0 z-10 px-4 pt-3 pb-3 flex items-center justify-between bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <button
           type="button"
-          onClick={onExitPortal}
+          onClick={handlePortalExit}
           className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 transition-colors"
           aria-label="Return to login screen"
         >

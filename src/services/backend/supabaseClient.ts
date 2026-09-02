@@ -116,7 +116,7 @@ function findLegacySupabaseAuthKey(): string | null {
   for (let i = 0; i < localStorage.length; i += 1) {
     const key = localStorage.key(i);
     if (!key) continue;
-    if (key === AUTH_STORAGE_KEYS.platform || key === AUTH_STORAGE_KEYS.venue) continue;
+    if (Object.values(AUTH_STORAGE_KEYS).includes(key)) continue;
     if (key.startsWith('sb-') && key.endsWith('-auth-token')) return key;
   }
   return null;

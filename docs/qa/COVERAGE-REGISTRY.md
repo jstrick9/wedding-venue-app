@@ -39,9 +39,9 @@ Order: shared foundation first, then by size (bug density). Every unit: remove `
 | 1.23 | components/admin/SeatingAndLinensManagement.tsx | 55 | done | #249 typed, no defects |
 | 1.24 | components/admin/StructuresManagement.tsx | 51 | done | #249 typed, no defects |
 
-## B. Phase 2 — RPC audit (46 functions)
+## B. Phase 2 — RPC audit (57 functions after migration 0021)
 
-**Phase 2 progress: 46/46 — COMPLETE (#261). Migrations 0018 + 0019 + 0020 APPLIED and LIVE-VERIFIED (#271): *_unchecked revoked (42501) / dropped (PGRST202), geocode slot anon-denied with no slot acquired, audit_logs anon INSERT flipped 23502→42501 (F-262-1 closed live); full anon-surface regression pass green.**
+**Phase 2 progress: original 46/46 — COMPLETE (#261). Migrations 0018 + 0019 + 0020 APPLIED and LIVE-VERIFIED (#271). Migration 0021 adds 11 account-binding/internal-wrapper functions; all 11 audited and behavior-verified locally (#273), with live deployment pending. Current finite inventory: 57/57 examined.**
 
 Per unit checklist: input validation/limits · authz derivation · row locking on read-modify-write · idempotency · error contract · grant hygiene · audit coverage. (`*` = service-only or trigger/internal — checklist applies with "who can call it" as the first question.)
 
@@ -93,10 +93,21 @@ Per unit checklist: input validation/limits · authz derivation · row locking o
 | 2.44 | upsert_couple_portal_snapshot | done | #261: clean — role-gated venue writer, hashed tokens, idempotent upsert; P4 unbounded payload declined |
 | 2.45 | upsert_platform_branding | done | #261: clean — is_platform_admin gate, audit row w/ payload |
 | 2.46 | venue_admin_claim_gate * | done | #261 residual: clean — lock check only, no writes, service-only |
+| 2.47 | refresh_couple_portal_invite_hashes * | done (local; live pending) | #273: trigger-only hash refresh + backfill; internal execute revoked; keeps primary/collaborator hashes synchronized after every payload write |
+| 2.48 | get_portal_invite_context | done (local; live pending) | #273: bounded token/context lookup; minimal fields only; expiry/revocation/org gates; durable account identity wins over stale snapshot email |
+| 2.49 | accept_portal_invite_internal * | done (local; live pending) | #273: service/internal only; participant advisory lock + post-lock context re-resolution; canonical email and existing-account conflict checks; direct client execute revoked |
+| 2.50 | accept_portal_invite | done (local; live pending) | #273: authenticated wrapper derives `auth.uid()` + JWT email; delegates atomically; anonymous claim cannot call it |
+| 2.51 | claim_portal_invite_account * | done (local; live pending) | #273: service-role wrapper for newly created Auth users; same locked transaction; direct anon/authenticated execute revoked |
+| 2.52 | get_couple_portal_snapshot_token_impl * | done (local; live pending) | #273: renamed historical token implementation; callable only through account-aware public wrapper; PUBLIC/anon/authenticated execute revoked |
+| 2.53 | save_couple_portal_snapshot_token_impl * | done (local; live pending) | #273: preserves #258 CAS writer behind account-aware wrapper; direct execute revoked |
+| 2.54 | get_guest_couple_portal_snapshot_token_impl * | done (local; live pending) | #273: historical compatibility implementation behind account-aware wrapper; direct execute revoked |
+| 2.55 | submit_guest_couple_rsvp_token_impl * | done (local; live pending) | #273: historical compatibility implementation behind account-aware wrapper; direct execute revoked |
+| 2.56 | get_guest_by_portal_token_token_impl * | done (local; live pending) | #273: relational token implementation gated by account-aware public function; direct execute revoked |
+| 2.57 | submit_guest_rsvp_token_impl * | done (local; live pending) | #273: locked/validated relational RSVP implementation gated by account-aware public function; direct execute revoked |
 
-## C. Phase 3 — authorization proof matrix (29 tables × 5 role classes)
+## C. Phase 3 — authorization proof matrix (30 tables × 5 role classes after migration 0021)
 
-**Method (#262):** anon column live-proven with the publishable key (GET sweep + INSERT `{}` discriminator + trigger interplay); guest/couple are anon at the Postgres level, so direct access inherits the anon denial and their data flows only through the token-gated security-definer RPCs audited in Phase 2 (#258); venue/platform columns are **policy-derived** from the full migration policy inventory (#262) — live sign-in proof pending request 3.1. Verdicts: `certified` (live evidence) / `policy` (derived from the inventory, live proof pending) / `n-a`.
+**Method (#262/#273):** the 29-table deployed schema anon column was live-proven with the publishable key; guest/couple data uses security-definer RPCs. Migration 0021 adds `portal_accounts` as table 30 and account-aware wrappers; its policy/ACL behavior is PGlite-proven locally (#273) but not live until rollout. Venue/platform cells otherwise remain policy-derived except the #272 live venue-claim coverage. Verdicts: `certified` (live evidence) / `policy` (derived from inventory, live proof pending) / `n-a`.
 
 Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived · `svc` = service-role only (no policies → deny-all for client roles).
 
@@ -121,6 +132,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | platform_memberships | certified #246 + live re-proven #262 | n-a | n-a | n-a | pol: self select; admin all |
 | platform_settings | live: denied | pol: public branding via get_public_platform_branding only | n-a | n-a | pol: admin select/all |
 | platform_venue_messages | live: denied (INS reached trigger → P0001 raise; policy also requires auth.uid sender) | n-a | n-a | pol: member select + trigger-derived sender_side insert | pol: admin select/update; platform-side insert |
+| portal_accounts *(0021 pending live)* | local #273: table denied; internal RPC ACLs deny anon | pol: authenticated invitee selects own mapping only | pol: authenticated invitee selects own mapping only | pol: owner/admin/planner select in own org | denied unless separately an org member |
 | profiles | live: denied | n-a | n-a | pol: self + same-org select; self insert/update | pol: admin select |
 | rsvp_submissions | live: denied | RPC-only (#258): own submission, locked+validated | RPC-only (#258): snapshot submissions | pol: member select/insert; owner/admin/planner update | n-a |
 | staff_tasks | live: denied | n-a | n-a | pol: member select; +staff manage | n-a |
@@ -132,7 +144,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | venue_geocode_rate | live: denied (no policies; slot via revoked RPC #261) | svc | svc | svc | svc |
 | venues | live: denied | n-a | n-a | pol: member select; owner/admin manage | n-a |
 
-**Phase 3 status:** anon column live-complete (29/29), re-verified post-migrations (#271); guest/couple derived-complete; venue column PARTIALLY LIVE-PROVEN via the 8.1 claim journey (#272: organizations/memberships/org_data/events member reads + audit_logs org-admin path + platform_* negatives); remaining venue cells + platform column policy-derived — matrix sweep skipped by operator choice (request 3.1 remainder not exercised). UPDATE/DELETE note: anon sees zero rows everywhere, so row-targeted writes are inert (204 no-ops on impossible filters, live-proven); all write policies additionally derive from auth.uid()/roles.
+**Phase 3 status:** deployed-schema anon column live-complete (29/29), re-verified post-migrations (#271); table 30 (`portal_accounts`) is locally behavior-proven and pending migration 0021 live deployment (#273). Guest/couple account gates are locally complete; venue column is PARTIALLY LIVE-PROVEN via journey 8.1 (#272); remaining venue cells + platform column are policy-derived because the matrix sweep was skipped by operator choice. UPDATE/DELETE note: anon saw zero rows on the deployed schema, so row-targeted writes were inert; all write policies additionally derive from `auth.uid()`/roles.
 
 ## D. Phase 4 — console flow audit
 
@@ -140,28 +152,29 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 |---|----------------|---------------|--------|
 | 4.1 | Platform console: venue create → invite → reissue → suspend/reactivate | PlatformAdminPortal, AdminPanel | open |
 | 4.2 | Platform console: metrics, branding, settings, chat | get_platform_console_metrics path | open |
-| 4.3 | Venue onboarding/claim (end-to-end) | VenueAdminOnboarding | harness ready (#248), run pending |
+| 4.3 | Venue onboarding/claim (end-to-end) | VenueAdminOnboarding | **complete live (#272); password-policy update local, rollout pending (#273)** |
 | 4.4 | Venue dashboard | VenueDashboard (957) | open (pairs with 1.7) |
 | 4.5 | Venue calendar | VenueCalendar (713) | open (pairs with 1.13) |
 | 4.6 | Venue chat | VenueChatPanel (595) | open (pairs with 1.16) |
 | 4.7 | Venue floor plan / layouts | FloorPlanCanvas (1890), layouts, layout_versions | **complete** | #267: deep flow pass — F-267-1 (P4) UndoRedoContext impure updaters fixed: nested setPast/setFuture/onRestore inside state updaters double-appended history under StrictMode (Ctrl+Z restored 2×/press, proven by behavioral test failing pre-fix); drag/pan/zoom state machine clean (conditional listeners, cursor-anchored zoom, clamped pan); one undo snapshot per drag + discrete nudge steps; coordinate math consistent; explicit-save model with dirty tracking + beforeunload guard + overwrite protection. Pinned by UndoRedoContext.strictmode.test.tsx (behavioral) |
 | 4.8 | Venue admin panels (19 management screens) | admin/* | open (pairs with A.2–A.6, A.8–A.12, A.14–A.19, A.23–A.24) |
 | 4.9 | Staff operations console: tasks/kanban, areas, shifts, BEO | StaffOperationsPanel (2061) | **complete** | #266: deep flow pass — F-266-1 (P4) import shape-validation fix (non-array tasks → garbage entries or TypeError crash on confirm), F-266-2/3 (P5) input reset + blob-URL revoke; CRUD gated+stamped, confirm dialogs live-array (no stale capture), shift conflicts warn-by-design, zero async surface, createObjectURL sweep 8/9 clean; VendorPanel (294 ln) triaged — effect-free, edit flow covered by VendorPanel.edit.test.tsx; timeline via useTimeline (triaged #263) |
-| 4.10 | Couple portal: view, RSVP, layout editor/preview | CouplesPortal (3930), CoupleLayoutEditor/Preview | **complete** | #263: F-263-1 fixed. #265: deep flow pass — lifecycle/logout state machine closed (URL token scrubbed on read; expiry can't oscillate); mutation→emit contract verified (auto-emit at storage layer, bypasses benign); guest CRUD/import/rotate clean; F-265-1 (P3) poll wiped portal-settings drafts every 5s FIXED+pinned |
-| 4.11 | Guest portal: view, submit RSVP | GuestPortal (2414) | **complete** | #263: F-263-1 fixed. #265: deep flow pass — F-265-2 (P3) poll reset in-progress RSVP answers (attending/plusOne/name) every 5s FIXED+pinned; RSVP submit validated+service-backed (Phase 2 RPC layer); prefill/memo chain stabilized; expiry + password gate covered by 8 dedicated test files |
+| 4.10 | Couple portal: view, RSVP, layout editor/preview | CouplesPortal (3930), CoupleLayoutEditor/Preview | **complete** | #263/#265 flow audit complete. #273: personal account gate, isolated Auth surface, stable primary identity, safe reissue, and ten-RPC account authorization added and locally pinned; live rollout pending |
+| 4.11 | Guest portal: view, submit RSVP | GuestPortal (2414) | **complete** | #263/#265 flow audit complete. #273: personal guest account gate, fixed invite email, isolated Auth, and account-bound snapshot/RSVP RPCs added and locally pinned; historical no-email compatibility retained; live rollout pending |
 | 4.12 | Auth/session lifecycle: sign-in, restore, sign-out, role routing | AuthBackend, session persistence | open |
 | 4.13 | Event-bus + store correctness (cross-console) | event bus, stores, hooks (20) | **complete** | #263: listener cleanup clean; hooks triaged; F-263-1 (P4) fixed. #264: 19 timer-cleanup sites swept (only real drop = F-264-1 (P4) debounced-save drop on unmount, FIXED+pinned); async pollers guarded (#245) except PlatformVenueChatPanel (P5 declined, self-healing); cross-tab store races none (storage-event refresh + server CAS). Closes 4.13 |
 | 4.14 | Unhandled rejections sweep (cross-cutting) | async surfaces codebase-wide | **complete** | #268: F-268-1 (P4) fixed — portal 5s pollers (try/finally w/o catch) + debounced save + unmount flush + public branding RPC all leaked unhandled rejections while offline (withTimeout REJECTS on stall); pulls catch quietly (retry built-in), save emits typed spm_cloud_sync_error (App toast), branding resolves null. 4 clean surfaces verified. Protocol checklist: cleanup/hooks/races/hotspots/rejections ALL done |
 | 4.15 | Optimistic-update rollback + state-machine completeness (protocol close) | async-mutating surfaces codebase-wide | **complete** | #269: F-269-1 (P3) fixed — guest RSVP cloud failure was false-success + silent swallow + 5s-poll wipe of the visible local copy; now emits typed spm_cloud_sync_error on both failure paths and the poll keeps the local RSVP when remote has none. All other surfaces verified pessimistic or local-first-with-error-events. PHASE 4 COMPLETE — every protocol item closed with evidence (#263–#269) |
 | 4.16 | Deferred P5 backlog cleanup | PlatformVenueMap, LodgingBuilder, portal chat cadence, misc | **complete** | #270: PlatformVenueMap selected-marker radius frozen at map-build (stale closure; effect rightly excludes selectedId to avoid rebuild-per-click freeze) — FIXED via markersRef + setRadius sync effect, pinned 4 tests. 4 remaining P5s formally declined with reasons (LodgingBuilder bounded drag, msgTick cadence, shift-time '' cosmetic, clipboard fallbacks). Phase 4 FULLY complete incl. backlog |
 
-## E. Edge Functions (3)
+## E. Edge Functions (4)
 
 | # | Function | Status | Notes |
 |---|----------|--------|-------|
-| 5.1 | claim-venue-admin | done (re-audit residual: input limits, abuse beyond token throttle) | #247/#248 |
+| 5.1 | claim-venue-admin | done; updated policy local, live redeploy pending | #247/#248; #273 shared server password policy + bounded token/name/password inputs |
 | 5.2 | geocode-venue | open | bearer-auth confirmed #246; validate inputs, rate limits, Geoapify error paths |
 | 5.3 | send-email | open | bearer-auth confirmed #246; abuse limits (spam via authenticated callers?) |
+| 5.4 | claim-portal-invite | done (local; live pending) | #273: token-context validation, shared password policy before Auth creation, existing-user no-reset path, transactional account bind, orphan cleanup, bounded inputs, CORS/config contract |
 
 ## F. Cross-cutting sweeps
 
@@ -180,18 +193,18 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 
 | # | Check | Status |
 |---|-------|--------|
-| 7.1 | Live schema fingerprint vs migrations 0001–0017 | open (0016/0017 applied 2026-08-31; full re-fingerprint pending) |
+| 7.1 | Live schema fingerprint vs migrations 0001–0021 | open (0018–0020 applied/live-verified #271; 0021 pending deployment #273; full re-fingerprint pending) |
 | 7.2 | Storage: MIME allowlist + per-bucket policies | certified #247 (public-branding); other buckets open |
-| 7.3 | Grants fingerprint (function execute grants vs intended callers) | open |
-| 7.4 | Edge Function env vars + CORS posture (known #245 note) | open |
+| 7.3 | Grants fingerprint (function execute grants vs intended callers) | open live; 0021 internal implementation ACLs behavior-proven locally #273 |
+| 7.4 | Edge Function env vars + CORS posture (known #245 note) | open overall; both unauthenticated claim Functions contract-checked #273 |
 
 ## H. E2E journeys (browser-level, after Phase 5 harness)
 
 | # | Journey | Status |
 |---|---------|--------|
 | 8.1 | Platform → create venue → invite → claim → first sign-in | **complete (live E2E)** | #272: operator-provided invite → context RPC → claim-venue-admin Edge Function (0017 atomic: ownership + membership + invite consumption + platform audit in one tx) → password sign-in → replay attempt correctly rejected. Venue-column cells live-proven: organizations (member scoping + owner_id transfer), organization_memberships, org_data member reads, audit_logs org-admin reads (0020 legit path); platform_* negative cells all 0 rows |
-| 8.2 | Claim → configure → couple portal publish → guest RSVP → venue sees submission | open |
-| 8.3 | Reissue invite → password reset → old sessions | open |
+| 8.2 | Claim → configure → couple portal publish → guest RSVP → venue sees submission | open; personal account implementation locally complete #273, fresh live artifacts needed |
+| 8.3 | Reissue invite → stable personal account → old token denied/current session evaluated | local contract complete #273; live journey pending |
 | 8.4 | Suspend venue → each console's behavior | open |
 | 8.5 | Concurrent RSVP race (two guests, one couple) | harness ready, run deferred #248 |
 | 8.6 | Guest token expiry / access window edges | open |
@@ -204,10 +217,13 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 
 | Artifact | Needed by | Status |
 |----------|-----------|--------|
-| 1 pending venue-admin invite → throwaway email (setup-link token pasted here) | Phase 3 venue column + journey 8.1 | **provided + consumed (#272)** — invite pointed at operator's own email (deviation logged); password reset to throwaway, operator advised to reset |
-| 2 guest-portal tokens for the same couple + its couple id | journey 8.5, C rows | requested |
+| Reset the #272 venue-owner account password | F-273-0 credential containment | **complete 2026-09-02** — operator confirmed reset; current tree redacted, consumed invite token and historical password are inert; history rewrite not attempted |
+| 1 pending venue-admin invite → throwaway email (setup-link token pasted here) | Phase 3 venue column + journey 8.1 | **provided + consumed (#272)** — invite pointed at operator's own email (deviation logged); password exposure contained in #273 |
+| 2 **email-backed, personal-account-marked** guest-portal invitations for the same throwaway couple + its couple id | journeys 8.2/8.5 + migration 0021 live proof | requested |
+| 1 fresh email-backed couple/collaborator invitation to a throwaway email | personal-account claim/reissue live proof (#273 / journeys 8.2–8.3) | requested after 0021 + both claim Functions deploy |
+| Live app URL + publishable/anon key (never service-role), supplied only for the verification session | post-0021 live probes | requested after deployment confirmation |
 | 1 second invite → second throwaway email (cross-user negative tests) | Phase 3 (negative cells) | later |
 | 1 throwaway venue you are willing to have suspended | 8.4 suspension paths | later |
 | 3.1 throwaway auth accounts for sign-in probes: (a) claim the row-1 invite with a throwaway sign-up (covers venue column + journey 8.1), (b) one plain fresh sign-up (negative cells + signup bootstrap flow), (c) platform_memberships row for account (a) or a third account — SQL script provided in #262 (covers platform column) | Phase 3 venue/platform columns live proof | requested (#262) |
 
-**Session state:** *none yet — no live sessions created by the campaign so far.*
+**Session state:** no credential files or authenticated browser sessions retained. #272 consumed one venue-admin invite and changed that existing account password as logged there; no #273 live mutation has occurred.
