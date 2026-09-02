@@ -17,6 +17,7 @@ This review stayed inside the requested invitation/account boundary. It did not 
 | F-273-6 | P2 | The undeployed-RPC compatibility check matched broad error text. Network/timeout failures mentioning the RPC path could be mistaken for “function absent.” | A transient backend failure could silently downgrade an account-required portal to the historical bearer-link path. |
 | F-273-7 | P2 | Newly issued/reissued invite tokens were not uniformly tied to a normalized, valid invitee email, and a claimed guest email could be edited in place. | Personal-account identity could be ambiguous or reissue could produce an invitation no account could safely claim. |
 | F-273-8 | P3 | `nanoid@3.3.17` was reported by `npm audit` as a high-severity dev-tool transitive dependency. | Build/test dependency exposure only; no runtime bundle impact. |
+| F-273-9 | **P2** | Post-push verification showed that the green Edge deployment workflow still enumerated only the three pre-existing Functions; it omitted new `claim-portal-invite`. | Backend rollout could appear successful while every new couple/guest account claim failed with a missing Function. |
 
 ## Remediation
 
@@ -96,6 +97,12 @@ Claim uses a participant-scoped PostgreSQL advisory transaction lock, including 
 - Admin-composed invitation mail is blocked when the target email is invalid.
 - `nanoid` was lockfile-updated to 3.3.18; `npm audit` now reports zero vulnerabilities.
 
+### 6. Release automation
+
+The Edge deployment workflow now explicitly deploys `claim-portal-invite` with `--no-verify-jwt`, matching the pre-auth invitation contract. Changes to `supabase/config.toml` also trigger that workflow. The Function contract test reads the production workflow and fails if the deploy command or config trigger disappears.
+
+The first workflow for commit `7a8b2ac` was green but did **not** deploy this new Function; that run is not counted as proof of portal-claim deployment. A follow-up workflow must complete before migration/frontend rollout.
+
 ## Preservation proof
 
 The migration adds account mappings and authorization wrappers; it does not rewrite wedding content. The hash backfill assigns each snapshot payload to itself solely to invoke the hash-refresh trigger. The PGlite harness loaded migrations through 0021 and verified:
@@ -114,8 +121,8 @@ No live project data was mutated during this review.
 
 | Gate | Result |
 |---|---|
-| Focused affected tests | **7 files / 52 tests passed** |
-| Full Vitest | **272 files passed, 4 skipped; 1111 tests passed, 5 skipped** |
+| Focused affected tests | feature pass **7 files / 52 tests**; final policy/account subset **7 files / 38 tests**; deployment contract **1 file / 4 tests** — all passed |
+| Full Vitest | **272 files passed, 4 skipped; 1112 tests passed, 5 skipped** |
 | TypeScript | `npm run typecheck` passed |
 | Strict production unused-locals audit | passed (`NO_UNUSED_PRODUCTION_ERRORS`) |
 | ESLint | passed with **0 errors / 27 pre-existing warnings** |

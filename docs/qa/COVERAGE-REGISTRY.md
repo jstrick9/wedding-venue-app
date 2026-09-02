@@ -174,7 +174,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | 5.1 | claim-venue-admin | done; updated policy local, live redeploy pending | #247/#248; #273 shared server password policy + bounded token/name/password inputs |
 | 5.2 | geocode-venue | open | bearer-auth confirmed #246; validate inputs, rate limits, Geoapify error paths |
 | 5.3 | send-email | open | bearer-auth confirmed #246; abuse limits (spam via authenticated callers?) |
-| 5.4 | claim-portal-invite | done (local; live pending) | #273: token-context validation, shared password policy before Auth creation, existing-user no-reset path, transactional account bind, orphan cleanup, bounded inputs, CORS/config contract |
+| 5.4 | claim-portal-invite | done (local; live deploy pending) | #273: token-context validation, shared password policy before Auth creation, existing-user no-reset path, transactional bind/orphan cleanup/bounds; F-273-9 fixed the initial workflow omission and added a deployment contract test |
 
 ## F. Cross-cutting sweeps
 

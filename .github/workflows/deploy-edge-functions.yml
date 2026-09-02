@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      - 'supabase/config.toml'
       - '.github/workflows/deploy-edge-functions.yml'
   workflow_dispatch:
 
@@ -78,3 +79,6 @@ jobs:
 
       - name: Deploy claim-venue-admin
         run: supabase functions deploy claim-venue-admin --use-api --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Deploy claim-portal-invite
+        run: supabase functions deploy claim-portal-invite --use-api --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID"

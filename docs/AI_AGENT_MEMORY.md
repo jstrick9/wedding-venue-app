@@ -1467,11 +1467,15 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
   mutable role-based primary identity/reissue could collapse co-owner tokens,
   fixed with stable `primary-couple` identity and owner-only rotation. P2s:
   failed logout local-token retention, broad unavailable-RPC downgrade, and
-  invalid/mutable invite-email identity all fixed+pinned. Migration 0021 adds
+  invalid/mutable invite-email identity all fixed+pinned. Post-push F-273-9
+  (P2): the green Edge workflow enumerated only the 3 old Functions and omitted
+  `claim-portal-invite`; fixed by an explicit no-JWT deploy step, config-path
+  trigger, and workflow contract test; follow-up deploy required. Migration 0021 adds
   portal_accounts (Auth passwords only), safe mapping lifecycle, hash-refresh
   trigger/backfill, historical no-email compatibility, and account gates.
-  `nanoid` 3.3.17→3.3.18 clears the audit. Gates: full Vitest 272 files pass,
-  4 skip / 1111 tests pass, 5 skip; focused 7/52; typecheck, strict unused,
+  `nanoid` 3.3.17→3.3.18 clears the audit. Final gates: full Vitest 272 files
+  pass, 4 skip / 1112 tests pass, 5 skip; feature focused 7/52, final
+  policy/account subset 7/38, deploy contract 1/4; typecheck, strict unused,
   lint (0 errors/27 baseline warnings), event lint, ratchet 0, both Deno
   checks, PGlite migration/authz/ACL/race/cascade harness, audit 0, sequential
   single+split builds and both budgets, diff/secret checks all pass. NO LIVE

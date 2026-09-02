@@ -5,11 +5,19 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 const source = read('supabase/functions/claim-portal-invite/index.ts');
 const config = read('supabase/config.toml');
+const deploymentWorkflow = read('.github/workflows/deploy-edge-functions.yml');
 
 describe('claim-portal-invite Edge Function contract', () => {
   it('allows an unauthenticated invitee to reach token validation', () => {
     expect(config).toMatch(/\[functions\.claim-portal-invite\]\s*verify_jwt = false/);
     expect(source).toContain("admin.rpc('get_portal_invite_context'");
+  });
+
+  it('is included in the production deployment workflow', () => {
+    expect(deploymentWorkflow).toContain("- 'supabase/config.toml'");
+    expect(deploymentWorkflow).toMatch(
+      /supabase functions deploy claim-portal-invite --use-api --no-verify-jwt --project-ref/,
+    );
   });
 
   it('never resets an existing global Auth identity from possession of an invite', () => {
