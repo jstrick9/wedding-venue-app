@@ -132,7 +132,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | venue_geocode_rate | live: denied (no policies; slot via revoked RPC #261) | svc | svc | svc | svc |
 | venues | live: denied | n-a | n-a | pol: member select; owner/admin manage | n-a |
 
-**Phase 3 status:** anon column live-complete (29/29) and now re-verified against the LIVE post-migration database (#271); guest/couple derived-complete; venue/platform policy-derived — **live sign-in proof pending request 3.1**. UPDATE/DELETE note: anon sees zero rows everywhere, so row-targeted writes are inert (204 no-ops on impossible filters, live-proven); all write policies additionally derive from auth.uid()/roles.
+**Phase 3 status:** anon column live-complete (29/29), re-verified post-migrations (#271); guest/couple derived-complete; venue column PARTIALLY LIVE-PROVEN via the 8.1 claim journey (#272: organizations/memberships/org_data/events member reads + audit_logs org-admin path + platform_* negatives); remaining venue cells + platform column policy-derived — matrix sweep skipped by operator choice (request 3.1 remainder not exercised). UPDATE/DELETE note: anon sees zero rows everywhere, so row-targeted writes are inert (204 no-ops on impossible filters, live-proven); all write policies additionally derive from auth.uid()/roles.
 
 ## D. Phase 4 — console flow audit
 
@@ -189,7 +189,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 
 | # | Journey | Status |
 |---|---------|--------|
-| 8.1 | Platform → create venue → invite → claim → first sign-in | harness ready, run deferred #248 |
+| 8.1 | Platform → create venue → invite → claim → first sign-in | **complete (live E2E)** | #272: operator-provided invite → context RPC → claim-venue-admin Edge Function (0017 atomic: ownership + membership + invite consumption + platform audit in one tx) → password sign-in → replay attempt correctly rejected. Venue-column cells live-proven: organizations (member scoping + owner_id transfer), organization_memberships, org_data member reads, audit_logs org-admin reads (0020 legit path); platform_* negative cells all 0 rows |
 | 8.2 | Claim → configure → couple portal publish → guest RSVP → venue sees submission | open |
 | 8.3 | Reissue invite → password reset → old sessions | open |
 | 8.4 | Suspend venue → each console's behavior | open |
@@ -204,7 +204,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 
 | Artifact | Needed by | Status |
 |----------|-----------|--------|
-| 1 pending venue-admin invite → throwaway email (setup-link token pasted here) | Phase 3 venue column + journey 8.1 | requested |
+| 1 pending venue-admin invite → throwaway email (setup-link token pasted here) | Phase 3 venue column + journey 8.1 | **provided + consumed (#272)** — invite pointed at operator's own email (deviation logged); password reset to throwaway, operator advised to reset |
 | 2 guest-portal tokens for the same couple + its couple id | journey 8.5, C rows | requested |
 | 1 second invite → second throwaway email (cross-user negative tests) | Phase 3 (negative cells) | later |
 | 1 throwaway venue you are willing to have suspended | 8.4 suspension paths | later |

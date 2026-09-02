@@ -1445,6 +1445,25 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #272 (2026-09-02): LIVE E2E — journey 8.1 venue-admin claim COMPLETE.
+  Operator pasted the board's pending invite (va-95a92153…, Seven Paths
+  Manor, owner role, invited email stricklandjoshua01@gmail.com — operator's
+  OWN email, deviation logged, warned first). Ran the app's exact flow:
+  context RPC ok:true → claim-venue-admin Edge Function → claimed:true,
+  existingUser:true (0017 atomic: ownership + membership + invite
+  consumption + platform_audit_logs 'venue_admin_invite.claimed' in ONE tx)
+  → password sign-in confirmed. LIVE-PROVEN: org owner_id transferred,
+  memberships owner/active, RLS member scoping (exactly 1 org visible),
+  org_data + events member reads, audit_logs org-admin reads (0020
+  legitimate path), platform_* negative cells all 0 rows, invite consumed
+  (context → not_found), REPLAY BLOCKED (2nd claim → 400 not_found).
+  MUTATIONS LOGGED: invite consumed; password on the operator's existing
+  account reset to throwaway va8-1-RsY3sNRGa-cABr38 (chat-reported; operator
+  advised to reset); ownership/membership ensured; platform audit row.
+  Venue column now PARTIALLY live-proven; matrix sweep + platform column
+  skipped by user choice (3.1 remainder). Transient credential files
+  deleted post-probe. Remaining live: journeys 8.2–8.6 (need throwaway
+  portal artifacts).
 - #271 (2026-09-01): LIVE VERIFICATION — operator applied migrations
   0018+0019+0020; all outcomes live-proven with the publishable key, ZERO
   mutations (denials + token-gated not_found only). 0018: all *_unchecked
