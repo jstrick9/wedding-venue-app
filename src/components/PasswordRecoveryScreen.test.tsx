@@ -3,8 +3,10 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const completeMock = vi.fn();
+const abandonMock = vi.fn();
 
 vi.mock('../services/backend/AuthBackend', () => ({
+  abandonSupabasePasswordRecovery: (...args: unknown[]) => abandonMock(...args),
   completeSupabasePasswordRecovery: (...args: unknown[]) => completeMock(...args),
 }));
 
@@ -25,6 +27,7 @@ import PasswordRecoveryScreen from './PasswordRecoveryScreen';
 describe('PasswordRecoveryScreen', () => {
   beforeEach(() => {
     completeMock.mockReset().mockResolvedValue(undefined);
+    abandonMock.mockReset();
     window.history.replaceState(null, '', '/reset/platform?code=pkce-code');
   });
 
@@ -107,6 +110,36 @@ describe('PasswordRecoveryScreen', () => {
       surface: 'venue',
       tokenHash: 'token-hash-123',
     });
+  });
+
+  it('allows another password attempt on the same verified reset screen', async () => {
+    completeMock
+      .mockRejectedValueOnce(new Error('New password should be different from old password'))
+      .mockResolvedValueOnce(undefined);
+    render(<PasswordRecoveryScreen surface="platform" />);
+
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'Current12!' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'Current12!' } });
+    fireEvent.click(screen.getByRole('button', { name: /save new password/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/different from your current password/i);
+    expect(screen.getByRole('button', { name: /save new password/i })).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'Different12!' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'Different12!' } });
+    fireEvent.click(screen.getByRole('button', { name: /save new password/i }));
+
+    await waitFor(() => expect(completeMock).toHaveBeenCalledTimes(2));
+    expect(completeMock.mock.calls[1][0]).toMatchObject({
+      code: 'pkce-code',
+      password: 'Different12!',
+    });
+  });
+
+  it('discards the ephemeral recovery capability when the screen unmounts', () => {
+    const { unmount } = render(<PasswordRecoveryScreen surface="venue" />);
+    unmount();
+    expect(abandonMock).toHaveBeenCalledWith('venue');
   });
 
   it('never renders a raw infrastructure error', async () => {

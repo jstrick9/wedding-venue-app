@@ -10,6 +10,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 const clients: Partial<Record<AuthSurface, SupabaseClient>> = {};
+const recoveryClients: Partial<Record<AuthSurface, SupabaseClient>> = {};
+const RECOVERY_FETCH_DEADLINE_MS = 7_000;
 let currentSurface: AuthSurface = detectAuthSurface();
 let migratedLegacy = false;
 
@@ -125,6 +127,42 @@ export function getSupabaseClient(surface: AuthSurface = currentSurface): Supaba
   }
 
   return clients[surface]!;
+}
+
+function createRecoveryClient(): SupabaseClient {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      // Recovery proofs establish a short-lived capability used only by the
+      // reset screen. Never persist it into a normal platform/venue session.
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      // Proof exchange + password save are sequential. Keep their combined
+      // network ceiling below the reset screen's user-facing timeout.
+      fetch: createDeadlineFetch(RECOVERY_FETCH_DEADLINE_MS),
+    },
+  });
+}
+
+export function getSupabaseRecoveryClient(surface: AuthSurface): SupabaseClient {
+  if (!isSupabaseConfigured()) {
+    throw new Error('This service is temporarily unavailable. Contact support for help.');
+  }
+  if (!recoveryClients[surface]) recoveryClients[surface] = createRecoveryClient();
+  return recoveryClients[surface]!;
+}
+
+/** Detach and return the ephemeral client so callers can revoke it best-effort. */
+export function discardSupabaseRecoveryClient(
+  surface: AuthSurface,
+  expectedClient?: SupabaseClient,
+): SupabaseClient | undefined {
+  const client = recoveryClients[surface];
+  if (expectedClient && client !== expectedClient) return undefined;
+  delete recoveryClients[surface];
+  return client;
 }
 
 export async function requirePlatformClient(): Promise<SupabaseClient> {

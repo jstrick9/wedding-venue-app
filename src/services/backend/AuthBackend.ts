@@ -5,7 +5,14 @@ import { claimVenueAdminAccount, isClaimFunctionMissingError } from '../platform
 import type { PasswordResetSurface } from '../../utils/passwordResetRoute';
 import { describePasswordPolicyError } from '../../utils/passwordPolicy';
 import { AuthFlowError, authRecoveryError, authSignInError } from '../../utils/authErrors';
-import { clearPersistedAuthSurface, getAuthSurface, getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
+import {
+  clearPersistedAuthSurface,
+  discardSupabaseRecoveryClient,
+  getAuthSurface,
+  getSupabaseClient,
+  getSupabaseRecoveryClient,
+  isSupabaseConfigured,
+} from './supabaseClient';
 
 export interface BackendAuthSession {
   user: User;
@@ -523,55 +530,292 @@ export async function signUpOrganizationInvite({
   return session;
 }
 
-export async function completeSupabasePasswordRecovery(params: {
+type RecoveryClient = ReturnType<typeof getSupabaseRecoveryClient>;
+
+interface ActiveRecoverySession {
+  proofKey: string;
+  userId: string;
+  accessToken?: string;
+  client: RecoveryClient;
+}
+
+const activeRecoverySessions: Partial<Record<PasswordResetSurface, ActiveRecoverySession>> = {};
+const recoveryOperationQueues: Partial<Record<PasswordResetSurface, Promise<void>>> = {};
+const recoveryAbandonGenerations: Record<PasswordResetSurface, number> = {
+  platform: 0,
+  venue: 0,
+};
+const inFlightRecoveryClients = new Set<RecoveryClient>();
+
+function recoveryProofKey(params: {
+  tokenHash?: string;
+  code?: string;
+  accessToken?: string;
+  refreshToken?: string;
+}): string | null {
+  if (params.tokenHash) return `token-hash:${params.tokenHash}`;
+  if (params.code) return `code:${params.code}`;
+  if (params.accessToken && params.refreshToken) {
+    return `session:${params.accessToken}:${params.refreshToken}`;
+  }
+  return null;
+}
+
+function recoveryFailureCanRetry(error: AuthFlowError): boolean {
+  return error.code === 'password_unchanged'
+    || error.code === 'password_previously_used'
+    || error.code === 'password_rejected'
+    || error.code === 'recovery_network_unavailable'
+    || error.code === 'recovery_unavailable';
+}
+
+async function cleanDetachedRecoveryClient(
+  surface: PasswordResetSurface,
+  supabase: RecoveryClient,
+  scope: 'local' | 'global',
+  knownAccessToken?: string,
+): Promise<void> {
+  let accessToken = knownAccessToken;
+  if (!accessToken) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      accessToken = data.session?.access_token;
+    } catch {
+      // The client is memory-only and is already detached below.
+    }
+  }
+  try {
+    if (accessToken && supabase.auth.admin?.signOut) {
+      await settleWithin(supabase.auth.admin.signOut(accessToken, scope), AUTH_REVOCATION_WAIT_MS);
+    }
+  } catch {
+    // The recovery capability is no longer reachable locally.
+  } finally {
+    // Do not call auth.signOut after the bounded revocation request: the SDK
+    // would make the same network call a second time. The detached client and
+    // its memory-only storage become unreachable as soon as cleanup returns.
+    clearPersistedAuthSurface(surface);
+  }
+}
+
+async function endSupabasePasswordRecovery(
+  surface: PasswordResetSurface,
+  scope: 'local' | 'global',
+  expectedClient?: RecoveryClient,
+  knownAccessToken?: string,
+): Promise<void> {
+  const active = activeRecoverySessions[surface];
+  const activeToEnd = !expectedClient || active?.client === expectedClient ? active : undefined;
+  if (activeToEnd) delete activeRecoverySessions[surface];
+
+  const detached = discardSupabaseRecoveryClient(surface, expectedClient);
+  const clients = new Set<RecoveryClient>();
+  if (expectedClient) clients.add(expectedClient);
+  if (activeToEnd?.client) clients.add(activeToEnd.client);
+  if (detached) clients.add(detached);
+
+  if (!clients.size) {
+    clearPersistedAuthSurface(surface);
+    return;
+  }
+  for (const client of clients) {
+    const token = client === expectedClient
+      ? knownAccessToken || activeToEnd?.accessToken
+      : client === activeToEnd?.client
+        ? activeToEnd.accessToken
+        : undefined;
+    await cleanDetachedRecoveryClient(surface, client, scope, token);
+  }
+}
+
+/** Immediately removes the memory-only recovery capability on navigation. */
+export function abandonSupabasePasswordRecovery(surface: PasswordResetSurface): void {
+  recoveryAbandonGenerations[surface] += 1;
+  const active = activeRecoverySessions[surface];
+  delete activeRecoverySessions[surface];
+  const detached = discardSupabaseRecoveryClient(surface);
+  clearPersistedAuthSurface(surface);
+
+  const clients = new Set<RecoveryClient>();
+  if (active?.client) clients.add(active.client);
+  if (detached) clients.add(detached);
+  for (const client of clients) {
+    // An in-flight save owns final cleanup: if it succeeds, it must still use
+    // the captured token for global revocation rather than being signed out here.
+    if (!inFlightRecoveryClients.has(client)) {
+      const token = client === active?.client ? active.accessToken : undefined;
+      void cleanDetachedRecoveryClient(surface, client, 'local', token);
+    }
+  }
+}
+
+interface CompleteRecoveryParams {
   surface: PasswordResetSurface;
   password: string;
   tokenHash?: string;
   code?: string;
   accessToken?: string;
   refreshToken?: string;
-}): Promise<void> {
+}
+
+async function runSupabasePasswordRecovery(
+  params: CompleteRecoveryParams,
+  requestedGeneration: number,
+): Promise<void> {
+  const wasAbandoned = () => recoveryAbandonGenerations[params.surface] !== requestedGeneration;
+  if (wasAbandoned()) throw new AuthFlowError('invalid_recovery_link');
+
+  const proofKey = recoveryProofKey(params);
+  if (!proofKey) {
+    const active = activeRecoverySessions[params.surface];
+    await endSupabasePasswordRecovery(
+      params.surface,
+      'local',
+      active?.client,
+      active?.accessToken,
+    );
+    throw new AuthFlowError('invalid_recovery_link');
+  }
+
+  const existing = activeRecoverySessions[params.surface];
+  if (existing && existing.proofKey !== proofKey) {
+    await endSupabasePasswordRecovery(
+      params.surface,
+      'local',
+      existing.client,
+      existing.accessToken,
+    );
+  }
+  if (wasAbandoned()) throw new AuthFlowError('invalid_recovery_link');
+
   const passwordError = describePasswordPolicyError(params.password);
   if (passwordError) throw new AuthFlowError('password_rejected');
 
-  const supabase = getSupabaseClient(params.surface);
+  const supabase = getSupabaseRecoveryClient(params.surface);
+  inFlightRecoveryClients.add(supabase);
   let recoverySessionEstablished = false;
+  let recoveryAccessToken: string | undefined;
   try {
-    if (params.tokenHash) {
-      const { data, error } = await supabase.auth.verifyOtp({
-        token_hash: params.tokenHash,
-        type: 'recovery',
-      });
-      recoverySessionEstablished = Boolean(data.session?.user);
-      if (error || !recoverySessionEstablished) throw authRecoveryError(error);
-    } else if (params.code) {
-      const { data, error } = await supabase.auth.exchangeCodeForSession(params.code);
-      recoverySessionEstablished = Boolean(data.session?.user);
-      if (error || !recoverySessionEstablished) throw authRecoveryError(error);
-    } else if (params.accessToken && params.refreshToken) {
-      const { data, error } = await supabase.auth.setSession({
-        access_token: params.accessToken,
-        refresh_token: params.refreshToken,
-      });
-      recoverySessionEstablished = Boolean(data.session?.user);
-      if (error || !recoverySessionEstablished) throw authRecoveryError(error);
+    const active = activeRecoverySessions[params.surface];
+    if (
+      active?.proofKey === proofKey
+      && active.client === supabase
+    ) {
+      const { data, error } = await supabase.auth.getSession();
+      recoverySessionEstablished = Boolean(
+        !error && data.session?.user?.id === active.userId,
+      );
+      recoveryAccessToken = data.session?.access_token || active.accessToken;
+      if (!recoverySessionEstablished || wasAbandoned()) {
+        throw new AuthFlowError('invalid_recovery_link');
+      }
     } else {
-      throw new AuthFlowError('invalid_recovery_link');
+      let recoveredUserId = '';
+      if (params.tokenHash) {
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: params.tokenHash,
+          type: 'recovery',
+        });
+        recoveredUserId = data.session?.user?.id || '';
+        recoveryAccessToken = data.session?.access_token;
+        recoverySessionEstablished = Boolean(recoveredUserId);
+        if (error || !recoveredUserId) throw authRecoveryError(error);
+      } else if (params.code) {
+        // PKCE verifiers belong to the original surface client's storage. The
+        // SDK exchange writes its result there, so capture it and synchronously
+        // clear that durable state before transferring into the memory client.
+        const exchangeClient = getSupabaseClient(params.surface);
+        const { data: exchanged, error: exchangeError } = (
+          await exchangeClient.auth.exchangeCodeForSession(params.code)
+        );
+        clearPersistedAuthSurface(params.surface);
+        const exchangedSession = exchanged.session;
+        if (
+          exchangeError
+          || !exchangedSession?.user?.id
+          || !exchangedSession.access_token
+          || !exchangedSession.refresh_token
+        ) {
+          throw authRecoveryError(exchangeError);
+        }
+        const { data, error } = await supabase.auth.setSession({
+          access_token: exchangedSession.access_token,
+          refresh_token: exchangedSession.refresh_token,
+        });
+        recoveredUserId = data.session?.user?.id || '';
+        recoveryAccessToken = data.session?.access_token;
+        recoverySessionEstablished = Boolean(recoveredUserId);
+        if (error || recoveredUserId !== exchangedSession.user.id) {
+          throw authRecoveryError(error);
+        }
+      } else if (params.accessToken && params.refreshToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: params.accessToken,
+          refresh_token: params.refreshToken,
+        });
+        recoveredUserId = data.session?.user?.id || '';
+        recoveryAccessToken = data.session?.access_token;
+        recoverySessionEstablished = Boolean(recoveredUserId);
+        if (error || !recoveredUserId) throw authRecoveryError(error);
+      }
+
+      if (wasAbandoned()) throw new AuthFlowError('invalid_recovery_link');
+      activeRecoverySessions[params.surface] = {
+        proofKey,
+        userId: recoveredUserId,
+        accessToken: recoveryAccessToken,
+        client: supabase,
+      };
+      // An unrelated normal session must never become the recovery capability.
+      // The verified recovery client remains memory-only for safe form retries.
+      clearPersistedAuthSurface(params.surface);
     }
 
     const { error } = await supabase.auth.updateUser({ password: params.password });
     if (error) throw authRecoveryError(error);
 
-    // A recovery proof authorizes exactly the password change. Do not turn the
-    // reset link into a durable application login; return to the correct login
-    // door and require the new password. Capture the proof session before local
-    // cleanup so global revocation is not accidentally skipped.
-    await revokeAndClearAuthSurface(params.surface, 'global', supabase);
+    // Only a successful password change consumes the local capability and
+    // globally revokes sessions. A rejected candidate stays on this screen and
+    // can be replaced without trying to consume the one-time proof again.
+    await endSupabasePasswordRecovery(
+      params.surface,
+      'global',
+      supabase,
+      recoveryAccessToken,
+    );
   } catch (error) {
-    if (recoverySessionEstablished) {
-      await revokeAndClearAuthSurface(params.surface, 'local', supabase);
-    }
-    if (error instanceof AuthFlowError) throw error;
-    throw authRecoveryError(error);
+    const safeError = error instanceof AuthFlowError ? error : authRecoveryError(error);
+    const active = activeRecoverySessions[params.surface];
+    const canRetry = recoverySessionEstablished
+      && !wasAbandoned()
+      && active?.proofKey === proofKey
+      && active.client === supabase
+      && recoveryFailureCanRetry(safeError);
+    if (canRetry) throw safeError;
+    await endSupabasePasswordRecovery(
+      params.surface,
+      'local',
+      supabase,
+      recoveryAccessToken,
+    );
+    throw safeError;
+  } finally {
+    inFlightRecoveryClients.delete(supabase);
   }
+}
+
+export function completeSupabasePasswordRecovery(
+  params: CompleteRecoveryParams,
+): Promise<void> {
+  const requestedGeneration = recoveryAbandonGenerations[params.surface];
+  const previous = recoveryOperationQueues[params.surface] || Promise.resolve();
+  const operation = previous
+    .catch(() => undefined)
+    .then(() => runSupabasePasswordRecovery(params, requestedGeneration));
+  recoveryOperationQueues[params.surface] = operation;
+  return operation.finally(() => {
+    if (recoveryOperationQueues[params.surface] === operation) {
+      delete recoveryOperationQueues[params.surface];
+    }
+  });
 }

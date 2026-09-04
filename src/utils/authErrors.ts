@@ -12,6 +12,8 @@ export type AuthErrorCode =
   | 'recovery_unavailable'
   | 'invalid_recovery_link'
   | 'recovery_expired'
+  | 'password_unchanged'
+  | 'password_previously_used'
   | 'password_rejected';
 
 const AUTH_MESSAGES: Record<AuthErrorCode, string> = {
@@ -28,6 +30,8 @@ const AUTH_MESSAGES: Record<AuthErrorCode, string> = {
   recovery_unavailable: 'We could not save your new password right now. Please try again.',
   invalid_recovery_link: 'This reset link is invalid or has already been used. Request a new password reset.',
   recovery_expired: 'This reset link has expired. Request a new password reset.',
+  password_unchanged: 'Your new password must be different from your current password. Choose another strong password and try again.',
+  password_previously_used: 'That password was used before. Choose a password you have not used for this account and try again.',
   password_rejected: 'That password could not be saved. Choose a different strong password and try again.',
 };
 
@@ -46,6 +50,13 @@ function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (error && typeof error === 'object' && 'message' in error) {
     return String((error as { message?: unknown }).message || '');
+  }
+  return '';
+}
+
+function errorCode(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return String((error as { code?: unknown }).code || '');
   }
   return '';
 }
@@ -72,11 +83,28 @@ export function authSignInError(error: unknown): AuthFlowError {
 
 export function authRecoveryError(error: unknown): AuthFlowError {
   const message = errorMessage(error);
-  if (/expired/i.test(message)) return new AuthFlowError('recovery_expired');
-  if (/invalid|otp|token|already.*used|code verifier|pkce/i.test(message)) {
+  const code = errorCode(error);
+  if (code === 'same_password') return new AuthFlowError('password_unchanged');
+  if (
+    /password_history|password_reuse|reused_password/i.test(code)
+    || /password.*(?:(?:previously|already|recently).*used|used before)|(?:(?:previously|already|recently).*used|used before).*password/i.test(message)
+  ) {
+    return new AuthFlowError('password_previously_used');
+  }
+  if (code === 'weak_password') return new AuthFlowError('password_rejected');
+  if (/expired/i.test(code) || /expired/i.test(message)) {
+    return new AuthFlowError('recovery_expired');
+  }
+  if (
+    /otp|token|flow_state|code_verifier|bad_jwt|session_not_found|user_not_found|no_authorization/i.test(code)
+    || /invalid|otp|token|already.*used|code verifier|pkce/i.test(message)
+  ) {
     return new AuthFlowError('invalid_recovery_link');
   }
-  if (/password|weak|different/i.test(message)) return new AuthFlowError('password_rejected');
+  if (/(?:the )?(?:new )?password (?:should|must) be different|(?:the )?new password.*same as (?:the )?(?:old|current) password|password.*(?:is|was) (?:the )?same as (?:the )?(?:old|current) password|same password/i.test(message)) {
+    return new AuthFlowError('password_unchanged');
+  }
+  if (/password|weak/i.test(message)) return new AuthFlowError('password_rejected');
   if (/failed to fetch|network|load failed|fetch failed|timeout|timed out/i.test(message)) {
     return new AuthFlowError('recovery_network_unavailable');
   }

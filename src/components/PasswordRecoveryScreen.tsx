@@ -1,5 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { completeSupabasePasswordRecovery } from '../services/backend/AuthBackend';
+import {
+  abandonSupabasePasswordRecovery,
+  completeSupabasePasswordRecovery,
+} from '../services/backend/AuthBackend';
 import { withTimeout } from '../utils/withTimeout';
 import { isSupabaseConfigured } from '../services/backend/supabaseClient';
 import {
@@ -82,6 +85,10 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
     stripRecoveryParamsFromUrl(window.location);
   }, []);
 
+  useEffect(() => () => {
+    abandonSupabasePasswordRecovery(surface);
+  }, [surface]);
+
   useEffect(() => {
     applyLoginBranding(branding);
   }, [branding]);
@@ -98,6 +105,7 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
   }, [payload.venueSlug, surface]);
 
   const leave = () => {
+    abandonSupabasePasswordRecovery(surface);
     const slug = surface === 'venue'
       ? payload.venueSlug || getActiveOrganizationSlug() || undefined
       : undefined;

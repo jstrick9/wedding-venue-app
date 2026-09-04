@@ -1,27 +1,44 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockAuth, clearPersistedAuthSurface, capturedSurfaces } = vi.hoisted(() => ({
+const {
+  mockAuth,
+  mockSurfaceAuth,
+  clearPersistedAuthSurface,
+  capturedSurfaces,
+} = vi.hoisted(() => ({
   mockAuth: {
     verifyOtp: vi.fn(),
-    exchangeCodeForSession: vi.fn(),
     setSession: vi.fn(),
+    getSession: vi.fn(),
     updateUser: vi.fn(),
     signOut: vi.fn(),
     admin: { signOut: vi.fn() },
+  },
+  mockSurfaceAuth: {
+    exchangeCodeForSession: vi.fn(),
   },
   clearPersistedAuthSurface: vi.fn(),
   capturedSurfaces: [] as string[],
 }));
 
-vi.mock('./supabaseClient', () => ({
-  clearPersistedAuthSurface,
-  getAuthSurface: () => 'platform',
-  isSupabaseConfigured: () => true,
-  getSupabaseClient: (surface?: string) => {
-    if (surface) capturedSurfaces.push(surface);
-    return { auth: mockAuth };
-  },
-}));
+vi.mock('./supabaseClient', () => {
+  const recoveryClient = { auth: mockAuth };
+  const surfaceClient = { auth: mockSurfaceAuth };
+  return {
+    clearPersistedAuthSurface,
+    discardSupabaseRecoveryClient: () => recoveryClient,
+    getAuthSurface: () => 'platform',
+    isSupabaseConfigured: () => true,
+    getSupabaseClient: (surface: string) => {
+      capturedSurfaces.push(`surface:${surface}`);
+      return surfaceClient;
+    },
+    getSupabaseRecoveryClient: (surface: string) => {
+      capturedSurfaces.push(`recovery:${surface}`);
+      return recoveryClient;
+    },
+  };
+});
 
 import { completeSupabasePasswordRecovery } from './AuthBackend';
 
@@ -29,12 +46,22 @@ describe('password recovery compatibility', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedSurfaces.length = 0;
-    mockAuth.exchangeCodeForSession.mockResolvedValue({
-      data: { session: { user: { id: 'user-1' } } },
+    mockSurfaceAuth.exchangeCodeForSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: 'captured-access-token',
+          refresh_token: 'captured-refresh-token',
+          user: { id: 'user-1' },
+        },
+      },
       error: null,
     });
     mockAuth.setSession.mockResolvedValue({
-      data: { session: { user: { id: 'user-1' } } },
+      data: { session: { access_token: 'captured-access-token', user: { id: 'user-1' } } },
+      error: null,
+    });
+    mockAuth.getSession.mockResolvedValue({
+      data: { session: { access_token: 'captured-access-token', user: { id: 'user-1' } } },
       error: null,
     });
     mockAuth.updateUser.mockResolvedValue({ data: {}, error: null });
@@ -49,11 +76,19 @@ describe('password recovery compatibility', () => {
       password: 'Newpass12!',
       code: 'pkce-code',
     });
-    expect(capturedSurfaces).toEqual(['venue']);
-    expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledWith('pkce-code');
+    expect(capturedSurfaces).toEqual(['recovery:venue', 'surface:venue']);
+    expect(mockSurfaceAuth.exchangeCodeForSession).toHaveBeenCalledWith('pkce-code');
+    expect(mockAuth.setSession).toHaveBeenCalledWith({
+      access_token: 'captured-access-token',
+      refresh_token: 'captured-refresh-token',
+    });
+    expect(mockSurfaceAuth.exchangeCodeForSession.mock.invocationCallOrder[0])
+      .toBeLessThan(clearPersistedAuthSurface.mock.invocationCallOrder[0]);
+    expect(clearPersistedAuthSurface.mock.invocationCallOrder[0])
+      .toBeLessThan(mockAuth.setSession.mock.invocationCallOrder[0]);
     expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'Newpass12!' });
     expect(mockAuth.admin.signOut).toHaveBeenCalledWith('captured-access-token', 'global');
-    expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
   });
 
   it('still accepts legacy implicit recovery tokens', async () => {
@@ -75,7 +110,7 @@ describe('password recovery compatibility', () => {
       completeSupabasePasswordRecovery({ surface: 'platform', password: 'Newpass12!' }),
     ).rejects.toMatchObject({ code: 'invalid_recovery_link' });
     expect(mockAuth.updateUser).not.toHaveBeenCalled();
-    expect(mockAuth.exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(mockSurfaceAuth.exchangeCodeForSession).not.toHaveBeenCalled();
     expect(mockAuth.setSession).not.toHaveBeenCalled();
   });
 });

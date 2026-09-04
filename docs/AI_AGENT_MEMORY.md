@@ -1446,6 +1446,35 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #275 (2026-09-04): RECOVERY REJECT→RETRY correction is locally complete;
+  deployment and one fresh-link live retest remain. Live #274 testing proved
+  F-275-1 (P1): rejecting a current/previous password cleared the exchanged
+  one-time recovery session, so the same screen retried the consumed proof and
+  could not accept a different candidate. Fixed with a per-surface dedicated
+  memory-only Auth client, proof+user+client binding, same-surface operation
+  serialization, recoverable policy/history/network retention, fatal-state and
+  navigation abandonment, and success-only global revocation. Adversarial
+  review also fixed the leave-during-save revocation race and preserved legacy
+  PKCE by exchanging with the verifier-owning surface, synchronously clearing
+  durable state, then transferring to memory. Copy now distinguishes current
+  password and password history without infrastructure wording. Recovery fetch
+  deadlines fit below the screen timeout; detached cleanup avoids a duplicate
+  sign-out network call. Pinned by rejection→weak→retry success, history retry,
+  proof-once, concurrency, in-flight/idle abandonment, memory-client identity,
+  PKCE transfer, surface isolation, and UI/error tests. Full gates: 283 files
+  passed/4 skipped; 1,152 tests passed/5 skipped; typecheck, strict unused,
+  lint 0 errors/27 baseline warnings, event lint, ratchet 0, audit 0, both
+  builds/budgets, diff/credential/white-label scans passed. NO LIVE MUTATIONS.
+  Review: docs/reviews/275-recovery-rejected-password-retry-2026-09-04.md.
+- #274 (2026-09-03–04): BRANDED SELF-SERVICE RECOVERY released. Migration
+  0022 and `request-password-reset` are deployed; a venue-admin request and
+  branded inbox delivery were live-proven. The endpoint is neutral-response,
+  eligibility/throttle context is service-derived, origin/sender defaults are
+  server-controlled and environment-wide (never per tenant), and confidential
+  mail/service credentials remain Edge-only. The least-privilege deployment
+  token intentionally cannot administer project secrets; do not broaden it.
+  Live save testing exposed F-275-1; #275 supersedes the initial cleanup-on-any-
+  update-error behavior. A consumed pre-fix link cannot be restored.
 - #273 (2026-09-02): PERSONAL INVITEE ACCOUNTS implemented and locally
   verified; rollout pending. Venue, couple/collaborator, and guest invite
   setup now shares an accessible live password UI (8–128, uppercase,

@@ -10,6 +10,7 @@ describe('branded password recovery deployment contract', () => {
   it('uses a public, server-controlled recovery endpoint instead of the hosted mail dispatcher', () => {
     const edge = source('supabase/functions/request-password-reset/index.ts');
     const authBackend = source('src/services/backend/AuthBackend.ts');
+    const backendClient = source('src/services/backend/supabaseClient.ts');
     const requestService = source('src/services/auth/passwordRecoveryService.ts');
 
     expect(edge).toContain("type: 'recovery'");
@@ -41,6 +42,14 @@ describe('branded password recovery deployment contract', () => {
     expect(acceptedFlow).not.toContain("finish({ error:");
     expect(acceptedFlow).toContain("finish({ ok: true }, 202)");
     expect(authBackend).not.toContain('resetPasswordForEmail');
+    expect(authBackend).toContain('recoveryFailureCanRetry');
+    expect(authBackend).toContain('getSupabaseRecoveryClient');
+    const recoveryClientFactory = backendClient.slice(
+      backendClient.indexOf('function createRecoveryClient'),
+      backendClient.indexOf('export async function requirePlatformClient'),
+    );
+    expect(recoveryClientFactory).toContain('persistSession: false');
+    expect(recoveryClientFactory).toContain('autoRefreshToken: false');
     expect(requestService).toContain("PASSWORD_RESET_REQUEST_FUNCTION = 'request-password-reset'");
   });
 

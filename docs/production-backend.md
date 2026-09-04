@@ -18,4 +18,6 @@ This directory documents the optional production-grade backend.
 5. Verify platform and venue recovery with throwaway accounts and real inboxes. A green deployment alone is not delivery proof.
 6. Accepted requests deliberately return before account lookup and delivery so response status/timing cannot reveal account existence. Monitor recent `password_reset_requests.delivery_state` values in operator-only database tooling; never expose that table or its service-only RPCs to browser roles.
 
+The reset screen exchanges each one-time proof into a dedicated, memory-only recovery client. Password-policy, current-password, password-history, and temporary network failures retain that proof-bound capability only while the same reset screen remains active, so the user can submit a different candidate without consuming the link again. Navigation, invalid state, or fatal failure discards it; a successful save performs bounded global revocation before returning to the branded sign-in door. Legacy PKCE codes are exchanged with their surface-stored verifier, immediately removed from durable storage, and transferred to the memory-only client.
+
 Never place a service-role key or email-delivery credential in browser environment variables or source control.
