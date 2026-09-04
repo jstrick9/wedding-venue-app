@@ -4,6 +4,7 @@ import { createOpaqueToken } from '../../utils/secureTokens';
 import { normalizeEmail, normalizeUsPhone, normalizeWebsite } from '../../utils/contactQuality';
 import { buildVenueAdminInviteUrl, sanitizeVenueAdminToken } from '../../utils/venueAdminInviteRoute';
 import { DEFAULT_NEW_INVITE_TTL_DAYS, DEFAULT_REISSUE_INVITE_TTL_DAYS, inviteExpiresAt } from '../../utils/inviteTtl';
+import { describeUnknownError } from '../../utils/unknownError';
 import type {
   OrganizationStatus,
   PlatformAuditLogEntry,
@@ -51,14 +52,14 @@ function describePlatformRpcFailure(error: string, fallback: string): string {
     return 'This action requires the platform administrator login. Sign in again at Platform login. A venue invite account in this browser is separate and cannot change venue records.';
   }
   if (/could not find the function|schema cache|PGRST202/i.test(message)) {
-    return 'The venue update function is missing. In Supabase → SQL Editor, run supabase/migrations/0014_geoapify_address_quality.sql.';
+    return 'Venue management is temporarily unavailable. Contact support for help.';
   }
-  return message || fallback;
+  return describeUnknownError(new Error(message), fallback);
 }
 
 async function requireSupabase(surface: AuthSurface = 'platform'): Promise<ReturnType<typeof getSupabaseClient>> {
   if (!isSupabaseConfigured()) {
-    throw new Error('Supabase is not configured.');
+    throw new Error('Platform administration is temporarily unavailable.');
   }
   if (surface === 'platform') return requirePlatformClient();
   return getSupabaseClient(surface);

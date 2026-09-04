@@ -65,7 +65,7 @@ describe('platform geocoding (N-5)', () => {
     expect(JSON.parse(String((init as RequestInit).body))).toMatchObject({ action: 'verify', city: 'Asheville' });
   });
 
-  it('throws a descriptive error when the Edge Function fails', async () => {
+  it('returns a stable white-label error when address verification fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       json: () => Promise.resolve({ ok: false, error: 'No matching location was found. Verify the address and try again.' }),
@@ -77,10 +77,10 @@ describe('platform geocoding (N-5)', () => {
       stateRegion: 'NC',
       postalCode: '00000',
       country: 'US',
-    })).rejects.toThrow('No matching location');
+    })).rejects.toThrow('Could not verify this venue address');
   });
 
-  it('explains a browser network failure instead of raw Failed to fetch', async () => {
+  it('explains a browser network failure without deployment details', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
 
     await expect(geocodeVenueAddress({
@@ -89,7 +89,7 @@ describe('platform geocoding (N-5)', () => {
       stateRegion: 'NC',
       postalCode: '28801',
       country: 'US',
-    })).rejects.toThrow(/geocode-venue Edge Function/i);
+    })).rejects.toThrow(/could not reach the address service/i);
   });
 });
 

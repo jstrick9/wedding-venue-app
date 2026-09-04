@@ -77,6 +77,9 @@ jobs:
       - name: Deploy send-email
         run: supabase functions deploy send-email --use-api --project-ref "$SUPABASE_PROJECT_ID"
 
+      - name: Deploy request-password-reset
+        run: supabase functions deploy request-password-reset --use-api --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID"
+
       - name: Deploy claim-venue-admin
         run: supabase functions deploy claim-venue-admin --use-api --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID"
 

@@ -14,6 +14,7 @@ import {
   loginBackgroundStyle,
   resolveLoginChrome,
 } from '../utils/loginBranding';
+import { describeRegistrationError, describeSignInError } from '../utils/authErrors';
 
 export interface LoginScreenProps {
   onContinueAsGuest?: () => void;
@@ -29,9 +30,11 @@ export interface LoginScreenProps {
   loginScope?: 'platform' | 'venue';
   /** Safe branding override for a public platform or venue login page. */
   brandingOverride?: Config;
+  /** Required to scope venue password recovery to this tenant. */
+  organizationId?: string;
 }
 
-export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, onRegister, onLogin, showPublicPortalLinks = true, loginScope = 'venue', brandingOverride }: LoginScreenProps) {
+export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, onRegister, onLogin, showPublicPortalLinks = true, loginScope = 'venue', brandingOverride, organizationId }: LoginScreenProps) {
   const { login, register: authRegister, continueAsGuest } = useAuth();
   const register = onRegister || authRegister;
   const [username, setUsername] = useState('');
@@ -151,9 +154,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
     e.preventDefault();
 
     if (showNoLocalAccountsHint) {
-      setError(
-        'No local accounts are configured for this production build. Enable Supabase auth or provision users before signing in.',
-      );
+      setError('Sign-in is not available for this workspace. Contact an administrator for help.');
       return;
     }
 
@@ -181,7 +182,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
         }
         setLockoutSecondsLeft(0);
       } else if (usingSupabaseAuth) {
-        setError('Sign-in failed. Use the email address and password for your Supabase account. Local admin credentials do not apply in cloud mode.');
+        setError('The email address or password is incorrect.');
       } else {
         // The AuthContext.login() call already persisted the failed-login state
         // (via recordFailedLogin → setUsers). Re-read to get the up-to-date
@@ -209,7 +210,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed. Check your connection and try again.');
+      setError(describeSignInError(err));
     } finally {
       setIsLoading(false);
     }
@@ -252,7 +253,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
       );
       if (err) setSignUpError(err);
     } catch (err) {
-      setSignUpError(err instanceof Error ? err.message : 'Unable to create your account.');
+      setSignUpError(describeRegistrationError(err, Boolean(onRegister)));
     } finally {
       setIsSigningUp(false);
     }
@@ -319,8 +320,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
                     ? 'Secure platform sign-in is enabled.'
                     : 'Secure venue sign-in is enabled.'
                   : showNoLocalAccountsHint
-                    ? 'Production access requires backend setup.'
-                    : 'Local workspace sign-in is active.'}
+                    ? 'Sign-in is not available.'
+                    : 'Workspace sign-in is active.'}
               </p>
               <p className="mt-1 text-xs opacity-90">
                 {usingSupabaseAuth
@@ -328,8 +329,8 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
                     ? 'Platform owners and platform administrators use this page to manage venue tenants.'
                     : 'Venue administrators, managers, planners, and staff use this page for venue operations.'
                   : showNoLocalAccountsHint
-                    ? 'Use Supabase auth for real production access, or provision accounts before publishing this workspace.'
-                    : 'Best for demos, QA, and local planning workshops.'}
+                    ? 'Contact an administrator to finish account setup.'
+                    : 'Use your assigned workspace credentials to continue.'}
               </p>
             </div>
 
@@ -362,6 +363,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
               <input
                 ref={usernameInputRef}
                 id="login-username"
+                type={usingSupabaseAuth ? 'email' : 'text'}
                 value={username}
                 onChange={handleUsernameChange}
                 onKeyDown={handleKeyDown}
@@ -447,7 +449,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
                 role="status"
                 className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700"
               >
-                Local demo accounts are disabled in production bundles. Configure Supabase auth to sign in securely.
+                Sign-in is not available for this workspace. Contact an administrator for help.
               </div>
             )}
 
@@ -615,6 +617,7 @@ export function LoginScreen({ onContinueAsGuest, allowAccountCreation = false, o
         <PasswordReset
           branding={config}
           authSurface={loginScope}
+          organizationId={organizationId}
           onClose={() => setShowPasswordReset(false)}
           onSuccess={() => {
             setShowPasswordReset(false);

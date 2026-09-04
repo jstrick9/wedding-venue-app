@@ -68,7 +68,7 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
             <div className="text-5xl mb-3">⚠️</div>
             <h1 className="text-2xl font-bold">Application Recovery</h1>
             <p className="text-white/80 text-sm mt-2">
-              The planner hit an unexpected startup issue. You can safely reload or reset local app data.
+              The planner hit an unexpected startup issue. You can safely reload or reset saved app data.
             </p>
           </div>
 
@@ -76,15 +76,14 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <div className="font-semibold mb-1">What happened?</div>
               <div>
-                A runtime error prevented the app from loading normally. This is often caused by stale or corrupted saved browser data.
+                A runtime error prevented the app from loading normally. This is often caused by stale or corrupted saved app data.
               </div>
             </div>
 
             {this.state.error && (
-              <details className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-                <summary className="cursor-pointer font-medium">Technical details</summary>
-                <pre className="mt-3 whitespace-pre-wrap break-words text-xs">{this.state.error.message}</pre>
-              </details>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                The error was recorded for support. Reload the application, or contact support if the problem continues.
+              </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -99,7 +98,7 @@ export class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, App
                 onClick={this.handleResetLocalData}
                 className="px-4 py-3 rounded-xl font-semibold border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
               >
-                Reset Local App Data
+                Reset Saved App Data
               </button>
             </div>
           </div>

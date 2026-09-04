@@ -258,13 +258,15 @@ describe('LoginScreen', () => {
     expect(screen.getByRole('button', { name: /^sign in$/i })).toBeEnabled();
   });
 
-  it('clears Signing in when login throws', async () => {
-    mockLogin.mockRejectedValue(new Error('Auth service unavailable'));
+  it('clears Signing in and hides raw service errors when login throws', async () => {
+    mockLogin.mockRejectedValue(new Error('Supabase auth provider unavailable'));
     render(<LoginScreen loginScope="platform" showPublicPortalLinks={false} />);
     fireEvent.change(screen.getByLabelText(/^username$/i), { target: { value: 'admin@example.com' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/auth service unavailable/i);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/could not sign you in right now/i);
+    expect(alert).not.toHaveTextContent(/supabase|provider/i);
     expect(screen.getByRole('button', { name: /^sign in$/i })).toBeEnabled();
   });
 

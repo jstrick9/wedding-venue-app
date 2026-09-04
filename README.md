@@ -37,12 +37,15 @@ audit.
   - cross-device couple/guest portal snapshots, platform↔venue chat, venue
     address/contact + server-side Geoapify autocomplete, verification, and map
     tiles (API key never ships to the browser), and object storage for public branding.
-  - Migrations live in `supabase/migrations/` (`0001`–`0015`). Apply them in order
-    and run a live RLS/onboarding smoke test before trusting cloud mode with real
+  - Migrations live in `supabase/migrations/` (`0001`–`0022`). Apply them in order
+    and run a live RLS/onboarding/recovery smoke test before trusting cloud mode with real
     venue data. The geocode Edge Function requires
     `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_APP_URL`, `ALLOWED_ORIGIN`,
     and `GEOAPIFY_API_KEY` as server secrets (the service-role and Geoapify keys
     must never go into Vercel/client env or GitHub).
+    Branded self-service recovery additionally requires migration `0022`, the
+    `request-password-reset` Function, a working `BREVO_API_KEY` or `RESEND_API_KEY`,
+    and a production Auth Site URL on the branded application origin. Production recovery requires server-only `PASSWORD_RESET_APP_URL` and a verified branded `PASSWORD_RESET_FROM_EMAIL`; browser-supplied non-local origins and hard-coded mailbox fallbacks are rejected.
 
 > **Honesty boundary:** local mode is the exercised product mode today. In cloud
 > mode the catalog/design domains and couple/guest snapshots are mirrored, but not
@@ -52,7 +55,8 @@ audit.
 Platform code lives under:
 - `supabase/migrations/` — Postgres schema + Row-Level Security + storage buckets
 - `supabase/functions/geocode-venue/` — server-side geocoding Edge Function
-- `supabase/functions/send-email/` — transactional email Edge Function
+- `supabase/functions/send-email/` — authenticated transactional email Edge Function
+- `supabase/functions/request-password-reset/` — public, throttled branded recovery-email endpoint
 - `src/services/backend/` — Supabase auth backend
 - `src/services/platform/` — platform console / tenant / chat / branding / geocoding
 - `src/services/repository/` — data-persistence seam (local + Supabase providers)

@@ -304,13 +304,13 @@ export default function AuthenticatedApp() {
     if (safeMode) {
       items.push({
         id: 'safe-mode', kind: 'warning', title: 'Safe Mode is active',
-        description: 'Some local project data appears damaged.',
+        description: 'Some saved project data appears damaged.',
         actions: [{ label: 'Attempt Auto-Repair', onClick: () => void handleAutoRepair() }, { label: 'Reload App', onClick: () => window.location.reload() }],
       });
     } else if (projectHealth?.overallStatus === 'warning') {
       items.push({
         id: 'health-warning', kind: 'warning', title: 'Project health warning',
-        description: 'Some local project data may be incomplete.',
+        description: 'Some saved project data may be incomplete.',
         actions: [{ label: 'Reload App', onClick: () => window.location.reload() }],
       });
     }
@@ -518,7 +518,7 @@ export default function AuthenticatedApp() {
     setProjectHealth(report);
     setSafeMode(report.overallStatus === 'corrupt');
     emitDataChanged('all');
-    showToast(`Recovered ${repaired.length} corrupt storage domain(s).`, 'warning');
+    showToast(`Recovered ${repaired.length} damaged data area(s).`, 'warning');
   }
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import { getConfig } from '../config';
 import SafeImage from './SafeImage';
 import { downloadLayoutPng, downloadLayoutPdf } from '../utils/layoutExport';
 import { showToast } from './Toast';
+import { describeUnknownError } from '../utils/unknownError';
 
 export interface PrintViewProps {
   venue: Venue;
@@ -54,7 +55,7 @@ export function PrintView({
       }
       showToast(`Exported ${kind.toUpperCase()} successfully.`, 'success');
     } catch (err) {
-      showToast(`Export failed: ${err instanceof Error ? err.message : 'unknown error'}`, 'warning');
+      showToast(describeUnknownError(err, 'Could not export the floor plan. Try again.'), 'warning');
     } finally {
       setExporting(null);
     }

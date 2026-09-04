@@ -50,7 +50,7 @@ describe('Admin & System Settings High-Density Executive UX (#155)', () => {
     // Verify main header title and status badges
     expect(screen.getByText(/Admin & System Settings/i)).toBeInTheDocument();
     expect(screen.getByText(/Healthy/i)).toBeInTheDocument();
-    expect(screen.getByText(/LocalStorage/i)).toBeInTheDocument();
+    expect(screen.getByText(/Workspace Data/i)).toBeInTheDocument();
 
     // Verify interactive Quick-Jump KPI pills
     const venuesBtn = screen.getByRole('button', { name: /Venues:/i });

@@ -88,10 +88,10 @@ export function BrandingManagement(props: AdminCommonProps) {
       void uploadPublicBrandingAsset(file, { organizationId })
         .then((logoUrl) => {
           handleSaveConfig({ ...config, logoUrl });
-          showSuccess?.('Logo uploaded to public venue branding storage.');
+          showSuccess?.('Logo uploaded and published to venue branding.');
           onComplete?.();
         })
-        .catch(() => showInfo?.('Upload failed', 'Could not upload the venue logo to Supabase Storage.', 'warning'));
+        .catch(() => showInfo?.('Upload failed', 'Could not upload the venue logo. Check the file and try again.', 'warning'));
       return;
     }
     if (typeof FileReader === 'undefined' || typeof window === 'undefined' || typeof window.FileReader !== 'function') {

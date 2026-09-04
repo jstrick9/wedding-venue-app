@@ -1479,7 +1479,7 @@ export function AdminPanel({ onClose, currentLayout, onLoadTemplateForEdit, layo
                 Healthy
               </span>
               <span className="bg-purple-100 text-purple-800 text-[11px] px-2 py-0.5 rounded-full font-semibold">
-                LocalStorage
+                Workspace Data
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">

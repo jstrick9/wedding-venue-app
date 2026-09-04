@@ -88,7 +88,7 @@ export class SupabaseEntityRepository implements EntityRepository {
   }
 
   async pushDomain(context: EntitySyncContext, domain: string): Promise<void> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+    if (!isSupabaseConfigured()) throw new Error('This service is temporarily unavailable.');
     const def = BACKUP_DOMAINS.find(
       (d) => d.key === domain || d.storageKey === domain,
     );
@@ -97,14 +97,14 @@ export class SupabaseEntityRepository implements EntityRepository {
   }
 
   async pushAll(context: EntitySyncContext): Promise<void> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+    if (!isSupabaseConfigured()) throw new Error('This service is temporarily unavailable.');
     for (const def of this.domains()) {
       await this.upsertDomain(context, def.key, def.read());
     }
   }
 
   async pullAll(context: EntitySyncContext): Promise<void> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+    if (!isSupabaseConfigured()) throw new Error('This service is temporarily unavailable.');
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('org_data')

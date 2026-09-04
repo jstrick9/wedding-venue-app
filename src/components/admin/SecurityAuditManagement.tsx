@@ -248,7 +248,7 @@ export function SecurityAuditManagement(props: AdminCommonProps) {
               🧹 Workspace Maintenance &amp; Diagnostics
             </h4>
             <p className="text-xs text-purple-700">
-              Use these administrative utilities to maintain healthy client browser storage and remove stale edit sessions.
+              Use these administrative utilities to maintain healthy saved workspace data and remove stale edit sessions.
             </p>
             <button
               type="button"

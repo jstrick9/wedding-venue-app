@@ -14,8 +14,9 @@ describe('inviteFromAddress', () => {
     expect(extractEmailAddress('Wedding VIP <invites@weddingvip.com>')).toBe('invites@weddingvip.com');
   });
 
-  it('explains a Brevo sender rejection', () => {
-    expect(describeBrevoSenderRejection('wedding-vip@outlook.com', 'Sender not valid')).toMatch(/wedding-vip@outlook.com/);
-    expect(describeBrevoSenderRejection('wedding-vip@outlook.com', 'Sender not valid')).toMatch(/invites@weddingvip.com/);
+  it('hides delivery-provider details from the rendered failure', () => {
+    const message = describeBrevoSenderRejection('wedding-vip@outlook.com', 'Sender not valid');
+    expect(message).toMatch(/temporarily unavailable/i);
+    expect(message).not.toMatch(/brevo|sender not valid|outlook/i);
   });
 });

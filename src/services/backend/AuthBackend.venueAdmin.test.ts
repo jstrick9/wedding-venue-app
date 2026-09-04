@@ -9,6 +9,8 @@ const getSession = vi.fn();
 const claimMock = vi.fn();
 
 vi.mock('./supabaseClient', () => ({
+  clearPersistedAuthSurface: vi.fn(),
+  getAuthSurface: () => 'platform',
   isSupabaseConfigured: () => true,
   getSupabaseClient: () => ({
     auth: { signInWithPassword, signUp, getUser, getSession },
@@ -148,7 +150,7 @@ describe('signUpVenueAdminWithInvite', () => {
     expect(session.organizationId).toBe('org-1');
   });
 
-  it('explains a reissue cannot reset the password until claim-venue-admin is deployed', async () => {
+  it('hides deployment details when reissue account setup is unavailable', async () => {
     claimMock.mockRejectedValue(new Error(CLAIM_FUNCTION_MISSING));
     signUp.mockResolvedValue({
       data: { user: null, session: null },
@@ -160,7 +162,7 @@ describe('signUpVenueAdminWithInvite', () => {
       password: 'New-pass-123',
       fullName: 'Joshua Strickland',
       inviteToken: 'va-abc123def4567890',
-    })).rejects.toThrow(/claim-venue-admin function must be deployed/i);
+    })).rejects.toThrow(/account setup is temporarily unavailable/i);
     expect(rpc).not.toHaveBeenCalled();
   });
 });

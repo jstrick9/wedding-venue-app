@@ -4,6 +4,7 @@ import { getConfig } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { resolveLoginChrome } from '../utils/loginBranding';
 import { withTimeout } from '../utils/withTimeout';
+import { describeUnknownError } from '../utils/unknownError';
 
 interface AcceptInviteProps {
   token: string;
@@ -50,12 +51,12 @@ export function AcceptInvite({ token, onDone }: AcceptInviteProps) {
           }, 800);
         } else {
           setState('error');
-          setMessage(res.error || 'Could not accept this invite.');
+          setMessage(describeUnknownError(new Error(res.error || ''), 'Could not accept this invite.'));
         }
       } catch (err: unknown) {
         if (cancelled) return;
         setState('error');
-        setMessage(err instanceof Error ? err.message : 'Could not accept this invite.');
+        setMessage(describeUnknownError(err, 'Could not accept this invite.'));
       }
     })();
     return () => { cancelled = true; };

@@ -10,6 +10,8 @@ const mockClient = {
 };
 
 vi.mock('./supabaseClient', () => ({
+  clearPersistedAuthSurface: vi.fn(),
+  getAuthSurface: () => 'platform',
   isSupabaseConfigured: () => true,
   getSupabaseClient: () => mockClient,
 }));

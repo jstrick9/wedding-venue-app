@@ -62,7 +62,7 @@ export class SupabaseLayoutRepository implements LayoutRepository {
    *    by the current client's workspace).
    */
   async saveAll(context: LayoutSyncContext, layouts: SavedLayout[]): Promise<void> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+    if (!isSupabaseConfigured()) throw new Error('This service is temporarily unavailable.');
     const supabase = getSupabaseClient();
 
     // Load existing rows so we can upsert by correlation and detect conflicts.
@@ -154,7 +154,7 @@ export class SupabaseLayoutRepository implements LayoutRepository {
   }
 
   async loadAll(context: LayoutSyncContext): Promise<SavedLayout[]> {
-    if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+    if (!isSupabaseConfigured()) throw new Error('This service is temporarily unavailable.');
     const supabase = getSupabaseClient();
 
     const { data, error } = await supabase

@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { autocompleteVenueAddress } from '../services/platform/geocodingService';
 import { suggestionLabel, type StandardizedAddress } from '../utils/geoapifyAddress';
 import { withTimeout } from '../utils/withTimeout';
+import { describeUnknownError } from '../utils/unknownError';
 
 export interface AddressValue {
   addressLine1: string;
@@ -69,7 +70,7 @@ export default function AddressAutocomplete({
         })
         .catch((error: unknown) => {
           setSuggestions([]);
-          setLookupError(error instanceof Error ? error.message : 'Could not look up addresses.');
+          setLookupError(describeUnknownError(error, 'Could not look up addresses. Check your connection and try again.'));
           setOpen(false);
         })
         .finally(() => setLoading(false));
@@ -188,7 +189,11 @@ export default function AddressAutocomplete({
         <label className="text-xs font-semibold text-gray-700">State *<input value={value.stateRegion} readOnly className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" /></label>
         <label className="text-xs font-semibold text-gray-700">ZIP *<input value={value.postalCode} readOnly className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm" /></label>
       </div>
-      <p className="text-[11px] text-gray-500">City, state, and ZIP fill from the selected Geoapify street address so they cannot be mistyped. Country is United States.</p>
+      <p className="text-[11px] text-gray-500">
+        City, state, and ZIP fill from the selected verified street address so they cannot be mistyped. Country is United States.
+        {' '}<a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer" className="underline">Powered by Geoapify</a>
+        {' '}· © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap contributors</a>
+      </p>
     </div>
   );
 }

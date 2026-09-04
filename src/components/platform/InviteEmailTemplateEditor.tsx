@@ -40,7 +40,7 @@ export default function InviteEmailTemplateEditor({ branding, onChange }: Invite
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const newTtl = clampInviteTtlDays(branding.venueAdminInviteTtlDays, DEFAULT_NEW_INVITE_TTL_DAYS);
   const reissueTtl = clampInviteTtlDays(branding.venueAdminReissueTtlDays, DEFAULT_REISSUE_INVITE_TTL_DAYS);
-  const previewUrl = 'https://weddingvip.vercel.app/i/va-exampletoken0001';
+  const previewUrl = 'https://app.example.com/i/va-exampletoken0001';
   const preview = useMemo(
     () => applyVenueAdminInviteTemplate(branding.venueAdminInviteSubject, branding.venueAdminInviteBody, {
       venueName: 'Hilltop Barn',
@@ -82,7 +82,7 @@ export default function InviteEmailTemplateEditor({ branding, onChange }: Invite
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3">
       <p className="text-xs font-bold text-indigo-950">Venue administrator invite email</p>
       <p className="mt-1 text-[11px] text-indigo-800">
-        Onboard and reissue send this HTML email automatically from wedding-vip@outlook.com through Brevo.
+        Onboard and reissue send this branded HTML email automatically.
         The {VENUE_ADMIN_SETUP_BUTTON_LABEL} button is the invite link. Drag a tag into the subject or body, or click a tag to insert it at the cursor.
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -158,9 +158,7 @@ export default function InviteEmailTemplateEditor({ branding, onChange }: Invite
         className="mt-2 h-[420px] w-full rounded-lg border border-white bg-white"
       />
       <p className="mt-3 text-[11px] leading-relaxed text-indigo-900">
-        One-time Brevo setup: create a free Brevo account, add wedding-vip@outlook.com as a sender and confirm the email,
-        then save the API key as the <code className="rounded bg-white px-1">BREVO_API_KEY</code> secret on the send-email Edge Function and redeploy it.
-        Invites always send from wedding-vip@outlook.com. A leftover EMAIL_FROM secret such as invites@weddingvip.com is ignored.
+        Email delivery settings are managed by your support team. Send a test invitation after settings change and contact support if delivery fails.
       </p>
     </div>
   );

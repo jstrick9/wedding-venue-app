@@ -1,4 +1,5 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
+import { describeUnknownError } from '../../utils/unknownError';
 
 export type StorageBucket = 'venue-images' | 'event-documents' | 'user-avatars';
 
@@ -26,7 +27,7 @@ export async function uploadObject(params: {
   contentType?: string;
 }): Promise<UploadedObject> {
   if (!isSupabaseConfigured()) {
-    throw new Error('Object storage requires Supabase configuration.');
+    throw new Error('File storage is temporarily unavailable.');
   }
 
   const supabase = getSupabaseClient();
@@ -45,7 +46,7 @@ export async function uploadObject(params: {
     upsert: false,
   });
 
-  if (error) throw error;
+  if (error) throw new Error(describeUnknownError(error, 'Could not upload the file. Try again.'));
 
   const { data } = await supabase.storage.from(params.bucket).createSignedUrl(path, 60 * 60);
   return { bucket: params.bucket, path, signedUrl: data?.signedUrl };
@@ -57,7 +58,7 @@ export async function getSignedObjectUrl(
   expiresInSeconds = 60 * 60,
 ): Promise<string> {
   if (!isSupabaseConfigured()) {
-    throw new Error('Object storage requires Supabase configuration.');
+    throw new Error('File storage is temporarily unavailable.');
   }
 
   const { data, error } = await getSupabaseClient()
@@ -65,7 +66,7 @@ export async function getSignedObjectUrl(
     .from(bucket)
     .createSignedUrl(path, expiresInSeconds);
 
-  if (error) throw error;
-  if (!data?.signedUrl) throw new Error('Unable to create signed URL.');
+  if (error) throw new Error(describeUnknownError(error, 'Could not open the file. Try again.'));
+  if (!data?.signedUrl) throw new Error('Could not open the file. Try again.');
   return data.signedUrl;
 }

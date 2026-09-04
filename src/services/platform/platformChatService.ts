@@ -18,7 +18,7 @@ export function chatAuthSurface(senderSide: PlatformChatSide): AuthSurface {
 }
 
 function requireChatClient(surface: AuthSurface) {
-  if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+  if (!isSupabaseConfigured()) throw new Error('This service is temporarily unavailable.');
   return getSupabaseClient(surface);
 }
 

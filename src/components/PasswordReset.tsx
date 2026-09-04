@@ -4,14 +4,20 @@ import { resolveLoginChrome } from '../utils/loginBranding';
 import { getUsers, setUsers } from '../hooks/useLayoutState';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { createPasswordRecord, createSecretRecord, verifySecret } from '../utils/auth';
-import { shouldUseSupabaseAuth, requestSupabasePasswordReset } from '../services/backend/AuthBackend';
+import { shouldUseSupabaseAuth } from '../services/backend/AuthBackend';
 import { withTimeout } from '../utils/withTimeout';
+import {
+  describePasswordResetRequestError,
+  requestPasswordReset,
+} from '../services/auth/passwordRecoveryService';
+import { describeUnknownError } from '../utils/unknownError';
 
 interface PasswordResetProps {
   onClose: () => void;
   onSuccess: () => void;
   branding?: Config;
   authSurface?: 'platform' | 'venue';
+  organizationId?: string;
 }
 
 type ResetStep = 'request' | 'verify' | 'reset' | 'success';
@@ -36,7 +42,7 @@ interface StoredResetCodeRecord {
   expiry: string;
 }
 
-const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, branding, authSurface = 'platform' }) => {
+const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, branding, authSurface = 'platform', organizationId }) => {
   const config = branding || getConfig();
   const chrome = resolveLoginChrome(config);
   const primaryButtonStyle = { backgroundColor: chrome.primary, color: chrome.headerText };
@@ -59,8 +65,8 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [userSecurityQuestion, setUserSecurityQuestion] = useState('');
   const [displayCode, setDisplayCode] = useState('');
-  // In Supabase (cloud) mode the visible flow must use Supabase Auth's recovery
-  // emails, not the local demo code. (Review #180 P0-5.)
+  // Hosted accounts use the server-side, branded recovery flow. The legacy
+  // in-browser verification-code path remains available only for demo builds.
   const usingSupabaseAuth = shouldUseSupabaseAuth();
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.MODE === 'test';
 
@@ -140,16 +146,18 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
     setLoading(true);
 
     try {
-      // Cloud mode: delegate to Supabase Auth recovery so real accounts can reset
-      // their password by email. No local code is generated.
       if (usingSupabaseAuth) {
         if (!email.trim()) {
-          setError('Enter the email address for your Supabase account.');
+          setError('Enter your account email address.');
           return;
         }
         await withTimeout(
-          requestSupabasePasswordReset(email.trim(), authSurface),
-          20000,
+          requestPasswordReset({
+            email,
+            surface: authSurface,
+            organizationId,
+          }),
+          22000,
           'Sending the reset email timed out. Try again, or check your connection.',
         );
         setStep('verify');
@@ -212,10 +220,10 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
       setResendCooldown(60);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : usingSupabaseAuth
-            ? 'Could not send a password reset email.'
+        usingSupabaseAuth
+          ? describePasswordResetRequestError(err)
+          : err instanceof Error
+            ? err.message
             : 'Could not send a verification code.',
       );
     } finally {
@@ -256,7 +264,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
       setVerificationCode('');
       setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not resend the verification code.');
+      setError(describeUnknownError(err, 'Could not resend the verification code.'));
     } finally {
       setLoading(false);
     }
@@ -373,7 +381,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
 
       setStep('success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update the password.');
+      setError(describeUnknownError(err, 'Could not update the password.'));
     } finally {
       setLoading(false);
     }
@@ -403,20 +411,23 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
           <div className="text-3xl mb-2">{step === 'success' ? '✅' : '🔐'}</div>
           <h2 className="text-xl font-bold">
             {step === 'request' && 'Reset Your Password'}
-            {step === 'verify' && 'Verify Your Identity'}
+            {step === 'verify' && (usingSupabaseAuth ? 'Check Your Email' : 'Verify Your Identity')}
             {step === 'reset' && 'Create New Password'}
             {step === 'success' && 'Password Reset Complete!'}
           </h2>
           <p className="text-sm opacity-80 mt-1">
-            {step === 'request' &&
-              'Enter your username or email to receive a reset code'}
-            {step === 'verify' && 'Enter the verification code sent to you'}
+            {step === 'request' && (usingSupabaseAuth
+              ? 'Enter your account email to receive a secure reset link'
+              : 'Enter your username or email to receive a reset code')}
+            {step === 'verify' && (usingSupabaseAuth
+              ? 'Use the newest reset message sent to your inbox'
+              : 'Enter the verification code sent to you')}
             {step === 'reset' && 'Choose a strong password to secure your account'}
             {step === 'success' && 'Your password has been successfully updated'}
           </p>
         </div>
 
-        {step !== 'success' && (
+        {step !== 'success' && !usingSupabaseAuth && (
           <div className="flex justify-center gap-2 p-3 bg-gray-50 border-b">
             {['request', 'verify', 'reset'].map((s, idx) => (
               <div key={s} className="flex items-center">
@@ -517,8 +528,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
                   <strong>💡 How it works:</strong>
                   <p className="mt-1">
-                    Enter your Supabase account email and we will send a password-reset link to that
-                    inbox. No local verification code is used in cloud mode.
+                    Enter your account email address. If it has access here, we will send a secure link for choosing a new password.
                   </p>
                 </div>
               ) : (
@@ -557,8 +567,9 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm text-emerald-800">
                 <strong>📬 Check your email.</strong>
                 <p className="mt-1">
-                  We sent a password-reset link to <strong>{email.trim()}</strong>. Use that link
-                  (opened in the same browser) to choose a new password. This window can be closed.
+                  If an account with access to this sign-in page matches <strong>{email.trim()}</strong>,
+                  a password-reset link is on its way. Open the newest message to choose a new password.
+                  If it does not arrive within a few minutes, try again or contact support. This window can be closed.
                 </p>
               </div>
               <button
@@ -586,7 +597,7 @@ const PasswordReset: React.FC<PasswordResetProps> = ({ onClose, onSuccess, brand
                     </span>
                   </div>
                   <p className="text-xs text-amber-600 mt-2 text-center">
-                    Demo mode only. Production reset codes must be delivered server-side.
+                    Demo only. Live account recovery sends private verification instructions by email.
                   </p>
                 </div>
               )}

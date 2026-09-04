@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { signInWithPassword, signOut, getSession, db } = vi.hoisted(() => ({
+const { signInWithPassword, signOut, adminSignOut, getSession, clearPersistedAuthSurface, db } = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
   signOut: vi.fn(),
+  adminSignOut: vi.fn(),
   getSession: vi.fn(),
+  clearPersistedAuthSurface: vi.fn(),
   db: {
     membershipRow: null as Record<string, unknown> | null,
     organizationRow: null as Record<string, unknown> | null,
@@ -23,9 +25,11 @@ function tableApi(result: { data: unknown; error: null }) {
 }
 
 vi.mock('./supabaseClient', () => ({
+  clearPersistedAuthSurface,
+  getAuthSurface: () => 'platform',
   isSupabaseConfigured: () => true,
   getSupabaseClient: () => ({
-    auth: { signInWithPassword, signOut, getSession },
+    auth: { signInWithPassword, signOut, getSession, admin: { signOut: adminSignOut } },
     from: (table: string) => {
       if (table === 'profiles') {
         return tableApi({ data: { email: 'ada@sevenpaths.com', full_name: 'Ada' }, error: null });
@@ -44,7 +48,7 @@ vi.mock('./supabaseClient', () => ({
   }),
 }));
 
-import { restoreSupabaseSession, signInWithSupabase } from './AuthBackend';
+import { restoreSupabaseSession, signInWithSupabase, signOutSupabase } from './AuthBackend';
 
 describe('signInWithSupabase unauthorized discard', () => {
   beforeEach(() => {
@@ -53,6 +57,7 @@ describe('signInWithSupabase unauthorized discard', () => {
     db.organizationRow = { slug: 'seven-paths-manor', status: 'active' };
     db.platformRow = null;
     signOut.mockResolvedValue({ error: null });
+    adminSignOut.mockResolvedValue({ error: null });
     getSession.mockResolvedValue({
       data: { session: { access_token: 'tok', user: { id: 'user-1', email: 'ada@sevenpaths.com' } } },
       error: null,
@@ -66,22 +71,46 @@ describe('signInWithSupabase unauthorized discard', () => {
     });
   });
 
-  it('does not sign out when the password is wrong', async () => {
+  it('clears a stale target session and returns a white-label credential error when the password is wrong', async () => {
     signInWithPassword.mockResolvedValue({ data: { session: null, user: null }, error: { message: 'Invalid login' } });
-    await expect(signInWithSupabase('ada@sevenpaths.com', 'nope', 'org-1', 'venue')).resolves.toBeNull();
-    expect(signOut).not.toHaveBeenCalled();
+    await expect(signInWithSupabase('ada@sevenpaths.com', 'nope', 'org-1', 'venue')).rejects.toMatchObject({
+      code: 'invalid_credentials',
+      message: 'The email address or password is incorrect.',
+    });
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(clearPersistedAuthSurface).toHaveBeenCalledWith('venue');
+  });
+
+  it('removes persisted auth before a stalled remote revocation and retains the captured token', async () => {
+    let finishRevocation!: (value: { error: null }) => void;
+    clearPersistedAuthSurface.mockReturnValueOnce('captured-access-token');
+    adminSignOut.mockImplementationOnce(() => new Promise((resolve) => { finishRevocation = resolve; }));
+
+    const pending = signOutSupabase('venue', { scope: 'global' });
+    expect(clearPersistedAuthSurface).toHaveBeenCalledWith('venue');
+    expect(adminSignOut).toHaveBeenCalledWith('captured-access-token', 'global');
+    expect(clearPersistedAuthSurface.mock.invocationCallOrder[0])
+      .toBeLessThan(adminSignOut.mock.invocationCallOrder[0]);
+
+    finishRevocation({ error: null });
+    await pending;
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
   it('locally signs out the venue client when the password is valid but the user is not a member', async () => {
     db.membershipRow = null;
-    await expect(signInWithSupabase('ada@sevenpaths.com', 'secret', 'org-b', 'venue')).resolves.toBeNull();
+    await expect(signInWithSupabase('ada@sevenpaths.com', 'secret', 'org-b', 'venue')).rejects.toMatchObject({
+      code: 'venue_access_denied',
+    });
     expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
   it('locally signs out when the venue is suspended', async () => {
     db.membershipRow = { role: 'owner', status: 'active', organization_id: 'org-1' };
     db.organizationRow = { slug: 'seven-paths-manor', status: 'suspended' };
-    await expect(signInWithSupabase('ada@sevenpaths.com', 'secret', 'org-1', 'venue')).resolves.toBeNull();
+    await expect(signInWithSupabase('ada@sevenpaths.com', 'secret', 'org-1', 'venue')).rejects.toMatchObject({
+      code: 'venue_unavailable',
+    });
     expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
@@ -106,8 +135,32 @@ describe('signInWithSupabase unauthorized discard', () => {
   it('locally signs out when the venue is archived', async () => {
     db.membershipRow = { role: 'owner', status: 'active', organization_id: 'org-1' };
     db.organizationRow = { slug: 'seven-paths-manor', status: 'archived' };
-    await expect(signInWithSupabase('ada@sevenpaths.com', 'secret', 'org-1', 'venue')).resolves.toBeNull();
+    await expect(signInWithSupabase('ada@sevenpaths.com', 'secret', 'org-1', 'venue')).rejects.toMatchObject({
+      code: 'venue_unavailable',
+    });
     expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('drops a restored venue identity that has no active venue membership', async () => {
+    db.membershipRow = null;
+    await expect(restoreSupabaseSession(undefined, 'venue')).resolves.toBeNull();
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(clearPersistedAuthSurface).toHaveBeenCalledWith('venue');
+  });
+
+  it('drops a restored platform identity that has no active platform membership', async () => {
+    db.platformRow = null;
+    await expect(restoreSupabaseSession(undefined, 'platform')).resolves.toBeNull();
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(clearPersistedAuthSurface).toHaveBeenCalledWith('platform');
+  });
+
+  it('restores only an identity with active platform membership on the platform surface', async () => {
+    db.platformRow = { role: 'platform_admin', status: 'active' };
+    const restored = await restoreSupabaseSession(undefined, 'platform');
+    expect(restored?.platformRole).toBe('platform_admin');
+    expect(restored?.user.role).toBe('admin');
+    expect(signOut).not.toHaveBeenCalled();
   });
 
   it('drops a restored venue session when the organization is suspended', async () => {

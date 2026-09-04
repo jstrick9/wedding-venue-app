@@ -17,10 +17,7 @@ export function resolveTransactionalFromAddress(_emailFromSecret?: string | null
 
 export function describeBrevoSenderRejection(fromEmail: string, providerMessage = ''): string {
   const detail = providerMessage.trim();
-  return [
-    `Brevo rejected sender ${fromEmail}.`,
-    'Confirm wedding-vip@outlook.com as a verified sender in Brevo.',
-    'Leftover EMAIL_FROM values such as invites@weddingvip.com are ignored.',
-    detail ? `Provider: ${detail}` : '',
-  ].filter(Boolean).join(' ');
+  void fromEmail;
+  void detail;
+  return 'Email delivery is temporarily unavailable. Try again later or copy the invitation link instead.';
 }

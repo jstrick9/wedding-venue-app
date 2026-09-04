@@ -122,7 +122,7 @@ export async function createEmergencyRecoverySnapshot(actor?: {
     localStorage.setItem(EMERGENCY_SNAPSHOT_KEY, json);
   } catch (error) {
     if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      console.error('localStorage quota exceeded. Attempting to free space...');
+      console.error('Device storage quota exceeded. Attempting to free space...');
       // Try to free space by removing old backups
       const keys = Object.keys(localStorage);
       keys.forEach(key => {

@@ -2,9 +2,10 @@ import type { User, UserRole } from '../../types';
 import type { AuthSurface } from '../../utils/authSurface';
 import type { PlatformRole } from '../platform/platformTypes';
 import { claimVenueAdminAccount, isClaimFunctionMissingError } from '../platform/claimVenueAdminAccount';
-import { buildPasswordResetRedirectUrl, type PasswordResetSurface } from '../../utils/passwordResetRoute';
+import type { PasswordResetSurface } from '../../utils/passwordResetRoute';
 import { describePasswordPolicyError } from '../../utils/passwordPolicy';
-import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
+import { AuthFlowError, authRecoveryError, authSignInError } from '../../utils/authErrors';
+import { clearPersistedAuthSurface, getAuthSurface, getSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 
 export interface BackendAuthSession {
   user: User;
@@ -52,13 +53,18 @@ export function shouldUseSupabaseAuth(): boolean {
   return import.meta.env.VITE_BACKEND_PROVIDER === 'supabase' && isSupabaseConfigured();
 }
 
-async function loadPlatformRole(userId: string, surface: AuthSurface): Promise<PlatformRole | undefined> {
+async function loadPlatformRole(
+  userId: string,
+  surface: AuthSurface,
+  strict = false,
+): Promise<PlatformRole | undefined> {
   const { data, error } = await getSupabaseClient(surface)
     .from('platform_memberships')
     .select('role,status')
     .eq('user_id', userId)
     .eq('status', 'active')
     .maybeSingle();
+  if (error && strict) throw new AuthFlowError('service_unavailable');
   if (error || !data?.role) return undefined;
   return data.role as PlatformRole;
 }
@@ -72,68 +78,133 @@ function isVenueAccessBlocked(status?: string | null): boolean {
   return status === 'suspended' || status === 'archived';
 }
 
+const AUTH_REVOCATION_WAIT_MS = 6000;
+
+async function settleWithin(promise: Promise<unknown>, timeoutMs: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      promise,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function revokeAndClearAuthSurface(
+  surface: AuthSurface,
+  scope: 'local' | 'global',
+  client?: ReturnType<typeof getSupabaseClient>,
+): Promise<void> {
+  const supabase = client || getSupabaseClient(surface);
+  // Capture the access token synchronously, then remove reloadable state before
+  // any network operation. The SDK otherwise reloads from storage during
+  // signOut; clearing first without capturing would silently skip revocation.
+  const accessToken = clearPersistedAuthSurface(surface);
+  try {
+    if (accessToken && supabase.auth.admin?.signOut) {
+      await settleWithin(
+        supabase.auth.admin.signOut(accessToken, scope),
+        AUTH_REVOCATION_WAIT_MS,
+      );
+    }
+  } catch {
+    // Browser teardown is authoritative locally even when remote revocation is
+    // temporarily unavailable.
+  }
+  try {
+    // With storage already empty this performs SDK in-memory cleanup and emits
+    // the signed-out event without another revocation request.
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    // Persisted state was already removed.
+  } finally {
+    clearPersistedAuthSurface(surface);
+  }
+}
+
 export async function signInWithSupabase(
   email: string,
   password: string,
   requiredOrganizationId?: string,
   surface?: AuthSurface,
-): Promise<BackendAuthSession | null> {
+): Promise<BackendAuthSession> {
   const target: AuthSurface = surface || (requiredOrganizationId ? 'venue' : 'platform');
   const supabase = getSupabaseClient(target);
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error || !data.session || !data.user) return null;
+  const clearTargetSession = () => revokeAndClearAuthSurface(target, 'local', supabase);
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', data.user.id)
-    .single();
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    if (error) throw authSignInError(error);
+    if (!data.session || !data.user) throw new AuthFlowError('service_unavailable');
 
-  const membershipQuery = supabase
-    .from('organization_memberships')
-    .select('role,status,organization_id')
-    .eq('user_id', data.user.id)
-    .eq('status', 'active');
-  const { data: membership } = await (requiredOrganizationId
-    ? membershipQuery.eq('organization_id', requiredOrganizationId)
-    : membershipQuery.limit(1)
-  ).maybeSingle();
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+    if (profileError) throw new AuthFlowError('service_unavailable');
 
-  if (requiredOrganizationId && !membership) {
-    await supabase.auth.signOut({ scope: 'local' });
-    return null;
+    const membershipQuery = supabase
+      .from('organization_memberships')
+      .select('role,status,organization_id')
+      .eq('user_id', data.user.id)
+      .eq('status', 'active');
+    const { data: membership, error: membershipError } = await (requiredOrganizationId
+      ? membershipQuery.eq('organization_id', requiredOrganizationId)
+      : membershipQuery.limit(1)
+    ).maybeSingle();
+    if (membershipError) throw new AuthFlowError('service_unavailable');
+
+    if (requiredOrganizationId && !membership) {
+      throw new AuthFlowError('venue_access_denied');
+    }
+
+    const organizationResult = membership?.organization_id
+      ? await supabase
+        .from('organizations')
+        .select('slug,status')
+        .eq('id', membership.organization_id)
+        .maybeSingle()
+      : { data: null, error: null };
+    if (organizationResult.error) throw new AuthFlowError('service_unavailable');
+    const organization = organizationResult.data;
+    const blocked = isVenueAccessBlocked(organization?.status);
+    if (requiredOrganizationId && blocked) {
+      throw new AuthFlowError('venue_unavailable');
+    }
+
+    const effectiveMembership = blocked ? null : membership;
+    const platformRole = await loadPlatformRole(data.user.id, target, true);
+    const user = mapProfileToUser(
+      {
+        ...profile,
+        app_role: hasPlatformAdminAuthority(platformRole) ? 'admin' : effectiveMembership?.role,
+      },
+      data.user.id,
+      data.user.email || email,
+    );
+
+    return {
+      user,
+      accessToken: data.session.access_token,
+      organizationId: effectiveMembership?.organization_id,
+      organizationSlug: blocked ? undefined : organization?.slug,
+      platformRole,
+    };
+  } catch (error) {
+    // Any failed attempt must clear this isolated surface. Otherwise a network,
+    // credential, or membership failure could revive a previously cached venue.
+    await clearTargetSession();
+    if (error instanceof AuthFlowError) throw error;
+    throw authSignInError(error);
   }
-
-  const { data: organization } = membership?.organization_id
-    ? await supabase
-      .from('organizations')
-      .select('slug,status')
-      .eq('id', membership.organization_id)
-      .maybeSingle()
-    : { data: null };
-  const blocked = isVenueAccessBlocked(organization?.status);
-  if (requiredOrganizationId && blocked) {
-    await supabase.auth.signOut({ scope: 'local' });
-    return null;
-  }
-  const effectiveMembership = blocked ? null : membership;
-  const platformRole = await loadPlatformRole(data.user.id, target);
-  const user = mapProfileToUser(
-    {
-      ...profile,
-      app_role: hasPlatformAdminAuthority(platformRole) ? 'admin' : effectiveMembership?.role,
-    },
-    data.user.id,
-    data.user.email || email,
-  );
-
-  return {
-    user,
-    accessToken: data.session.access_token,
-    organizationId: effectiveMembership?.organization_id,
-    organizationSlug: blocked ? undefined : organization?.slug,
-    platformRole,
-  };
 }
 
 export async function restoreSupabaseSession(
@@ -141,43 +212,55 @@ export async function restoreSupabaseSession(
   surface: AuthSurface = 'platform',
 ): Promise<BackendAuthSession | null> {
   const supabase = getSupabaseClient(surface);
-  const { data } = await supabase.auth.getSession();
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw new AuthFlowError('service_unavailable');
   const session = data.session;
   if (!session?.user) return null;
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', session.user.id)
     .single();
+  if (profileError || !profile) throw new AuthFlowError('service_unavailable');
 
   const membershipQuery = supabase
     .from('organization_memberships')
     .select('role,status,organization_id')
     .eq('user_id', session.user.id)
     .eq('status', 'active');
-  const { data: membership } = await (requiredOrganizationId
+  const { data: membership, error: membershipError } = await (requiredOrganizationId
     ? membershipQuery.eq('organization_id', requiredOrganizationId)
     : membershipQuery.limit(1)
   ).maybeSingle();
+  if (membershipError) throw new AuthFlowError('service_unavailable');
 
-  if (requiredOrganizationId && !membership) return null;
+  const platformRole = await loadPlatformRole(session.user.id, surface, true);
+  const lacksSurfaceAccess = (surface === 'venue' && !membership)
+    || (surface === 'platform' && !platformRole);
+  if (lacksSurfaceAccess || (requiredOrganizationId && !membership)) {
+    await signOutSupabase(surface, { scope: 'local' });
+    return null;
+  }
 
-  const { data: organization } = membership?.organization_id
+  const organizationResult = membership?.organization_id
     ? await supabase
       .from('organizations')
       .select('slug,status')
       .eq('id', membership.organization_id)
       .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (organizationResult.error || (membership && !organizationResult.data)) {
+    throw new AuthFlowError('service_unavailable');
+  }
+  const organization = organizationResult.data;
   const blocked = isVenueAccessBlocked(organization?.status);
   if (blocked && surface === 'venue') {
-    await supabase.auth.signOut({ scope: 'local' });
+    await signOutSupabase(surface, { scope: 'local' });
     return null;
   }
-  if (requiredOrganizationId && blocked) return null;
+
   const effectiveMembership = blocked ? null : membership;
-  const platformRole = await loadPlatformRole(session.user.id, surface);
   return {
     user: mapProfileToUser(
       {
@@ -199,7 +282,8 @@ export async function signOutSupabase(
   options?: { scope?: 'local' | 'global' },
 ): Promise<void> {
   if (!isSupabaseConfigured()) return;
-  await getSupabaseClient(surface).auth.signOut({ scope: options?.scope ?? 'global' });
+  const target = surface || getAuthSurface();
+  await revokeAndClearAuthSurface(target, options?.scope ?? 'local');
 }
 
 export interface SignUpParams {
@@ -241,7 +325,7 @@ export async function signUpWithSupabase({
   });
   if (error) throw error;
   if (!data.session || !data.user) {
-    throw new Error('Sign-up succeeded but no session was returned (email confirmation may be required).');
+    throw new Error('Your account was created. Confirm your email using the message we sent, then return to sign in.');
   }
 
   // Bootstrap an organization + owner membership so the new user has an RLS
@@ -344,7 +428,7 @@ async function signUpVenueAdminFallback({
   });
   if (error) throw error;
   if (!data.session || !data.user) {
-    throw new Error('Account created but no session was returned. Email confirmation may be enabled; complete confirmation or use a test project with confirmation disabled.');
+    throw new Error('Your account was created. Confirm your email using the message we sent, then return to sign in.');
   }
   return acceptVenueAdminInviteAsSignedIn(inviteToken, fullName);
 }
@@ -401,7 +485,7 @@ export async function signUpVenueAdminWithInvite({
     } catch (fallbackError) {
       if (alreadyRegisteredMessage(fallbackError)) {
         throw new Error(
-          'This venue already has an administrator account. The claim-venue-admin function must be deployed so a reissued invite can set a new password without losing venue work.',
+          'This venue already has an administrator account, but account setup is temporarily unavailable. Ask the platform administrator to reissue the invitation. Venue work is unchanged.',
         );
       }
       throw fallbackError;
@@ -423,7 +507,7 @@ export async function signUpOrganizationInvite({
   });
   if (error) throw error;
   if (!data.session || !data.user) {
-    throw new Error('Account created but no session was returned. Email confirmation may be enabled; complete confirmation or use a test project with confirmation disabled.');
+    throw new Error('Your account was created. Confirm your email using the message we sent, then return to sign in.');
   }
 
   const { data: accepted, error: acceptError } = await supabase.rpc('accept_invite', {
@@ -439,42 +523,55 @@ export async function signUpOrganizationInvite({
   return session;
 }
 
-export async function requestSupabasePasswordReset(
-  email: string,
-  surface: PasswordResetSurface = 'platform',
-): Promise<void> {
-  const redirectTo = buildPasswordResetRedirectUrl(surface);
-  const { error } = await getSupabaseClient(surface).auth.resetPasswordForEmail(email, {
-    redirectTo,
-  });
-  if (error) throw error;
-}
-
 export async function completeSupabasePasswordRecovery(params: {
   surface: PasswordResetSurface;
   password: string;
+  tokenHash?: string;
   code?: string;
   accessToken?: string;
   refreshToken?: string;
 }): Promise<void> {
-  if (params.password.length < 8) {
-    throw new Error('Password must be at least 8 characters.');
-  }
+  const passwordError = describePasswordPolicyError(params.password);
+  if (passwordError) throw new AuthFlowError('password_rejected');
+
   const supabase = getSupabaseClient(params.surface);
-  if (params.code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(params.code);
-    if (error) throw new Error(error.message || 'This reset link is invalid or already used.');
-  } else if (params.accessToken && params.refreshToken) {
-    const { error } = await supabase.auth.setSession({
-      access_token: params.accessToken,
-      refresh_token: params.refreshToken,
-    });
-    if (error) throw new Error(error.message || 'This reset link is invalid or already used.');
-  } else {
-    throw new Error(
-      'This reset link is missing or incomplete. Request a new password reset and open the newest email in this same browser.',
-    );
+  let recoverySessionEstablished = false;
+  try {
+    if (params.tokenHash) {
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash: params.tokenHash,
+        type: 'recovery',
+      });
+      recoverySessionEstablished = Boolean(data.session?.user);
+      if (error || !recoverySessionEstablished) throw authRecoveryError(error);
+    } else if (params.code) {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(params.code);
+      recoverySessionEstablished = Boolean(data.session?.user);
+      if (error || !recoverySessionEstablished) throw authRecoveryError(error);
+    } else if (params.accessToken && params.refreshToken) {
+      const { data, error } = await supabase.auth.setSession({
+        access_token: params.accessToken,
+        refresh_token: params.refreshToken,
+      });
+      recoverySessionEstablished = Boolean(data.session?.user);
+      if (error || !recoverySessionEstablished) throw authRecoveryError(error);
+    } else {
+      throw new AuthFlowError('invalid_recovery_link');
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: params.password });
+    if (error) throw authRecoveryError(error);
+
+    // A recovery proof authorizes exactly the password change. Do not turn the
+    // reset link into a durable application login; return to the correct login
+    // door and require the new password. Capture the proof session before local
+    // cleanup so global revocation is not accidentally skipped.
+    await revokeAndClearAuthSurface(params.surface, 'global', supabase);
+  } catch (error) {
+    if (recoverySessionEstablished) {
+      await revokeAndClearAuthSurface(params.surface, 'local', supabase);
+    }
+    if (error instanceof AuthFlowError) throw error;
+    throw authRecoveryError(error);
   }
-  const { error } = await supabase.auth.updateUser({ password: params.password });
-  if (error) throw new Error(error.message || 'Could not update the password.');
 }

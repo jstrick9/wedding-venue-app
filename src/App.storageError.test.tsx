@@ -25,7 +25,7 @@ describe('global storage error surface', () => {
     // The message appears in both the live region and the toast; assert at
     // least one instance surfaced on the login screen.
     await waitFor(() => {
-      expect(screen.getAllByText(/Could not save "spm_test_key"/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Could not save workspace data/i).length).toBeGreaterThan(0);
     });
   });
 });

@@ -1,6 +1,7 @@
-import { AUTH_STORAGE_KEYS, type AuthSurface } from '../../utils/authSurface';
+import type { AuthSurface } from '../../utils/authSurface';
 import { describePasswordPolicyError } from '../../utils/passwordPolicy';
 import { createDeadlineFetch, getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
+import { signOutSupabase } from '../backend/AuthBackend';
 
 export type PortalInviteKind = 'couple' | 'guest';
 export type PortalAccountMode = 'create' | 'sign-in';
@@ -32,7 +33,7 @@ export interface PortalInviteLookupResult {
 
 export const CLAIM_PORTAL_INVITE_FUNCTION = 'claim-portal-invite';
 export const CLAIM_PORTAL_FUNCTION_MISSING =
-  'Personal invite accounts are not deployed yet. Ask the administrator to deploy migration 0021 and the claim-portal-invite Edge Function.';
+  'Personal account setup is temporarily unavailable. Please try again later or contact the invitation sender.';
 
 function surfaceFor(kind: PortalInviteKind): AuthSurface {
   return kind === 'couple' ? 'couple' : 'guest';
@@ -121,7 +122,7 @@ function describeAcceptError(error: string): string {
   if (error === 'email_required') return 'Ask the sender to add a valid email address and reissue this personal account invitation.';
   if (error === 'account_required') return 'Sign in with your personal password to continue.';
   if (error === 'not_found') return 'This invitation is invalid or has been replaced by a newer link.';
-  return error || 'Could not connect this account to the invitation.';
+  return 'Could not connect this account to the invitation. Request a new link or contact the invitation sender.';
 }
 
 async function signInAndAccept(params: {
@@ -151,7 +152,7 @@ async function signInAndAccept(params: {
   });
   const context = mapContext(data);
   if (error || !context) {
-    await client.auth.signOut({ scope: 'local' });
+    await signOutSupabase(surfaceFor(params.kind), { scope: 'local' });
     const payload = data && typeof data === 'object' ? data as Record<string, unknown> : {};
     throw new Error(describeAcceptError(String(payload.error || error?.message || '')));
   }
@@ -168,7 +169,7 @@ export async function claimOrSignInPortalInvite(params: {
   password: string;
   fullName: string;
 }): Promise<PortalInviteContext> {
-  if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+  if (!isSupabaseConfigured()) throw new Error(CLAIM_PORTAL_FUNCTION_MISSING);
   const token = params.token.trim();
   const email = params.email.trim().toLowerCase();
   const fullName = params.fullName.trim();
@@ -228,19 +229,5 @@ export async function claimOrSignInPortalInvite(params: {
 
 export async function signOutPortalAccount(kind: PortalInviteKind): Promise<void> {
   if (!isSupabaseConfigured()) return;
-  const surface = surfaceFor(kind);
-  try {
-    await getSupabaseClient(surface).auth.signOut({ scope: 'local' });
-  } finally {
-    // Supabase does not remove its local session when the remote logout request
-    // fails. Portal sign-out must still revoke this browser's JWT immediately,
-    // or remounting the invitation gate can silently reopen the account.
-    try {
-      localStorage.removeItem(AUTH_STORAGE_KEYS[surface]);
-      localStorage.removeItem(`${AUTH_STORAGE_KEYS[surface]}-code-verifier`);
-    } catch {
-      // The component remains signed out in memory. Backend authorization is
-      // still authoritative if browser storage is unavailable.
-    }
-  }
+  await signOutSupabase(surfaceFor(kind), { scope: 'local' });
 }

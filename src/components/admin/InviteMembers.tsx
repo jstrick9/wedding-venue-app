@@ -5,6 +5,7 @@ import { createInvite } from '../../services/org/inviteService';
 import { showToast } from '../Toast';
 import { normalizeEmail } from '../../utils/contactQuality';
 import { withTimeout } from '../../utils/withTimeout';
+import { describeUnknownError } from '../../utils/unknownError';
 
 const ROLES = [
   { id: 'admin', label: 'Admin' },
@@ -59,11 +60,11 @@ export function InviteMembers() {
       );
 
       if (!res.ok) {
-        showToast(res.error || 'Could not send the invite.', 'warning');
+        showToast(describeUnknownError(new Error(res.error || ''), 'Could not send the invite.'), 'warning');
         return;
       }
       if (res.error) {
-        showToast(`${res.error} Copy the invitation link below.`, 'warning');
+        showToast(`${describeUnknownError(new Error(res.error), 'Email delivery is temporarily unavailable.')} Copy the invitation link below.`, 'warning');
       } else {
         showToast(`Invitation emailed to ${trimmed}.`, 'success');
       }
@@ -71,7 +72,7 @@ export function InviteMembers() {
       setInviteeName('');
       setResult(res);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not send the invite.', 'warning');
+      showToast(describeUnknownError(err, 'Could not send the invite.'), 'warning');
     } finally {
       setIsSending(false);
     }

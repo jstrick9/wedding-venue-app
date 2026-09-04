@@ -19,7 +19,7 @@ describe('Staff login hang guards', () => {
 
     const reset = readFileSync(join(process.cwd(), 'src/components/PasswordReset.tsx'), 'utf8');
     expect(reset).toContain('Sending the reset email timed out');
-    expect(reset).toContain('requestSupabasePasswordReset');
+    expect(reset).toContain('requestPasswordReset');
     expect(reset).toContain('withTimeout');
 
     const recovery = readFileSync(join(process.cwd(), 'src/components/PasswordRecoveryScreen.tsx'), 'utf8');

@@ -10,6 +10,7 @@ import {
 import { isStrongPassword } from '../utils/passwordPolicy';
 import { resolveLoginChrome } from '../utils/loginBranding';
 import { InvitePasswordFields } from './InvitePasswordFields';
+import { describeUnknownError } from '../utils/unknownError';
 
 interface PortalInviteAccountSetupProps {
   kind: PortalInviteKind;
@@ -31,7 +32,7 @@ function inviteErrorMessage(error: string, kind: PortalInviteKind): string {
   if (error === 'email_required') {
     return 'This invitation needs an email address before a personal account can be created. Ask the sender to add your email and reissue the link.';
   }
-  return error || 'This invitation could not be opened.';
+  return 'This invitation could not be opened. Request a new link or contact the invitation sender.';
 }
 
 export function PortalInviteAccountSetup({
@@ -84,7 +85,7 @@ export function PortalInviteAccountSetup({
       })
       .catch((lookupError: unknown) => {
         if (cancelled) return;
-        setError(lookupError instanceof Error ? lookupError.message : 'This invitation could not be opened.');
+        setError(describeUnknownError(lookupError, 'This invitation could not be opened.'));
         setLoading(false);
       });
     return () => { cancelled = true; };
@@ -115,7 +116,7 @@ export function PortalInviteAccountSetup({
         onAuthenticated(authenticated);
       }
     } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : 'Could not set up this account.';
+      const message = describeUnknownError(submitError, 'Could not set up this account.');
       if (/existing Wedding VIP password|did not sign in/i.test(message)) setMode('sign-in');
       setError(message);
     } finally {

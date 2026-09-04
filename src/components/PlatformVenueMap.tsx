@@ -107,7 +107,7 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
               img.src = url;
             })
             .catch((error) => {
-              setTileError(error instanceof Error ? error.message : 'Could not load Geoapify tiles.');
+              setTileError('Could not load map tiles. Try again later.');
               done(error instanceof Error ? error : new Error('tile'), img);
             });
           return img;
@@ -115,7 +115,7 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
       }
       new GeoapifyAuthedTiles({
         tileSize: 256,
-        attribution: 'Powered by Geoapify | © OpenMapTiles © OpenStreetMap contributors',
+        attribution: '<a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer">Powered by Geoapify</a> | © <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
       }).addTo(leafletMap);
       markers.clear();
       pins.forEach((item) => {
@@ -135,8 +135,8 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
         leafletMap.fitBounds(group.pad(pins.length === 1 ? 0.4 : 0.2), { maxZoom: 12, animate: false });
       }
       map = leafletMap;
-    }).catch((error) => {
-      if (!cancelled) setTileError(error instanceof Error ? error.message : 'Could not start the map.');
+    }).catch(() => {
+      if (!cancelled) setTileError('Could not start the map. Try again later.');
     });
     return () => {
       cancelled = true;
@@ -159,7 +159,7 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Geographic operations</p>
           <h2 className="mt-1 text-lg font-bold text-gray-900">Venue network map</h2>
-          <p className="mt-1 text-xs text-gray-500">Street tiles come from Geoapify through the server proxy. Use the table for exact values and actions.</p>
+          <p className="mt-1 text-xs text-gray-500">Use the street map for geographic context and the table for exact values and actions.</p>
         </div>
         <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
           {([['points', 'Point map'], ['density', 'Density'], ['regions', 'Regions']] as const).map(([id, label]) => (
@@ -175,7 +175,7 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
               ref={mapNode}
               className="w-full"
               style={{ height: 360, width: '100%', minHeight: 360 }}
-              aria-label="Geoapify map of venue organizations"
+              aria-label="Street map of venue organizations"
             />
           ) : (
             <svg viewBox="0 0 800 360" role="img" aria-label={view === 'points' ? 'Point map of venue organizations' : 'Venue organization density map'} className="h-auto w-full">
@@ -210,7 +210,12 @@ export default function PlatformVenueMap({ organizations, onOpenVenue }: Platfor
       {selected && <div className="mt-3 flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-indigo-950">{selected.name}</p><p className="mt-1 text-xs text-indigo-900">{selected.addressLine1}, {selected.city}, {selected.stateRegion} {selected.postalCode}</p><p className="mt-1 text-xs text-indigo-900">Status: {selected.status} · Admins: {selected.admins.length}</p></div>{onOpenVenue && <button type="button" onClick={() => onOpenVenue(selected.id)} className="rounded-lg bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white">Open / edit</button>}</div>}
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200"><table className="min-w-full text-left text-xs"><caption className="sr-only">Venue map data table</caption><thead className="bg-gray-50 font-bold text-gray-600"><tr><th className="px-3 py-2">Venue</th><th className="px-3 py-2">Region</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Coordinates</th><th className="px-3 py-2">Actions</th></tr></thead><tbody>{organizations.map((organization) => <tr key={organization.id} className="border-t border-gray-100"><td className="px-3 py-2 font-semibold text-gray-800">{organization.name}</td><td className="px-3 py-2 text-gray-600">{organization.city}, {organization.stateRegion}</td><td className="px-3 py-2 text-gray-600">{organization.status}</td><td className="px-3 py-2 text-gray-600">{formatMapCoordinates(organization)}</td><td className="px-3 py-2">{onOpenVenue ? <button type="button" onClick={() => onOpenVenue(organization.id)} className="rounded-lg bg-indigo-700 px-2.5 py-1 text-[11px] font-bold text-white">Open / edit</button> : '—'}</td></tr>)}</tbody></table></div>
-      <p className="mt-2 text-[11px] text-gray-400">Map tiles: Powered by Geoapify | © OpenMapTiles © OpenStreetMap contributors. Density and region views stay schematic. Floor-plan designer is unchanged.</p>
+      <p className="mt-2 text-[11px] text-gray-400">
+        Map tiles: <a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer" className="underline">Powered by Geoapify</a>
+        {' '}| © <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer" className="underline">OpenMapTiles</a>
+        {' '}© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap contributors</a>.
+        {' '}Density and region views stay schematic. Floor-plan designer is unchanged.
+      </p>
     </section>
   );
 }

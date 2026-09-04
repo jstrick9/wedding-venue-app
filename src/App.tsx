@@ -12,6 +12,7 @@ import { ToastContainer, showToast } from './components/Toast';
 import { on } from './utils/appEvents';
 import { lazy } from 'react';
 import PlatformLoginScreen from './components/PlatformLoginScreen';
+import PasswordRecoveryScreen from './components/PasswordRecoveryScreen';
 import { getActiveOrganizationSlug } from './services/platform/organizationContext';
 import { isVenueStaffRoute } from './utils/authSurface';
 import { isPlatformConsoleHash } from './utils/platformConsoleRoute';
@@ -27,7 +28,6 @@ const AcceptInvite = lazy(() => import('./components/AcceptInvite').then((m) => 
 const PlatformAdminPortal = lazy(() => import('./components/PlatformAdminPortal'));
 const VenueAdminOnboarding = lazy(() => import('./components/VenueAdminOnboarding'));
 const VenueLoginScreen = lazy(() => import('./components/VenueLoginScreen'));
-const PasswordRecoveryScreen = lazy(() => import('./components/PasswordRecoveryScreen'));
 
 /**
  * Surfaces `spm_storage_error` events as toasts no matter which screen is
@@ -51,7 +51,7 @@ function GlobalStorageErrorListener() {
     () =>
       on('spm_storage_error', (detail) => {
         const verb = detail.action === 'save' ? 'save' : 'load';
-        showToast(`Could not ${verb} "${detail.key}": ${detail.error}`, 'warning');
+        showToast(`Could not ${verb} workspace data. Try again or contact support if the problem continues.`, 'warning');
       }),
     [],
   );
@@ -72,7 +72,7 @@ function GlobalCloudSyncErrorListener() {
           ? detail.domain
           : `"${detail.domain}"`;
         showToast(
-          `Saved locally, but syncing ${what} to the cloud failed: ${detail.error}. Your change is still on this device.`,
+          `Saved on this device, but ${what} could not be synced to the shared workspace. Your change is still available here; try again when the connection recovers.`,
           'warning',
         );
       }),
@@ -348,6 +348,22 @@ function AppContent() {
 }
 
 export default function App() {
+  // Recovery proof is handled before normal session restoration. This keeps an
+  // unrelated cached login from delaying or influencing the one-purpose reset
+  // session, and lets the recovery screen scrub the URL immediately.
+  if (shouldShowPasswordRecovery({
+    hash: window.location.hash,
+    pathname: window.location.pathname,
+  })) {
+    return (
+      <AppErrorBoundary>
+        <PasswordRecoveryScreen
+          surface={passwordResetSurfaceFromLocation({ pathname: window.location.pathname })}
+        />
+      </AppErrorBoundary>
+    );
+  }
+
   return (
     <AppErrorBoundary>
       <AuthProvider>

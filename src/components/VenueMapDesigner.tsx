@@ -9,6 +9,7 @@ import {
 } from '../utils/venueMapDesigner';
 import { downloadLayoutPng, downloadLayoutPdf } from '../utils/layoutExport';
 import { showToast } from './Toast';
+import { describeUnknownError } from '../utils/unknownError';
 
 export interface VenueMapDesignerProps {
   map: VenueMapConfig;
@@ -301,7 +302,7 @@ export function VenueMapDesigner({ map: initialMap, venues, onSave, onClose, map
       else await downloadLayoutPdf(svg, base);
       showToast(`Venue Map exported (${kind.toUpperCase()}).`, 'success');
     } catch (err) {
-      showToast(`Export failed: ${err instanceof Error ? err.message : 'unknown'}`, 'warning');
+      showToast(describeUnknownError(err, 'Could not export the venue map. Try again.'), 'warning');
     }
   };
 

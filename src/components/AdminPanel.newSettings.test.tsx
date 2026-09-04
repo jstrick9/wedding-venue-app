@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AdminPanel } from './AdminPanel';
-import { STORAGE_KEYS } from '../constants/storageKeys';
-import type { Config } from '../types';
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -28,27 +26,6 @@ vi.mock('../contexts/AuthContext', () => ({
   }),
 }));
 
-const testConfig: Config = {
-  logoUrl: '',
-  venueName: 'Seven Paths Manor',
-  tagline: 'Weddings Reimagined',
-  location: 'Spring Hope, NC',
-  websiteUrl: 'https://www.sevenpathsmanor.com',
-  supportEmail: 'weddings@sevenpathsmanor.com',
-  phone: '',
-  primaryColor: '#4A1942',
-  primaryDark: '#3d1a45',
-  primaryLight: '#6b2c5c',
-  accentColor: '#8B5A8B',
-  backgroundColor: '#f3f4f6',
-  textColor: '#1f2937',
-  fontFamily: 'Inter, system-ui, sans-serif',
-  headingFontFamily: 'Inter, system-ui, sans-serif',
-  headerTextColor: '#FFFFFF',
-  bodyTextColor: '#374151',
-  accentTextColor: '#4A1942',
-};
-
 describe('AdminPanel new System Settings modules (#147)', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -70,7 +47,7 @@ describe('AdminPanel new System Settings modules (#147)', () => {
     render(<AdminPanel {...dummyProps} />);
 
     expect(screen.getByText(/healthy/i)).toBeInTheDocument();
-    expect(screen.getByText(/localstorage/i)).toBeInTheDocument();
+    expect(screen.getByText(/workspace data/i)).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /💬\s*templates/i })
     ).toBeInTheDocument();

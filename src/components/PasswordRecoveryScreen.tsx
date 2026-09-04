@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { completeSupabasePasswordRecovery } from '../services/backend/AuthBackend';
 import { withTimeout } from '../utils/withTimeout';
 import { isSupabaseConfigured } from '../services/backend/supabaseClient';
@@ -11,54 +11,111 @@ import {
 } from '../utils/loginBranding';
 import {
   readRecoveryCode,
+  readRecoveryTokenHash,
   readRecoveryTokensFromHash,
+  readRecoveryVenueSlug,
+  passwordResetLoginHash,
   stripRecoveryParamsFromUrl,
   type PasswordResetSurface,
 } from '../utils/passwordResetRoute';
+import { describePasswordPolicyError } from '../utils/passwordPolicy';
+import { describeRecoveryError } from '../utils/authErrors';
+import { InvitePasswordFields } from './InvitePasswordFields';
+import { getPublicVenueBranding } from '../services/platform/publicVenueService';
+import { getActiveOrganizationSlug } from '../services/platform/organizationContext';
+import type { Config } from '../types';
 
 interface PasswordRecoveryScreenProps {
   surface: PasswordResetSurface;
 }
 
+interface RecoveryPayload {
+  tokenHash?: string;
+  code?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  venueSlug?: string;
+}
+
+function captureRecoveryPayload(): RecoveryPayload {
+  const tokens = readRecoveryTokensFromHash(window.location.hash);
+  return {
+    tokenHash: readRecoveryTokenHash(window.location.hash)
+      || readRecoveryTokenHash(window.location.search),
+    code: readRecoveryCode(window.location.search),
+    ...tokens,
+    venueSlug: readRecoveryVenueSlug(window.location.hash)
+      || readRecoveryVenueSlug(window.location.search),
+  };
+}
+
+function hasProof(payload: RecoveryPayload): boolean {
+  return Boolean(
+    payload.tokenHash
+    || payload.code
+    || (payload.accessToken && payload.refreshToken),
+  );
+}
+
 export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScreenProps) {
-  const branding = surface === 'venue' ? NEUTRAL_LOGIN_CONFIG : DEFAULT_PLATFORM_LOGIN_CONFIG;
+  // Capture during render, before the first effect strips the secret from the
+  // address bar. React Strict Mode may replay effects, but this state remains
+  // stable and cannot be overwritten by the now-clean URL.
+  const [payload] = useState<RecoveryPayload>(captureRecoveryPayload);
+  const validInitialProof = hasProof(payload);
+  const [branding, setBranding] = useState<Config>(
+    surface === 'venue' ? NEUTRAL_LOGIN_CONFIG : DEFAULT_PLATFORM_LOGIN_CONFIG,
+  );
   const chrome = resolveLoginChrome(branding);
-  const payloadRef = useRef<{ code?: string; accessToken?: string; refreshToken?: string }>({});
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [state, setState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState('');
-  const [hasRecoveryProof, setHasRecoveryProof] = useState(false);
+  const [state, setState] = useState<'idle' | 'saving' | 'success' | 'error'>(
+    validInitialProof ? 'idle' : 'error',
+  );
+  const [message, setMessage] = useState(
+    validInitialProof
+      ? ''
+      : 'This reset link is missing or incomplete. Request a new password reset and open the newest email.',
+  );
+
+  useEffect(() => {
+    stripRecoveryParamsFromUrl(window.location);
+  }, []);
 
   useEffect(() => {
     applyLoginBranding(branding);
-    const code = readRecoveryCode(window.location.search);
-    const tokens = readRecoveryTokensFromHash(window.location.hash);
-    payloadRef.current = { code, ...tokens };
-    stripRecoveryParamsFromUrl(window.location);
-    const ok = Boolean(code || (tokens?.accessToken && tokens?.refreshToken));
-    setHasRecoveryProof(ok);
-    if (!ok) {
-      setState('error');
-      setMessage('This reset link is missing or incomplete. Request a new password reset and open the newest email in this same browser.');
-    }
   }, [branding]);
 
+  useEffect(() => {
+    if (surface !== 'venue' || !payload.venueSlug) return;
+    let cancelled = false;
+    void getPublicVenueBranding(payload.venueSlug)
+      .then((result) => {
+        if (!cancelled && result) setBranding(result.config);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [payload.venueSlug, surface]);
+
   const leave = () => {
-    const hash = surface === 'venue' ? '#/home' : '#/platform-login';
-    window.location.replace(`${window.location.origin}/${hash}`);
+    const slug = surface === 'venue'
+      ? payload.venueSlug || getActiveOrganizationSlug() || undefined
+      : undefined;
+    window.location.replace(`${window.location.origin}/${passwordResetLoginHash(surface, slug)}`);
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (state === 'saving') return;
     if (!isSupabaseConfigured()) {
       setState('error');
-      setMessage('Supabase is not configured in this deployment.');
+      setMessage('Password reset is temporarily unavailable. Please try again later or contact support.');
       return;
     }
-    if (password.length < 8) {
+    const passwordError = describePasswordPolicyError(password);
+    if (passwordError) {
       setState('error');
-      setMessage('Password must be at least 8 characters.');
+      setMessage(passwordError);
       return;
     }
     if (password !== confirmPassword) {
@@ -74,23 +131,20 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
         completeSupabasePasswordRecovery({
           surface,
           password,
-          code: payloadRef.current.code,
-          accessToken: payloadRef.current.accessToken,
-          refreshToken: payloadRef.current.refreshToken,
+          tokenHash: payload.tokenHash,
+          code: payload.code,
+          accessToken: payload.accessToken,
+          refreshToken: payload.refreshToken,
         }),
-        20000,
-        'Saving the new password timed out. Request a new reset and open the newest email in this same browser.',
+        22000,
+        'Saving the new password timed out. Request a new reset and try again.',
       );
       setState('success');
-      setMessage('Password updated. Opening sign-in…');
+      setMessage('Password updated. Returning to sign-in…');
       window.setTimeout(leave, 600);
     } catch (error) {
       setState('error');
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : 'Could not update the password. Request a new reset and open the newest email in this same browser.',
-      );
+      setMessage(describeRecoveryError(error));
     }
   };
 
@@ -101,48 +155,36 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
           <div className="text-center">
             <div className="text-4xl">🔐</div>
             <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-gray-500">
-              {surface === 'venue' ? 'Venue password reset' : 'Platform password reset'}
+              {surface === 'venue' ? `${branding.venueName || 'Venue'} password reset` : 'Platform password reset'}
             </p>
             <h1 className="mt-1 text-2xl font-bold" style={{ color: chrome.primary, fontFamily: chrome.headingFontFamily }}>
               Set a new password
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-gray-600">
-              Open this page from the newest reset email in the same browser where you requested the reset.
+              Choose a strong password for your account. After it is saved, sign in again with the new password.
             </p>
           </div>
 
-          {hasRecoveryProof && <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-3">
-            <div>
-              <label htmlFor="recovery-password" className="mb-1 block text-xs font-semibold text-gray-700">New password</label>
-              <input
-                id="recovery-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm"
-                autoComplete="new-password"
+          {validInitialProof && (
+            <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-3">
+              <InvitePasswordFields
+                idPrefix="recovery"
+                password={password}
+                confirmPassword={confirmPassword}
+                onPasswordChange={setPassword}
+                onConfirmPasswordChange={setConfirmPassword}
+                disabled={state === 'saving' || state === 'success'}
               />
-            </div>
-            <div>
-              <label htmlFor="recovery-confirm-password" className="mb-1 block text-xs font-semibold text-gray-700">Confirm new password</label>
-              <input
-                id="recovery-confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm"
-                autoComplete="new-password"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={state === 'saving'}
-              className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:opacity-60"
-              style={{ backgroundColor: chrome.primary, color: chrome.headerText }}
-            >
-              {state === 'saving' ? 'Saving password…' : 'Save new password'}
-            </button>
-          </form>}
+              <button
+                type="submit"
+                disabled={state === 'saving' || state === 'success'}
+                className="w-full rounded-lg px-4 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ backgroundColor: chrome.primary, color: chrome.headerText }}
+              >
+                {state === 'saving' ? 'Saving password…' : state === 'success' ? 'Password saved' : 'Save new password'}
+              </button>
+            </form>
+          )}
 
           {message && (
             <div
@@ -151,6 +193,16 @@ export default function PasswordRecoveryScreen({ surface }: PasswordRecoveryScre
             >
               {message}
             </div>
+          )}
+
+          {state !== 'saving' && state !== 'success' && (
+            <button
+              type="button"
+              onClick={leave}
+              className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Return to sign in
+            </button>
           )}
         </div>
       </div>

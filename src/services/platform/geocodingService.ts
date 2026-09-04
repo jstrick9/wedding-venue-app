@@ -22,10 +22,10 @@ export interface GeocodedAddress {
 }
 
 const UNREACHABLE_ADDRESS_SERVICE =
-  'Could not reach the address service. In the Supabase project: deploy the geocode-venue Edge Function, then set the GEOAPIFY_API_KEY secret.';
+  'Could not reach the address service. Check your connection and try again, or contact support.';
 
 function requireSupabaseUrl(): string {
-  if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+  if (!isSupabaseConfigured()) throw new Error(UNREACHABLE_ADDRESS_SERVICE);
   return String(import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
 }
 
@@ -34,7 +34,7 @@ function translateNetworkError(error: unknown): never {
   if (/failed to fetch|networkerror|load failed/i.test(message)) {
     throw new Error(UNREACHABLE_ADDRESS_SERVICE);
   }
-  throw error instanceof Error ? error : new Error(message);
+  throw new Error(UNREACHABLE_ADDRESS_SERVICE);
 }
 
 async function authorizedFetch(init: RequestInit): Promise<Response> {
@@ -64,7 +64,7 @@ export async function autocompleteVenueAddress(text: string): Promise<Standardiz
     body: JSON.stringify({ action: 'autocomplete', text: query }),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data?.ok) throw new Error(String(data?.error || 'Could not look up address suggestions.'));
+  if (!response.ok || !data?.ok) throw new Error('Could not look up address suggestions. Check the address and try again.');
   return (Array.isArray(data.results) ? data.results : [])
     .map((result: unknown) => mapGeoapifyResult(result as Parameters<typeof mapGeoapifyResult>[0]))
     .filter((result: StandardizedAddress | null): result is StandardizedAddress => Boolean(result));
@@ -88,7 +88,7 @@ export async function geocodeVenueAddress(address: VenueAddressInput): Promise<G
     }),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data?.ok) throw new Error(String(data?.error || 'Could not verify this venue address.'));
+  if (!response.ok || !data?.ok) throw new Error('Could not verify this venue address. Check the address and try again.');
   const mapped = mapGeoapifyResult(data.result) || undefined;
   return {
     latitude: Number(data.latitude),
@@ -107,8 +107,8 @@ export async function fetchGeoapifyTile(z: number, x: number, y: number, retina 
       body: JSON.stringify({ action: 'tile', z, x, y, retina }),
     });
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(String((data as { error?: string }).error || 'Could not load map tiles.'));
+      await response.body?.cancel().catch(() => undefined);
+      throw new Error('Could not load map tiles. Try again later.');
     }
     return response.blob();
   })(), 15000, 'Loading map tiles timed out. Check your connection and try again.');

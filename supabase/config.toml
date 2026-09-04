@@ -8,3 +8,8 @@ verify_jwt = false
 # creates their account. The high-entropy invite token is validated by RPC 0021.
 [functions.claim-portal-invite]
 verify_jwt = false
+
+# Password recovery begins before the account owner has a session. Migration
+# 0022 supplies service-only membership checks and abuse throttling.
+[functions.request-password-reset]
+verify_jwt = false

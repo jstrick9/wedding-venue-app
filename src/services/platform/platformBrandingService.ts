@@ -30,7 +30,7 @@ export async function getPlatformBranding(): Promise<Config> {
 }
 
 export async function savePlatformBranding(branding: Config): Promise<void> {
-  if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+  if (!isSupabaseConfigured()) throw new Error('This service is temporarily unavailable.');
   const { data, error } = await getSupabaseClient('platform').rpc('upsert_platform_branding', {
     p_branding: branding,
   });

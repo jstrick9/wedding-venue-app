@@ -22,8 +22,8 @@ vi.mock('../services/platform/publicVenueService', () => ({
 }));
 
 vi.mock('./LoginScreen', () => ({
-  LoginScreen: ({ brandingOverride }: { brandingOverride?: { venueName?: string; primaryColor?: string } }) => (
-    <div>Venue login for {brandingOverride?.venueName} {brandingOverride?.primaryColor}</div>
+  LoginScreen: ({ brandingOverride, organizationId }: { brandingOverride?: { venueName?: string; primaryColor?: string }; organizationId?: string }) => (
+    <div>Venue login for {brandingOverride?.venueName} {brandingOverride?.primaryColor} {organizationId}</div>
   ),
 }));
 
@@ -61,7 +61,7 @@ describe('VenueLoginScreen branding', () => {
     await waitFor(() => {
       expect(screen.getByText(/venue login for hilltop barn/i)).toBeInTheDocument();
     });
-    expect(screen.getByText(/#111827/i)).toBeInTheDocument();
+    expect(screen.getByText(/#111827/i)).toHaveTextContent('org-2');
   });
 
   it("clears Loading venue sign-in when branding lookup times out", async () => {
@@ -71,8 +71,8 @@ describe('VenueLoginScreen branding', () => {
     render(<VenueLoginScreen slug="hilltop-barn" />);
 
     expect(screen.getByText(/loading venue sign-in/i)).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: /venue sign-in timed out/i })).toBeInTheDocument();
-    expect(screen.getByText(/check the venue link and try again/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /venue sign-in unavailable/i })).toBeInTheDocument();
+    expect(screen.getByText(/check your connection and try again/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
     expect(screen.queryByText(/venue login for/i)).not.toBeInTheDocument();
   });
@@ -119,6 +119,6 @@ describe('VenueLoginScreen branding', () => {
     render(<VenueLoginScreen slug="hilltop-barn" />);
 
     expect(await screen.findByRole('button', { name: /open venue workspace/i })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /venue sign-in timed out/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /venue sign-in unavailable/i })).not.toBeInTheDocument();
   });
 });

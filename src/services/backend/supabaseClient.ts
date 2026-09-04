@@ -72,6 +72,31 @@ export function getAuthSurface(): AuthSurface {
   return currentSurface;
 }
 
+export function clearPersistedAuthSurface(surface: AuthSurface): string | undefined {
+  if (typeof localStorage === 'undefined') return undefined;
+  const key = AUTH_STORAGE_KEYS[surface];
+  let accessToken: string | undefined;
+  try {
+    const persisted = localStorage.getItem(key);
+    if (persisted && persisted.length <= 100_000) {
+      const parsed = JSON.parse(persisted) as { access_token?: unknown };
+      if (typeof parsed?.access_token === 'string' && parsed.access_token.length <= 10_000) {
+        accessToken = parsed.access_token;
+      }
+    }
+  } catch {
+    // A corrupt record has no usable revocation token; it is still removed below.
+  }
+  try {
+    localStorage.removeItem(key);
+    localStorage.removeItem(`${key}-code-verifier`);
+  } catch {
+    // In-memory auth state is still cleared by the caller. Authorization remains
+    // server-enforced if browser storage is unavailable.
+  }
+  return accessToken;
+}
+
 function createSurfaceClient(surface: AuthSurface): SupabaseClient {
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -91,7 +116,7 @@ function createSurfaceClient(surface: AuthSurface): SupabaseClient {
 export function getSupabaseClient(surface: AuthSurface = currentSurface): SupabaseClient {
   if (!isSupabaseConfigured()) {
     throw new Error(
-      'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.',
+      'This service is temporarily unavailable. Contact support for help.',
     );
   }
 
@@ -176,7 +201,16 @@ export async function migrateLegacyAuthSessions(): Promise<void> {
     await getSupabaseClient(target).auth.setSession(tokens);
   }
 
-  await legacy.auth.signOut({ scope: 'local' });
+  // The destination contains this same refresh token. Calling Auth signOut on
+  // the legacy client would revoke the token we just migrated; remove only the
+  // obsolete storage keys instead.
+  try {
+    localStorage.removeItem(legacyKey);
+    localStorage.removeItem(`${legacyKey}-code-verifier`);
+  } catch {
+    // The destination session remains server-authorized even if obsolete local
+    // storage cannot be removed in this browser.
+  }
 }
 
 export async function getCurrentAccessToken(surface?: AuthSurface): Promise<string | null> {

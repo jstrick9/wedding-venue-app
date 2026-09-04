@@ -5,12 +5,17 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   signInWithPassword: vi.fn(),
   signOut: vi.fn(),
+  clearPersistedAuthSurface: vi.fn((surface: string) => {
+    localStorage.removeItem(`wvip-auth-${surface}`);
+    localStorage.removeItem(`wvip-auth-${surface}-code-verifier`);
+  }),
 }));
 
 vi.mock('../backend/supabaseClient', () => ({
   isSupabaseConfigured: () => true,
   getSupabaseClient: (...args: unknown[]) => mocks.getSupabaseClient(...args),
   createDeadlineFetch: () => fetch,
+  clearPersistedAuthSurface: (surface: string) => mocks.clearPersistedAuthSurface(surface),
 }));
 
 import {
@@ -195,11 +200,24 @@ describe('portalInviteAccount', () => {
     expect(localStorage.getItem('wvip-auth-couple')).not.toBeNull();
   });
 
-  it('clears the local portal JWT even when Supabase logout cannot reach the network', async () => {
+  it('clears persisted portal auth before a stalled remote logout resolves', async () => {
+    let finishSignOut!: (value: { error: null }) => void;
+    mocks.signOut.mockImplementationOnce(() => new Promise((resolve) => { finishSignOut = resolve; }));
+
+    const pending = signOutPortalAccount('guest');
+    expect(mocks.clearPersistedAuthSurface).toHaveBeenCalledWith('guest');
+    expect(mocks.clearPersistedAuthSurface.mock.invocationCallOrder[0])
+      .toBeLessThan(mocks.signOut.mock.invocationCallOrder[0]);
+
+    finishSignOut({ error: null });
+    await pending;
+  });
+
+  it('clears the local portal JWT even when remote logout cannot reach the network', async () => {
     localStorage.setItem('wvip-auth-couple', '{"access_token":"jwt"}');
     mocks.signOut.mockRejectedValueOnce(new Error('offline'));
 
-    await expect(signOutPortalAccount('couple')).rejects.toThrow('offline');
+    await expect(signOutPortalAccount('couple')).resolves.toBeUndefined();
 
     expect(localStorage.getItem('wvip-auth-couple')).toBeNull();
   });

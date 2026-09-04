@@ -12,6 +12,7 @@ import {
 import type { BackupImportReport, BackupBundle } from '../../utils/backupTypes';
 import { showToast } from '../Toast';
 import { BrandedSectionHeader } from './shared/AdminSharedComponents';
+import { describeUnknownError } from '../../utils/unknownError';
 
 interface BackupManagementProps {
   user: User | null;
@@ -41,7 +42,7 @@ export function BackupManagement({ user, onDataRestored }: BackupManagementProps
       await downloadBackupBundle(user ? { id: user.id, name: user.name } : undefined);
       showToast('Backup downloaded.', 'success');
     } catch (err) {
-      showToast(`Export failed: ${err instanceof Error ? err.message : 'unknown error'}`, 'warning');
+      showToast(describeUnknownError(err, 'Could not export the backup. Try again.'), 'warning');
     } finally {
       setIsExporting(false);
     }
@@ -66,7 +67,7 @@ export function BackupManagement({ user, onDataRestored }: BackupManagementProps
     } catch (err) {
       setReport({
         valid: false,
-        errors: [`Could not read backup file: ${err instanceof Error ? err.message : 'invalid JSON'}`],
+        errors: [describeUnknownError(err, 'Could not read this backup file. Confirm that it is a valid app backup and try again.')],
         warnings: [],
       });
     } finally {
@@ -84,7 +85,7 @@ export function BackupManagement({ user, onDataRestored }: BackupManagementProps
       setReport(null);
       onDataRestored();
     } catch (err) {
-      showToast(`Restore failed: ${err instanceof Error ? err.message : 'unknown error'}`, 'warning');
+      showToast(describeUnknownError(err, 'Could not restore the backup. No changes were applied.'), 'warning');
     }
   };
 
@@ -110,8 +111,8 @@ export function BackupManagement({ user, onDataRestored }: BackupManagementProps
       />
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-        <strong>Local-mode privacy note:</strong> this backup contains the venue workspace,
-        couple/guest records, and local access links so a restore can preserve your vetting
+        <strong>Backup privacy note:</strong> this file contains the venue workspace,
+        couple/guest records, and private portal access links so a restore can preserve your
         data. Store the downloaded JSON securely and do not email or publicly share it.
       </div>
 

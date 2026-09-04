@@ -150,14 +150,25 @@ export function describeVenueAdminInviteError(code?: string | null): string {
     case 'missing':
       return 'This setup link is missing or incomplete. Open the newest invitation email and use the Set up your account button, or ask the platform administrator to copy the link from the console.';
     case 'venue_already_claimed':
-      return 'This venue already has an owner. Ask the platform administrator to apply migration 0015, then reissue the invitation.';
+      return 'This venue already has an owner. Ask the platform administrator to reissue the invitation.';
     default:
-      if (/invalid input syntax for type uuid/i.test(code || '')) {
-        return 'The invitation is valid, but the lookup function needs a database update. In Supabase → SQL Editor, run supabase/migrations/0015_reissue_claimed_venue_and_invite_lookup.sql, then open this link again.';
-      }
-      if (code && /[. ]/.test(code) && code.length > 12 && !/invalid input syntax/i.test(code)) {
-        return code;
-      }
       return 'This setup link is invalid, expired, revoked, or already used. Ask the platform administrator to reissue the invitation.';
   }
+}
+
+export function describeVenueAdminClaimError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error || '');
+  if (/^Password must be /i.test(message)) return message;
+  if (/too many attempts/i.test(message)) {
+    return 'Too many setup attempts. Wait a few minutes and try again.';
+  }
+  if (/missing or incomplete|invalid_token|not_found|expired|already.*claimed/i.test(message)) {
+    return describeVenueAdminInviteError(
+      /expired/i.test(message) ? 'expired' : /missing/i.test(message) ? 'missing' : 'not_found',
+    );
+  }
+  if (/venue.*unavailable|suspended|archived/i.test(message)) {
+    return 'This venue is currently unavailable. Contact the platform administrator for help.';
+  }
+  return 'Account setup could not be completed right now. Please try again or contact the platform administrator.';
 }

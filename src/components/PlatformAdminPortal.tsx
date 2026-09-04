@@ -191,7 +191,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       })
       .catch((err) => {
         setBrandingReady(false);
-        setBrandingLoadError(err instanceof Error ? err.message : 'Could not load platform branding.');
+        setBrandingLoadError(describeUnknownError(err, 'Could not load platform branding.'));
       });
     void withTimeout(
       getPlatformConsoleMetrics(),
@@ -224,7 +224,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       ));
       setVenuesReady(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load platform console data.');
+      setError(describeUnknownError(err, 'Could not load platform console data.'));
     } finally {
       setLoading(false);
     }
@@ -262,7 +262,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       );
       showToast(successMessage, 'success');
     } catch (mailErr) {
-      const mailMessage = mailErr instanceof Error ? mailErr.message : 'Email delivery failed.';
+      const mailMessage = describeUnknownError(mailErr, 'Email delivery is temporarily unavailable.');
       showToast(`${mailMessage} Copy the setup link below.`, 'warning');
     }
   };
@@ -301,7 +301,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       setPlatformBranding(next);
       showToast('Platform branding saved.', 'success');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not save platform branding.', 'warning');
+      showToast(describeUnknownError(err, 'Could not save platform branding.'), 'warning');
     } finally {
       setBrandingSaving(false);
     }
@@ -321,7 +321,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       );
       await handleSavePlatformBranding({ ...platformBranding, logoUrl });
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not upload platform logo.', 'warning');
+      showToast(describeUnknownError(err, 'Could not upload platform logo.'), 'warning');
       setBrandingSaving(false);
     }
   };
@@ -389,7 +389,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       void refreshVenuesAfterSave();
       await sendInviteEmail(composeInput, `Created ${created.organizationName} and emailed the HTML invite to ${adminEmail.value}.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create the venue organization.');
+      setError(describeUnknownError(err, 'Could not create the venue organization.'));
     } finally {
       setGeocoding(false);
       setSaving(false);
@@ -447,7 +447,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       }, `New setup link created and emailed to ${normalized.value}. Expires ${formatInviteExpiry(next.expiresAt)}.`);
       void refreshVenuesAfterSave();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not reissue the invite.', 'warning');
+      showToast(describeUnknownError(err, 'Could not reissue the invite.'), 'warning');
     } finally {
       setActionId(null);
     }
@@ -466,7 +466,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       showToast('Pending venue-admin invite revoked.', 'success');
       void refreshVenuesAfterSave();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not revoke the invite.', 'warning');
+      showToast(describeUnknownError(err, 'Could not revoke the invite.'), 'warning');
     } finally {
       setActionId(null);
     }
@@ -484,7 +484,7 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       showToast(`${organization.name} suspended; tenant data was retained.`, 'success');
       void refreshVenuesAfterSave();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not suspend the venue.', 'warning');
+      showToast(describeUnknownError(err, 'Could not suspend the venue.'), 'warning');
     } finally {
       setActionId(null);
     }
@@ -508,11 +508,10 @@ export default function PlatformAdminPortal({ onOpenVenueWorkspace }: PlatformAd
       void refreshVenuesAfterSave();
     } catch (err) {
       showToast(
-        err instanceof Error
-          ? err.message
-          : restoring
-            ? 'Could not restore the venue.'
-            : 'Could not reactivate the venue.',
+        describeUnknownError(
+          err,
+          restoring ? 'Could not restore the venue.' : 'Could not reactivate the venue.',
+        ),
         'warning',
       );
     } finally {
@@ -1280,7 +1279,7 @@ function OnboardVenueForm({
         <label className="block text-xs font-semibold text-gray-700">Contact phone *<input type="tel" value={form.primaryContactPhone} onChange={(event) => setForm((current) => ({ ...current, primaryContactPhone: event.target.value }))} onBlur={(event) => { const next = normalizeUsPhone(event.target.value); if (next.ok) setForm((current) => ({ ...current, primaryContactPhone: next.display })); }} placeholder="(555) 123-4567" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
         <label className="block text-xs font-semibold text-gray-700">Contact email *<input type="email" value={form.primaryContactEmail} onChange={(event) => setForm((current) => ({ ...current, primaryContactEmail: event.target.value, adminEmail: current.adminEmail || event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
         <label className="block text-xs font-semibold text-gray-700">First administrator email *<input type="email" value={form.adminEmail} onChange={(event) => setForm((current) => ({ ...current, adminEmail: event.target.value }))} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" /></label>
-        <p className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] text-indigo-800">Choose a Geoapify street suggestion so city, state, and ZIP fill automatically. The server verifies the address and caches coordinates before the venue is created. {geocoding ? 'Verifying address…' : ''}</p>
+        <p className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] text-indigo-800">Choose a verified street suggestion so city, state, and ZIP fill automatically. The address is verified before the venue is created. {geocoding ? 'Verifying address…' : ''}</p>
         <button type="submit" disabled={saving || geocoding} className="w-full rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60" style={{ backgroundColor: primaryColor }}>{geocoding ? 'Verifying address…' : saving ? 'Creating venue…' : 'Create Venue & Generate Admin Link'}</button>
       </form>
       {error && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}

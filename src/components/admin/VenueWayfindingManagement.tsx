@@ -284,7 +284,7 @@ export function VenueWayfindingManagement({ venues, onShowSuccess, onOpenVenueMa
         <h3 className="font-semibold text-sm mb-2">🌤️ Weather Forecast</h3>
         <p className="text-xs text-gray-500 mb-3">
           Enter a forecast per event day (shown alongside the couple's timeline in their
-          guest portal), or auto-fetch from a free weather API by entering a location.
+          guest portal), or automatically fetch a forecast by entering a location.
         </p>
 
         <div className="flex gap-2 mb-3">

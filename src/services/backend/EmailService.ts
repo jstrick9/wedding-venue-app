@@ -28,31 +28,30 @@ function errorFromUnknown(value: unknown): string {
 }
 
 export function describeEmailDeliveryFailure(error: unknown, data?: unknown): string {
-  const fromData = errorFromUnknown(data);
-  if (fromData) return fromData;
-  if (error && typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message: unknown }).message === 'string') {
-    const message = (error as { message: string }).message.trim();
-    if (/failed to send a request to the edge function/i.test(message)) {
-      return 'The send-email function did not respond. Set BREVO_API_KEY on send-email, then copy the setup link if needed.';
-    }
-    if (/invites@weddingvip\.com|sender not valid|not authenticated/i.test(message)) {
-      return 'Brevo rejected the sender. Confirm wedding-vip@outlook.com as a verified sender. Leftover EMAIL_FROM values such as invites@weddingvip.com are ignored.';
-    }
-    if (message) return message;
+  const message = `${errorFromUnknown(data)} ${
+    error && typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: unknown }).message || '')
+      : ''
+  }`.trim();
+  if (/unauthorized|forbidden|permission/i.test(message)) {
+    return 'Your session no longer has permission to send this email. Sign in again and retry.';
   }
-  return 'Email delivery failed.';
+  if (/rate limit|too many/i.test(message)) {
+    return 'Too many emails were requested. Wait a few minutes and try again.';
+  }
+  if (/timed out|timeout/i.test(message)) {
+    return 'Email delivery timed out. Check your connection and try again.';
+  }
+  return 'Email delivery is temporarily unavailable. Try again later or copy the invitation link instead.';
 }
 
 async function describeFunctionError(error: unknown, data: unknown): Promise<string> {
-  const fromData = errorFromUnknown(data);
-  if (fromData) return fromData;
   if (error && typeof error === 'object' && error !== null) {
     const ctx = (error as { context?: unknown }).context;
     if (ctx && typeof ctx === 'object' && ctx !== null && 'json' in ctx && typeof (ctx as { json: unknown }).json === 'function') {
       try {
         const body = await (ctx as { json: () => Promise<unknown> }).json();
-        const fromBody = errorFromUnknown(body);
-        if (fromBody) return fromBody;
+        if (errorFromUnknown(body)) return describeEmailDeliveryFailure(error, body);
       } catch {
         // ignore unreadable function error bodies
       }
@@ -66,7 +65,7 @@ export async function sendTransactionalEmail(
   surface?: AuthSurface,
 ): Promise<void> {
   if (!isSupabaseConfigured()) {
-    throw new Error('Email delivery requires Supabase Edge Functions configuration.');
+    throw new Error('Email delivery is temporarily unavailable. Try again later or copy the invitation link instead.');
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -77,7 +76,7 @@ export async function sendTransactionalEmail(
       invoked,
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
-          reject(new Error('The send-email function timed out after 25 seconds. Check send-email logs.'));
+          reject(new Error('Email delivery timed out. Check your connection and try again.'));
         }, SEND_EMAIL_TIMEOUT_MS);
       }),
     ]);
@@ -85,7 +84,7 @@ export async function sendTransactionalEmail(
     if (error) throw new Error(await describeFunctionError(error, data));
     const payloadError = errorFromUnknown(data);
     if (payloadError && !(data && typeof data === 'object' && 'ok' in data && (data as { ok?: unknown }).ok === true)) {
-      throw new Error(payloadError);
+      throw new Error(describeEmailDeliveryFailure(undefined, data));
     }
   } finally {
     if (timer) clearTimeout(timer);

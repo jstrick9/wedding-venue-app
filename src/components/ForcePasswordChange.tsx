@@ -4,6 +4,7 @@ import { getConfig } from '../config';
 import { resolveLoginChrome } from '../utils/loginBranding';
 import { applyDocumentBranding } from '../utils/documentBranding';
 import { withTimeout } from '../utils/withTimeout';
+import { describeUnknownError } from '../utils/unknownError';
 
 /**
  * Forced "change your password on first login" gate.
@@ -64,7 +65,7 @@ export default function ForcePasswordChange() {
       // On success, AuthContext.user updates and clears requiresPasswordChange,
       // which unmounts this gate and reveals the workspace.
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to update your password. Please try again.');
+      setError(describeUnknownError(err, 'Unable to update your password. Please try again.'));
     } finally {
       setIsLoading(false);
     }

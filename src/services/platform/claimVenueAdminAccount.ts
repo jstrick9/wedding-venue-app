@@ -4,7 +4,7 @@ import { describePasswordPolicyError } from '../../utils/passwordPolicy';
 export const CLAIM_VENUE_ADMIN_FUNCTION = 'claim-venue-admin';
 
 export const CLAIM_FUNCTION_MISSING =
-  'The venue claim service is not deployed yet. Wait for the claim-venue-admin Edge Function, refresh this page, and set a new password again. Venue events, layouts, guests, and team work are not deleted.';
+  'Account setup is temporarily unavailable. Please try again later or contact the platform administrator. Venue events, layouts, guests, and team work are unchanged.';
 
 export interface ClaimVenueAdminAccountResult {
   email: string;
@@ -45,7 +45,7 @@ export async function claimVenueAdminAccount(params: {
   fullName: string;
 }): Promise<ClaimVenueAdminAccountResult> {
   if (!isSupabaseConfigured()) {
-    throw new Error('Supabase is not configured.');
+    throw new Error(CLAIM_FUNCTION_MISSING);
   }
   const token = params.token.trim();
   const password = params.password;

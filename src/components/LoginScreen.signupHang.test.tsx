@@ -107,7 +107,9 @@ describe('LoginScreen invite sign-up hang guards', () => {
       />,
     );
     fillAndSubmit();
-    expect(await screen.findByRole('alert')).toHaveTextContent(/auth service unavailable/i);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/could not be created right now/i);
+    expect(alert).not.toHaveTextContent(/auth service/i);
     expect(screen.getByRole('button', { name: /create account/i })).toBeEnabled();
   });
 });

@@ -19,6 +19,7 @@ import type { Config } from '../types';
 import {
   captureVenueAdminInviteToken,
   clearVenueAdminInviteToken,
+  describeVenueAdminClaimError,
   describeVenueAdminInviteError,
 } from '../utils/venueAdminInviteRoute';
 
@@ -122,7 +123,7 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
     }
     if (!isSupabaseConfigured()) {
       setState('error');
-      setMessage('Supabase is not configured in this deployment.');
+      setMessage('Account setup is temporarily unavailable. Please try again later or contact the platform administrator.');
       return;
     }
     if (!form.fullName.trim() || !form.email.trim() || !form.password) {
@@ -164,7 +165,7 @@ export default function VenueAdminOnboarding({ token }: VenueAdminOnboardingProp
       finish(session.organizationSlug || invite.organizationSlug);
     } catch (error) {
       setState('error');
-      setMessage(error instanceof Error ? error.message : 'Could not complete venue administrator setup.');
+      setMessage(describeVenueAdminClaimError(error));
     }
   };
 

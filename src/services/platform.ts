@@ -24,5 +24,5 @@ export function isPlatformEnabled(): boolean {
 }
 
 export function platformLabel(): string {
-  return isPlatformEnabled() ? 'Supabase (multi-user)' : 'Local (this device)';
+  return isPlatformEnabled() ? 'Shared workspace' : 'This device';
 }

@@ -30,6 +30,7 @@ import { migrateLegacyAuthSessions, setAuthSurface } from '../services/backend/s
 import { detectAuthSurface, type AuthSurface } from '../utils/authSurface';
 import { loginHashAfterLogout } from '../utils/loginRoute';
 import { withTimeout } from '../utils/withTimeout';
+import { AuthFlowError, describeRegistrationError } from '../utils/authErrors';
 
 export interface AuthRegistrationParams {
   email: string;
@@ -260,19 +261,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     if (shouldUseSupabaseAuth()) {
-      const session = await signInWithSupabase(username, password, undefined, 'platform');
-      if (!session) {
-        setPlatformAuth(await restoreSupabaseSession(undefined, 'platform'));
-        return false;
-      }
-      const role = session.platformRole;
-      if (role !== 'platform_owner' && role !== 'platform_admin' && role !== 'platform_support') {
-        await signOutSupabase('platform', { scope: 'local' });
+      try {
+        const session = await signInWithSupabase(username, password, undefined, 'platform');
+        if (!session) {
+          setPlatformAuth(null);
+          return false;
+        }
+        const role = session.platformRole;
+        if (role !== 'platform_owner' && role !== 'platform_admin' && role !== 'platform_support') {
+          await signOutSupabase('platform', { scope: 'local' });
+          setPlatformAuth(null);
+          throw new AuthFlowError('platform_access_denied');
+        }
+        setPlatformAuth(session);
+        return true;
+      } catch (error) {
         setPlatformAuth(null);
-        return false;
+        throw error;
       }
-      setPlatformAuth(session);
-      return true;
     }
 
     const users = getUsers();
@@ -328,13 +334,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const loginForOrganization: AuthContextType['loginForOrganization'] = async (organizationId, username, password) => {
     if (!shouldUseSupabaseAuth()) return false;
-    const session = await signInWithSupabase(username, password, organizationId, 'venue');
-    if (!session) {
-      setVenueAuth(await restoreSupabaseSession(undefined, 'venue'));
-      return false;
+    try {
+      const session = await signInWithSupabase(username, password, organizationId, 'venue');
+      if (!session) {
+        setVenueAuth(null);
+        return false;
+      }
+      setVenueAuth(session);
+      return true;
+    } catch (error) {
+      // Never revive another venue's cached membership after a failed attempt at
+      // this venue. The surface client and React state must agree on signed-out.
+      setVenueAuth(null);
+      throw error;
     }
-    setVenueAuth(session);
-    return true;
   };
 
   const logout = () => {
@@ -346,10 +359,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (shouldUseSupabaseAuth()) {
       if (surface === 'venue') {
         setVenueAuth(null);
-        void signOutSupabase('venue');
+        void signOutSupabase('venue', { scope: 'local' });
       } else {
         setPlatformAuth(null);
-        void signOutSupabase('platform');
+        void signOutSupabase('platform', { scope: 'local' });
       }
     } else {
       setUser(null);
@@ -366,27 +379,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const register: AuthContextType['register'] = async ({ email, password, fullName, organizationName }) => {
     if (!shouldUseSupabaseAuth()) {
-      return 'Account registration requires the Supabase backend. Contact the venue administrator.';
+      return 'Account registration is not available. Contact the venue administrator.';
     }
     try {
       const session = await signUpWithSupabase({ email, password, fullName, organizationName });
       setVenueAuth(session);
       return null;
     } catch (err) {
-      return err instanceof Error ? err.message : 'Unable to create your account.';
+      return describeRegistrationError(err);
     }
   };
 
   const registerWithInvite: AuthContextType['registerWithInvite'] = async (inviteToken, { email, password, fullName }) => {
     if (!shouldUseSupabaseAuth()) {
-      return 'Organization invitations require the Supabase backend.';
+      return 'Invitation-based account setup is not available. Contact the venue administrator.';
     }
     try {
       const session = await signUpOrganizationInvite({ email, password, fullName, inviteToken });
       setVenueAuth(session);
       return null;
     } catch (err) {
-      return err instanceof Error ? err.message : 'Unable to create your invited account.';
+      return describeRegistrationError(err, true);
     }
   };
 

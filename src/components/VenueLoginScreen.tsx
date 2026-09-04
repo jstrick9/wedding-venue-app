@@ -80,10 +80,10 @@ export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
         if (cancelled) return;
         setVenue(result);
         if (result) applyLoginBranding(result.config);
-      } catch (err: unknown) {
+      } catch {
         if (cancelled) return;
         setVenue(null);
-        setLoadError(err instanceof Error ? err.message : 'Could not load venue sign-in.');
+        setLoadError('Could not load this venue sign-in. Check your connection and try again.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -126,7 +126,7 @@ export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
       <VenueAuthStatusCard
         branding={NEUTRAL_LOGIN_CONFIG}
         icon="🏛️"
-        title="Venue sign-in timed out"
+        title="Venue sign-in unavailable"
         body={loadError}
         actionLabel="Try again"
         onAction={() => { setRetryId((current) => current + 1); }}
@@ -178,6 +178,8 @@ export default function VenueLoginScreen({ slug }: VenueLoginScreenProps) {
   return (
     <LoginScreen
       brandingOverride={venue.config}
+      organizationId={venue.organizationId}
+      loginScope="venue"
       showPublicPortalLinks={false}
       onLogin={(email, password) => loginForOrganization(venue.organizationId, email, password)}
     />

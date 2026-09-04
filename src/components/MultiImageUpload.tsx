@@ -3,6 +3,7 @@ import SafeImage from './SafeImage';
 import { showToast } from './Toast';
 import { uploadImage } from '../services/storage/imageStorage';
 import { useAuth } from '../contexts/AuthContext';
+import { describeUnknownError } from '../utils/unknownError';
 
 interface ImageItem {
   id: string;
@@ -66,7 +67,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
       };
       onChange([...images, newImage]);
     } catch (err) {
-      showToast(`Could not upload image: ${err instanceof Error ? err.message : 'unknown error'}`, 'warning');
+      showToast(describeUnknownError(err, 'Could not upload the image. Check the file and try again.'), 'warning');
     }
   };
 

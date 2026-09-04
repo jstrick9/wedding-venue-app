@@ -1,15 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockAuth = {
-  resetPasswordForEmail: vi.fn(),
-  exchangeCodeForSession: vi.fn(),
-  setSession: vi.fn(),
-  getSession: vi.fn(),
-  updateUser: vi.fn(),
-};
-const capturedSurfaces: string[] = [];
+const { mockAuth, clearPersistedAuthSurface, capturedSurfaces } = vi.hoisted(() => ({
+  mockAuth: {
+    verifyOtp: vi.fn(),
+    exchangeCodeForSession: vi.fn(),
+    setSession: vi.fn(),
+    updateUser: vi.fn(),
+    signOut: vi.fn(),
+    admin: { signOut: vi.fn() },
+  },
+  clearPersistedAuthSurface: vi.fn(),
+  capturedSurfaces: [] as string[],
+}));
 
 vi.mock('./supabaseClient', () => ({
+  clearPersistedAuthSurface,
+  getAuthSurface: () => 'platform',
   isSupabaseConfigured: () => true,
   getSupabaseClient: (surface?: string) => {
     if (surface) capturedSurfaces.push(surface);
@@ -17,64 +23,59 @@ vi.mock('./supabaseClient', () => ({
   },
 }));
 
-import { completeSupabasePasswordRecovery, requestSupabasePasswordReset } from './AuthBackend';
+import { completeSupabasePasswordRecovery } from './AuthBackend';
 
-describe('Supabase password recovery', () => {
+describe('password recovery compatibility', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedSurfaces.length = 0;
-    mockAuth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
-    mockAuth.exchangeCodeForSession.mockResolvedValue({ data: {}, error: null });
-    mockAuth.setSession.mockResolvedValue({ data: {}, error: null });
-    mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    mockAuth.exchangeCodeForSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1' } } },
+      error: null,
+    });
+    mockAuth.setSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1' } } },
+      error: null,
+    });
     mockAuth.updateUser.mockResolvedValue({ data: {}, error: null });
+    mockAuth.signOut.mockResolvedValue({ error: null });
+    mockAuth.admin.signOut.mockResolvedValue({ error: null });
+    clearPersistedAuthSurface.mockReturnValue('captured-access-token');
   });
 
-  it('sends a path-only platform redirect on the platform client', async () => {
-    await requestSupabasePasswordReset('punistricker@gmail.com', 'platform');
-    expect(capturedSurfaces).toEqual(['platform']);
-    expect(mockAuth.resetPasswordForEmail).toHaveBeenCalledTimes(1);
-    const [email, options] = mockAuth.resetPasswordForEmail.mock.calls[0];
-    expect(email).toBe('punistricker@gmail.com');
-    expect(options.redirectTo).toMatch(/\/reset\/platform$/);
-    expect(options.redirectTo).not.toMatch(/[?#]/);
-  });
-
-  it('sends a venue redirect on the venue client', async () => {
-    await requestSupabasePasswordReset('ada@sevenpaths.com', 'venue');
-    expect(capturedSurfaces).toEqual(['venue']);
-    const options = mockAuth.resetPasswordForEmail.mock.calls[0][1] as { redirectTo: string };
-    expect(options.redirectTo).toMatch(/\/reset\/venue$/);
-  });
-
-  it('exchanges a PKCE code on the matching surface then updates the password', async () => {
+  it('still exchanges a legacy PKCE code on the matching surface', async () => {
     await completeSupabasePasswordRecovery({
       surface: 'venue',
-      password: 'Newpass12',
+      password: 'Newpass12!',
       code: 'pkce-code',
     });
     expect(capturedSurfaces).toEqual(['venue']);
     expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledWith('pkce-code');
-    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'Newpass12' });
+    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'Newpass12!' });
+    expect(mockAuth.admin.signOut).toHaveBeenCalledWith('captured-access-token', 'global');
+    expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
-  it('rejects a missing recovery session', async () => {
-    await expect(
-      completeSupabasePasswordRecovery({ surface: 'platform', password: 'Newpass12' }),
-    ).rejects.toThrow(/missing or incomplete/i);
-    expect(mockAuth.updateUser).not.toHaveBeenCalled();
-    expect(mockAuth.getSession).not.toHaveBeenCalled();
-  });
-
-  it('does not change the password of an already signed-in session without a recovery token', async () => {
-    mockAuth.getSession.mockResolvedValue({
-      data: { session: { access_token: 'existing-platform-jwt' } },
-      error: null,
+  it('still accepts legacy implicit recovery tokens', async () => {
+    await completeSupabasePasswordRecovery({
+      surface: 'platform',
+      password: 'Newpass12!',
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
     });
+    expect(mockAuth.setSession).toHaveBeenCalledWith({
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+    });
+    expect(mockAuth.updateUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not change the password of an already signed-in session without recovery proof', async () => {
     await expect(
-      completeSupabasePasswordRecovery({ surface: 'platform', password: 'Newpass12' }),
-    ).rejects.toThrow(/missing or incomplete/i);
+      completeSupabasePasswordRecovery({ surface: 'platform', password: 'Newpass12!' }),
+    ).rejects.toMatchObject({ code: 'invalid_recovery_link' });
     expect(mockAuth.updateUser).not.toHaveBeenCalled();
     expect(mockAuth.exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(mockAuth.setSession).not.toHaveBeenCalled();
   });
 });
