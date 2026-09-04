@@ -1,6 +1,6 @@
 # Review #275 — Recovery Retry After Rejected Password
 
-**Date:** 2026-09-04 · **Mode:** live-defect follow-up, adversarial auth/session review, and local verification · **Baseline:** `7264cde` (#274 released) · **Live status:** correction not yet deployed; one fresh reset-link retest required after deployment
+**Date:** 2026-09-04 · **Mode:** live-defect follow-up, adversarial auth/session review, and production verification · **Baseline:** `7264cde` (#274 released) · **Live status:** **COMPLETE** at `f6a5a32`; fresh-link reject → retry → sign-in passed
 
 ## Findings — reported before remediation
 
@@ -81,6 +81,8 @@ The correction is pinned by behavioral tests for:
 | Gate | Result |
 |---|---|
 | Focused recovery/auth tests | **6 files / 30 tests passed** |
+| Exact-SHA CI | GitHub run `33923708079` passed at `f6a5a324cb89e7a6371ff9841028fdfe1de89c33` |
+| Production deployment | deployment `6273581042` succeeded at the same SHA; canonical platform/venue reset routes returned HTTP 200 with the corrected copy |
 | Full Vitest | **283 files passed, 4 skipped; 1,152 tests passed, 5 skipped** |
 | TypeScript | `npm run typecheck` passed |
 | Strict production unused-locals audit | passed |
@@ -94,23 +96,23 @@ The correction is pinned by behavioral tests for:
 
 Full Vitest retained known non-failing React `act(...)` notices and intentional legacy-auth warnings. ESLint and split-build warnings are the pre-existing warning baseline; all enforced gates passed.
 
-## Live mutation log
+## Live production verification and mutation log
 
-None. This review used source inspection, mocks, local unit/integration tests, static checks, and production builds only. No account, password, venue, membership, recovery request, email, or database row was changed live.
+The correction was pushed at `f6a5a324cb89e7a6371ff9841028fdfe1de89c33`. Exact-SHA CI, the production deployment, the Supabase preview check, and both canonical reset routes passed. The deployed bundle contained the corrected current-password, password-history, retry, and success copy.
 
-## Rollout and remaining proof
+The operator then completed the approved throwaway venue-admin sequence in a real browser:
 
-This change modifies frontend/auth client code and documentation only; it adds no migration or Edge Function change.
+1. requested and opened one fresh branded venue reset email;
+2. submitted the account’s current password and received the actionable current-password rejection;
+3. kept the same reset screen open and submitted a different compliant password;
+4. received success and returned to the branded venue sign-in;
+5. signed in with the new password; and
+6. confirmed the prior password was rejected.
 
-1. Commit and push the correction.
-2. Verify GitHub CI and the frontend deployment at the exact pushed SHA.
-3. Request one fresh branded venue reset email for the approved throwaway venue-admin account.
-4. On that one reset screen, submit the account’s current or otherwise prohibited password and confirm the actionable rejection.
-5. Without reopening the link or requesting another email, submit a different compliant password and confirm success.
-6. Confirm return to the venue’s branded sign-in page; sign in with the new password; confirm the prior password fails.
+**Authorized live mutations:** one password-reset request/delivery audit path ran for the approved throwaway account, and that account’s Auth password changed once. No reset token, password, email, venue slug, or other customer identifier was shared with or retained by the agent. No venue, membership, event, invitation, or wedding data changed.
 
-The consumed pre-fix link cannot be repaired and is not valid test evidence. Live completion requires the fresh-link reject → retry → save → post-reset-login sequence above.
+The consumed pre-fix link remains irrecoverable and was not counted as test evidence. This fresh-link sequence is the live acceptance proof.
 
 ## Disposition
 
-All new P1/P2 findings in this recovery boundary are remediated and pinned locally. The correction preserves neutral delivery, tenant/surface isolation, legacy callback compatibility, data and memberships, white-label copy, and post-success global revocation. It is **local-complete but not live-complete** until the pushed build is deployed and the fresh-link sequence passes.
+All new P1/P2 findings in this recovery boundary are remediated, pinned, deployed, and fresh-link verified. The correction preserves neutral delivery, tenant/surface isolation, legacy callback compatibility, data and memberships, white-label copy, and post-success global revocation. Review #275 and the rejected-password retry defect are **LIVE-COMPLETE**. The separately authorized portal journeys 8.2–8.6 remain on the campaign board as artifacts become available.

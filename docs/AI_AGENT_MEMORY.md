@@ -1446,8 +1446,8 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
-- #275 (2026-09-04): RECOVERY REJECT→RETRY correction is locally complete;
-  deployment and one fresh-link live retest remain. Live #274 testing proved
+- #275 (2026-09-04): RECOVERY REJECT→RETRY correction is LIVE-COMPLETE at
+  `f6a5a324cb89e7a6371ff9841028fdfe1de89c33`. Live #274 testing proved
   F-275-1 (P1): rejecting a current/previous password cleared the exchanged
   one-time recovery session, so the same screen retried the consumed proof and
   could not accept a different candidate. Fixed with a per-surface dedicated
@@ -1464,8 +1464,15 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
   PKCE transfer, surface isolation, and UI/error tests. Full gates: 283 files
   passed/4 skipped; 1,152 tests passed/5 skipped; typecheck, strict unused,
   lint 0 errors/27 baseline warnings, event lint, ratchet 0, audit 0, both
-  builds/budgets, diff/credential/white-label scans passed. NO LIVE MUTATIONS.
-  Review: docs/reviews/275-recovery-rejected-password-retry-2026-09-04.md.
+  builds/budgets, diff/credential/white-label scans passed. Exact-SHA GitHub
+  CI run 33923708079, production deployment 6273581042, Supabase Preview, and
+  both canonical reset routes passed. Operator fresh-link proof then passed:
+  current-password rejection was actionable, same screen accepted a different
+  password, branded venue sign-in worked with the new password, and the prior
+  password failed. AUTHORIZED LIVE MUTATIONS: one approved throwaway recovery
+  request/delivery path and one Auth password change; no credential or reset
+  link retained; no venue/membership/wedding data changed. Review:
+  docs/reviews/275-recovery-rejected-password-retry-2026-09-04.md.
 - #274 (2026-09-03–04): BRANDED SELF-SERVICE RECOVERY released. Migration
   0022 and `request-password-reset` are deployed; a venue-admin request and
   branded inbox delivery were live-proven. The endpoint is neutral-response,
