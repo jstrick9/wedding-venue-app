@@ -62,6 +62,12 @@ describe('branded password recovery deployment contract', () => {
     const workflow = source('.github/workflows/deploy-edge-functions.yml');
 
     expect(config).toMatch(/\[functions\.request-password-reset\]\s+verify_jwt = false/);
+    expect(workflow).toContain('PUBLIC_APP_URL: https://weddingvip.vercel.app');
+    expect(workflow).toContain('PASSWORD_RESET_FROM_EMAIL: wedding-vip@outlook.com');
+    expect(workflow).toContain('Sync production recovery configuration');
+    expect(workflow).toContain('supabase secrets set');
+    expect(workflow.indexOf('Sync production recovery configuration'))
+      .toBeLessThan(workflow.indexOf('Deploy request-password-reset'));
     expect(workflow).toContain('Deploy request-password-reset');
     expect(workflow).toContain('functions deploy request-password-reset --use-api --no-verify-jwt');
   });
