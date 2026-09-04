@@ -8,16 +8,20 @@
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
 //   BREVO_API_KEY or RESEND_API_KEY
-// Required project-wide settings:
-//   PUBLIC_APP_URL (one canonical SaaS origin; not one value per tenant)
-//   PASSWORD_RESET_FROM_EMAIL (verified branded sender)
-// Legacy compatibility:
-//   PASSWORD_RESET_APP_URL (used only when PUBLIC_APP_URL is absent)
+// Public production deployment defaults are versioned below (one origin and
+// sender for the entire SaaS, never one value per tenant). Optional runtime
+// overrides for another environment:
+//   PUBLIC_APP_URL
+//   PASSWORD_RESET_FROM_EMAIL
+// Legacy URL compatibility:
+//   PASSWORD_RESET_APP_URL
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
 const DEFAULT_FROM_NAME = 'Wedding VIP';
+const DEPLOYMENT_PUBLIC_APP_URL = 'https://weddingvip.vercel.app';
+const DEPLOYMENT_PASSWORD_RESET_FROM_EMAIL = 'wedding-vip@outlook.com';
 const MIN_RESPONSE_MS = 900;
 const DELIVERY_TIMEOUT_MS = 6000;
 
@@ -47,7 +51,11 @@ function configuredApplicationUrl(): string {
   // branding are resolved from membership data, never from separate URLs or
   // browser-provided branding. Keep the #274 name as a rollout-compatible
   // fallback while PUBLIC_APP_URL remains the project-wide source of truth.
-  return (Deno.env.get('PUBLIC_APP_URL') || Deno.env.get('PASSWORD_RESET_APP_URL') || '').trim();
+  return (
+    Deno.env.get('PUBLIC_APP_URL')
+    || Deno.env.get('PASSWORD_RESET_APP_URL')
+    || DEPLOYMENT_PUBLIC_APP_URL
+  ).trim();
 }
 
 function requestOriginAllowed(request: Request, configuredAppUrl: string): boolean {
@@ -337,7 +345,9 @@ serve(async (request) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const brevoApiKey = Deno.env.get('BREVO_API_KEY') || '';
     const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
-    const fromEmail = normalizeEmail(Deno.env.get('PASSWORD_RESET_FROM_EMAIL'));
+    const fromEmail = normalizeEmail(
+      Deno.env.get('PASSWORD_RESET_FROM_EMAIL') || DEPLOYMENT_PASSWORD_RESET_FROM_EMAIL,
+    );
     if (!supabaseUrl || !serviceRoleKey || !isPlausibleEmail(fromEmail) || (!brevoApiKey && !resendApiKey)) {
       return finish({ error: 'Password reset is temporarily unavailable. Please try again later.' }, 503);
     }

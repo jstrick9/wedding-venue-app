@@ -22,7 +22,8 @@ describe('branded password recovery deployment contract', () => {
     expect(edge.indexOf("Deno.env.get('PUBLIC_APP_URL')"))
       .toBeLessThan(edge.indexOf("Deno.env.get('PASSWORD_RESET_APP_URL')"));
     expect(edge).toContain("Deno.env.get('PASSWORD_RESET_FROM_EMAIL')");
-    expect(edge).not.toContain('wedding-vip@outlook.com');
+    expect(edge).toContain("DEPLOYMENT_PUBLIC_APP_URL = 'https://weddingvip.vercel.app'");
+    expect(edge).toContain("DEPLOYMENT_PASSWORD_RESET_FROM_EMAIL = 'wedding-vip@outlook.com'");
     expect(edge).toContain('isLocalDevelopmentRedirect(requestedRedirectTo)');
     expect(edge).toContain('requestOriginAllowed(request, configuredAppUrl)');
     expect(edge).not.toContain("request.headers.get('Origin') || '*'");
@@ -62,12 +63,7 @@ describe('branded password recovery deployment contract', () => {
     const workflow = source('.github/workflows/deploy-edge-functions.yml');
 
     expect(config).toMatch(/\[functions\.request-password-reset\]\s+verify_jwt = false/);
-    expect(workflow).toContain('PUBLIC_APP_URL: https://weddingvip.vercel.app');
-    expect(workflow).toContain('PASSWORD_RESET_FROM_EMAIL: wedding-vip@outlook.com');
-    expect(workflow).toContain('Sync production recovery configuration');
-    expect(workflow).toContain('supabase secrets set');
-    expect(workflow.indexOf('Sync production recovery configuration'))
-      .toBeLessThan(workflow.indexOf('Deploy request-password-reset'));
+    expect(workflow).not.toContain('supabase secrets set');
     expect(workflow).toContain('Deploy request-password-reset');
     expect(workflow).toContain('functions deploy request-password-reset --use-api --no-verify-jwt');
   });

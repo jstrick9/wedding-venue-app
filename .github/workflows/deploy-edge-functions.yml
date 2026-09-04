@@ -18,10 +18,6 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      # Public production configuration, managed as code (one origin/sender for
-      # the entire SaaS deployment — never one value per tenant).
-      PUBLIC_APP_URL: https://weddingvip.vercel.app
-      PASSWORD_RESET_FROM_EMAIL: wedding-vip@outlook.com
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -52,13 +48,6 @@ jobs:
             echo "::error::SUPABASE_PROJECT_ID looks like a UUID. Use Project Settings → General → Reference ID (the subdomain of https://xxxx.supabase.co), not the organization UUID."
             exit 1
           fi
-
-      - name: Sync production recovery configuration
-        run: |
-          supabase secrets set \
-            "PUBLIC_APP_URL=${PUBLIC_APP_URL}" \
-            "PASSWORD_RESET_FROM_EMAIL=${PASSWORD_RESET_FROM_EMAIL}" \
-            --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: List project refs this token can see
         continue-on-error: true
