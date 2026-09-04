@@ -1,6 +1,6 @@
 # Review #276 — Personal-Portal E2E Readiness + Access Lifecycle
 
-**Date:** 2026-09-04 · **Mode:** continuous risk-density review, safe live-harness preparation, and local lifecycle verification · **Baseline:** `5162642` (#275 live-complete) · **Live status:** **LOCAL REMEDIATION COMPLETE; journeys 8.2–8.6 await deployment and operator-provisioned throwaway artifacts**
+**Date:** 2026-09-04 · **Mode:** continuous risk-density review, safe live-harness preparation, and local lifecycle verification · **Baseline:** `5162642` (#275 live-complete) · **Live status:** **REMEDIATION RELEASED at `7152bc5`; journeys 8.2–8.6 await operator-provisioned throwaway artifacts**
 
 ## Findings — reported before remediation
 
@@ -90,6 +90,8 @@ The live harness requires environment-only credentials from a mode-0600 temporar
 | Harness syntax | `node --check scripts/e2e-rsvp-concurrency.mjs` passed |
 | Focused lifecycle/harness tests | **4 files / 25 tests passed** |
 | Full Vitest | **285 files passed, 4 skipped; 1,170 tests passed, 5 skipped** |
+| Exact-SHA CI | GitHub run `33928549637` passed at `7152bc5411c92d4c7a03fdea81320501bdc446fa` |
+| Production deployment | deployment `6274443440` succeeded at the same SHA; canonical root returned HTTP 200 and contained the new lifecycle marker |
 | TypeScript | `npm run typecheck` passed |
 | Strict production unused-locals audit | passed (`NO_UNUSED_PRODUCTION_ERRORS`) |
 | ESLint | passed with **0 errors / 27 pre-existing warnings** |
@@ -104,7 +106,7 @@ The first post-remediation full run found one stale static contract test that re
 
 ## Remaining live execution contract
 
-Do not run mutating mode or consume an invitation until the exact deployed frontend SHA is green and all inputs below are operator-provisioned throwaway artifacts.
+The release prerequisite is satisfied: exact source SHA `7152bc5411c92d4c7a03fdea81320501bdc446fa` is CI-green and deployed. Do not run mutating mode or consume an invitation until all inputs below are operator-provisioned throwaway artifacts.
 
 Required batch:
 
@@ -120,4 +122,4 @@ Every mutation will be logged as attempted, confirmed, no-change, or indetermina
 
 All Review #276 findings are remediated and pinned locally. Journey 8.5 tooling now proves personal-account isolation and the actual guest projection rather than legacy bearer behavior. Journeys 8.3/8.4/8.6 have deterministic coverage for closing already-open portals after authoritative lifecycle denial. White-label UX, stable participant/account identity, historical-link compatibility, tenant/session isolation, and wedding data are preserved.
 
-Review #276 is **LOCAL-COMPLETE, LIVE-PENDING**. Journeys 8.2–8.6 remain open until the corrected SHA is deployed and the operator supplies the batched throwaway artifacts above.
+Review #276 remediation is **RELEASE-COMPLETE; LIVE JOURNEYS PENDING**. Journeys 8.2–8.6 remain open until the operator supplies the batched throwaway artifacts above and each authorized sequence is executed and logged.
