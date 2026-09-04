@@ -178,7 +178,7 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 | 5.2 | geocode-venue | open | bearer-auth confirmed #246; validate inputs, rate limits, Geoapify error paths |
 | 5.3 | send-email | open | bearer-auth confirmed #246; abuse limits (spam via authenticated callers?) |
 | 5.4 | claim-portal-invite | done; #273 deployment workflow passed, live journey pending | #273: token-context validation, shared password policy before Auth creation, existing-user no-reset path, transactional bind/orphan cleanup/bounds; F-273-9 fixed the initial workflow omission and added a deployment contract test |
-| 5.5 | request-password-reset | done locally; production deployment + inbox proof pending | #274: public neutral-response door; service-derived eligibility; hash-only atomic throttling; server-owned branded origin/sender; background delivery with provider deadlines/failover; fragment proof; explicit no-JWT deployment step; Deno check + contract tests passed |
+| 5.5 | request-password-reset | deployed; production configuration + inbox proof pending | #274: public neutral-response door; service-derived eligibility; hash-only atomic throttling; server-owned branded origin/sender; background delivery with provider deadlines/failover; fragment proof; explicit no-JWT deployment step. Live follow-up found the production origin unset and the password-specific URL name duplicated existing project configuration; the function now uses one project-wide `PUBLIC_APP_URL` for all tenants with the old name as a compatibility fallback. |
 
 ## F. Cross-cutting sweeps
 

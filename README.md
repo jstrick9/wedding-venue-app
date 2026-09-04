@@ -45,7 +45,7 @@ audit.
     must never go into Vercel/client env or GitHub).
     Branded self-service recovery additionally requires migration `0022`, the
     `request-password-reset` Function, a working `BREVO_API_KEY` or `RESEND_API_KEY`,
-    and a production Auth Site URL on the branded application origin. Production recovery requires server-only `PASSWORD_RESET_APP_URL` and a verified branded `PASSWORD_RESET_FROM_EMAIL`; browser-supplied non-local origins and hard-coded mailbox fallbacks are rejected.
+    and a production Auth Site URL on the branded application origin. Production recovery reuses the one project-wide `PUBLIC_APP_URL` for every tenant (`PASSWORD_RESET_APP_URL` is a legacy fallback) and requires a verified branded `PASSWORD_RESET_FROM_EMAIL`; browser-supplied non-local origins and hard-coded mailbox fallbacks are rejected.
 
 > **Honesty boundary:** local mode is the exercised product mode today. In cloud
 > mode the catalog/design domains and couple/guest snapshots are mirrored, but not

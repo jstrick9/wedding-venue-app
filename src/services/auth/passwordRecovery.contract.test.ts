@@ -17,7 +17,10 @@ describe('branded password recovery deployment contract', () => {
     expect(edge).toContain("admin.rpc('get_password_reset_account_context'");
     expect(edge).toContain("admin.rpc('begin_password_reset_request'");
     expect(edge).toContain('readBoundedJson(request)');
+    expect(edge).toContain("Deno.env.get('PUBLIC_APP_URL')");
     expect(edge).toContain("Deno.env.get('PASSWORD_RESET_APP_URL')");
+    expect(edge.indexOf("Deno.env.get('PUBLIC_APP_URL')"))
+      .toBeLessThan(edge.indexOf("Deno.env.get('PASSWORD_RESET_APP_URL')"));
     expect(edge).toContain("Deno.env.get('PASSWORD_RESET_FROM_EMAIL')");
     expect(edge).not.toContain('wedding-vip@outlook.com');
     expect(edge).toContain('isLocalDevelopmentRedirect(requestedRedirectTo)');

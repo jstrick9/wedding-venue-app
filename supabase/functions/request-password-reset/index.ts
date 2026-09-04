@@ -8,10 +8,11 @@
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
 //   BREVO_API_KEY or RESEND_API_KEY
-// Required:
+// Required project-wide settings:
+//   PUBLIC_APP_URL (one canonical SaaS origin; not one value per tenant)
 //   PASSWORD_RESET_FROM_EMAIL (verified branded sender)
-// Required outside localhost development:
-//   PASSWORD_RESET_APP_URL (branded production application origin)
+// Legacy compatibility:
+//   PASSWORD_RESET_APP_URL (used only when PUBLIC_APP_URL is absent)
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
@@ -39,6 +40,14 @@ interface DeliveryResult {
   ok: boolean;
   channel: 'brevo' | 'resend' | 'none';
   status: number;
+}
+
+function configuredApplicationUrl(): string {
+  // One deployment has one trusted application origin. Tenant identity and
+  // branding are resolved from membership data, never from separate URLs or
+  // browser-provided branding. Keep the #274 name as a rollout-compatible
+  // fallback while PUBLIC_APP_URL remains the project-wide source of truth.
+  return (Deno.env.get('PUBLIC_APP_URL') || Deno.env.get('PASSWORD_RESET_APP_URL') || '').trim();
 }
 
 function requestOriginAllowed(request: Request, configuredAppUrl: string): boolean {
@@ -305,7 +314,7 @@ async function sendViaResend(
 serve(async (request) => {
   const startedAt = Date.now();
   let acceptedRequest = false;
-  const configuredAppUrl = Deno.env.get('PASSWORD_RESET_APP_URL') || '';
+  const configuredAppUrl = configuredApplicationUrl();
   const originAllowed = requestOriginAllowed(request, configuredAppUrl);
   const corsHeaders = corsHeadersFor(request, originAllowed);
   const json = (body: unknown, status = 200) => jsonWith(corsHeaders, body, status);
