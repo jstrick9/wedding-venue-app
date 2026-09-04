@@ -64,6 +64,7 @@ import { deriveShades } from '../utils/color';
 import { getGuestPortalBackend } from '../services/portal/guestPortalBackend';
 import {
   isCoupleCloudEnabled,
+  isPortalAccessError,
   pullGuestPortalSnapshot,
 } from '../services/couples/coupleCloudSync';
 import {
@@ -263,11 +264,25 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         setResolvedGuestId(guest.id);
         saveGuestPortalSession(remoteConfig, accountInviteToken, remoteConfig?.eventTitle || coupleEventId, guest.id, coupleEventId);
       } catch (err) {
-        // F-268-1 (Review #268): the RPC (or its fetch deadline) rejects on
-        // network failure/stall — try/finally alone turned that into an
-        // unhandled promise rejection every 5 seconds while offline. The poll
-        // retries on its own, so stay quiet.
-        console.debug('Guest portal cloud pull failed; retrying on the next poll.', err);
+        if (isPortalAccessError(err) && !cancelled) {
+          // F-276-4: expiry, revocation, venue suspension, and account mismatch
+          // are authoritative denials, not retryable network failures. Hide the
+          // hydrated private view immediately and re-run the invitation gate.
+          clearGuestPortalSession();
+          setIsAuthed(false);
+          setResolvedGuestId(null);
+          setConfig(null);
+          setRemoteCouple(undefined);
+          setPortalData({ venues: [], guests: [], submissions: [], guestEvents: [] });
+          setRsvpSuccess(null);
+          setPortalAccountAccess('pending');
+        } else if (!cancelled) {
+          // F-268-1 (Review #268): the RPC (or its fetch deadline) rejects on
+          // network failure/stall — try/finally alone turned that into an
+          // unhandled promise rejection every 5 seconds while offline. The poll
+          // retries on its own, so stay quiet.
+          console.debug('Guest portal cloud pull failed; retrying on the next poll.', err);
+        }
       } finally {
         pulling = false;
       }

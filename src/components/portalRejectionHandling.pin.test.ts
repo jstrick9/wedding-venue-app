@@ -14,7 +14,9 @@ import { describe, expect, it } from 'vitest';
  * retries on its own), the couple-portal save path emits the typed
  * `spm_cloud_sync_error` event (App-level toast, Review #245 P2-F channel),
  * and the public branding RPC resolves null on failure instead of rejecting
- * into its `void … .then(…)` callers.
+ * into its `void … .then(…)` callers. Review #276 F-276-4 further requires
+ * pollers to distinguish authoritative access denials (which re-gate the
+ * portal) from those transient failures (which remain quiet and retryable).
  */
 describe('portal cloud-sync paths handle rejections (F-268-1)', () => {
   const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
@@ -23,7 +25,8 @@ describe('portal cloud-sync paths handle rejections (F-268-1)', () => {
     const src = read('src/components/CouplesPortal.tsx');
     const hydrate = /const hydrateRemote = async \(\) => \{[\s\S]*?\n\s{4}\};/.exec(src)?.[0] ?? '';
     expect(hydrate).not.toBe('');
-    expect(hydrate).toMatch(/catch \(err\) \{\s*\/\/ F-268-1[\s\S]*?console\.debug\('Couple portal cloud pull failed; retrying on the next poll\.', err\);/);
+    expect(hydrate).toMatch(/catch \(err\) \{\s*if \(isPortalAccessError\(err\) && !cancelled\) \{[\s\S]*?setPortalAccountAccess\('pending'\);/);
+    expect(hydrate).toMatch(/else if \(!cancelled\) \{\s*\/\/ F-268-1[\s\S]*?console\.debug\('Couple portal cloud pull failed; retrying on the next poll\.', err\);/);
   });
 
   it('CouplesPortal save catch emits the typed cloud-sync-error event', () => {
@@ -33,9 +36,12 @@ describe('portal cloud-sync paths handle rejections (F-268-1)', () => {
     expect(push).toMatch(/catch \(err\) \{[\s\S]*?emit\('spm_cloud_sync_error', \{\s*domain: 'couple portal',/);
   });
 
-  it('GuestPortal pull catches network failures', () => {
+  it('GuestPortal re-gates access denials but catches transient network failures', () => {
     const src = read('src/components/GuestPortal.tsx');
-    expect(src).toMatch(/console\.debug\('Guest portal cloud pull failed; retrying on the next poll\.', err\);/);
+    const hydrate = /const hydrateGuest = async \(\) => \{[\s\S]*?\n\s{4}\};/.exec(src)?.[0] ?? '';
+    expect(hydrate).not.toBe('');
+    expect(hydrate).toMatch(/if \(isPortalAccessError\(err\) && !cancelled\) \{[\s\S]*?setPortalAccountAccess\('pending'\);/);
+    expect(hydrate).toMatch(/else if \(!cancelled\) \{[\s\S]*?console\.debug\('Guest portal cloud pull failed; retrying on the next poll\.', err\);/);
   });
 
   it('public branding RPC resolves null on failure instead of rejecting', () => {

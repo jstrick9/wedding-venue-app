@@ -178,13 +178,38 @@ export interface CouplePortalPull {
   updatedAt?: string;
 }
 
+/** A server-verified invitation/account denial, distinct from a retryable pull failure. */
+export class PortalAccessError extends Error {
+  readonly code: string;
+
+  constructor(code: string) {
+    super('Portal access must be verified again.');
+    this.name = 'PortalAccessError';
+    this.code = code;
+  }
+}
+
+export function isPortalAccessError(error: unknown): error is PortalAccessError {
+  return error instanceof PortalAccessError;
+}
+
+function throwPortalAccessError(data: unknown): void {
+  if (!data || typeof data !== 'object') return;
+  const result = data as { ok?: unknown; error?: unknown };
+  if (result.ok !== false) return;
+  const code = String(result.error || 'access_denied');
+  throw new PortalAccessError(/^[a-z0-9_-]{1,64}$/i.test(code) ? code : 'access_denied');
+}
+
 export async function pullCouplePortalSnapshot(token: string, venueSlug?: string): Promise<CouplePortalPull | null> {
   if (!isCoupleCloudEnabled() || !token) return null;
   const { data, error } = await getSupabaseClient().rpc(
     venueSlug ? 'get_couple_portal_snapshot_for_venue' : 'get_couple_portal_snapshot',
     venueSlug ? { p_venue_slug: venueSlug, p_token: token } : { p_token: token },
   );
-  if (error || !data?.ok || !data.payload) return null;
+  if (error) return null;
+  throwPortalAccessError(data);
+  if (!data?.ok || !data.payload) return null;
   return { payload: data.payload as CouplePortalSnapshot, updatedAt: data.updated_at as string | undefined };
 }
 
@@ -296,7 +321,9 @@ export async function pullGuestPortalSnapshot(
       ? { p_venue_slug: venueSlug, p_couple_id: coupleEventId, p_guest_token: guestToken }
       : { p_couple_id: coupleEventId, p_guest_token: guestToken },
   );
-  if (error || !data?.ok) return null;
+  if (error) return null;
+  throwPortalAccessError(data);
+  if (!data?.ok) return null;
   return {
     coupleId: coupleEventId,
     event: Array.isArray(data.event) ? data.event as CoupleEvent[] : [],

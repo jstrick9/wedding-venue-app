@@ -81,6 +81,7 @@ import {
   buildCouplePortalSnapshot,
   hydrateCouplePortalSnapshot,
   isCoupleCloudEnabled,
+  isPortalAccessError,
   pullCouplePortalSnapshot,
   saveCouplePortalSnapshot,
 } from '../services/couples/coupleCloudSync';
@@ -299,11 +300,25 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
         }
         cloudHydratingRef.current = false;
       } catch (err) {
-        // F-268-1 (Review #268): the RPC (or its fetch deadline) REJECTS on
-        // network failure/stall — with only try/finally this surfaced as an
-        // unhandled promise rejection every 5 seconds while offline. The poll
-        // retries on its own, so stay quiet.
-        console.debug('Couple portal cloud pull failed; retrying on the next poll.', err);
+        if (isPortalAccessError(err) && !cancelled) {
+          // F-276-4: an authoritative expiry, revocation, venue suspension, or
+          // account mismatch must close an already-hydrated portal. Preserve
+          // the isolated Auth session so a valid replacement link can still
+          // recognize the same personal account, but clear the local portal
+          // session and force the invitation gate to verify access again.
+          cloudHydratingRef.current = false;
+          cloudSyncedAtRef.current = undefined;
+          clearCoupleSession();
+          setSession(null);
+          setInvalidInvite(false);
+          setPortalAccountAccess('pending');
+        } else if (!cancelled) {
+          // F-268-1 (Review #268): the RPC (or its fetch deadline) REJECTS on
+          // network failure/stall — with only try/finally this surfaced as an
+          // unhandled promise rejection every 5 seconds while offline. The poll
+          // retries on its own, so stay quiet.
+          console.debug('Couple portal cloud pull failed; retrying on the next poll.', err);
+        }
       } finally {
         pulling = false;
       }

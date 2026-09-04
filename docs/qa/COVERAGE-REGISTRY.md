@@ -204,14 +204,14 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 
 ## H. E2E journeys (browser-level, after Phase 5 harness)
 
-| # | Journey | Status |
-|---|---------|--------|
+| # | Journey | Status | Evidence |
+|---|---------|--------|----------|
 | 8.1 | Platform → create venue → invite → claim → first sign-in | **complete (live E2E)** | #272: operator-provided invite → context RPC → claim-venue-admin Edge Function (0017 atomic: ownership + membership + invite consumption + platform audit in one tx) → password sign-in → replay attempt correctly rejected. Venue-column cells live-proven: organizations (member scoping + owner_id transfer), organization_memberships, org_data member reads, audit_logs org-admin reads (0020 legit path); platform_* negative cells all 0 rows |
-| 8.2 | Claim → configure → couple portal publish → guest RSVP → venue sees submission | open; personal account implementation deployed and locally complete #273; fresh live artifacts needed |
-| 8.3 | Reissue invite → stable personal account → old token denied/current session evaluated | deployed contract complete #273; live journey pending |
-| 8.4 | Suspend venue → each console's behavior | open |
-| 8.5 | Concurrent RSVP race (two guests, one couple) | harness ready, run deferred #248 |
-| 8.6 | Guest token expiry / access window edges | open |
+| 8.2 | Claim → configure → couple portal publish → guest RSVP → venue sees submission | **in-progress; live pending** | Personal-account implementation deployed/local contract complete #273. #276 corrected claim/guest verification assumptions and added failure-safe mutation accounting; fresh throwaway artifacts still required. |
+| 8.3 | Reissue invite → stable personal account → old token denied/current session evaluated | **in-progress; live pending** | Stable account/reissue backend contract #273. #276 F-276-4 now deterministically re-gates an already-open old-token portal after authoritative `not_found`; exact corrected frontend deployment + fresh couple invite needed. |
+| 8.4 | Suspend venue → each console's behavior | **in-progress; live pending** | #276 F-276-4 now propagates `venue_unavailable` and re-gates already-open couple/guest portals while preserving transient retry behavior; authorized throwaway suspension/reactivation and live console proof pending. |
+| 8.5 | Concurrent RSVP race (two guests, one couple) | **harness complete; live pending** | #276 replaced legacy anonymous #248 harness with two distinct personal accounts/JWTs, bidirectional cross-account denial, safe oversized negative writes, projected-RSVP readback, and an always-emitted redacted mutation ledger; 6 harness tests pass. |
+| 8.6 | Guest token expiry / access window edges | **in-progress; live pending** | #276 F-276-4 preserves `expired` as a terminal denial and re-gates an already-open guest portal on its next poll; live before/edge/after proof requires an operator-controlled throwaway expiry boundary. |
 
 ---
 
@@ -223,12 +223,13 @@ Legend per cell below: `live` = live-proven this phase · `pol` = policy-derived
 |----------|-----------|--------|
 | Reset the #272 venue-owner account password | F-273-0 credential containment | **complete 2026-09-02** — operator confirmed reset; current tree redacted, consumed invite token and historical password are inert; history rewrite not attempted |
 | 1 pending venue-admin invite → throwaway email (setup-link token pasted here) | Phase 3 venue column + journey 8.1 | **provided + consumed (#272)** — invite pointed at operator's own email (deviation logged); password exposure contained in #273 |
-| 2 **email-backed, personal-account-marked** guest-portal invitations for the same throwaway couple + its couple id | journeys 8.2/8.5 + migration 0021 live proof | requested |
-| 1 fresh email-backed couple/collaborator invitation to a throwaway email | personal-account claim/reissue live proof (#273 / journeys 8.2–8.3) | requested after 0021 + both claim Functions deploy |
-| Live app URL + publishable/anon key (never service-role), supplied only for the verification session | post-0022 recovery + account probes | recovery origin/deployment complete (#274/#275); publishable key still requested only when remaining account probes resume |
+| 2 **email-backed, personal-account-marked** guest-portal invitations for the same throwaway couple + its couple ID + known strong personal-account passwords | journeys 8.2/8.5 + migration 0021 live proof | **requested for #276 live continuation** — provide secrets only through a mode-0600 attachment; never commit/log them |
+| 1 fresh email-backed couple/collaborator invitation to a throwaway email + known strong password | personal-account claim/reissue live proof (#273 / journeys 8.2–8.3) | **requested for #276 live continuation** — migration 0021 and claim Functions are deployed; corrected frontend SHA must deploy before consumption |
+| 1 operator-controlled personal guest invitation that can be moved from active to expired (may be one of the two above) | journey 8.6 before/edge/after proof | **requested for #276** — operator performs any administrative expiry change unless an authorized product UI supports it |
+| Live app URL + publishable/anon key (never service-role), supplied only for the verification session | post-0022 recovery + account probes | recovery origin/deployment complete (#274/#275); **requested now for #276 portal probes** |
 | 1 throwaway inbox with an active venue-admin account + venue slug (and permission to reset only that password) | #274 live request → inbox → save → post-reset sign-in proof | **provided + complete (#274/#275)** — branded delivery and fresh-link reject → same-screen retry → new sign-in passed; no credentials retained |
 | 1 second invite → second throwaway email (cross-user negative tests) | Phase 3 (negative cells) | later |
-| 1 throwaway venue you are willing to have suspended | 8.4 suspension paths | later |
+| 1 throwaway venue you explicitly authorize for suspension **and reactivation** | 8.4 suspension paths | **requested for #276 live continuation** — administrative action remains operator-run unless performed through an already-authorized product console |
 | 3.1 throwaway auth accounts for sign-in probes: (a) claim the row-1 invite with a throwaway sign-up (covers venue column + journey 8.1), (b) one plain fresh sign-up (negative cells + signup bootstrap flow), (c) platform_memberships row for account (a) or a third account — SQL script provided in #262 (covers platform column) | Phase 3 venue/platform columns live proof | requested (#262) |
 
 **Session state:** no credential files, reset links, passwords, or authenticated browser sessions are retained by the agent. #272 consumed one venue-admin invite and changed that existing account password as logged there. #274/#275 used the approved throwaway venue-admin recovery path: branded reset requests/emails were issued, and the operator’s final fresh-link proof changed that throwaway Auth password once. No venue, membership, event, invitation, or wedding data changed.

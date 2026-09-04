@@ -1446,6 +1446,32 @@ giants first) → 5 browser E2E harness → 6 concurrency/adversarial → 7 drif
    rows carry per-unit evidence with review numbers.
 
 **Campaign progress log (append per session):**
+- #276 (2026-09-04): JOURNEYS 8.2–8.6 readiness is LOCAL-COMPLETE/LIVE-PENDING.
+  Reported before remediation: F-276-1/2 (P2), the #248 RSVP-race harness used
+  anonymous bearer calls and expected the guest-forbidden full submission list
+  after migration 0021; F-276-3 (P3), guest B silently fell back to A; F-276-4
+  (P1), already-open guest/couple portals retained hydrated private UI after
+  authoritative expiry, token revocation/reissue, venue suspension, or account
+  mismatch because pull helpers collapsed `{ok:false}` to retryable `null`; and
+  F-276-5 (P3), successful-only mutation reporting omitted partial writes and
+  redundant acceptance performed an uncounted binding timestamp write. The
+  rewritten harness requires two distinct personal accounts/Auth user IDs/JWTs,
+  exact anonymous and bidirectional cross-account denials, safe oversized
+  negative writes, simultaneous RSVP writes, each guest's own projected-rsvp
+  readback, and a redacted attempt/confirmed/indeterminate ledger emitted from
+  `finally`; it accepts only existing Auth users that are not yet bound. Runtime
+  pulls now preserve bounded authoritative denials as `PortalAccessError`; both
+  open portals clear their local portal session (guest also clears hydrated
+  private state) and re-enter the white-label account/invite gate, while true
+  network failures still retry quietly. Final local evidence: 285 test files
+  passed/4 skipped, 1,170 tests passed/5 skipped; focused 4 files/25 tests;
+  typecheck; lint 0 errors/27 baseline warnings; event lint; ratchet 0; audit 0;
+  both builds/budgets; syntax/diff/credential scans all passed. No live mutation
+  or invitation consumption occurred. Remaining: deploy exact corrected SHA,
+  then execute authorized throwaway journeys with two guest invites/passwords,
+  one couple/collaborator invite/password, one suspend/reactivate venue, one
+  operator-controlled expiry edge, canonical URL, and publishable key (never
+  service role). Review: docs/reviews/276-personal-portal-e2e-readiness-and-access-lifecycle-2026-09-04.md.
 - #275 (2026-09-04): RECOVERY REJECT→RETRY correction is LIVE-COMPLETE at
   `f6a5a324cb89e7a6371ff9841028fdfe1de89c33`. Live #274 testing proved
   F-275-1 (P1): rejecting a current/previous password cleared the exchanged
