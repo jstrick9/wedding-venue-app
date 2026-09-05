@@ -3,6 +3,7 @@ import { getEntityRepository, type EntitySyncContext } from '../repository/entit
 
 export type { EntitySyncContext };
 import {
+  affectsCouplePortalSnapshots,
   pullAllCouplePortalSnapshotsForVenue,
   syncAllCouplePortalSnapshots,
 } from '../couples/coupleCloudSync';
@@ -18,13 +19,19 @@ export function canSyncEntities(organizationId: string | null | undefined): bool
   return getPlatformProvider() === 'supabase' && Boolean(organizationId);
 }
 
-export async function pullEntities(context: EntitySyncContext): Promise<void> {
+export async function pullEntities(
+  context: EntitySyncContext,
+  shouldApply: () => boolean = () => true,
+): Promise<boolean> {
   const repo = getEntityRepository();
-  await repo.pullAll(context);
+  const entitiesApplied = await repo.pullAll(context, shouldApply);
+  if (entitiesApplied === false || !shouldApply()) return false;
   if (repo.provider === 'supabase') {
-    await pullAllCouplePortalSnapshotsForVenue(context);
+    const snapshotsApplied = await pullAllCouplePortalSnapshotsForVenue(context, shouldApply);
+    if (snapshotsApplied === false || !shouldApply()) return false;
   }
-  emitDataChanged('backend_hydrated');
+  emitDataChanged('backend_hydrated', 'backend');
+  return true;
 }
 
 export async function pushEntities(context: EntitySyncContext): Promise<void> {
@@ -42,11 +49,13 @@ export async function pushEntityDomain(
 ): Promise<void> {
   const repo = getEntityRepository();
   await repo.pushDomain(context, domain);
-  if (
-    repo.provider === 'supabase' &&
-    (domain === 'all' || domain === 'coupleEvents' || domain === 'spm_couple_events' || domain.includes('couple'))
-  ) {
+  if (repo.provider === 'supabase' && affectsCouplePortalSnapshots(domain)) {
     await syncAllCouplePortalSnapshots(context);
-    await syncCoupleRelationalProjection(context);
+    // Only couple-owned relational domains need the relational projection. A
+    // global map/rules/weather update should refresh portal snapshots without
+    // rewriting unrelated couple rows.
+    if (domain === 'all' || domain.includes('couple') || domain === 'spm_couple_events') {
+      await syncCoupleRelationalProjection(context);
+    }
   }
 }

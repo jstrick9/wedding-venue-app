@@ -17,7 +17,8 @@ describe('GuestPortal uses the shared VenueMapCanvas', () => {
     expect(source).toContain("import { VenueMapCanvas } from './VenueMapCanvas';");
     const uses = (source.match(/<VenueMapCanvas/g) || []).length;
     expect(uses).toBeGreaterThanOrEqual(2); // Venue Map card + Wayfinding tab
-    expect(source).toContain('onPointClick={(p) => openInMaps(p)}');
+    expect(source).toContain('onPointClick={openInMaps}');
+    expect(source).toContain('isPointInteractive={hasValidMapGps}');
   });
 
   it('no longer contains the duplicated hand-rolled map SVG / routePolyline', () => {

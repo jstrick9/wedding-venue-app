@@ -1,4 +1,4 @@
-import type { CoupleEvent, GuestPortalConfig, RSVPSubmission } from '../../types';
+import type { CoupleEvent, GuestPortalConfig, RSVPSubmission, VenueMapConfig } from '../../types';
 import { getPlatformProvider } from '../platform';
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { BACKUP_DOMAINS } from '../../utils/backupDomains';
@@ -7,6 +7,7 @@ import { sha256Hex } from '../../utils/hash';
 import { findCoupleEventById, getCoupleEvents } from './coupleService';
 import { getCouplePortalExpiry } from './accessLifecycle';
 import { getCoupleGuests } from './coupleGuestService';
+import { projectVenueMap } from '../../utils/venueMapDesigner';
 
 export interface CoupleCloudContext {
   organizationId: string;
@@ -54,6 +55,23 @@ const GLOBAL_DOMAINS = new Set([
   'venueWeather',
 ]);
 
+/**
+ * Whether changing a local domain invalidates the denormalized couple/guest
+ * portal snapshots. Accepts either the canonical domain key or its storage key
+ * so callers cannot silently miss publication because of an alias.
+ */
+export function affectsCouplePortalSnapshots(domain: string): boolean {
+  if (domain === 'all') return true;
+  const canonical = BACKUP_DOMAINS.find(
+    (definition) => definition.key === domain || definition.storageKey === domain,
+  )?.key as string | undefined;
+  const key = canonical || domain;
+  return GLOBAL_DOMAINS.has(key)
+    || COUPLE_SCOPED_ARRAYS.has(key)
+    || key === 'coupleEvents'
+    || key === 'couplePortalConfigs';
+}
+
 export function isCoupleCloudEnabled(): boolean {
   return getPlatformProvider() === 'supabase' && isSupabaseConfigured();
 }
@@ -96,6 +114,22 @@ export async function buildCouplePortalSnapshot(coupleEventId: string): Promise<
     } catch {
       snapshot[domain.key] = domain.defaultValue;
     }
+  }
+
+  // Never place staff-only map objects in a portal snapshot. Keep a couple-safe
+  // projection for the couple UI and a separately event-scoped guest projection
+  // that the guest RPC returns instead of the broader couple map.
+  const sourceMap = snapshot.venueMapConfigs as VenueMapConfig | null | undefined;
+  if (sourceMap && Array.isArray(sourceMap.points)) {
+    snapshot.venueMapConfigs = projectVenueMap(sourceMap, 'couple');
+    snapshot.guestVenueMap = projectVenueMap(
+      sourceMap,
+      'guest',
+      event.selectedSpaces || [],
+    );
+  } else {
+    snapshot.venueMapConfigs = null;
+    snapshot.guestVenueMap = null;
   }
 
   // Store a hash alongside each guest token. The raw token remains in the private
@@ -242,10 +276,24 @@ export async function saveCouplePortalSnapshot(
   return data?.ok ? 'saved' : 'error';
 }
 
+export interface HydrateCouplePortalSnapshotOptions {
+  notify?: boolean;
+  /**
+   * Couple-token hydration needs the snapshot's scoped presentation domains.
+   * Venue-member bulk hydration must leave those global domains authoritative
+   * from org_data, or a stale/couple-filtered snapshot can overwrite the venue's
+   * canonical catalog and staff-only map layers.
+   */
+  includeGlobalDomains?: boolean;
+}
+
 /** Merge one event's remote data into the local one-venue browser cache. */
 export function hydrateCouplePortalSnapshot(
   snapshot: CouplePortalSnapshot,
-  notify = true,
+  {
+    notify = true,
+    includeGlobalDomains = true,
+  }: HydrateCouplePortalSnapshotOptions = {},
 ): void {
   for (const domain of BACKUP_DOMAINS) {
     if (!(domain.key in snapshot)) continue;
@@ -273,24 +321,32 @@ export function hydrateCouplePortalSnapshot(
       domain.write([...current.filter((item) => !belongs(item)), ...remote]);
       continue;
     }
-    if (GLOBAL_DOMAINS.has(domain.key)) domain.write(incoming);
+    if (includeGlobalDomains && GLOBAL_DOMAINS.has(domain.key)) domain.write(incoming);
   }
-  if (notify) emitDataChanged('all');
+  if (notify) emitDataChanged('all', 'backend');
 }
 
 /** Hydrate all couple snapshots visible to an authenticated venue member. */
 export async function pullAllCouplePortalSnapshotsForVenue(
   context: CoupleCloudContext,
-): Promise<void> {
-  if (!isCoupleCloudEnabled()) return;
+  shouldApply: () => boolean = () => true,
+): Promise<boolean> {
+  if (!isCoupleCloudEnabled()) return shouldApply();
   const { data, error } = await getSupabaseClient()
     .from('couple_portal_snapshots')
     .select('couple_id,payload')
     .eq('organization_id', context.organizationId);
   if (error) throw error;
+  if (!shouldApply()) return false;
   for (const row of data || []) {
-    if (row.payload) hydrateCouplePortalSnapshot(row.payload as CouplePortalSnapshot, false);
+    if (row.payload) {
+      hydrateCouplePortalSnapshot(row.payload as CouplePortalSnapshot, {
+        notify: false,
+        includeGlobalDomains: false,
+      });
+    }
   }
+  return true;
 }
 
 export interface GuestPortalCloudSnapshot {

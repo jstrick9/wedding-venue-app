@@ -73,14 +73,28 @@ export default function AuthenticatedApp() {
 
   const [view, setView] = useState<'dashboard' | 'studio' | 'admin' | 'venuemap'>('dashboard');
   const [venueMapDirty, setVenueMapDirty] = useState(false);
+  const venueMapDirtyRef = useRef(false);
+  const viewRef = useRef<'dashboard' | 'studio' | 'admin' | 'venuemap'>('dashboard');
   const [confirmVenueMapLeave, setConfirmVenueMapLeave] = useState(false);
+  const [pendingVenueMapHash, setPendingVenueMapHash] = useState<string | null>(null);
   // Guard leaving the studio while the working layout has unsaved changes.
   const [pendingStudioLeave, setPendingStudioLeave] = useState<(() => void) | null>(null);
   // Warn before saving an empty layout as a venue's master layout.
   const [confirmEmptyMasterLayout, setConfirmEmptyMasterLayout] = useState(false);
 
+  useEffect(() => {
+    venueMapDirtyRef.current = venueMapDirty;
+  }, [venueMapDirty]);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
   const leaveVenueMap = () => {
-    if (venueMapDirty) { setConfirmVenueMapLeave(true); return; }
+    if (venueMapDirty) {
+      setPendingVenueMapHash('#/studio');
+      setConfirmVenueMapLeave(true);
+      return;
+    }
     window.location.hash = '#/studio'; setView('studio'); closeAll();
   };
 
@@ -120,11 +134,18 @@ export default function AuthenticatedApp() {
   useEffect(() => {
     const applyHash = () => {
       const h = window.location.hash || '';
+      const staysOnVenueMap = h.startsWith('#/venuemap');
+      if (viewRef.current === 'venuemap' && venueMapDirtyRef.current && !staysOnVenueMap) {
+        setPendingVenueMapHash(h || VENUE_HOME_HASH);
+        setConfirmVenueMapLeave(true);
+        window.history.replaceState(window.history.state, '', '#/venuemap');
+        return;
+      }
       if (h.startsWith('#/admin')) setView('admin');
       else if (h.startsWith('#/studio')) setView('studio');
-      else if (h.startsWith('#/venuemap')) setView('venuemap');
+      else if (staysOnVenueMap) setView('venuemap');
       else if (h.startsWith('#/home') || needsVenueHomeHashRewrite(h)) {
-        if (needsVenueHomeHashRewrite(h)) window.location.hash = VENUE_HOME_HASH;
+        if (needsVenueHomeHashRewrite(h)) window.history.replaceState(window.history.state, '', VENUE_HOME_HASH);
         setView('dashboard');
       }
     };
@@ -441,7 +462,7 @@ export default function AuthenticatedApp() {
     if (!entityBackendSync.enabled) return;
     return on('spm_data_changed', (detail) => {
       const type = detail?.type;
-      if (!type || type === 'backend_hydrated') return;
+      if (!type || type === 'backend_hydrated' || detail?.source === 'backend') return;
       if (type === 'all') {
         void entityBackendSync.saveToBackend();
         return;
@@ -773,14 +794,14 @@ export default function AuthenticatedApp() {
   // Warn before a browser refresh/close if the working layout has unsaved changes.
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (layoutState.layoutDirty) {
+      if (layoutState.layoutDirty || venueMapDirty) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [layoutState.layoutDirty]);
+  }, [layoutState.layoutDirty, venueMapDirty]);
 
   // Save/delete wrappers that flush to the shared backend after the local
   // localStorage write (no-op when the platform backend is disabled).
@@ -870,6 +891,50 @@ export default function AuthenticatedApp() {
     [layoutState, handleResetView, closeAll],
   );
 
+  // Never render a venue workspace from the shared browser cache until this
+  // exact authenticated organization has been hydrated. This blocks stale data
+  // from a previously signed-in tenant, including property maps, during load or
+  // after a failed pull.
+  if (!entityBackendSync.hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
+          {entityBackendSync.loadError ? (
+            <>
+              <div className="text-3xl" aria-hidden="true">⚠️</div>
+              <h1 className="mt-3 text-lg font-bold text-gray-900">We couldn’t load your venue workspace</h1>
+              <p className="mt-2 text-sm text-gray-600">
+                Your venue data has not been opened on this device. Check your connection and try again.
+              </p>
+              <div className="mt-5 flex justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void entityBackendSync.loadFromBackend()}
+                  className="rounded-lg bg-[#4A1942] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3b1435]"
+                >
+                  Try again
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Sign out
+                </button>
+              </div>
+            </>
+          ) : (
+            <div role="status" aria-live="polite">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-[#4A1942]" aria-hidden="true" />
+              <h1 className="mt-4 text-lg font-bold text-gray-900">Loading your venue workspace…</h1>
+              <p className="mt-1 text-sm text-gray-500">Your maps and planning data will appear when they’re ready.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (view === 'admin') {
     return (
       <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#f3f4f6' }}>
@@ -913,7 +978,8 @@ export default function AuthenticatedApp() {
               map={getVenueMapConfig() || emptyVenueMapConfig()}
               venues={layoutState.venues}
               mapTitle={brandingConfig.venueName || 'Venue Map'}
-              onSave={(next) => { saveVenueMapConfig(next); emitDataChanged('venueMapConfigs'); }}
+              organizationId={organizationId || undefined}
+              onSave={(next) => { saveVenueMapConfig(next); }}
               onClose={leaveVenueMap}
               onDirtyChange={setVenueMapDirty}
             />
@@ -926,8 +992,20 @@ export default function AuthenticatedApp() {
           title="Discard unsaved map changes?"
           message="You have unsaved changes to the venue map. Leaving will discard them. Save the map first to keep your work."
           confirmLabel="Leave anyway"
-          onConfirm={() => { setConfirmVenueMapLeave(false); setVenueMapDirty(false); window.location.hash = '#/studio'; setView('studio'); closeAll(); }}
-          onCancel={() => setConfirmVenueMapLeave(false)}
+          onConfirm={() => {
+            const destination = pendingVenueMapHash || '#/studio';
+            setConfirmVenueMapLeave(false);
+            setPendingVenueMapHash(null);
+            venueMapDirtyRef.current = false;
+            setVenueMapDirty(false);
+            window.location.hash = destination;
+            if (destination.startsWith('#/admin')) setView('admin');
+            else if (destination.startsWith('#/studio')) setView('studio');
+            else if (destination.startsWith('#/venuemap')) setView('venuemap');
+            else setView('dashboard');
+            closeAll();
+          }}
+          onCancel={() => { setConfirmVenueMapLeave(false); setPendingVenueMapHash(null); window.history.replaceState(window.history.state, '', '#/venuemap'); }}
         />
       </div>
     );

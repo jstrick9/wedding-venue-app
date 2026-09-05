@@ -30,6 +30,9 @@ describe('AuthenticatedApp full-venue map module route', () => {
     expect(source).toMatch(/view === 'venuemap'/);
     expect(source).toContain('<VenueMapDesigner');
     expect(source).toContain('saveVenueMapConfig');
+    // saveVersionedStorage already emits the canonical domain event. A second
+    // explicit emit here would race two backend writes for every map publish.
+    expect(source).not.toMatch(/saveVenueMapConfig\(next\);\s*emitDataChanged\('venueMapConfigs'\)/);
   });
 
   it('routes the Studio "Design the full-venue map" shortcut to the module, not Admin', () => {
@@ -37,5 +40,21 @@ describe('AuthenticatedApp full-venue map module route', () => {
     // The shortcut no longer sets ADMIN_LAST_TAB / navigates to #/admin
     expect(source).not.toContain("localStorage.setItem(STORAGE_KEYS.ADMIN_LAST_TAB, 'wayfinding')");
     expect(source).toContain("window.location.hash = '#/venuemap';");
+  });
+
+  it('guards hash/back navigation and browser unload while the map draft is dirty', () => {
+    const source = readFileSync(APP_PATH, 'utf8');
+    expect(source).toContain("viewRef.current === 'venuemap' && venueMapDirtyRef.current");
+    expect(source).toContain("window.history.replaceState(window.history.state, '', '#/venuemap')");
+    expect(source).toContain('layoutState.layoutDirty || venueMapDirty');
+    expect(source).toContain('pendingVenueMapHash');
+  });
+
+  it('does not render a cached venue map before the current tenant is hydrated', () => {
+    const source = readFileSync(APP_PATH, 'utf8');
+    expect(source).toContain('if (!entityBackendSync.hydrated)');
+    expect(source).toContain('entityBackendSync.loadError');
+    expect(source).toContain('entityBackendSync.loadFromBackend()');
+    expect(source).toContain("detail?.source === 'backend'");
   });
 });

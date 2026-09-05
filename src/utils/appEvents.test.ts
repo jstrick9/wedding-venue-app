@@ -36,6 +36,14 @@ describe('appEvents typed bus', () => {
     off();
   });
 
+  it('can mark a refresh as backend-originated without changing local event payloads', () => {
+    const handler = vi.fn();
+    const off = on('spm_data_changed', handler);
+    emitDataChanged('venueMapConfigs', 'backend');
+    expect(handler).toHaveBeenCalledWith({ type: 'venueMapConfigs', source: 'backend' });
+    off();
+  });
+
   it('is interoperable with raw window listeners (legacy callers)', () => {
     const legacyHandler = vi.fn();
     const wrapped = (e: Event) => legacyHandler((e as CustomEvent).detail);

@@ -19,7 +19,9 @@ describe('portal polling single-flight guards', () => {
     const source = readFileSync(join(process.cwd(), 'src/components/CouplesPortal.tsx'), 'utf8');
     expect(source).toContain('let pulling = false');
     expect(source).toMatch(/if \(pulling\) return;/);
-    expect(source).toMatch(/finally \{\s*\n\s*pulling = false;/);
+    expect(source).toMatch(
+      /finally \{\s*\n\s*cloudHydratingRef\.current = false;\s*\n\s*pulling = false;/,
+    );
   });
 
   it('both Supabase surface clients route every request through the deadline fetch', () => {

@@ -1,7 +1,7 @@
 // src/components/admin/GuestPortalManagement.tsx
-// Admin tab that manages all GuestPortalConfig fields including
-// schedule items and wayfinding points (B-09 fix) and the grace-period
-// setting (B-06 fix). Persists via setGuestPortalConfig from guestPortal.ts.
+// Admin tab that manages GuestPortalConfig fields. Guest wayfinding locations
+// are authored only in the canonical Venue Map Designer; legacy destination
+// records remain preserved in config but are intentionally not editable here.
 import { useState, useCallback } from 'react';
 import { useBrandingConfig } from '../../config';
 import { BrandedSectionHeader } from './shared/AdminSharedComponents';
@@ -9,7 +9,6 @@ import {
   GuestPortalConfig,
   GuestPortalGuestRecord,
   PortalScheduleItem,
-  PortalWayfindingPoint,
   PortalMealOption,
   DEFAULT_MEAL_OPTIONS,
 } from '../../types';
@@ -122,10 +121,6 @@ export function GuestPortalManagement({
   const [editingItem, setEditingItem] = useState<PortalScheduleItem | null>(null);
   const [newItem, setNewItem] = useState<Partial<PortalScheduleItem>>({});
   const [showAddItem, setShowAddItem] = useState(false);
-
-  // ── Wayfinding points state ───────────────────────────────────────────────
-  const [newPoint, setNewPoint] = useState<Partial<PortalWayfindingPoint>>({});
-  const [showAddPoint, setShowAddPoint] = useState(false);
 
   // ── Meal options state ────────────────────────────────────────────────────
   const [newMealOption, setNewMealOption] = useState('');
@@ -264,31 +259,9 @@ export function GuestPortalManagement({
     setEditingItem(null);
   };
 
-  // ─── Wayfinding points CRUD ───────────────────────────────────────────────
-  const wayfindingPoints = cfg.wayfindingPoints ?? [];
-
-  const addWayfindingPoint = () => {
-    if (!newPoint.label?.trim()) return;
-    const pt: PortalWayfindingPoint = {
-      id: uid(),
-      label: newPoint.label.trim(),
-      description: newPoint.description?.trim() || undefined,
-    };
-    const next = { ...cfg, wayfindingPoints: [...wayfindingPoints, pt] };
-    setCfg(next);
-    save(next);
-    setNewPoint({});
-    setShowAddPoint(false);
-  };
-
-  const deleteWayfindingPoint = (id: string) => {
-    const next = {
-      ...cfg,
-      wayfindingPoints: wayfindingPoints.filter((p) => p.id !== id),
-    };
-    setCfg(next);
-    save(next);
-  };
+  // Keep old records intact for backwards-compatible storage, but do not expose
+  // a second authoring surface that disagrees with the map guests actually use.
+  const legacyWayfindingCount = cfg.wayfindingPoints?.length ?? 0;
 
   const hasPassword = !!(cfg.portalPasswordHash || cfg.portalPassword);
 
@@ -569,7 +542,7 @@ export function GuestPortalManagement({
         />
         <ToggleRow
           label="Show Wayfinding tab"
-          hint='Directions between named points. Add points below then toggle on.'
+          hint="Directions between guest-visible Venue Map points connected by authored routes."
           checked={cfg.showWayfinding ?? false}
           onChange={(v) => update({ showWayfinding: v })}
         />
@@ -864,81 +837,26 @@ export function GuestPortalManagement({
         </button>
       )}
 
-      {/* ── Wayfinding Points ── */}
-      <SectionHeader title="Wayfinding Destinations" emoji="🧭" />
-      <p className="text-xs text-gray-500 mb-2">
-        Named locations that guests can get directions to. Enable the Wayfinding tab above once
-        you have at least one destination.
-      </p>
-
-      <div className="space-y-2">
-        {wayfindingPoints.map((pt) => (
-          <div
-            key={pt.id}
-            className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-3 py-2.5 gap-2"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-800 truncate">{pt.label}</p>
-              {pt.description && (
-                <p className="text-xs text-gray-500 truncate">{pt.description}</p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => deleteWayfindingPoint(pt.id)}
-              aria-label={`Remove ${pt.label}`}
-              className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-            >
-              🗑️
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {showAddPoint ? (
-        <div className="border border-indigo-300 rounded-xl p-3 bg-indigo-50 space-y-2 mt-2">
-          <input
-            type="text"
-            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
-            value={newPoint.label ?? ''}
-            onChange={(e) => setNewPoint({ ...newPoint, label: e.target.value })}
-            placeholder="Destination name * (e.g. Ceremony Arch, Bar, Parking)"
-            autoFocus
-          />
-          <input
-            type="text"
-            className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
-            value={newPoint.description ?? ''}
-            onChange={(e) => setNewPoint({ ...newPoint, description: e.target.value })}
-            placeholder="Short description (optional)"
-          />
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={addWayfindingPoint}
-              disabled={!newPoint.label?.trim()}
-              className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg disabled:opacity-40"
-            >
-              Add Destination
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowAddPoint(false); setNewPoint({}); }}
-              className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded-lg"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
+      {/* ── Canonical wayfinding authoring ── */}
+      <SectionHeader title="Guest Wayfinding" emoji="🧭" />
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+        <p className="text-sm font-semibold text-indigo-950">Manage destinations on the Venue Map</p>
+        <p className="mt-1 text-xs leading-relaxed text-indigo-800">
+          Guests now use guest-visible points and authored walkway routes from the Venue Map Designer. Add destination labels, audience access, route guidance, and verified step-free status there.
+        </p>
+        {legacyWayfindingCount > 0 && (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+            {legacyWayfindingCount} legacy destination record{legacyWayfindingCount === 1 ? ' is' : 's are'} preserved for compatibility, but no longer shown to guests or edited here.
+          </p>
+        )}
         <button
           type="button"
-          onClick={() => setShowAddPoint(true)}
-          className="mt-2 w-full py-2 border-2 border-dashed border-indigo-300 rounded-xl text-sm text-indigo-600 hover:bg-indigo-50 transition-colors"
+          onClick={() => { window.location.hash = '#/venuemap'; }}
+          className="mt-3 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-800"
         >
-          + Add Destination
+          Open Venue Map Designer →
         </button>
-      )}
+      </div>
 
       {/* ── Portal Guests ── */}
       <SectionHeader title="Portal Guests" emoji="👥" />

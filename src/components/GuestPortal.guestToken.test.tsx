@@ -46,6 +46,7 @@ vi.mock('../services/couples/coupleGuestService', () => ({
 vi.mock('../services/wayfinding/venueWayfindingService', () => ({
   getVenueMapConfig: vi.fn(() => null),
   getVenueRules: vi.fn(() => ({ rules: [] })),
+  normalizeVenueMapConfig: vi.fn((value: unknown) => value),
   coupleWayfindingPoints: vi.fn(() => []),
   routePolyline: vi.fn(() => []),
 }));
@@ -58,6 +59,7 @@ import GuestPortal from './GuestPortal';
 import * as guestPortalHelpers from '../utils/guestPortal';
 import * as coupleGuestService from '../services/couples/coupleGuestService';
 import * as coupleRsvpService from '../services/couples/coupleRsvpService';
+import * as wayfindingService from '../services/wayfinding/venueWayfindingService';
 
 describe('GuestPortal legacy token compatibility when cloud accounts are unavailable', () => {
   beforeEach(() => {
@@ -155,5 +157,58 @@ describe('GuestPortal preview mode', () => {
       expect(screen.getByText(/Preview mode/i)).toBeTruthy();
     });
     expect(guestPortalHelpers.saveGuestPortalSession).not.toHaveBeenCalled();
+  });
+
+  it('scopes wayfinding to guest-visible event spaces and never invents a route', async () => {
+    vi.mocked(coupleGuestService.getCouplePortalConfig).mockReturnValue({
+      eventTitle: 'Smith & Johnson',
+      eventStartDate: '2026-06-06',
+      showMap: true,
+      showSchedule: false,
+      showWayfinding: true,
+      showRSVP: false,
+      showLodging: false,
+    } as any);
+    vi.mocked(wayfindingService.getVenueMapConfig).mockReturnValue({
+      width: 100,
+      height: 80,
+      points: [
+        { id: 'gate', label: 'Main Gate', kind: 'entry', x: 5, y: 5 },
+        { id: 'ceremony', label: 'Ceremony Garden', description: 'Enter beside the fountain.', kind: 'space', x: 40, y: 20, venueId: 'ceremony' },
+        { id: 'reception', label: 'Reception Hall', kind: 'space', x: 70, y: 30, venueId: 'reception' },
+        { id: 'service', label: 'Service Yard', kind: 'amenity', x: 80, y: 70, audience: 'staff' },
+      ],
+      routes: [{
+        id: 'guest-route',
+        name: 'Garden Walk',
+        pointIds: ['gate', 'ceremony'],
+        audience: 'public',
+        accessibility: 'unknown',
+        notes: 'Stay on the signed path.',
+      }],
+      rainContingencies: [],
+      drawings: [],
+      updatedAt: new Date().toISOString(),
+    });
+
+    render(<GuestPortal coupleEventId="e1" preview onExitPortal={() => {}} />);
+    await waitFor(() => expect(screen.getByText(/Preview mode/i)).toBeTruthy());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /Getting Around/i }));
+
+    expect(screen.getAllByText(/Ceremony Garden/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Reception Hall/)).toBeNull();
+    expect(screen.queryByText(/Service Yard/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Ceremony Garden/ })).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText('Directions destination'), 'ceremony');
+    await user.click(screen.getByRole('button', { name: 'Get Directions' }));
+    expect(screen.getByText(/Follow “Garden Walk”/)).toBeInTheDocument();
+    expect(screen.getByText('Stay on the signed path.')).toBeInTheDocument();
+    expect(screen.getByText('Enter beside the fountain.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: /Use verified step-free routes only/i }));
+    await user.click(screen.getByRole('button', { name: 'Get Directions' }));
+    expect(screen.getByText(/No verified step-free route is published/)).toBeInTheDocument();
   });
 });

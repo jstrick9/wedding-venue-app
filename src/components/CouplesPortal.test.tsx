@@ -55,6 +55,8 @@ describe('CouplesPortal', () => {
       width: 100, height: 80, points: [
         { id: 'p1', label: 'Ceremony Garden', kind: 'space', x: 20, y: 20, venueId: 'ceremony' },
         { id: 'p2', label: 'Reception Hall', kind: 'space', x: 60, y: 40, venueId: 'reception' },
+        { id: 'p3', label: 'Private Planning Suite', kind: 'amenity', x: 50, y: 20, audience: 'couple' },
+        { id: 'p4', label: 'Service Yard', kind: 'amenity', x: 80, y: 70, audience: 'staff' },
       ], rainContingencies: [], routes: [], updatedAt: new Date().toISOString(),
     });
 
@@ -63,8 +65,11 @@ describe('CouplesPortal', () => {
     fireEvent.click(screen.getByText('Venue Spaces'));
 
     // The map section renders.
-    expect(screen.getByText(/Venue map/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Venue map/ })).toBeTruthy();
     expect(screen.getByText(/Tap a space pin to design its layout/)).toBeTruthy();
+    expect(screen.getAllByText(/Private Planning Suite/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Private Planning Suite/ })).toBeNull();
+    expect(screen.queryByText(/Service Yard/)).toBeNull();
   });
 
   it('shows invalid invite state for a bad token', () => {

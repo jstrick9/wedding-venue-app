@@ -49,8 +49,12 @@ export interface EntityRepository {
   provider: PlatformProvider;
   /** Persist all syncable domains for a context (replace-sync). */
   pushAll(context: EntitySyncContext): Promise<void>;
-  /** Load all syncable domains for a context from the backend into local store. */
-  pullAll(context: EntitySyncContext): Promise<void>;
+  /**
+   * Load all syncable domains for a context from the backend into local store.
+   * `shouldApply` is checked after I/O and before shared-browser-cache mutation,
+   * so a superseded tenant request cannot overwrite the active tenant's data.
+   */
+  pullAll(context: EntitySyncContext, shouldApply?: () => boolean): Promise<boolean>;
   /** Persist a single domain for a context. */
   pushDomain(context: EntitySyncContext, domain: EntityDomain): Promise<void>;
 }
@@ -59,14 +63,21 @@ export class LocalEntityRepository implements EntityRepository {
   provider: PlatformProvider = 'local';
 
   async pushAll(): Promise<void> { /* no-op: localStorage already owns the data */ }
-  async pullAll(): Promise<void> { /* no-op */ }
+  async pullAll(_context: EntitySyncContext, shouldApply: () => boolean = () => true): Promise<boolean> {
+    return shouldApply();
+  }
   async pushDomain(): Promise<void> { /* no-op */ }
 }
 
 export class SupabaseEntityRepository implements EntityRepository {
   provider: PlatformProvider = 'supabase';
 
-  private domains(): { key: string; read: () => unknown; write: (v: unknown) => void }[] {
+  private domains(): {
+    key: string;
+    defaultValue: unknown;
+    read: () => unknown;
+    write: (v: unknown) => void;
+  }[] {
     return BACKUP_DOMAINS.filter((d) => isSyncableDomain(d.key));
   }
 
@@ -103,7 +114,10 @@ export class SupabaseEntityRepository implements EntityRepository {
     }
   }
 
-  async pullAll(context: EntitySyncContext): Promise<void> {
+  async pullAll(
+    context: EntitySyncContext,
+    shouldApply: () => boolean = () => true,
+  ): Promise<boolean> {
     if (!isSupabaseConfigured()) throw new Error('This service is temporarily unavailable.');
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
@@ -111,22 +125,24 @@ export class SupabaseEntityRepository implements EntityRepository {
       .select('domain,payload')
       .eq('organization_id', context.organizationId);
     if (error) throw error;
+    if (!shouldApply()) return false;
 
-    // Write every row and emit a typed event per domain so active React state
-    // hydrates from the freshly-pulled values without a page reload (P1-2).
-    const emitted = new Set<string>();
-    for (const row of data || []) {
-      const def = BACKUP_DOMAINS.find((d) => d.key === row.domain);
-      if (!def) continue;
-      def.write(row.payload);
-      if (!emitted.has(def.key)) {
-        emitted.add(def.key);
-        emitDataChanged(def.key as DataChangedType);
-      }
+    // The browser cache is shared across authenticated sessions. Treat the
+    // organization-scoped backend result as a complete snapshot: a domain that
+    // is absent for the new organization must be reset to its canonical default,
+    // rather than inheriting the previous organization's local value.
+    const rowsByDomain = new Map(
+      (data || []).map((row) => [row.domain, row.payload] as const),
+    );
+    for (const def of this.domains()) {
+      const value = rowsByDomain.has(def.key)
+        ? rowsByDomain.get(def.key)
+        : def.defaultValue;
+      def.write(value);
+      emitDataChanged(def.key as DataChangedType, 'backend');
     }
-    // An empty (or missing) remote result must replace local state, so emit a
-    // full refresh signal even when nothing was pulled (P1-5).
-    emitDataChanged('all');
+    emitDataChanged('all', 'backend');
+    return true;
   }
 }
 

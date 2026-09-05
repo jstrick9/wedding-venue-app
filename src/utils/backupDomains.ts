@@ -17,7 +17,11 @@ import {
   getCoupleGuestsForBackup,
   getCouplePortalConfigsForBackup,
 } from '../services/couples/coupleGuestService';
-import { getVenueMapConfig, getVenueRules } from '../services/wayfinding/venueWayfindingService';
+import {
+  getVenueMapConfig,
+  getVenueRules,
+  normalizeVenueMapConfig,
+} from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather } from '../services/weather/venueWeatherService';
 import { getCoupleChecklistsForBackup } from '../services/couples/coupleChecklistService';
 import { getCoupleVendorsForBackup } from '../services/couples/coupleVendorService';
@@ -450,7 +454,11 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     recovery: true,
     version: STORAGE_VERSIONS.VENUE_MAP_CONFIGS,
     read: () => getVenueMapConfig(),
-    write: (v) => writeVersioned(STORAGE_KEYS.VENUE_MAP_CONFIGS, STORAGE_VERSIONS.VENUE_MAP_CONFIGS, v),
+    write: (v) => writeVersioned(
+      STORAGE_KEYS.VENUE_MAP_CONFIGS,
+      STORAGE_VERSIONS.VENUE_MAP_CONFIGS,
+      normalizeVenueMapConfig(v),
+    ),
   },
   {
     key: 'venueRules',

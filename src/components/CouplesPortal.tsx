@@ -9,6 +9,7 @@ import {
   GuestPortalConfig,
   PortalScheduleItem,
   CoupleChecklistItem,
+  VenueMapPoint,
   DEFAULT_MEAL_OPTIONS,
 } from '../types';
 import {
@@ -91,6 +92,7 @@ import { createSecretRecord } from '../utils/auth';
 import { sendCoupleEmail } from '../services/couples/coupleEmailService';
 import { CoupleLayoutEditor } from './CoupleLayoutEditor';
 import { VenueMapCanvas } from './VenueMapCanvas';
+import { projectVenueMap } from '../utils/venueMapDesigner';
 import { LodgingAssignmentsModal } from './LodgingAssignmentsModal';
 import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
 import { PortalInviteAccountSetup } from './PortalInviteAccountSetup';
@@ -320,6 +322,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
           console.debug('Couple portal cloud pull failed; retrying on the next poll.', err);
         }
       } finally {
+        cloudHydratingRef.current = false;
         pulling = false;
       }
     };
@@ -357,7 +360,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
     void hydrateRemote();
     const off = on('spm_data_changed', (detail) => {
-      if (cloudHydratingRef.current) return;
+      if (cloudHydratingRef.current || detail?.source === 'backend') return;
       const type = detail?.type || '';
       if (type !== 'all' && !type.includes('couple') && !type.includes('guest') && !type.includes('package')) return;
       if (cloudSaveTimerRef.current) clearTimeout(cloudSaveTimerRef.current);
@@ -1941,14 +1944,25 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
               {/* Interactive venue map — drill into spaces/lodging */}
               {(() => {
-                const vmap = getVenueMapConfig();
-                if (!vmap || vmap.points.length === 0) return null;
+                const sourceMap = getVenueMapConfig();
+                if (!sourceMap) return null;
+                const coupleMap = projectVenueMap(sourceMap, 'couple');
+                if (coupleMap.points.length === 0) return null;
+                const canOpenMapPoint = (point: VenueMapPoint) =>
+                  point.kind === 'space'
+                  && Boolean(point.venueId)
+                  && (
+                    eligibleSpaces.some((venue) => venue.id === point.venueId)
+                    || venues.some((venue) => venue.id === point.venueId && venue.category === 'lodging')
+                  );
                 return (
                   <div className="rounded-xl bg-white border border-gray-200 p-4 shadow-sm">
                     <h3 className="font-semibold text-sm mb-2">🗺️ Venue map</h3>
                     <VenueMapCanvas
-                      map={vmap}
+                      map={coupleMap}
                       editable={false}
+                      isPointInteractive={canOpenMapPoint}
+                      pointActionLabel={() => 'Open this space.'}
                       onPointClick={(p) => {
                         if (p.kind === 'space' && p.venueId) {
                           // Drill into the space: if it's an available event space, open

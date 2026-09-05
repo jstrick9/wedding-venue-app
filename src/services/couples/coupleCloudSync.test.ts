@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createCoupleEvent, getCoupleEvents } from './coupleService';
 import { addCoupleGuest, getCoupleGuests } from './coupleGuestService';
 import {
+  getVenueMapConfig,
+  saveVenueMapConfig,
+} from '../wayfinding/venueWayfindingService';
+import {
   buildCouplePortalSnapshot,
+  affectsCouplePortalSnapshots,
   hydrateCouplePortalSnapshot,
   isCoupleCloudEnabled,
 } from './coupleCloudSync';
@@ -39,6 +44,44 @@ describe('couple cloud snapshot seam', () => {
     expect(getCoupleEvents()).toHaveLength(2);
     expect(getCoupleGuests(first.id)[0].name).toBe('Remote Guest');
     expect(getCoupleGuests(second.id)).toHaveLength(0);
+  });
+
+  it('preserves canonical venue globals during venue-member snapshot hydration', () => {
+    saveVenueMapConfig({
+      width: 100,
+      height: 80,
+      points: [
+        { id: 'staff-yard', label: 'Service Yard', kind: 'amenity', x: 10, y: 10, audience: 'staff' },
+      ],
+      routes: [],
+      drawings: [],
+      rainContingencies: [],
+      updatedAt: '2026-09-05T12:00:00.000Z',
+    });
+
+    hydrateCouplePortalSnapshot({
+      venueMapConfigs: {
+        width: 100,
+        height: 80,
+        points: [{ id: 'guest-gate', label: 'Guest Gate', kind: 'entry', x: 5, y: 5 }],
+        routes: [],
+        drawings: [],
+        rainContingencies: [],
+        updatedAt: '2026-09-04T12:00:00.000Z',
+      },
+    }, {
+      notify: false,
+      includeGlobalDomains: false,
+    });
+
+    expect(getVenueMapConfig()?.points.map((point) => point.id)).toEqual(['staff-yard']);
+  });
+
+  it('recognizes map domains as portal-snapshot invalidations', () => {
+    expect(affectsCouplePortalSnapshots('venueMapConfigs')).toBe(true);
+    expect(affectsCouplePortalSnapshots('spm_venue_map_configs')).toBe(true);
+    expect(affectsCouplePortalSnapshots('venueRules')).toBe(true);
+    expect(affectsCouplePortalSnapshots('staffTasks')).toBe(false);
   });
 
   it('stays a no-op until Supabase configuration is enabled', () => {

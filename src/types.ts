@@ -19,6 +19,10 @@ export interface DrawingObject {
   fontSize?: number;
   text?: string;
   radius?: number;
+  /** Venue-map publication audience when this object is used as a map layer. */
+  audience?: VenueMapAudience;
+  /** Wedding event-space ids this map layer applies to; absent/empty means all events. */
+  eventSpaceIds?: string[];
 }
 
 export interface EntryPoint {
@@ -1287,6 +1291,11 @@ export interface VenueCalendarEvent {
 
 export type VenueMapPointKind = 'space' | 'parking' | 'entry' | 'amenity' | 'path';
 
+/** Publication audience for venue-map objects. Legacy objects default to public. */
+export type VenueMapAudience = 'public' | 'couple' | 'staff';
+export type VenueMapViewer = 'guest' | 'couple' | 'staff';
+export type VenueMapRouteAccessibility = 'unknown' | 'step-free' | 'not-step-free';
+
 export interface VenueMapPoint {
   id: string;
   label: string;
@@ -1295,6 +1304,10 @@ export interface VenueMapPoint {
   x: number;
   y: number;
   kind: VenueMapPointKind;
+  /** Who may receive and render this point. Defaults to public for legacy maps. */
+  audience?: VenueMapAudience;
+  /** Wedding event-space ids this point applies to; absent/empty means all events. */
+  eventSpaceIds?: string[];
   /** When kind === 'space', the venue id this point represents. */
   venueId?: string;
   /** Optional real-world GPS coordinates for "Open in Maps". */
@@ -1332,6 +1345,14 @@ export interface VenueMapConfig {
 export interface VenueMapRoute {
   id: string;
   name: string;
+  /** Who may receive and render this route. Defaults to public for legacy maps. */
+  audience?: VenueMapAudience;
+  /** Wedding event-space ids this route applies to; absent/empty means all events. */
+  eventSpaceIds?: string[];
+  /** Verified mobility status; unknown routes must never be represented as step-free. */
+  accessibility?: VenueMapRouteAccessibility;
+  /** Venue-authored route guidance or cautions shown with guest directions. */
+  notes?: string;
   /** Ordered map-point ids the route connects (drawn in sequence). */
   pointIds: string[];
 }

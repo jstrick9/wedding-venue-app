@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { canSyncEntities, pullEntities, pushEntities, pushEntityDomain } from '../services/sync/entitySync';
 import { subscribeToEntityChanges } from '../services/sync/entityRealtime';
 import { emit } from '../utils/appEvents';
@@ -12,6 +12,10 @@ export interface EntityBackendSyncOptions {
 
 export interface EntityBackendSync {
   enabled: boolean;
+  /** True only after this exact user/organization context has been hydrated. */
+  hydrated: boolean;
+  loading: boolean;
+  loadError: string | null;
   loadFromBackend: () => Promise<void>;
   saveToBackend: () => Promise<void>;
   /** Push a single domain to the backend (e.g. after an admin edit). */
@@ -29,25 +33,54 @@ export function useEntityBackendSync({
   onLoaded,
 }: EntityBackendSyncOptions): EntityBackendSync {
   const enabled = canSyncEntities(organizationId);
-  const loadedRef = useRef(false);
 
   // Memoize the context so its reference is stable across renders.
   const context = useMemo(
     () => (userId && organizationId ? { userId, organizationId } : null),
     [userId, organizationId],
   );
+  const contextKey = context ? `${context.organizationId}:${context.userId}` : null;
+  const activeContextKeyRef = useRef<string | null>(contextKey);
+  const loadGenerationRef = useRef(0);
+  // Update during render so an old request is ineligible before any effect for
+  // the newly selected tenant has a chance to run.
+  activeContextKeyRef.current = contextKey;
+  const [loadState, setLoadState] = useState<{
+    contextKey: string;
+    status: 'loading' | 'ready' | 'error';
+    error: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    activeContextKeyRef.current = contextKey;
+    return () => {
+      if (activeContextKeyRef.current === contextKey) activeContextKeyRef.current = null;
+      loadGenerationRef.current += 1;
+    };
+  }, [contextKey]);
 
   const loadFromBackend = useCallback(async () => {
-    if (!enabled || !context) return;
+    if (!enabled || !context || !contextKey) return;
+    const generation = loadGenerationRef.current + 1;
+    loadGenerationRef.current = generation;
+    const shouldApply = () =>
+      activeContextKeyRef.current === contextKey
+      && loadGenerationRef.current === generation;
+    setLoadState({ contextKey, status: 'loading', error: null });
     try {
-      await pullEntities(context);
-      loadedRef.current = true;
+      const applied = await pullEntities(context, shouldApply);
+      if (applied === false || !shouldApply()) return;
+      setLoadState({ contextKey, status: 'ready', error: null });
       onLoaded?.();
     } catch (err) {
-      // Leave loadedRef false so a failed first pull can retry on the next mount.
+      if (!shouldApply()) return;
+      const message = err instanceof Error ? err.message : String(err);
+      // Do not expose a previous organization's browser cache after a failed
+      // pull. The workspace remains gated and offers an explicit retry.
+      setLoadState({ contextKey, status: 'error', error: message });
       console.error('Failed to load entities from backend:', err);
     }
-  }, [enabled, context, onLoaded]);
+  }, [enabled, context, contextKey, onLoaded]);
 
   const reportPushFailure = useCallback((domain: string, err: unknown) => {
     // A cloud push failed after the local write succeeded. The user's change is
@@ -83,12 +116,11 @@ export function useEntityBackendSync({
     [enabled, context, reportPushFailure],
   );
 
-  // Reset the loaded flag whenever the org/user context changes so a venue
-  // switch pulls that organization's data (P1-5). When a new context is seen we
-  // also re-run the initial pull.
+  // A context-key mismatch is treated as not hydrated synchronously during
+  // render, before this effect runs. That prevents a one-frame exposure of the
+  // previous organization's cached workspace during an account/venue switch.
   useEffect(() => {
     if (!enabled || !context) return;
-    loadedRef.current = false;
     void loadFromBackend();
   }, [enabled, context, loadFromBackend]);
 
@@ -97,9 +129,32 @@ export function useEntityBackendSync({
     return subscribeToEntityChanges(context, () => onLoaded?.());
   }, [enabled, context, onLoaded]);
 
+  const stateMatchesContext = Boolean(contextKey && loadState?.contextKey === contextKey);
+  const hydrated = !enabled || (stateMatchesContext && loadState?.status === 'ready');
+  const loading = enabled && (!stateMatchesContext || loadState?.status === 'loading');
+  const loadError = enabled && stateMatchesContext && loadState?.status === 'error'
+    ? loadState.error
+    : null;
+
   // Stable object identity so consumers can depend on it without re-rendering.
   return useMemo(
-    () => ({ enabled, loadFromBackend, saveToBackend, saveDomainToBackend }),
-    [enabled, loadFromBackend, saveToBackend, saveDomainToBackend],
+    () => ({
+      enabled,
+      hydrated,
+      loading,
+      loadError,
+      loadFromBackend,
+      saveToBackend,
+      saveDomainToBackend,
+    }),
+    [
+      enabled,
+      hydrated,
+      loading,
+      loadError,
+      loadFromBackend,
+      saveToBackend,
+      saveDomainToBackend,
+    ],
   );
 }

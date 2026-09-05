@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VenueMapDesigner } from './VenueMapDesigner';
 import { emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 
@@ -9,56 +9,85 @@ const mockVenues: any[] = [
   { id: 'v2', name: 'Rose Garden', category: 'ceremony' },
 ];
 
-describe('VenueMapDesigner - Base Map Background & Full Drawing Integration (#171)', () => {
+describe('VenueMapDesigner base image and map-native zones', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('renders Base Map and Drawing & Zones controls and allows base map URL application', () => {
-    const onSave = vi.fn();
+  it('renders canonical base-map and zone controls and applies a valid HTTPS image URL to the draft', () => {
     const map = emptyVenueMapConfig();
-    render(<VenueMapDesigner map={map} venues={mockVenues} onSave={onSave} />);
+    const { container } = render(<VenueMapDesigner map={map} venues={mockVenues} onSave={() => {}} />);
 
     expect(screen.getByText('🖼️ Base Map Image')).toBeInTheDocument();
-    expect(screen.getByText('🎨 Map Drawing & Zones')).toBeInTheDocument();
+    expect(screen.getByText('🎨 Property zones')).toBeInTheDocument();
 
-    // Paste Base Map URL and apply
-    const urlInput = screen.getByPlaceholderText('https://example.com/property-aerial.png');
-    fireEvent.change(urlInput, { target: { value: 'https://example.com/map.png' } });
-    const applyBtn = screen.getByRole('button', { name: 'Apply' });
-    fireEvent.click(applyBtn);
+    fireEvent.change(screen.getByPlaceholderText('https://example.com/property-aerial.png'), {
+      target: { value: 'https://example.com/map.png' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
-    expect(screen.getByText('85% opacity')).toBeInTheDocument();
+    expect(container.querySelector('image')).toHaveAttribute('href', 'https://example.com/map.png');
+    expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.getByText(/Local draft has unpublished changes/)).toBeInTheDocument();
   });
 
-  it('allows adding 4 Preset Zones to map.drawings and clearing them', () => {
-    const onSave = vi.fn();
-    const map = emptyVenueMapConfig();
-    render(<VenueMapDesigner map={map} venues={mockVenues} onSave={onSave} />);
+  it('adds one editable vector zone with audience and event-space controls, then clears it', () => {
+    render(<VenueMapDesigner map={emptyVenueMapConfig()} venues={mockVenues} onSave={() => {}} />);
 
-    const addZonesBtn = screen.getByRole('button', { name: /＋ Add 4 Preset Zones/i });
-    fireEvent.click(addZonesBtn);
+    fireEvent.click(screen.getByRole('button', { name: /Add editable zone/i }));
+    expect(screen.getByDisplayValue('New map zone')).toBeInTheDocument();
 
-    // Verify shapes appeared in the side panel list
-    expect(screen.getAllByText(/Ceremony Lawn Zone/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Main Parking Lot/i).length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText('Zone label'), { target: { value: 'Ceremony Lawn' } });
+    const audienceControls = screen.getAllByLabelText('Audience');
+    fireEvent.change(audienceControls[audienceControls.length - 1], { target: { value: 'couple' } });
+    expect(screen.getAllByText('Ceremony Lawn').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Couples only').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Event-space scope: All wedding events/).length).toBeGreaterThan(0);
 
-    // Clear shapes
-    const clearBtn = screen.getByRole('button', { name: /Clear Shapes/i });
-    fireEvent.click(clearBtn);
-
-    expect(screen.queryByText(/Ceremony Lawn Zone/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Clear zones/i }));
+    expect(screen.queryByDisplayValue('Ceremony Lawn')).not.toBeInTheDocument();
   });
 
-  it('opens Full Map Drawing Studio modal when button is clicked', () => {
+  it('accepts a bounded raster upload without fabricating a success reference', async () => {
+    const { container } = render(<VenueMapDesigner map={emptyVenueMapConfig()} venues={mockVenues} onSave={() => {}} />);
+    const file = new File([new Uint8Array([137, 80, 78, 71])], 'property.png', { type: 'image/png' });
+
+    fireEvent.change(screen.getByLabelText('Upload base map image file'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => expect(container.querySelector('image')).toBeInTheDocument());
+    expect(container.querySelector('image')?.getAttribute('href')).toMatch(/^data:image\/png;base64,/);
+    expect(container.querySelector('image')?.getAttribute('href')).not.toContain('mock_basemap');
+  });
+
+  it('rejects unsafe upload formats without changing the map', () => {
+    const { container } = render(<VenueMapDesigner map={emptyVenueMapConfig()} venues={mockVenues} onSave={() => {}} />);
+    const file = new File(['<svg><script>alert(1)</script></svg>'], 'unsafe.svg', { type: 'image/svg+xml' });
+
+    fireEvent.change(screen.getByLabelText('Upload base map image file'), {
+      target: { files: [file] },
+    });
+
+    expect(container.querySelector('image')).not.toBeInTheDocument();
+    expect(screen.getByText(/Venue map is saved/)).toBeInTheDocument();
+  });
+
+  it('keeps the base image separate when zones are edited and saves only through the explicit map action', () => {
     const onSave = vi.fn();
-    const map = emptyVenueMapConfig();
+    const map = {
+      ...emptyVenueMapConfig(),
+      backgroundImageUrl: 'data:image/png;base64,public-safe-map',
+    };
     render(<VenueMapDesigner map={map} venues={mockVenues} onSave={onSave} />);
 
-    const openDrawingBtn = screen.getByRole('button', { name: /✏️ Open Full Map Drawing Studio/i });
-    fireEvent.click(openDrawingBtn);
+    expect(screen.queryByRole('button', { name: /Drawing Studio/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Add editable zone/i }));
+    expect(onSave).not.toHaveBeenCalled();
 
-    // Verify DrawingTool modal opened
-    expect(screen.getByText('Drawing Tools')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Save Venue Map/i }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].backgroundImageUrl).toBe('data:image/png;base64,public-safe-map');
+    expect(onSave.mock.calls[0][0].drawings).toHaveLength(1);
   });
 });

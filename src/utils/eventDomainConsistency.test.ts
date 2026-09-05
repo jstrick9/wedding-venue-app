@@ -56,7 +56,6 @@ describe('event domain consistency (P1-3 regression guard)', () => {
     const canonicalExpectation: Record<string, string> = {
       chairSpecs: 'chairSpecs',
       spacingSettings: 'spacingSettings',
-      venueMapConfigs: 'venueMapConfigs',
       coupleEvents: 'coupleEvents',
       coupleMessages: 'coupleMessages',
     };
@@ -71,6 +70,11 @@ describe('event domain consistency (P1-3 regression guard)', () => {
     const chairSpecs = BACKUP_DOMAINS.find((d) => d.key === 'chairSpecs');
     expect(chairSpecs).toBeDefined();
     expect(storageKeyToDomainKey(chairSpecs!.storageKey)).toBe('chairSpecs');
+    // Venue-map saves rely on this automatic versioned-storage notification;
+    // the designer must not also emit a duplicate backend-sync event.
+    const venueMap = BACKUP_DOMAINS.find((d) => d.key === 'venueMapConfigs');
+    expect(venueMap).toBeDefined();
+    expect(storageKeyToDomainKey(venueMap!.storageKey)).toBe('venueMapConfigs');
     // Unknown keys fall back to 'all' rather than producing an untyped string.
     expect(storageKeyToDomainKey('spm_unknown_key')).toBe('all');
   });

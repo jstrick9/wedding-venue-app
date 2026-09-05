@@ -16,6 +16,20 @@ export function subscribeToEntityChanges(
   }
 
   const supabase = getSupabaseClient();
+  let active = true;
+  let refreshGeneration = 0;
+  const refresh = () => {
+    const generation = refreshGeneration + 1;
+    refreshGeneration = generation;
+    const shouldApply = () => active && refreshGeneration === generation;
+    void pullEntities(context, shouldApply)
+      .then((applied) => {
+        if (applied !== false && shouldApply()) onChanged?.();
+      })
+      .catch((error) => {
+        if (shouldApply()) console.error('Failed to refresh entity data:', error);
+      });
+  };
   const channel = supabase
     .channel(`spm-org-data-${context.organizationId}`)
     .on(
@@ -26,9 +40,7 @@ export function subscribeToEntityChanges(
         table: 'org_data',
         filter: `organization_id=eq.${context.organizationId}`,
       },
-      () => {
-        void pullEntities(context).then(() => onChanged?.());
-      },
+      refresh,
     )
     .on(
       'postgres_changes',
@@ -38,13 +50,13 @@ export function subscribeToEntityChanges(
         table: 'couple_portal_snapshots',
         filter: `organization_id=eq.${context.organizationId}`,
       },
-      () => {
-        void pullEntities(context).then(() => onChanged?.());
-      },
+      refresh,
     )
     .subscribe();
 
   return () => {
+    active = false;
+    refreshGeneration += 1;
     void supabase.removeChannel(channel);
   };
 }

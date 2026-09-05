@@ -7,9 +7,9 @@
  *  - PNG  via canvas.toBlob('image/png')
  *  - PDF  via a minimal PDF generator that embeds the JPEG as a DCTDecode image
  *
- * Images: data-URL images (local mode) are kept; cross-origin/external images
- * are stripped so the canvas isn't tainted (photos are omitted from the export,
- * while shapes/patterns/icons still render).
+ * Images: data URLs pass through. Blob, signed-storage, and remote image URLs
+ * are fetched and embedded before rasterization. Export fails explicitly when an
+ * image cannot be embedded, rather than silently producing an incomplete map.
  */
 
 export interface ExportOptions {
@@ -21,31 +21,63 @@ export interface ExportOptions {
 
 const ENCODED_HEADER = '%PDF-1.4\n';
 
-function cloneAndNormalizeSvg(
+export function cloneAndNormalizeSvg(
   svg: SVGSVGElement,
   widthPx: number,
   heightPx: number,
+  fallbackViewBox: string,
 ): SVGSVGElement {
   const clone = svg.cloneNode(true) as SVGSVGElement;
-  // Export from the plan origin (ignore pan/zoom transforms).
+  // Export from the SVG's authored coordinate system, not from CSS pan/zoom.
+  // Pixel dimensions control raster resolution; preserving the original viewBox
+  // keeps map coordinates and aspect ratio correct.
   clone.removeAttribute('style');
   clone.setAttribute('width', String(widthPx));
   clone.setAttribute('height', String(heightPx));
-  clone.setAttribute('viewBox', `0 0 ${widthPx} ${heightPx}`);
+  clone.setAttribute('viewBox', svg.getAttribute('viewBox') || fallbackViewBox);
+  clone.setAttribute('preserveAspectRatio', svg.getAttribute('preserveAspectRatio') || 'xMidYMid meet');
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-
-  // Strip <image> elements whose href is not a data URL (would taint the
-  // canvas / fail to render). Keep data-URL images (local mode).
-  clone.querySelectorAll('image').forEach((img) => {
-    const href =
-      img.getAttribute('href') || img.getAttribute('xlink:href') || '';
-    if (!href.startsWith('data:')) {
-      img.remove();
-    }
-  });
-
   return clone;
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string'
+      ? resolve(reader.result)
+      : reject(new Error('Could not encode an image for export.'));
+    reader.onerror = () => reject(new Error('Could not encode an image for export.'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+export async function inlineSvgImages(svg: SVGSVGElement): Promise<void> {
+  const images = Array.from(svg.querySelectorAll('image'));
+  await Promise.all(images.map(async (image) => {
+    const href = image.getAttribute('href') || image.getAttribute('xlink:href') || '';
+    if (!href || href.startsWith('data:')) return;
+
+    let response: Response;
+    try {
+      response = await fetch(href, { credentials: 'same-origin' });
+    } catch {
+      throw new Error('The map image could not be loaded for export. Upload it to the venue map instead of using a blocked external URL.');
+    }
+    if (!response.ok) {
+      throw new Error(`The map image could not be loaded for export (HTTP ${response.status}).`);
+    }
+    const blob = await response.blob();
+    if (!/^image\/(png|jpeg|webp|gif)$/i.test(blob.type)) {
+      throw new Error('The map image has an unsupported file type for export. Use PNG, JPEG, WebP, or GIF.');
+    }
+    if (blob.size > 12 * 1024 * 1024) {
+      throw new Error('The map image is too large to embed in an export.');
+    }
+    const dataUrl = await blobToDataUrl(blob);
+    image.setAttribute('href', dataUrl);
+    image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
+  }));
 }
 
 function svgToXmlString(svg: SVGSVGElement): string {
@@ -55,7 +87,7 @@ function svgToXmlString(svg: SVGSVGElement): string {
 /**
  * Render the given SVG (normalized) to an offscreen canvas and return it.
  */
-export function renderSvgToCanvas(
+export async function renderSvgToCanvas(
   svg: SVGSVGElement,
   options: ExportOptions = {},
 ): Promise<{ canvas: HTMLCanvasElement; width: number; height: number }> {
@@ -66,10 +98,16 @@ export function renderSvgToCanvas(
   const rawW = Math.max(1, svg.viewBox.baseVal?.width || svg.clientWidth || 480);
   const rawH = Math.max(1, svg.viewBox.baseVal?.height || svg.clientHeight || 320);
 
-  const width = Math.round(rawW * scale) + padding * 2;
-  const height = Math.round(rawH * scale) + padding * 2;
+  if (!Number.isFinite(scale) || scale <= 0) throw new Error('Export scale must be greater than zero.');
+  if (!Number.isFinite(padding) || padding < 0) throw new Error('Export padding cannot be negative.');
 
-  const clone = cloneAndNormalizeSvg(svg, width, height);
+  const contentWidth = Math.max(1, Math.round(rawW * scale));
+  const contentHeight = Math.max(1, Math.round(rawH * scale));
+  const width = contentWidth + padding * 2;
+  const height = contentHeight + padding * 2;
+
+  const clone = cloneAndNormalizeSvg(svg, contentWidth, contentHeight, `0 0 ${rawW} ${rawH}`);
+  await inlineSvgImages(clone);
   const xml = svgToXmlString(clone);
   const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
 
@@ -186,8 +224,8 @@ export function buildPdfFromJpeg(jpegBytes: Uint8Array, imgW: number, imgH: numb
   );
 
   const xrefPos = pos;
-  const xrefEntries = [0, 1, 2, 3, 4, 5].map(
-    (i) => `${String(offsets[i]).padStart(10, '0')} 00000 n`,
+  const xrefEntries = offsets.map(
+    (offset) => `${String(offset).padStart(10, '0')} 00000 n `,
   );
   push(
     ascii(

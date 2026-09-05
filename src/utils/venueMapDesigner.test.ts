@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   addMapPoint, moveMapPoint, updateMapPoint, removeMapPoint,
   addMapRoute, removeMapRoute, renameMapRoute, duplicateMapPoint, routePoints, pointColor, updateMapSize,
+  findVenueMapRoute, projectVenueMap, updateMapRoute,
 } from './venueMapDesigner';
 import { emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 
@@ -78,6 +79,15 @@ describe('venue map designer helpers', () => {
     expect(map.points.find((p) => p.label === 'Parking')!.x).toBe(5);
   });
 
+  it('keeps vector zones inside resized map bounds', () => {
+    const map = {
+      ...emptyVenueMapConfig(),
+      drawings: [{ id: 'zone', type: 'zone', x: 80, y: 70, width: 40, height: 30 }],
+    };
+    const resized = updateMapSize(map, 50, 40);
+    expect(resized.drawings?.[0]).toMatchObject({ x: 10, y: 10, width: 40, height: 30 });
+  });
+
   it('clamps size input to sane bounds and ignores non-finite values', () => {
     let map = updateMapSize(emptyVenueMapConfig(), 5, 9999); // below/above bounds
     expect(map.width).toBe(20);
@@ -141,5 +151,160 @@ describe('venue map designer helpers', () => {
     // 'Short' drops below 2 -> removed; 'Long' keeps 2 -> retained.
     expect(map.routes.map((r) => r.name)).toEqual(['Long']);
     expect(map.routes[0].pointIds).toHaveLength(2);
+  });
+
+  it('rejects missing and duplicate point ids when adding a route', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'A', kind: 'entry', x: 5, y: 5 });
+    map = addMapPoint(map, { label: 'B', kind: 'space', x: 20, y: 20 });
+    const [a, b] = map.points.map((point) => point.id);
+    map = addMapRoute(map, 'Valid', [a, 'deleted-point', a, b]);
+    expect(map.routes[0].pointIds).toEqual([a, b]);
+    const unchanged = addMapRoute(map, 'Invalid', [a, 'deleted-point']);
+    expect(unchanged).toBe(map);
+  });
+
+  it('updates route order safely and can clear event scope', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'A', kind: 'entry', x: 5, y: 5 });
+    map = addMapPoint(map, { label: 'B', kind: 'path', x: 20, y: 10 });
+    map = addMapPoint(map, { label: 'C', kind: 'space', x: 40, y: 20, venueId: 'garden' });
+    const [a, b, c] = map.points.map((point) => point.id);
+    map = addMapRoute(map, 'Scoped', [a, b, c], { eventSpaceIds: ['garden'] });
+    const routeId = map.routes[0].id;
+
+    map = updateMapRoute(map, routeId, {
+      pointIds: [c, 'missing', b, a, b],
+      eventSpaceIds: undefined,
+    });
+    expect(map.routes[0].pointIds).toEqual([c, b, a]);
+    expect(map.routes[0].eventSpaceIds).toBeUndefined();
+
+    map = updateMapRoute(map, routeId, { pointIds: [a, 'missing'] });
+    expect(map.routes[0].pointIds).toEqual([c, b, a]);
+  });
+
+  it('projects guest, couple, and staff audiences without orphan route shortcuts', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'Gate', kind: 'entry', x: 5, y: 5, audience: 'public' });
+    map = addMapPoint(map, { label: 'Ceremony', kind: 'space', x: 40, y: 20, venueId: 'ceremony', audience: 'public' });
+    map = addMapPoint(map, { label: 'Planning Suite', kind: 'space', x: 50, y: 30, venueId: 'suite', audience: 'couple' });
+    map = addMapPoint(map, { label: 'Service Yard', kind: 'space', x: 60, y: 40, venueId: 'service', audience: 'staff' });
+    const [gate, ceremony, suite, service] = map.points.map((point) => point.id);
+    map = addMapRoute(map, 'Guest Walk', [gate, ceremony], { audience: 'public', accessibility: 'step-free' });
+    map = addMapRoute(map, 'Service Road', [gate, service], { audience: 'staff' });
+    map = addMapRoute(map, 'Hidden shortcut', [gate, service, ceremony], { audience: 'public' });
+    map = addMapRoute(map, 'Couple Walk', [gate, suite], { audience: 'couple' });
+
+    const guest = projectVenueMap(map, 'guest', ['ceremony']);
+    expect(guest.points.map((point) => point.label)).toEqual(['Gate', 'Ceremony']);
+    expect(guest.routes.map((route) => route.name)).toEqual(['Guest Walk']);
+
+    const couple = projectVenueMap(map, 'couple');
+    expect(couple.points.map((point) => point.label)).toContain('Planning Suite');
+    expect(couple.points.map((point) => point.label)).not.toContain('Service Yard');
+    expect(couple.routes.map((route) => route.name)).toContain('Couple Walk');
+
+    const staff = projectVenueMap(map, 'staff');
+    expect(staff.points.map((point) => point.label)).toContain('Service Yard');
+  });
+
+  it('fails closed when persisted audience or event scope is explicitly malformed', () => {
+    const malformedAudienceMap = {
+      ...emptyVenueMapConfig(),
+      points: [{ id: 'private', label: 'Private', kind: 'amenity', x: 1, y: 1, audience: 'everyone' }],
+    } as any;
+    expect(projectVenueMap(malformedAudienceMap, 'guest').points).toEqual([]);
+    expect(projectVenueMap(malformedAudienceMap, 'couple').points).toEqual([]);
+    expect(projectVenueMap(malformedAudienceMap, 'staff').points).toHaveLength(1);
+    for (const malformedAudience of [null, '']) {
+      const map = {
+        ...emptyVenueMapConfig(),
+        points: [{ id: 'private', label: 'Private', kind: 'amenity', x: 1, y: 1, audience: malformedAudience }],
+      } as any;
+      expect(projectVenueMap(map, 'guest').points).toEqual([]);
+      expect(projectVenueMap(map, 'couple').points).toEqual([]);
+    }
+
+    const malformedScopeMap = {
+      ...emptyVenueMapConfig(),
+      points: [{ id: 'bad-scope', label: 'Bad scope', kind: 'amenity', x: 1, y: 1, eventSpaceIds: 'ceremony' }],
+    } as any;
+    expect(projectVenueMap(malformedScopeMap, 'guest', ['ceremony']).points).toEqual([]);
+  });
+
+  it('allowlists projection fields instead of leaking structurally wider JSON', () => {
+    const map = {
+      width: 100,
+      height: 80,
+      points: [
+        { id: 'gate', label: 'Gate', kind: 'entry', x: 5, y: 5, internalNotes: 'gate code 1234' },
+        { id: 'garden', label: 'Garden', kind: 'space', venueId: 'ceremony', x: 40, y: 20 },
+      ],
+      routes: [{ id: 'walk', name: 'Walk', pointIds: ['gate', 'garden'], internalNotes: 'staff shortcut' }],
+      drawings: [{ id: 'zone', type: 'zone', x: 1, y: 1, width: 4, height: 4, internalNotes: 'alarm location' }],
+      rainContingencies: [],
+      updatedAt: '2026-09-05T12:00:00.000Z',
+      internalVenueNotes: 'private operations details',
+    } as any;
+
+    const guest = projectVenueMap(map, 'guest', ['ceremony']);
+    expect(JSON.stringify(guest)).not.toContain('internal');
+    expect(JSON.stringify(guest)).not.toContain('1234');
+    expect(guest.points[0]).not.toHaveProperty('internalNotes');
+    expect(guest.routes[0]).not.toHaveProperty('internalNotes');
+    expect(guest.drawings?.[0]).not.toHaveProperty('internalNotes');
+    expect(guest).not.toHaveProperty('internalVenueNotes');
+    expect(guest.routes[0].pointIds).not.toBe(map.routes[0].pointIds);
+  });
+
+  it('applies event-space scope to points, routes, and zones', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'Main Gate', kind: 'entry', x: 5, y: 5 });
+    map = addMapPoint(map, { label: 'Ceremony Lawn', kind: 'space', x: 30, y: 20, venueId: 'ceremony' });
+    map = addMapPoint(map, { label: 'Reception Hall', kind: 'space', x: 70, y: 20, venueId: 'reception' });
+    map = addMapPoint(map, { label: 'Ceremony Restroom', kind: 'amenity', x: 25, y: 15, eventSpaceIds: ['ceremony'] });
+    map = addMapPoint(map, { label: 'Reception Bar', kind: 'amenity', x: 75, y: 15, eventSpaceIds: ['reception'] });
+    const [gate, ceremony, reception, ceremonyAmenity, receptionAmenity] = map.points.map((point) => point.id);
+    map = addMapRoute(map, 'Ceremony route', [gate, ceremonyAmenity, ceremony], { eventSpaceIds: ['ceremony'] });
+    map = addMapRoute(map, 'Reception route', [gate, receptionAmenity, reception], { eventSpaceIds: ['reception'] });
+    map = {
+      ...map,
+      drawings: [
+        { id: 'ceremony-zone', type: 'zone', x: 10, y: 10, width: 20, height: 20, eventSpaceIds: ['ceremony'] },
+        { id: 'reception-zone', type: 'zone', x: 60, y: 10, width: 20, height: 20, eventSpaceIds: ['reception'] },
+        { id: 'global-zone', type: 'zone', x: 0, y: 0, width: 5, height: 5 },
+      ],
+    };
+
+    const ceremonyMap = projectVenueMap(map, 'guest', ['ceremony']);
+    expect(ceremonyMap.points.map((point) => point.label)).toEqual([
+      'Main Gate',
+      'Ceremony Lawn',
+      'Ceremony Restroom',
+    ]);
+    expect(ceremonyMap.routes.map((route) => route.name)).toEqual(['Ceremony route']);
+    expect(ceremonyMap.drawings?.map((drawing) => drawing.id)).toEqual(['ceremony-zone', 'global-zone']);
+
+    const noEventContext = projectVenueMap(map, 'guest');
+    expect(noEventContext.points.map((point) => point.label)).toEqual(['Main Gate']);
+    expect(noEventContext.routes).toEqual([]);
+    expect(noEventContext.drawings?.map((drawing) => drawing.id)).toEqual(['global-zone']);
+  });
+
+  it('finds only authored graph paths and can require verified step-free routes', () => {
+    let map = emptyVenueMapConfig();
+    map = addMapPoint(map, { label: 'Parking', kind: 'parking', x: 5, y: 5 });
+    map = addMapPoint(map, { label: 'Junction', kind: 'path', x: 20, y: 10 });
+    map = addMapPoint(map, { label: 'Ceremony', kind: 'space', x: 40, y: 20 });
+    map = addMapPoint(map, { label: 'Unconnected', kind: 'amenity', x: 80, y: 70 });
+    const [parking, junction, ceremony, unconnected] = map.points.map((point) => point.id);
+    map = addMapRoute(map, 'Parking Path', [parking, junction], { accessibility: 'step-free' });
+    map = addMapRoute(map, 'Garden Path', [junction, ceremony], { accessibility: 'step-free', notes: 'Use the ramp.' });
+
+    const route = findVenueMapRoute(map, parking, ceremony, { stepFreeOnly: true });
+    expect(route?.pointIds).toEqual([parking, junction, ceremony]);
+    expect(route?.routes.map((item) => item.name)).toEqual(['Parking Path', 'Garden Path']);
+    expect(findVenueMapRoute(map, parking, unconnected)).toBeNull();
   });
 });

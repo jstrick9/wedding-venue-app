@@ -35,6 +35,8 @@
  * If you add a new persistent domain, add it to `BACKUP_DOMAINS` AND to this
  * union so the bus, the backup registry, and the entity repository stay aligned.
  */
+export type DataChangedSource = 'local' | 'backend';
+
 export type DataChangedType =
   | 'all'
   | 'backend_hydrated'
@@ -146,7 +148,7 @@ export interface AppEventMap {
   /** Open the workspace help / shortcuts modal. */
   spm_open_workspace_help: void;
   /** Some persisted store mutated; subscribers should refresh from `localStorage`. */
-  spm_data_changed: { type: DataChangedType } | void;
+  spm_data_changed: { type: DataChangedType; source?: DataChangedSource } | void;
   /** A new undo snapshot is available for the undo/redo stack. */
   spm_push_undo_snapshot: UndoSnapshot;
   /** The working layout was replaced (venue switch / load-layout / load-template);
@@ -219,6 +221,9 @@ export function on<K extends AppEventName>(
  * Equivalent to `emit('spm_data_changed', { type })` but reads better at the
  * many call sites in `useLayoutState.ts` / `data/venueData.ts`.
  */
-export function emitDataChanged(type: DataChangedType = 'all'): void {
-  emit('spm_data_changed', { type });
+export function emitDataChanged(
+  type: DataChangedType = 'all',
+  source?: DataChangedSource,
+): void {
+  emit('spm_data_changed', source ? { type, source } : { type });
 }

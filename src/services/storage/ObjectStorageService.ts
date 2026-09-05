@@ -1,7 +1,7 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { describeUnknownError } from '../../utils/unknownError';
 
-export type StorageBucket = 'venue-images' | 'event-documents' | 'user-avatars';
+export type StorageBucket = 'venue-images' | 'venue-map-images' | 'event-documents' | 'user-avatars';
 
 export interface UploadedObject {
   bucket: StorageBucket;
