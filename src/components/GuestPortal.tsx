@@ -31,6 +31,9 @@ import {
   PortalScheduleItem,
   PortalMealOption,
   VenueMapPoint,
+  VenueMapConfig,
+  VenueRulesConfig,
+  VenueWeatherConfig,
   CoupleGuestEvent,
   CoupleEvent,
   DEFAULT_MEAL_OPTIONS,
@@ -78,13 +81,24 @@ import {
 import { findCoupleEventById } from '../services/couples/coupleService';
 import { isPortalAccessActive } from '../services/couples/accessLifecycle';
 import {
-  getVenueMapConfig,
+  getVenueMapConfigForPortal,
   getVenueRules,
-  normalizeVenueMapConfig,
+  normalizeVenueMapConfigForPortal,
+  normalizeVenueRulesConfig,
 } from '../services/wayfinding/venueWayfindingService';
 import { VenueMapCanvas } from './VenueMapCanvas';
-import { findVenueMapRoute, projectVenueMap } from '../utils/venueMapDesigner';
-import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
+import {
+  findVenueMapRoute,
+  partitionVenueMapRainContingencyCollisions,
+  projectVenueMap,
+  rainContingencyValidationIssue,
+  routePriorityLabel,
+} from '../utils/venueMapDesigner';
+import {
+  eventDates,
+  getVenueWeather,
+  normalizeVenueWeatherConfig,
+} from '../services/weather/venueWeatherService';
 import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
 import { PortalInviteAccountSetup } from './PortalInviteAccountSetup';
 import { signOutPortalAccount, type PortalInviteContext } from '../services/portal/portalInviteAccount';
@@ -127,7 +141,7 @@ const hasValidMapGps = (point: VenueMapPoint) =>
   && point.lng >= -180
   && point.lng <= 180;
 
-const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, venueSlug, onExitPortal, preview = false }) => {
+const GuestPortalSession: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, venueSlug, onExitPortal, preview = false }) => {
   const isPreview = preview;
   const guestInviteTokenRef = useRef(guestToken);
   if (guestToken) guestInviteTokenRef.current = guestToken;
@@ -172,6 +186,17 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
   }, [venueSlug]);
   const [config, setConfig] = useState<GuestPortalConfig | null>(null);
   const [remoteCouple, setRemoteCouple] = useState<CoupleEvent | undefined>();
+  // Cloud map state is intentionally separate from the other snapshot fields:
+  // a map-only poll must trigger a render even when the event, guest, and RSVP
+  // payloads are unchanged.
+  const [remoteVenueMap, setRemoteVenueMap] = useState<VenueMapConfig | null | undefined>();
+  const [venueMapRetryNonce, setVenueMapRetryNonce] = useState(0);
+  const [remoteVenueRules, setRemoteVenueRules] = useState<VenueRulesConfig | undefined>(() => (
+    cloudAccountInvite ? normalizeVenueRulesConfig(undefined) : undefined
+  ));
+  const [remoteVenueWeather, setRemoteVenueWeather] = useState<VenueWeatherConfig | undefined>(() => (
+    cloudAccountInvite ? normalizeVenueWeatherConfig(undefined) : undefined
+  ));
   const [portalData, setPortalData] = useState<PortalData>({
     venues: [],
     guests: [],
@@ -198,6 +223,16 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
   const [stepFreeOnly, setStepFreeOnly] = useState(false);
   const [wayfindingResult, setWayfindingResult] = useState<string[] | null>(null);
 
+  const activeVenueMap = remoteVenueMap !== undefined
+    ? remoteVenueMap
+    : getVenueMapConfigForPortal();
+  const activeVenueRules = remoteVenueRules !== undefined
+    ? remoteVenueRules
+    : getVenueRules();
+  const activeVenueWeather = remoteVenueWeather !== undefined
+    ? remoteVenueWeather
+    : getVenueWeather();
+
   // Per-couple guest portal: scopes config, guests, and RSVPs to a couple event.
   const isCouplePortal = !!coupleEventId;
   const couple = useMemo(
@@ -218,8 +253,24 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
   // On a separate device the browser has no local CoupleEvent/guest record.
   // Hydrate the public, token-validated snapshot before relying on localStorage.
   useEffect(() => {
-    if (cloudAccountInvite && portalAccountAccess === 'pending') return;
-    if (!isCoupleCloudEnabled() || !isCouplePortal || !coupleEventId || !accountInviteToken) return;
+    if (cloudAccountInvite && portalAccountAccess === 'pending') {
+      setRemoteVenueMap(null);
+      setRemoteVenueRules(normalizeVenueRulesConfig(undefined));
+      setRemoteVenueWeather(normalizeVenueWeatherConfig(undefined));
+      return;
+    }
+    if (!isCoupleCloudEnabled() || !isCouplePortal || !coupleEventId || !accountInviteToken) {
+      setRemoteVenueMap(undefined);
+      setRemoteVenueRules(undefined);
+      setRemoteVenueWeather(undefined);
+      return;
+    }
+    // Do not retain another invitation's map, rules, or weather while this
+    // invitation context is resolving. Portal browser caches are not an
+    // authorization or tenant-isolation boundary.
+    setRemoteVenueMap(null);
+    setRemoteVenueRules(normalizeVenueRulesConfig(undefined));
+    setRemoteVenueWeather(normalizeVenueWeatherConfig(undefined));
     let cancelled = false;
     // In-flight guard (Review #245 P1-A): if a pull stalls, skip ticks instead
     // of stacking another anonymous RPC every 5 seconds. The client-level fetch
@@ -236,6 +287,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         const remoteConfig = remote.portalConfig?.[coupleEventId]
           || Object.values(remote.portalConfig || {})[0]
           || null;
+        const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
         const guest = {
           ...(remote.guest as unknown as GuestPortalGuestRecord),
           token: accountInviteToken,
@@ -244,15 +296,27 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
           allowPortalAccess: true,
         };
         const rsvp = remote.rsvp ? { ...remote.rsvp, token: accountInviteToken } : undefined;
-        if (remote.venueMap !== undefined) {
-          saveVersionedStorage(
-            STORAGE_KEYS.VENUE_MAP_CONFIGS,
-            STORAGE_VERSIONS.VENUE_MAP_CONFIGS,
-            normalizeVenueMapConfig(remote.venueMap),
-          );
+        const nextVenueMap = remote.venueMap !== undefined
+          ? normalizeVenueMapConfigForPortal(remote.venueMap, {
+              preservePortalStatus: true,
+              preserveDuplicateIds: true,
+            })
+          : undefined;
+        const nextVenueRules = normalizeVenueRulesConfig(remote.venueRules);
+        const nextVenueWeather = normalizeVenueWeatherConfig(remote.venueWeather);
+
+        if (nextVenueMap !== undefined) {
+          setRemoteVenueMap((previous) => (
+            sameJson(previous, nextVenueMap) ? previous : nextVenueMap
+          ));
         }
-        if (remote.venueRules !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_RULES, STORAGE_VERSIONS.VENUE_RULES, remote.venueRules);
-        if (remote.venueWeather !== undefined) saveVersionedStorage(STORAGE_KEYS.VENUE_WEATHER, STORAGE_VERSIONS.VENUE_WEATHER, remote.venueWeather);
+        setRemoteVenueRules((previous) => (
+          sameJson(previous, nextVenueRules) ? previous : nextVenueRules
+        ));
+        setRemoteVenueWeather((previous) => (
+          sameJson(previous, nextVenueWeather) ? previous : nextVenueWeather
+        ));
+
         // F-265-2 (Review #265): every poll rebuilds these objects with fresh
         // identities even when nothing changed remotely, and that churn flowed
         // through the identifiedGuest/guestRSVP memos into the RSVP prefill
@@ -260,7 +324,6 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         // plus-one, name edits) every 5 seconds. Keep the previous state
         // reference when the content is identical so the memos (and the prefill
         // effect) only re-run when the remote snapshot actually moved.
-        const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
         setRemoteCouple((prev) => (sameJson(prev, remoteEvent) ? prev : remoteEvent));
         setConfig((prev) => (sameJson(prev, remoteConfig) ? prev : remoteConfig));
         setPortalData((previous) => {
@@ -278,10 +341,55 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
           };
           return sameJson(previous, next) ? previous : next;
         });
+
+        // Authenticated in-memory state above is authoritative. These global
+        // browser entries are only legacy/offline caches and must never block
+        // portal hydration when storage is disabled, private, or full.
+        const cacheEntries: Array<[string, number, unknown]> = [];
+        if (nextVenueMap !== undefined) {
+          cacheEntries.push([
+            STORAGE_KEYS.VENUE_MAP_CONFIGS,
+            STORAGE_VERSIONS.VENUE_MAP_CONFIGS,
+            nextVenueMap,
+          ]);
+        }
+        if (remote.venueRules !== undefined) {
+          cacheEntries.push([
+            STORAGE_KEYS.VENUE_RULES,
+            STORAGE_VERSIONS.VENUE_RULES,
+            nextVenueRules,
+          ]);
+        }
+        if (remote.venueWeather !== undefined) {
+          cacheEntries.push([
+            STORAGE_KEYS.VENUE_WEATHER,
+            STORAGE_VERSIONS.VENUE_WEATHER,
+            nextVenueWeather,
+          ]);
+        }
+        cacheEntries.forEach(([key, version, value]) => {
+          try {
+            saveVersionedStorage(key, version, value, { emitChange: false });
+          } catch {
+            // Best-effort cache only; invitation-keyed React state remains live.
+          }
+        });
+
         setIsAuthed(true);
         setActiveEventName(remoteConfig?.eventTitle || coupleEventId);
         setResolvedGuestId(guest.id);
-        saveGuestPortalSession(remoteConfig, accountInviteToken, remoteConfig?.eventTitle || coupleEventId, guest.id, coupleEventId);
+        try {
+          saveGuestPortalSession(
+            remoteConfig,
+            accountInviteToken,
+            remoteConfig?.eventTitle || coupleEventId,
+            guest.id,
+            coupleEventId,
+          );
+        } catch {
+          // A server-authorized personal-account session remains usable when
+          // the browser refuses optional session persistence.
+        }
       } catch (err) {
         if (isPortalAccessError(err) && !cancelled) {
           // F-276-4: expiry, revocation, venue suspension, and account mismatch
@@ -292,6 +400,9 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
           setResolvedGuestId(null);
           setConfig(null);
           setRemoteCouple(undefined);
+          setRemoteVenueMap(null);
+          setRemoteVenueRules(normalizeVenueRulesConfig(undefined));
+          setRemoteVenueWeather(normalizeVenueWeatherConfig(undefined));
           setPortalData({ venues: [], guests: [], submissions: [], guestEvents: [] });
           setRsvpSuccess(null);
           setPortalAccountAccess('pending');
@@ -313,7 +424,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       cancelled = true;
       window.clearInterval(poll);
     };
-  }, [accountInviteToken, cloudAccountInvite, coupleEventId, isCouplePortal, portalAccountAccess, venueSlug]);
+  }, [accountInviteToken, cloudAccountInvite, coupleEventId, isCouplePortal, portalAccountAccess, venueMapRetryNonce, venueSlug]);
 
   useEffect(() => {
     try {
@@ -823,7 +934,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
   };
 
   const handleGetDirections = () => {
-    const sourceMap = getVenueMapConfig();
+    const sourceMap = activeVenueMap;
     if (!sourceMap) {
       setWayfindingResult(['No venue-authored walking routes are published yet. Please ask venue staff for directions.']);
       return;
@@ -832,6 +943,10 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       sourceMap,
       'guest',
       isCouplePortal ? (couple?.selectedSpaces || []) : [],
+      {
+        managedBaseImageOnly: isCoupleCloudEnabled(),
+        venues: isCoupleCloudEnabled() ? undefined : portalData.venues,
+      },
     );
     const destinations = scopedMap.points.filter((point) => point.kind !== 'path');
     const defaultStart = destinations.find((point) => point.kind === 'entry') || destinations[0];
@@ -856,19 +971,29 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
 
     const path = findVenueMapRoute(scopedMap, from.id, to.id, { stepFreeOnly });
     if (!path) {
-      setWayfindingResult([
-        stepFreeOnly
-          ? `No verified step-free route is published from ${from.label} to ${to.label}.`
-          : `No venue-authored walking route is published from ${from.label} to ${to.label}.`,
-        'Please use on-site signs or ask venue staff for safe directions.',
-      ]);
+      const emergencyOnlyPath = findVenueMapRoute(scopedMap, from.id, to.id, {
+        stepFreeOnly,
+        includeEmergencyOnly: true,
+      });
+      setWayfindingResult(emergencyOnlyPath?.priority === 'emergency-only'
+        ? [
+            `Only an emergency-only path is published from ${from.label} to ${to.label}; it is not used for routine directions.`,
+            'Please use on-site signs or ask venue staff for safe directions.',
+          ]
+        : [
+            stepFreeOnly
+              ? `No verified step-free route is published from ${from.label} to ${to.label}.`
+              : `No venue-authored walking route is published from ${from.label} to ${to.label}.`,
+            'Please use on-site signs or ask venue staff for safe directions.',
+          ]);
       return;
     }
 
     const steps = [`Start at ${from.label}.`];
     if (from.description) steps.push(from.description);
     path.routes.forEach((route) => {
-      steps.push(`Follow “${route.name}”.`);
+      const priority = routePriorityLabel(route.priority).toLowerCase();
+      steps.push(`Follow ${priority === 'standard' ? '' : `${priority} `}route “${route.name}”.`);
       if (route.notes) steps.push(route.notes);
     });
     steps.push(`Arrive at ${to.label}.`);
@@ -1042,11 +1167,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         )}
 
         {/* Venue rules & regulations (also shown on home for prominence) */}
-        {getVenueRules().rules.length > 0 && (
+        {activeVenueRules.rules.length > 0 && (
           <div className="bg-white rounded-xl shadow p-4">
             <p className="text-sm font-semibold text-gray-800 mb-2">📜 Venue Rules &amp; Regulations</p>
             <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
-              {getVenueRules().rules.map((r, i) => (
+              {activeVenueRules.rules.map((r, i) => (
                 <li key={i}>{r}</li>
               ))}
             </ul>
@@ -1098,9 +1223,19 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
     // In a couple portal, scope the map to the couple's selected spaces (+ their
     // rain-contingency backups), not every venue in the catalog.
     const coupleSelected = couple?.selectedSpaces || [];
-    const backupIds = (getVenueMapConfig()?.rainContingencies || [])
-      .filter((c) => coupleSelected.includes(c.outdoorVenueId))
-      .map((c) => c.indoorVenueId);
+    const collisionSafeRainPlans = activeVenueMap
+      ? partitionVenueMapRainContingencyCollisions(activeVenueMap).map.rainContingencies
+        .filter((contingency) => contingency.outdoorVenueId !== contingency.indoorVenueId)
+      : [];
+    const backupIds = collisionSafeRainPlans
+      .filter((contingency) =>
+        coupleSelected.includes(contingency.outdoorVenueId)
+          && (
+            isCoupleCloudEnabled()
+            || rainContingencyValidationIssue(contingency, portalData.venues) === null
+          ),
+      )
+      .map((contingency) => contingency.indoorVenueId);
     const scopedIds = new Set([...coupleSelected, ...backupIds]);
     const venuesToShow = portalData.venues.filter((v) =>
       isCouplePortal && scopedIds.size > 0
@@ -1114,12 +1249,16 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       <div className="space-y-4 pb-24">
         {/* Full venue map (venue-controlled wayfinding) */}
         {(() => {
-          const sourceMap = getVenueMapConfig();
+          const sourceMap = activeVenueMap;
           if (!sourceMap) return null;
           const guestMap = projectVenueMap(
             sourceMap,
             'guest',
             isCouplePortal ? coupleSelected : [],
+            {
+              managedBaseImageOnly: isCoupleCloudEnabled(),
+              venues: isCoupleCloudEnabled() ? undefined : portalData.venues,
+            },
           );
           if (guestMap.points.length === 0) return null;
           return (
@@ -1130,6 +1269,8 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
                 onPointClick={openInMaps}
                 isPointInteractive={hasValidMapGps}
                 pointActionLabel={() => 'Open in maps.'}
+                hideMapWhenBackgroundUnavailable
+                onRetryBackgroundImage={() => setVenueMapRetryNonce((nonce) => nonce + 1)}
               />
               <div className="mt-1 text-[10px] text-gray-400 px-1">
                 Tap a pin that has GPS to open it in Google Maps.
@@ -1345,7 +1486,7 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
         {(() => {
           const dates = eventDates(config.eventStartDate, config.eventEndDate);
           const dayDate = dates[effectiveDay];
-          const forecast = dayDate ? getVenueWeather().forecasts[dayDate] : undefined;
+          const forecast = dayDate ? activeVenueWeather.forecasts[dayDate] : undefined;
           if (!forecast) return null;
           return (
             <div className="rounded-xl bg-sky-50 border border-sky-200 p-3 flex items-center gap-3">
@@ -1426,10 +1567,18 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
 
     // Wayfinding is venue-controlled: use the venue's full property map, scoped to the
     // couple's selected spaces (+ parking/entry + applicable rain-contingency backups).
-    const sourceMap = getVenueMapConfig();
+    const sourceMap = activeVenueMap;
     const coupleSelected = couple?.selectedSpaces || [];
     const venueMap = sourceMap
-      ? projectVenueMap(sourceMap, 'guest', isCouplePortal ? coupleSelected : [])
+      ? projectVenueMap(
+          sourceMap,
+          'guest',
+          isCouplePortal ? coupleSelected : [],
+          {
+            managedBaseImageOnly: isCoupleCloudEnabled(),
+            venues: isCoupleCloudEnabled() ? undefined : portalData.venues,
+          },
+        )
       : null;
     const wayfindingPoints: VenueMapPoint[] = (venueMap?.points || []).filter(
       (point) => point.kind !== 'path',
@@ -1469,9 +1618,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
             onPointClick={openInMaps}
             isPointInteractive={hasValidMapGps}
             pointActionLabel={() => 'Open in maps.'}
+            hideMapWhenBackgroundUnavailable
+            onRetryBackgroundImage={() => setVenueMapRetryNonce((nonce) => nonce + 1)}
           />
           <div className="mt-1 text-[10px] text-gray-400 px-1">
-            Tip: tap a pin that has GPS to open it in Google Maps.
+            Tip: tap a GPS pin, or use the Map location actions list below, to open it in Google Maps.
           </div>
 
           <div className="mt-4 space-y-3">
@@ -1543,11 +1694,11 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
           )}
 
           {/* Venue rules & regulations */}
-          {getVenueRules().rules.length > 0 && (
+          {activeVenueRules.rules.length > 0 && (
             <div className="bg-white rounded-xl shadow p-4 mt-4">
               <p className="text-xs font-semibold text-gray-800 mb-2">📜 Venue Rules &amp; Regulations</p>
               <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
-                {getVenueRules().rules.map((r, i) => (
+                {activeVenueRules.rules.map((r, i) => (
                   <li key={i}>{r}</li>
                 ))}
               </ul>
@@ -2598,6 +2749,21 @@ const GuestPortal: React.FC<GuestPortalProps> = ({ guestToken, coupleEventId, ve
       </nav>
     </div>
   );
+};
+
+/**
+ * Invitation context is a hard state boundary. React otherwise reuses this
+ * component when only hash parameters change, which can retain the previous
+ * wedding's in-memory portal state until an effect or network pull completes.
+ */
+const GuestPortal: React.FC<GuestPortalProps> = (props) => {
+  const contextKey = JSON.stringify([
+    props.guestToken || '',
+    props.coupleEventId || '',
+    props.venueSlug || '',
+    Boolean(props.preview),
+  ]);
+  return <GuestPortalSession key={contextKey} {...props} />;
 };
 
 export default GuestPortal;

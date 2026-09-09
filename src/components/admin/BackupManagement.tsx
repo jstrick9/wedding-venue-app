@@ -106,7 +106,7 @@ export function BackupManagement({ user, onDataRestored }: BackupManagementProps
       <BrandedSectionHeader
         icon="💾"
         title="Backup &amp; Restore"
-        description="Download a full backup of this workspace (venues, tables, guests, layouts, decor, messages, portal, staff, settings) as a single JSON file, or restore from one. A rollback snapshot is kept automatically before each restore."
+        description="Download a full backup of this workspace (venues, maps and recovery quarantine, tables, guests, layouts, decor, messages, portal, staff, settings) as a single JSON file, or restore from one. A rollback snapshot is kept automatically before each restore."
         config={config}
       />
 

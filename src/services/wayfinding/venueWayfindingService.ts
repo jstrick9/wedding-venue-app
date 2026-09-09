@@ -5,6 +5,7 @@ import {
   VenueMapRoute,
   VenueMapAudience,
   VenueMapRouteAccessibility,
+  VenueMapRoutePriority,
   DrawingObject,
   RainContingency,
   VenueRulesConfig,
@@ -13,23 +14,119 @@ import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { STORAGE_VERSIONS } from '../../constants/storageVersions';
 import { loadVersionedStorage, saveVersionedStorage } from '../../utils/storage';
 import {
+  constrainMapDrawing,
   INVALID_VENUE_MAP_EVENT_SCOPE,
+  INVALID_VENUE_MAP_POINT_REFERENCE,
+  INVALID_VENUE_MAP_ROUTE_PRIORITY,
+  partitionVenueMapRainContingencyCollisions,
   projectVenueMap,
+  venueMapComplexityIssues,
+  venueMapDrawingIntegrityIssue,
+  venueMapPointCoordinateIssue,
+  LEGACY_VENUE_MAP_HEIGHT,
+  LEGACY_VENUE_MAP_WIDTH,
+  VENUE_MAP_FRAME_MAX,
+  VENUE_MAP_FRAME_MIN,
+  venueMapHasDuplicateIdentities,
+  venueMapHasInvalidDrawingGeometry,
+  venueMapHasInvalidRoutePriorities,
+  venueMapHasRainContingencyCollisions,
+  venueMapRoutePriorityIssue,
+  venueMapRouteReferenceIssues,
 } from '../../utils/venueMapDesigner';
 
 const MAP_KEY = STORAGE_KEYS.VENUE_MAP_CONFIGS;
 const MAP_VERSION = STORAGE_VERSIONS.VENUE_MAP_CONFIGS;
+const STRUCTURAL_RECOVERY_KEY = STORAGE_KEYS.VENUE_MAP_STRUCTURAL_RECOVERY;
+const STRUCTURAL_RECOVERY_VERSION = STORAGE_VERSIONS.VENUE_MAP_STRUCTURAL_RECOVERY;
 const RULES_KEY = STORAGE_KEYS.VENUE_RULES;
 const RULES_VERSION = STORAGE_VERSIONS.VENUE_RULES;
 
 const POINT_KINDS = new Set<VenueMapPointKind>(['space', 'parking', 'entry', 'amenity', 'path']);
 const AUDIENCES = new Set<VenueMapAudience>(['public', 'couple', 'staff']);
 const ACCESSIBILITY = new Set<VenueMapRouteAccessibility>(['unknown', 'step-free', 'not-step-free']);
+const ROUTE_PRIORITIES = new Set<VenueMapRoutePriority>(['preferred', 'standard', 'secondary', 'emergency-only']);
+
+export {
+  LEGACY_VENUE_MAP_HEIGHT,
+  LEGACY_VENUE_MAP_WIDTH,
+  VENUE_MAP_FRAME_MAX,
+  VENUE_MAP_FRAME_MIN,
+} from '../../utils/venueMapDesigner';
 
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+}
+
+function explicitMapDimensionIssue(
+  source: Record<string, unknown>,
+  field: 'width' | 'height',
+): string | null {
+  if (!Object.prototype.hasOwnProperty.call(source, field)) return null;
+  const value = source[field];
+  if (
+    typeof value !== 'number'
+    || !Number.isFinite(value)
+    || value < VENUE_MAP_FRAME_MIN
+    || value > VENUE_MAP_FRAME_MAX
+  ) {
+    return `Saved map ${field} was explicitly present but is not a finite number from ${VENUE_MAP_FRAME_MIN} to ${VENUE_MAP_FRAME_MAX}.`;
+  }
+  return null;
+}
+
+export function venueMapFrameIssues(value: unknown): string[] {
+  const source = record(value);
+  if (!source) return [];
+  return (['width', 'height'] as const).flatMap((field) => {
+    const issue = explicitMapDimensionIssue(source, field);
+    return issue ? [issue] : [];
+  });
+}
+
+export function venueMapFrameIssue(value: unknown): string | null {
+  const issues = venueMapFrameIssues(value);
+  return issues.length > 0 ? issues.join(' ') : null;
+}
+
+export function assertVenueMapFrameValid(value: unknown): void {
+  if (venueMapFrameIssue(value)) {
+    throw new Error('Invalid map width or height must be explicitly repaired before the Venue Map can be saved.');
+  }
+}
+
+export function assertVenueMapComplexityWithinBudget(value: unknown): void {
+  const issues = venueMapComplexityIssues(value);
+  if (issues.length > 0) {
+    throw new Error(`The Venue Map exceeds its operational complexity budget. ${issues[0]}`);
+  }
+}
+
+export function venueMapHasInvalidPointCoordinates(value: unknown): boolean {
+  const source = record(value);
+  if (!source || venueMapFrameIssue(source)) return false;
+  const width = Object.prototype.hasOwnProperty.call(source, 'width')
+    ? source.width as number
+    : LEGACY_VENUE_MAP_WIDTH;
+  const height = Object.prototype.hasOwnProperty.call(source, 'height')
+    ? source.height as number
+    : LEGACY_VENUE_MAP_HEIGHT;
+  if (!Array.isArray(source.points)) return false;
+  return source.points.some((candidate) => {
+    const point = record(candidate);
+    return !!point && venueMapPointCoordinateIssue(
+      { x: point.x as number, y: point.y as number },
+      { width, height },
+    ) !== null;
+  });
+}
+
+export function assertVenueMapPointCoordinatesResolved(value: unknown): void {
+  if (venueMapHasInvalidPointCoordinates(value)) {
+    throw new Error('Invalid or out-of-frame map-point coordinates must be explicitly repaired before the Venue Map can be saved.');
+  }
 }
 
 function boundedNumber(value: unknown, fallback: number, min: number, max: number): number {
@@ -38,16 +135,25 @@ function boundedNumber(value: unknown, fallback: number, min: number, max: numbe
     : fallback;
 }
 
+function finiteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function optionalText(value: unknown, maxLength = 1000): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim().slice(0, maxLength);
   return trimmed || undefined;
 }
 
-function stringIds(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const ids = [...new Set(value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim()))];
-  return ids.length ? ids : undefined;
+function normalizedRoutePointIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [INVALID_VENUE_MAP_POINT_REFERENCE];
+  return value.map((item) => {
+    if (typeof item !== 'string') return INVALID_VENUE_MAP_POINT_REFERENCE;
+    const id = item.trim();
+    return id.length >= 1 && id.length <= 200
+      ? id
+      : INVALID_VENUE_MAP_POINT_REFERENCE;
+  });
 }
 
 function normalizedEventSpaceIds(value: unknown): string[] | undefined {
@@ -85,97 +191,359 @@ function safeBackgroundRef(value: unknown): string | undefined {
   return undefined;
 }
 
+export interface NormalizeVenueMapConfigOptions {
+  /** Preserve server-authored portal availability metadata; canonical admin saves omit it. */
+  preservePortalStatus?: boolean;
+  /** Admin/cache recovery only: retain duplicate object IDs and competing rain plans. */
+  preserveDuplicateIds?: boolean;
+}
+
+type VenueMapStructuralRecoveryBase = {
+  /** Display-only occurrence identity; it is never eligible for publication. */
+  key: string;
+  occurrenceIndex: number;
+  issues: string[];
+  collectionMalformed?: boolean;
+  /** The saved document explicitly supplied an invalid width or height. */
+  mapFrameMalformed?: boolean;
+  /** The whole saved document exceeds a bounded rendering/storage/query budget. */
+  mapComplexityExceeded?: boolean;
+};
+
+export type VenueMapStructuralRecoveryArtifact =
+  | (VenueMapStructuralRecoveryBase & {
+      family: 'map';
+      candidate: { id?: never };
+    })
+  | (VenueMapStructuralRecoveryBase & {
+      family: 'point';
+      candidate: Partial<VenueMapPoint>;
+    })
+  | (VenueMapStructuralRecoveryBase & {
+      family: 'route';
+      candidate: Partial<VenueMapRoute>;
+    })
+  | (VenueMapStructuralRecoveryBase & {
+      family: 'drawing';
+      candidate: Partial<DrawingObject>;
+    })
+  | (VenueMapStructuralRecoveryBase & {
+      family: 'rainContingency';
+      candidate: Partial<RainContingency>;
+    });
+
+export interface VenueMapNormalizationAnalysis {
+  map: VenueMapConfig | null;
+  structuralRecoveryArtifacts: VenueMapStructuralRecoveryArtifact[];
+  /** Raw over-budget source; admin recovery only and never part of a portal map. */
+  quarantinedMap?: unknown;
+}
+
+export interface VenueMapStructuralRecoveryBackupEnvelope {
+  mapFingerprint: string;
+  artifacts: VenueMapStructuralRecoveryArtifact[];
+  /** Optional whole-map recovery payload, checksum-covered by backup bundle v2. */
+  quarantinedMap?: unknown;
+  quarantinedMapFingerprint?: string;
+  /** True only for a shareable backup whose recovery source had secrets omitted. */
+  quarantinedMapRedacted?: boolean;
+}
+
+type StoredVenueMapStructuralRecovery = VenueMapStructuralRecoveryBackupEnvelope;
+
 /**
  * Normalize untrusted local/cloud JSON into the canonical venue-map contract.
  * Objects are rebuilt from an allowlist so unknown/internal fields cannot ride
  * along into couple or guest projections.
  */
-export function normalizeVenueMapConfig(value: unknown): VenueMapConfig | null {
+function normalizeVenueMapConfigInternal(
+  value: unknown,
+  options: NormalizeVenueMapConfigOptions,
+  structuralRecoveryArtifacts: VenueMapStructuralRecoveryArtifact[],
+  precomputedComplexityIssues?: string[],
+): VenueMapConfig | null {
+  const complexityIssues = precomputedComplexityIssues || venueMapComplexityIssues(value);
   const source = record(value);
-  if (!source) return null;
-  const width = boundedNumber(source.width, 100, 20, 500);
-  const height = boundedNumber(source.height, 80, 20, 500);
+  if (!source) {
+    if (complexityIssues.length > 0) {
+      structuralRecoveryArtifacts.push({
+        key: 'map:complexity',
+        family: 'map',
+        occurrenceIndex: -1,
+        issues: complexityIssues,
+        mapComplexityExceeded: true,
+        candidate: {},
+      });
+      return emptyVenueMapConfig();
+    }
+    if (value !== null && value !== undefined) {
+      structuralRecoveryArtifacts.push({
+        key: 'map:root',
+        family: 'map',
+        occurrenceIndex: -1,
+        collectionMalformed: true,
+        issues: ['The saved Venue Map is not an object and cannot be interpreted safely.'],
+        candidate: {},
+      });
+    }
+    return null;
+  }
+  const frameIssues = venueMapFrameIssues(source);
+  const width = boundedNumber(
+    Object.prototype.hasOwnProperty.call(source, 'width') ? source.width : undefined,
+    LEGACY_VENUE_MAP_WIDTH,
+    VENUE_MAP_FRAME_MIN,
+    VENUE_MAP_FRAME_MAX,
+  );
+  const height = boundedNumber(
+    Object.prototype.hasOwnProperty.call(source, 'height') ? source.height : undefined,
+    LEGACY_VENUE_MAP_HEIGHT,
+    VENUE_MAP_FRAME_MIN,
+    VENUE_MAP_FRAME_MAX,
+  );
+  if (frameIssues.length > 0) {
+    structuralRecoveryArtifacts.push({
+      key: 'map:frame',
+      family: 'map',
+      occurrenceIndex: -1,
+      issues: frameIssues,
+      mapFrameMalformed: true,
+      candidate: {},
+    });
+  }
 
+  if (complexityIssues.length > 0) {
+    structuralRecoveryArtifacts.push({
+      key: 'map:complexity',
+      family: 'map',
+      occurrenceIndex: -1,
+      issues: complexityIssues,
+      mapComplexityExceeded: true,
+      candidate: {},
+    });
+    // Never pick an arbitrary prefix of an oversized identity graph. A small,
+    // non-publishable working surface stays responsive while the exact source
+    // remains in the separately fingerprinted admin recovery envelope.
+    return {
+      width,
+      height,
+      points: [],
+      routes: [],
+      drawings: [],
+      rainContingencies: [],
+      updatedAt: optionalText(source.updatedAt, 100) || new Date().toISOString(),
+    };
+  }
+
+  const pointCandidates = Array.isArray(source.points) ? source.points : [];
+  if (source.points !== undefined && !Array.isArray(source.points)) {
+    structuralRecoveryArtifacts.push({
+      key: 'point:collection',
+      family: 'point',
+      occurrenceIndex: -1,
+      collectionMalformed: true,
+      issues: ['The saved points collection is not an array and cannot be interpreted safely.'],
+      candidate: {},
+    });
+  }
   const points: VenueMapPoint[] = [];
   const pointIds = new Set<string>();
-  for (const candidate of Array.isArray(source.points) ? source.points : []) {
+  for (const [occurrenceIndex, candidate] of pointCandidates.entries()) {
     const item = record(candidate);
-    if (!item) continue;
+    if (!item) {
+      structuralRecoveryArtifacts.push({
+        key: `point:${occurrenceIndex}`,
+        family: 'point',
+        occurrenceIndex,
+        issues: ['This saved point occurrence is not an object.'],
+        candidate: {},
+      });
+      continue;
+    }
     const id = optionalText(item.id, 200);
     const kind = typeof item.kind === 'string' && POINT_KINDS.has(item.kind as VenueMapPointKind)
       ? item.kind as VenueMapPointKind
       : null;
-    if (!id || pointIds.has(id) || !kind) continue;
-    pointIds.add(id);
+    const x = finiteNumber(item.x);
+    const y = finiteNumber(item.y);
+    // When the whole frame itself is quarantined, its replacement bounds are
+    // not authoritative yet. The admin's explicit frame decision owns how
+    // otherwise finite points are interpreted; do not create secondary point
+    // findings merely because the temporary recovery frame is smaller.
+    const xOutsideFrame = frameIssues.length === 0
+      && x !== null
+      && (x < 0 || x > width);
+    const yOutsideFrame = frameIssues.length === 0
+      && y !== null
+      && (y < 0 || y > height);
     const latitude = item.lat;
     const longitude = item.lng;
     const hasGpsPair = typeof latitude === 'number' && Number.isFinite(latitude)
       && latitude >= -90 && latitude <= 90
       && typeof longitude === 'number' && Number.isFinite(longitude)
       && longitude >= -180 && longitude <= 180;
-    points.push({
-      id,
-      label: optionalText(item.label, 200) || 'Map point',
+    const safeCandidate: Partial<VenueMapPoint> = {
+      id: id || undefined,
+      label: optionalText(item.label, 200) || 'Recovered map point',
       description: optionalText(item.description),
-      x: boundedNumber(item.x, 0, 0, width),
-      y: boundedNumber(item.y, 0, 0, height),
-      kind,
+      x: Math.max(0, Math.min(width, x ?? width / 2)),
+      y: Math.max(0, Math.min(height, y ?? height / 2)),
+      kind: kind || undefined,
       audience: normalizedAudience(item.audience),
       eventSpaceIds: normalizedEventSpaceIds(item.eventSpaceIds),
       venueId: optionalText(item.venueId, 200),
       lat: hasGpsPair ? latitude : undefined,
       lng: hasGpsPair ? longitude : undefined,
-    });
+    };
+    const issues = [
+      ...(!id ? ['The point is missing a valid ID.'] : []),
+      ...(!kind ? [`The point kind “${optionalText(item.kind, 50) || 'blank'}” is unsupported.`] : []),
+      ...(x === null ? ['The point is missing a finite horizontal coordinate.'] : []),
+      ...(y === null ? ['The point is missing a finite vertical coordinate.'] : []),
+      ...(xOutsideFrame
+        ? [`The point horizontal coordinate falls outside the current map frame (0 to ${width}).`]
+        : []),
+      ...(yOutsideFrame
+        ? [`The point vertical coordinate falls outside the current map frame (0 to ${height}).`]
+        : []),
+    ];
+    if (issues.length > 0) {
+      structuralRecoveryArtifacts.push({
+        key: `point:${occurrenceIndex}`,
+        family: 'point',
+        occurrenceIndex,
+        issues,
+        candidate: safeCandidate,
+      });
+      continue;
+    }
+    if (!options.preserveDuplicateIds && pointIds.has(id!)) continue;
+    pointIds.add(id!);
+    points.push(safeCandidate as VenueMapPoint);
   }
 
+  const routeCandidates = Array.isArray(source.routes) ? source.routes : [];
+  if (source.routes !== undefined && !Array.isArray(source.routes)) {
+    structuralRecoveryArtifacts.push({
+      key: 'route:collection',
+      family: 'route',
+      occurrenceIndex: -1,
+      collectionMalformed: true,
+      issues: ['The saved routes collection is not an array and cannot be interpreted safely.'],
+      candidate: {},
+    });
+  }
   const routes: VenueMapRoute[] = [];
   const routeIds = new Set<string>();
-  for (const candidate of Array.isArray(source.routes) ? source.routes : []) {
+  for (const [occurrenceIndex, candidate] of routeCandidates.entries()) {
     const item = record(candidate);
-    if (!item) continue;
+    if (!item) {
+      structuralRecoveryArtifacts.push({
+        key: `route:${occurrenceIndex}`,
+        family: 'route',
+        occurrenceIndex,
+        issues: ['This saved route occurrence is not an object.'],
+        candidate: {},
+      });
+      continue;
+    }
     const id = optionalText(item.id, 200);
-    if (!id || routeIds.has(id)) continue;
-    const orderedPointIds = stringIds(item.pointIds)?.filter((pointId) => pointIds.has(pointId)) || [];
-    if (orderedPointIds.length < 2) continue;
-    routeIds.add(id);
-    routes.push({
-      id,
-      name: optionalText(item.name, 200) || 'Path',
-      pointIds: orderedPointIds,
+    const safeCandidate: Partial<VenueMapRoute> = {
+      id: id || undefined,
+      name: optionalText(item.name, 200) || 'Recovered walkway',
+      pointIds: normalizedRoutePointIds(item.pointIds),
       audience: normalizedAudience(item.audience),
       eventSpaceIds: normalizedEventSpaceIds(item.eventSpaceIds),
       accessibility: typeof item.accessibility === 'string' && ACCESSIBILITY.has(item.accessibility as VenueMapRouteAccessibility)
         ? item.accessibility as VenueMapRouteAccessibility
         : 'unknown',
+      priority: !Object.prototype.hasOwnProperty.call(item, 'priority')
+        ? 'standard'
+        : typeof item.priority === 'string'
+          && ROUTE_PRIORITIES.has(item.priority as VenueMapRoutePriority)
+          ? item.priority as VenueMapRoutePriority
+          : INVALID_VENUE_MAP_ROUTE_PRIORITY,
       notes: optionalText(item.notes),
-    });
+    };
+    if (!id) {
+      structuralRecoveryArtifacts.push({
+        key: `route:${occurrenceIndex}`,
+        family: 'route',
+        occurrenceIndex,
+        issues: ['The walkway is missing a valid ID.'],
+        candidate: safeCandidate,
+      });
+      continue;
+    }
+    if (!options.preserveDuplicateIds && routeIds.has(id)) continue;
+    routeIds.add(id);
+    routes.push(safeCandidate as VenueMapRoute);
   }
 
+  const drawingCandidates = Array.isArray(source.drawings) ? source.drawings : [];
+  if (source.drawings !== undefined && !Array.isArray(source.drawings)) {
+    structuralRecoveryArtifacts.push({
+      key: 'drawing:collection',
+      family: 'drawing',
+      occurrenceIndex: -1,
+      collectionMalformed: true,
+      issues: ['The saved drawings collection is not an array and cannot be interpreted safely.'],
+      candidate: {},
+    });
+  }
   const drawings: DrawingObject[] = [];
   const drawingIds = new Set<string>();
-  for (const candidate of Array.isArray(source.drawings) ? source.drawings : []) {
+  for (const [occurrenceIndex, candidate] of drawingCandidates.entries()) {
     const item = record(candidate);
-    if (!item) continue;
+    if (!item) {
+      structuralRecoveryArtifacts.push({
+        key: `drawing:${occurrenceIndex}`,
+        family: 'drawing',
+        occurrenceIndex,
+        issues: ['This saved drawing occurrence is not an object.'],
+        candidate: {},
+      });
+      continue;
+    }
     const id = optionalText(item.id, 200);
     const type = optionalText(item.type, 50);
-    if (!id || !type || drawingIds.has(id)) continue;
-    drawingIds.add(id);
+    const structurallyValid = Boolean(id && type);
+    const preserveRecoveryGeometry = options.preserveDuplicateIds === true;
     const drawingPoints = Array.isArray(item.points)
       ? item.points.flatMap((candidatePoint) => {
           const point = record(candidatePoint);
-          return point ? [{
+          if (
+            !point
+            || typeof point.x !== 'number'
+            || !Number.isFinite(point.x)
+            || typeof point.y !== 'number'
+            || !Number.isFinite(point.y)
+          ) {
+            return preserveRecoveryGeometry && structurallyValid
+              ? [{ x: Number.NaN, y: Number.NaN }]
+              : [];
+          }
+          return [{
             x: boundedNumber(point.x, 0, 0, width),
             y: boundedNumber(point.y, 0, 0, height),
-          }] : [];
+          }];
         })
       : undefined;
-    drawings.push({
-      id,
-      type,
-      x: boundedNumber(item.x, 0, 0, width),
-      y: boundedNumber(item.y, 0, 0, height),
-      width: typeof item.width === 'number' ? boundedNumber(item.width, 1, 1, width) : undefined,
-      height: typeof item.height === 'number' ? boundedNumber(item.height, 1, 1, height) : undefined,
+    const safeCandidate: Partial<DrawingObject> = {
+      id: id || undefined,
+      type: type || undefined,
+      x: typeof item.x === 'number' && Number.isFinite(item.x)
+        ? boundedNumber(item.x, 0, 0, width)
+        : preserveRecoveryGeometry && structurallyValid ? Number.NaN : 0,
+      y: typeof item.y === 'number' && Number.isFinite(item.y)
+        ? boundedNumber(item.y, 0, 0, height)
+        : preserveRecoveryGeometry && structurallyValid ? Number.NaN : 0,
+      width: typeof item.width === 'number' && Number.isFinite(item.width)
+        ? preserveRecoveryGeometry ? item.width : boundedNumber(item.width, 1, 1, width)
+        : undefined,
+      height: typeof item.height === 'number' && Number.isFinite(item.height)
+        ? preserveRecoveryGeometry ? item.height : boundedNumber(item.height, 1, 1, height)
+        : undefined,
       points: drawingPoints,
       rotation: typeof item.rotation === 'number' ? boundedNumber(item.rotation, 0, -360, 360) : undefined,
       fillColor: safeColor(item.fillColor),
@@ -184,23 +552,96 @@ export function normalizeVenueMapConfig(value: unknown): VenueMapConfig | null {
       opacity: typeof item.opacity === 'number' ? boundedNumber(item.opacity, 1, 0, 1) : undefined,
       fontSize: typeof item.fontSize === 'number' ? boundedNumber(item.fontSize, 12, 1, 100) : undefined,
       text: optionalText(item.text, 300),
-      radius: typeof item.radius === 'number' ? boundedNumber(item.radius, 1, 1, Math.min(width, height) / 2) : undefined,
+      radius: typeof item.radius === 'number' && Number.isFinite(item.radius)
+        ? preserveRecoveryGeometry
+          ? item.radius
+          : boundedNumber(item.radius, 1, 1, Math.min(width, height) / 2)
+        : undefined,
       audience: normalizedAudience(item.audience),
       eventSpaceIds: normalizedEventSpaceIds(item.eventSpaceIds),
-    });
+    };
+    const issues = [
+      ...(!id ? ['The map shape is missing a valid ID.'] : []),
+      ...(!type ? ['The map shape is missing a drawing type.'] : []),
+    ];
+    if (issues.length > 0) {
+      structuralRecoveryArtifacts.push({
+        key: `drawing:${occurrenceIndex}`,
+        family: 'drawing',
+        occurrenceIndex,
+        issues,
+        candidate: safeCandidate,
+      });
+      continue;
+    }
+    if (!options.preserveDuplicateIds && drawingIds.has(id!)) continue;
+    drawingIds.add(id!);
+    const drawing = safeCandidate as DrawingObject;
+    drawings.push(
+      preserveRecoveryGeometry && venueMapDrawingIntegrityIssue(drawing)
+        ? drawing
+        : constrainMapDrawing(drawing, width, height),
+    );
   }
 
+  const rainCandidates = Array.isArray(source.rainContingencies) ? source.rainContingencies : [];
+  if (source.rainContingencies !== undefined && !Array.isArray(source.rainContingencies)) {
+    structuralRecoveryArtifacts.push({
+      key: 'rainContingency:collection',
+      family: 'rainContingency',
+      occurrenceIndex: -1,
+      collectionMalformed: true,
+      issues: ['The saved rain-plan collection is not an array and cannot be interpreted safely.'],
+      candidate: {},
+    });
+  }
   const rainContingencies: RainContingency[] = [];
   const contingencyIds = new Set<string>();
-  for (const candidate of Array.isArray(source.rainContingencies) ? source.rainContingencies : []) {
+  const contingencyOutdoorVenueIds = new Set<string>();
+  for (const [occurrenceIndex, candidate] of rainCandidates.entries()) {
     const item = record(candidate);
-    if (!item) continue;
+    if (!item) {
+      structuralRecoveryArtifacts.push({
+        key: `rainContingency:${occurrenceIndex}`,
+        family: 'rainContingency',
+        occurrenceIndex,
+        issues: ['This saved rain-plan occurrence is not an object.'],
+        candidate: {},
+      });
+      continue;
+    }
     const id = optionalText(item.id, 200);
     const outdoorVenueId = optionalText(item.outdoorVenueId, 200);
     const indoorVenueId = optionalText(item.indoorVenueId, 200);
-    if (!id || !outdoorVenueId || !indoorVenueId || contingencyIds.has(id)) continue;
-    contingencyIds.add(id);
-    rainContingencies.push({ id, outdoorVenueId, indoorVenueId, note: optionalText(item.note) });
+    const safeCandidate: Partial<RainContingency> = {
+      id: id || undefined,
+      outdoorVenueId: outdoorVenueId || undefined,
+      indoorVenueId: indoorVenueId || undefined,
+      note: optionalText(item.note),
+    };
+    const issues = [
+      ...(!id ? ['The rain plan is missing a valid ID.'] : []),
+      ...(!outdoorVenueId ? ['The rain plan is missing an outdoor source ID.'] : []),
+      ...(!indoorVenueId ? ['The rain plan is missing an indoor backup ID.'] : []),
+    ];
+    if (issues.length > 0) {
+      structuralRecoveryArtifacts.push({
+        key: `rainContingency:${occurrenceIndex}`,
+        family: 'rainContingency',
+        occurrenceIndex,
+        issues,
+        candidate: safeCandidate,
+      });
+      continue;
+    }
+    if (
+      (!options.preserveDuplicateIds && outdoorVenueId === indoorVenueId)
+      || (!options.preserveDuplicateIds && contingencyIds.has(id!))
+      || (!options.preserveDuplicateIds && contingencyOutdoorVenueIds.has(outdoorVenueId!))
+    ) continue;
+    contingencyIds.add(id!);
+    contingencyOutdoorVenueIds.add(outdoorVenueId!);
+    rainContingencies.push(safeCandidate as RainContingency);
   }
 
   const backgroundImageUrl = safeBackgroundRef(source.backgroundImageUrl);
@@ -215,34 +656,525 @@ export function normalizeVenueMapConfig(value: unknown): VenueMapConfig | null {
     backgroundOpacity: backgroundImageUrl
       ? boundedNumber(source.backgroundOpacity, 0.85, 0.1, 1)
       : undefined,
+    backgroundImageUnavailable: options.preservePortalStatus
+      && source.backgroundImageUnavailable === true
+      ? true
+      : undefined,
     updatedAt: optionalText(source.updatedAt, 100) || new Date().toISOString(),
   };
 }
 
+export function analyzeVenueMapConfig(
+  value: unknown,
+  options: NormalizeVenueMapConfigOptions = {},
+): VenueMapNormalizationAnalysis {
+  const structuralRecoveryArtifacts: VenueMapStructuralRecoveryArtifact[] = [];
+  const complexityIssues = venueMapComplexityIssues(value);
+  const normalized = normalizeVenueMapConfigInternal(
+    value,
+    options,
+    structuralRecoveryArtifacts,
+    complexityIssues,
+  );
+  return {
+    // A malformed persisted document still needs a safe admin working surface
+    // so its separate recovery artifact remains visible and removable.
+    map: normalized || (structuralRecoveryArtifacts.some((artifact) => artifact.family === 'map')
+      ? emptyVenueMapConfig()
+      : null),
+    structuralRecoveryArtifacts,
+    quarantinedMap: complexityIssues.length > 0 ? value : undefined,
+  };
+}
+
+export function normalizeVenueMapConfig(
+  value: unknown,
+  options: NormalizeVenueMapConfigOptions = {},
+): VenueMapConfig | null {
+  return normalizeVenueMapConfigInternal(value, options, []);
+}
+
+/** Portal-facing normalization defaults omitted legacy dimensions but never repairs an explicit bad frame. */
+export function normalizeVenueMapConfigForPortal(
+  value: unknown,
+  options: NormalizeVenueMapConfigOptions = {},
+): VenueMapConfig | null {
+  if (venueMapFrameIssue(value) || venueMapComplexityIssues(value).length > 0) return null;
+  return normalizeVenueMapConfig(value, options);
+}
+
+let inMemoryStructuralRecovery: StoredVenueMapStructuralRecovery | null = null;
+let structuralRecoveryStorageWriteFailed = false;
+
+function compactMapFingerprint(value: string): string {
+  // Four independently mixed 32-bit lanes provide a compact deterministic
+  // content binding without duplicating a potentially multi-megabyte inline
+  // base image inside local recovery/backup envelopes. This is an accidental
+  // mismatch guard, not an authentication primitive (the backup has SHA-256).
+  let h1 = 0x6a09e667 ^ value.length;
+  let h2 = 0xbb67ae85 ^ value.length;
+  let h3 = 0x3c6ef372 ^ value.length;
+  let h4 = 0xa54ff53a ^ value.length;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    h1 = Math.imul(h1 ^ code, 0x9e3779b1);
+    h2 = Math.imul(h2 ^ code, 0x85ebca77);
+    h3 = Math.imul(h3 ^ code, 0xc2b2ae3d);
+    h4 = Math.imul(h4 ^ code, 0x27d4eb2f);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 0x85ebca6b) ^ h2;
+  h2 = Math.imul(h2 ^ (h2 >>> 13), 0xc2b2ae35) ^ h3;
+  h3 = Math.imul(h3 ^ (h3 >>> 16), 0x85ebca6b) ^ h4;
+  h4 = Math.imul(h4 ^ (h4 >>> 13), 0xc2b2ae35) ^ h1;
+  const hex = (hash: number) => (hash >>> 0).toString(16).padStart(8, '0');
+  return `map-v1:${value.length}:${hex(h1)}${hex(h2)}${hex(h3)}${hex(h4)}`;
+}
+
+function structuralRecoveryFingerprint(map: VenueMapConfig | null): string {
+  const canonical = JSON.stringify(map === null
+    ? null
+    : normalizeVenueMapConfig(map, { preserveDuplicateIds: true }));
+  return compactMapFingerprint(canonical);
+}
+
+function quarantinedVenueMapFingerprint(value: unknown): string | null {
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? null : compactMapFingerprint(serialized);
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeStructuralRecoveryCandidate(
+  family: VenueMapStructuralRecoveryArtifact['family'],
+  value: unknown,
+): VenueMapStructuralRecoveryArtifact['candidate'] {
+  const candidate = record(value);
+  if (!candidate || family === 'map') return {};
+  if (family === 'point') {
+    const latitude = finiteNumber(candidate.lat);
+    const longitude = finiteNumber(candidate.lng);
+    const hasGpsPair = latitude !== null
+      && latitude >= -90
+      && latitude <= 90
+      && longitude !== null
+      && longitude >= -180
+      && longitude <= 180;
+    const x = finiteNumber(candidate.x);
+    const y = finiteNumber(candidate.y);
+    return {
+      id: optionalText(candidate.id, 200),
+      label: optionalText(candidate.label, 200) || 'Recovered map point',
+      description: optionalText(candidate.description),
+      x: x === null ? undefined : Math.max(0, Math.min(VENUE_MAP_FRAME_MAX, x)),
+      y: y === null ? undefined : Math.max(0, Math.min(VENUE_MAP_FRAME_MAX, y)),
+      kind: typeof candidate.kind === 'string'
+        && POINT_KINDS.has(candidate.kind as VenueMapPointKind)
+        ? candidate.kind as VenueMapPointKind
+        : undefined,
+      audience: normalizedAudience(candidate.audience),
+      eventSpaceIds: normalizedEventSpaceIds(candidate.eventSpaceIds),
+      venueId: optionalText(candidate.venueId, 200),
+      lat: hasGpsPair ? latitude! : undefined,
+      lng: hasGpsPair ? longitude! : undefined,
+    };
+  }
+  const recoveryMap = {
+    ...emptyVenueMapConfig(),
+    updatedAt: 'recovery-candidate',
+    points: [],
+    routes: family === 'route' ? [candidate] : [],
+    drawings: family === 'drawing' ? [candidate] : [],
+    rainContingencies: family === 'rainContingency' ? [candidate] : [],
+  };
+  const analysis = analyzeVenueMapConfig(recoveryMap, { preserveDuplicateIds: true });
+  const quarantined = analysis.structuralRecoveryArtifacts.find((artifact) =>
+    artifact.family === family && artifact.occurrenceIndex === 0,
+  );
+  if (quarantined) return quarantined.candidate;
+  if (family === 'route') return analysis.map?.routes[0] || {};
+  if (family === 'drawing') return (analysis.map?.drawings || [])[0] || {};
+  return (analysis.map?.rainContingencies || [])[0] || {};
+}
+
+function normalizeStoredStructuralRecovery(value: unknown): StoredVenueMapStructuralRecovery | null {
+  const source = record(value);
+  if (
+    !source
+    || typeof source.mapFingerprint !== 'string'
+    || source.mapFingerprint.length < 1
+    || source.mapFingerprint.length > 200
+    || !Array.isArray(source.artifacts)
+    || source.artifacts.length > 10_000
+  ) {
+    return null;
+  }
+  const seenKeys = new Set<string>();
+  const artifacts = source.artifacts.flatMap((candidate) => {
+    const item = record(candidate);
+    const family = item?.family;
+    const recoveryCandidate = record(item?.candidate);
+    if (
+      !item
+      || !['map', 'point', 'route', 'drawing', 'rainContingency'].includes(String(family))
+      || typeof item.key !== 'string'
+      || item.key.length < 1
+      || item.key.length > 200
+      || seenKeys.has(item.key)
+      || typeof item.occurrenceIndex !== 'number'
+      || !Number.isInteger(item.occurrenceIndex)
+      || !Array.isArray(item.issues)
+      || !recoveryCandidate
+    ) return [];
+    const issues = item.issues
+      .filter((issue): issue is string => typeof issue === 'string')
+      .map((issue) => issue.slice(0, 500))
+      .slice(0, 10);
+    if (issues.length === 0) return [];
+    seenKeys.add(item.key);
+    return [{
+      key: item.key,
+      family,
+      occurrenceIndex: item.occurrenceIndex,
+      collectionMalformed: item.collectionMalformed === true || undefined,
+      mapFrameMalformed:
+        family === 'map' && item.mapFrameMalformed === true ? true : undefined,
+      mapComplexityExceeded:
+        family === 'map' && item.mapComplexityExceeded === true ? true : undefined,
+      issues,
+      candidate: sanitizeStructuralRecoveryCandidate(
+        family as VenueMapStructuralRecoveryArtifact['family'],
+        recoveryCandidate,
+      ),
+    } as VenueMapStructuralRecoveryArtifact];
+  });
+  const hasComplexityQuarantine = artifacts.some(
+    (artifact) => artifact.family === 'map' && artifact.mapComplexityExceeded === true,
+  );
+  const quarantinedFingerprint = quarantinedVenueMapFingerprint(source.quarantinedMap);
+  const quarantinedMapRedacted = source.quarantinedMapRedacted === true;
+  if (hasComplexityQuarantine) {
+    if (
+      quarantinedFingerprint === null
+      || typeof source.quarantinedMapFingerprint !== 'string'
+      || source.quarantinedMapFingerprint !== quarantinedFingerprint
+      || (!quarantinedMapRedacted && venueMapComplexityIssues(source.quarantinedMap).length === 0)
+    ) return null;
+  } else if (
+    source.quarantinedMap !== undefined
+    || source.quarantinedMapFingerprint !== undefined
+    || source.quarantinedMapRedacted !== undefined
+  ) {
+    return null;
+  }
+  return {
+    mapFingerprint: source.mapFingerprint,
+    artifacts,
+    quarantinedMap: hasComplexityQuarantine ? source.quarantinedMap : undefined,
+    quarantinedMapFingerprint: hasComplexityQuarantine ? quarantinedFingerprint! : undefined,
+    quarantinedMapRedacted: hasComplexityQuarantine && quarantinedMapRedacted ? true : undefined,
+  };
+}
+
+function writeVenueMapStructuralRecovery(
+  map: VenueMapConfig | null,
+  artifacts: VenueMapStructuralRecoveryArtifact[],
+  quarantinedMap?: unknown,
+  quarantinedMapRedacted = false,
+): void {
+  const hasComplexityQuarantine = artifacts.some(
+    (artifact) => artifact.family === 'map' && artifact.mapComplexityExceeded === true,
+  );
+  const quarantinedMapFingerprint = hasComplexityQuarantine
+    ? quarantinedVenueMapFingerprint(quarantinedMap)
+    : null;
+  const stored = {
+    mapFingerprint: structuralRecoveryFingerprint(map),
+    artifacts,
+    quarantinedMap: hasComplexityQuarantine ? quarantinedMap : undefined,
+    quarantinedMapFingerprint: quarantinedMapFingerprint || undefined,
+    quarantinedMapRedacted: hasComplexityQuarantine && quarantinedMapRedacted ? true : undefined,
+  };
+  inMemoryStructuralRecovery = stored;
+  try {
+    saveVersionedStorage(
+      STRUCTURAL_RECOVERY_KEY,
+      STRUCTURAL_RECOVERY_VERSION,
+      stored,
+      { emitChange: false },
+    );
+    structuralRecoveryStorageWriteFailed = false;
+  } catch {
+    structuralRecoveryStorageWriteFailed = true;
+    try {
+      localStorage.removeItem(STRUCTURAL_RECOVERY_KEY);
+    } catch {
+      // Storage is unavailable; the in-memory envelope remains authoritative.
+    }
+    // The mounted admin session still retains this recovery state in memory.
+  }
+}
+
+function readVenueMapStructuralRecovery(): StoredVenueMapStructuralRecovery | null {
+  try {
+    // Always re-read the envelope when storage is available. Another tab may
+    // have resolved or discovered recovery artifacts; a process-local cache
+    // must never authorize publication against stale cross-tab state.
+    if (localStorage.getItem(STRUCTURAL_RECOVERY_KEY) === null) {
+      // A quota failure can prevent a large recovery envelope from reaching
+      // localStorage. Keep the mounted session fail-closed and recoverable in
+      // memory; a subsequent server pull can repopulate it after reload.
+      if (structuralRecoveryStorageWriteFailed) return inMemoryStructuralRecovery;
+      inMemoryStructuralRecovery = null;
+      return null;
+    }
+    structuralRecoveryStorageWriteFailed = false;
+  } catch {
+    return inMemoryStructuralRecovery;
+  }
+  const stored = loadVersionedStorage<StoredVenueMapStructuralRecovery | null>({
+    key: STRUCTURAL_RECOVERY_KEY,
+    defaultValue: null,
+    currentVersion: STRUCTURAL_RECOVERY_VERSION,
+    validate: (value): value is StoredVenueMapStructuralRecovery | null =>
+      value === null || normalizeStoredStructuralRecovery(value) !== null,
+    normalize: normalizeStoredStructuralRecovery,
+  });
+  inMemoryStructuralRecovery = stored;
+  return stored;
+}
+
+export function getVenueMapStructuralRecoveryArtifacts(
+  map: VenueMapConfig | null = getVenueMapConfig(),
+): VenueMapStructuralRecoveryArtifact[] {
+  const stored = readVenueMapStructuralRecovery();
+  return stored?.mapFingerprint === structuralRecoveryFingerprint(map)
+    ? stored.artifacts
+    : [];
+}
+
+export function assertVenueMapStructuralRecoveryResolved(
+  map: VenueMapConfig | null = getVenueMapConfig(),
+): void {
+  const artifacts = getVenueMapStructuralRecoveryArtifacts(map);
+  if (artifacts.some(
+    (artifact) => artifact.family === 'map' && artifact.mapComplexityExceeded === true,
+  )) {
+    throw new Error('The oversized Venue Map must be downloaded for recovery and reset before publication.');
+  }
+  if (artifacts.some(
+    (artifact) => artifact.family === 'map' && artifact.mapFrameMalformed === true,
+  )) {
+    throw new Error('Invalid map dimensions must be explicitly accepted or reset before publication.');
+  }
+  if (artifacts.length > 0) {
+    throw new Error('Structurally malformed map records must be explicitly reconstructed or removed before publication.');
+  }
+}
+
+/** Export a checksum-covered, admin-backup-only copy of the quarantine state. */
+export function getVenueMapStructuralRecoveryForBackup(): VenueMapStructuralRecoveryBackupEnvelope {
+  const map = getVenueMapConfig();
+  const stored = readVenueMapStructuralRecovery();
+  if (stored?.mapFingerprint === structuralRecoveryFingerprint(map)) return stored;
+  return {
+    mapFingerprint: structuralRecoveryFingerprint(map),
+    artifacts: [],
+  };
+}
+
+export function getQuarantinedVenueMapForRecovery(
+  map: VenueMapConfig | null = getVenueMapConfig(),
+): unknown | undefined {
+  const stored = readVenueMapStructuralRecovery();
+  return stored?.mapFingerprint === structuralRecoveryFingerprint(map)
+    ? stored.quarantinedMap
+    : undefined;
+}
+
+/** Rebind the internal raw-source fingerprint after security redaction. */
+export function venueMapRecoverySourceIsRedacted(
+  map: VenueMapConfig | null = getVenueMapConfig(),
+): boolean {
+  const stored = readVenueMapStructuralRecovery();
+  return stored?.mapFingerprint === structuralRecoveryFingerprint(map)
+    && stored.quarantinedMapRedacted === true;
+}
+
+export function rebindVenueMapRecoveryAfterRedaction(value: unknown): unknown {
+  const source = record(value);
+  if (!source || source.quarantinedMap === undefined) return value;
+  const fingerprint = quarantinedVenueMapFingerprint(source.quarantinedMap);
+  return fingerprint
+    ? { ...source, quarantinedMapFingerprint: fingerprint }
+    : value;
+}
+
+export function venueMapStructuralRecoveryBackupIssue(
+  value: unknown,
+  mapValue: unknown,
+): string | null {
+  const source = record(value);
+  const normalized = normalizeStoredStructuralRecovery(value);
+  if (
+    !source
+    || !Array.isArray(source.artifacts)
+    || !normalized
+    || normalized.artifacts.length !== source.artifacts.length
+  ) {
+    return 'Venue Map structural recovery metadata is malformed.';
+  }
+  const mapAnalysis = mapValue === null
+    ? { map: null, structuralRecoveryArtifacts: [] }
+    : analyzeVenueMapConfig(mapValue, { preserveDuplicateIds: true });
+  const map = mapAnalysis.map;
+  if (mapValue !== null && !map) {
+    return 'Venue Map structural recovery metadata has no valid map target.';
+  }
+  const retainedArtifacts = new Set(normalized.artifacts.map((artifact) => JSON.stringify(artifact)));
+  if (mapAnalysis.structuralRecoveryArtifacts.some((artifact) =>
+    !retainedArtifacts.has(JSON.stringify(artifact)),
+  )) {
+    return 'Venue Map structural recovery metadata omits malformed occurrences found in its map.';
+  }
+  if (normalized.mapFingerprint !== structuralRecoveryFingerprint(map)) {
+    return 'Venue Map structural recovery metadata does not match its canonical map.';
+  }
+  return null;
+}
+
+/** Restore quarantine only when it is bound to the exact canonical map. */
+export function restoreVenueMapStructuralRecoveryFromBackup(value: unknown): void {
+  const map = getVenueMapConfig();
+  const issue = venueMapStructuralRecoveryBackupIssue(value, map);
+  if (issue) throw new Error(issue);
+  const normalized = normalizeStoredStructuralRecovery(value)!;
+  writeVenueMapStructuralRecovery(
+    map,
+    normalized.artifacts,
+    normalized.quarantinedMap,
+    normalized.quarantinedMapRedacted === true,
+  );
+}
+
 export function getVenueMapConfig(): VenueMapConfig | null {
-  return loadVersionedStorage<VenueMapConfig | null>({
+  let latestAnalysis: VenueMapNormalizationAnalysis = {
+    map: null,
+    structuralRecoveryArtifacts: [],
+  };
+  const map = loadVersionedStorage<VenueMapConfig | null>({
     key: MAP_KEY,
     defaultValue: null,
     currentVersion: MAP_VERSION,
-    validate: (v): v is VenueMapConfig | null => v === null || normalizeVenueMapConfig(v) !== null,
-    normalize: (v) => normalizeVenueMapConfig(v),
+    validate: (value): value is VenueMapConfig | null =>
+      value === null || normalizeVenueMapConfig(value, { preserveDuplicateIds: true }) !== null,
+    normalize: (value) => {
+      latestAnalysis = value === null
+        ? { map: null, structuralRecoveryArtifacts: [] }
+        : analyzeVenueMapConfig(value, { preserveDuplicateIds: true });
+      return latestAnalysis.map;
+    },
   });
+  const existingRecovery = readVenueMapStructuralRecovery();
+  if (
+    latestAnalysis.structuralRecoveryArtifacts.length > 0
+    && existingRecovery?.mapFingerprint !== structuralRecoveryFingerprint(map)
+  ) {
+    // Self-heal only when normalization actually discovered artifacts. Never
+    // erase a mismatched marker here: another tab may have written that marker
+    // immediately before exposing its matching canonical cache.
+    writeVenueMapStructuralRecovery(
+      map,
+      latestAnalysis.structuralRecoveryArtifacts,
+      latestAnalysis.quarantinedMap,
+    );
+  }
+  return map;
 }
 
-export function saveVenueMapConfig(config: VenueMapConfig): void {
+/**
+ * Local/demo portal reads share browser storage with the admin editor. A
+ * recovered working frame is admin-only until the explicit frame decision has
+ * been made, so those portals must receive no map while that marker is pending.
+ */
+export function getVenueMapConfigForPortal(): VenueMapConfig | null {
+  const map = getVenueMapConfig();
+  if (!map || venueMapFrameIssue(map)) return null;
+  return getVenueMapStructuralRecoveryArtifacts(map).some(
+    (artifact) => artifact.family === 'map'
+      && (artifact.mapFrameMalformed === true || artifact.mapComplexityExceeded === true),
+  )
+    ? null
+    : map;
+}
+
+export function assertVenueMapRoutePrioritiesResolved(value: unknown): void {
+  const normalized = normalizeVenueMapConfig(value, { preserveDuplicateIds: true });
+  if (normalized && venueMapHasInvalidRoutePriorities(normalized)) {
+    throw new Error('Invalid walkway priorities must be repaired before the Venue Map can be published.');
+  }
+}
+
+export function saveVenueMapConfig(
+  config: VenueMapConfig,
+  options: { emitChange?: boolean } = {},
+): void {
+  assertVenueMapComplexityWithinBudget(config);
+  assertVenueMapFrameValid(config);
+  assertVenueMapPointCoordinatesResolved(config);
+  if (venueMapHasInvalidRoutePriorities(config)) {
+    throw new Error('Invalid walkway priorities must be repaired before the Venue Map can be saved.');
+  }
+  if (venueMapHasDuplicateIdentities(config)) {
+    throw new Error('Duplicate map identities must be repaired before the Venue Map can be saved.');
+  }
+  if (venueMapHasRainContingencyCollisions(config)) {
+    throw new Error('Duplicate or competing rain plans must be repaired before the Venue Map can be saved.');
+  }
+  if (venueMapHasInvalidDrawingGeometry(config)) {
+    throw new Error('Unsupported or malformed map shapes must be repaired before the Venue Map can be saved.');
+  }
+  if ((config.routes || []).some((route) =>
+    route.pointIds.length < 2
+      || venueMapRouteReferenceIssues(route, config.points).length > 0,
+  )) {
+    throw new Error('Unavailable walkway point references must be repaired before the Venue Map can be saved.');
+  }
   const normalized = normalizeVenueMapConfig(config);
   if (!normalized) throw new Error('Venue map data is invalid and was not saved.');
-  saveVersionedStorage(MAP_KEY, MAP_VERSION, normalized);
+  saveVersionedStorage(MAP_KEY, MAP_VERSION, normalized, options);
+  writeVenueMapStructuralRecovery(normalized, []);
+}
+
+/** Replace the browser cache from an authoritative server value without publishing it. */
+export function cacheVenueMapConfigFromServer(value: unknown): VenueMapConfig | null {
+  const analysis = value === null
+    ? { map: null, structuralRecoveryArtifacts: [] }
+    : analyzeVenueMapConfig(value, { preserveDuplicateIds: true });
+  if (value !== null && !analysis.map) {
+    throw new Error('The shared venue map is invalid and could not be loaded.');
+  }
+  // Publish the fingerprint-bound quarantine marker before exposing the safe
+  // canonical cache. Cross-tab readers must never observe a newly normalized
+  // malformed map during a window in which its recovery state is still empty.
+  writeVenueMapStructuralRecovery(
+    analysis.map,
+    analysis.structuralRecoveryArtifacts,
+    analysis.quarantinedMap,
+  );
+  saveVersionedStorage(MAP_KEY, MAP_VERSION, analysis.map, { emitChange: false });
+  return analysis.map;
 }
 
 export function emptyVenueMapConfig(): VenueMapConfig {
   return {
-    width: 100,
-    height: 80,
+    width: LEGACY_VENUE_MAP_WIDTH,
+    height: LEGACY_VENUE_MAP_HEIGHT,
     points: [],
-    rainContingencies: [],
     routes: [],
     drawings: [],
+    rainContingencies: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -251,18 +1183,38 @@ export function emptyVenueMapConfig(): VenueMapConfig {
 export function routePolyline(map: VenueMapConfig | null, routeId: string): { x: number; y: number }[] {
   if (!map) return [];
   const route = (map.routes || []).find((r) => r.id === routeId);
-  if (!route) return [];
+  if (
+    !route
+    || venueMapRoutePriorityIssue(route)
+    || route.pointIds.length < 2
+    || venueMapRouteReferenceIssues(route, map.points).length > 0
+  ) return [];
   const byId = new Map(map.points.map((p) => [p.id, p]));
   return route.pointIds.map((id) => byId.get(id)).filter(Boolean).map((p) => ({ x: p!.x, y: p!.y }));
+}
+
+export function normalizeVenueRulesConfig(value: unknown): VenueRulesConfig {
+  const source = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return {
+    rules: Array.isArray(source.rules)
+      ? source.rules
+        .filter((rule): rule is string => typeof rule === 'string')
+        .map((rule) => rule.trim())
+        .filter(Boolean)
+      : [],
+    updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : '',
+  };
 }
 
 export function getVenueRules(): VenueRulesConfig {
   return loadVersionedStorage<VenueRulesConfig>({
     key: RULES_KEY,
-    defaultValue: { rules: [], updatedAt: new Date().toISOString() },
+    defaultValue: normalizeVenueRulesConfig(undefined),
     currentVersion: RULES_VERSION,
     validate: (v): v is VenueRulesConfig => !!v && typeof v === 'object',
-    normalize: (v) => (v ? (v as VenueRulesConfig) : { rules: [], updatedAt: new Date().toISOString() }),
+    normalize: normalizeVenueRulesConfig,
   });
 }
 
@@ -278,7 +1230,12 @@ export function findRainContingency(
   map: VenueMapConfig | null,
   outdoorVenueId: string,
 ): RainContingency | undefined {
-  return map?.rainContingencies.find((c) => c.outdoorVenueId === outdoorVenueId);
+  if (!map) return undefined;
+  return partitionVenueMapRainContingencyCollisions(map).map.rainContingencies
+    .find((contingency) =>
+      contingency.outdoorVenueId === outdoorVenueId
+        && contingency.outdoorVenueId !== contingency.indoorVenueId,
+    );
 }
 
 /**

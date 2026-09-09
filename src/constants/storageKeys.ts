@@ -56,6 +56,8 @@ export const STORAGE_KEYS = {
   COUPLE_GUEST_EVENTS: 'spm_couple_guest_events',
   VENUE_CALENDAR_EVENTS: 'spm_venue_calendar_events',
   VENUE_MAP_CONFIGS: 'spm_venue_map_configs',
+  /** Admin-only, non-syncable recovery metadata for rejected canonical map entries. */
+  VENUE_MAP_STRUCTURAL_RECOVERY: 'spm_venue_map_structural_recovery',
   VENUE_RULES: 'spm_venue_rules',
   VENUE_WEATHER: 'spm_venue_weather',
 

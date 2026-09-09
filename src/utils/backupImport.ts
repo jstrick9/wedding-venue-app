@@ -3,7 +3,11 @@ import { BACKUP_DOMAINS } from './backupDomains';
 import { containsRedaction, countRedactedFields } from './backupSecrets';
 import type { BackupBundle, BackupImportReport, BackupPayload } from './backupTypes';
 import { emitDataChanged } from './appEvents';
-import { buildBackupBundle } from './backupExport';
+import { BACKUP_BUNDLE_VERSION, buildBackupBundle } from './backupExport';
+import {
+  getVenueMapConfig,
+  venueMapStructuralRecoveryBackupIssue,
+} from '../services/wayfinding/venueWayfindingService';
 import {
   validateDecorArrangement,
   validateDecorItem,
@@ -57,6 +61,13 @@ export async function preflightBackupImport(
     );
   }
 
+  const bundleVersion = bundle?.manifest?.bundleVersion;
+  if (!Number.isInteger(bundleVersion) || Number(bundleVersion) < 1) {
+    errors.push('Backup bundle version is missing or invalid.');
+  } else if (Number(bundleVersion) > BACKUP_BUNDLE_VERSION) {
+    errors.push('Backup was created by a newer app version and cannot be restored safely.');
+  }
+
   if (!bundle?.payload) {
     errors.push('Backup payload is missing.');
   }
@@ -71,6 +82,25 @@ export async function preflightBackupImport(
   }
 
   const payload = bundle?.payload || {};
+
+  if (Number(bundleVersion) >= 2 && payload.venueMapStructuralRecovery === undefined) {
+    errors.push('Backup is missing required Venue Map structural recovery metadata.');
+  } else if (Number(bundleVersion) === 1 && payload.venueMapStructuralRecovery === undefined) {
+    warnings.push(
+      'This legacy backup predates portable Venue Map recovery metadata. Its canonical map can still be restored, but any quarantine state omitted by the old export cannot be recovered.',
+    );
+  }
+  if (payload.venueMapStructuralRecovery !== undefined) {
+    if (payload.venueMapConfigs === undefined) {
+      errors.push('Venue Map structural recovery metadata is present without its canonical map.');
+    } else {
+      const recoveryIssue = venueMapStructuralRecoveryBackupIssue(
+        payload.venueMapStructuralRecovery,
+        payload.venueMapConfigs,
+      );
+      if (recoveryIssue) errors.push(recoveryIssue);
+    }
+  }
 
   // Warn when the bundle contains redacted security material (it was exported
   // with `buildRedactedExportBundle`), so users know accounts/tokens won't
@@ -253,6 +283,20 @@ export function applyBackupPayload(
   payload: BackupPayload,
   mode: 'replace' | 'merge' = 'replace',
 ): void {
+  if (payload.venueMapStructuralRecovery !== undefined) {
+    if (payload.venueMapConfigs === undefined) {
+      throw new Error('Venue Map structural recovery metadata cannot be restored without its canonical map.');
+    }
+    const targetMap = mode === 'merge'
+      ? mergeValue(getVenueMapConfig(), payload.venueMapConfigs)
+      : payload.venueMapConfigs;
+    const recoveryIssue = venueMapStructuralRecoveryBackupIssue(
+      payload.venueMapStructuralRecovery,
+      targetMap,
+    );
+    if (recoveryIssue) throw new Error(recoveryIssue);
+  }
+
   for (const domain of BACKUP_DOMAINS) {
     const incoming = payload[domain.key];
     if (incoming === undefined) continue;

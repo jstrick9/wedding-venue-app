@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, within } from '@testing-library/react';
 import { VenueMapCanvas, clientPointToVenueMap } from './VenueMapCanvas';
 import { emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
 import { addMapPoint } from '../utils/venueMapDesigner';
@@ -37,6 +37,53 @@ describe('VenueMapCanvas', () => {
       100,
       200,
     ).inside).toBe(false);
+  });
+
+  it('keeps extreme aspect ratios readable in a keyboard-pannable bounded viewport', () => {
+    const wideMap = {
+      ...emptyVenueMapConfig(),
+      width: 500,
+      height: 20,
+      points: [{ id: 'gate', label: 'Gate', kind: 'entry' as const, x: 5, y: 5 }],
+    };
+    const { container, rerender } = render(<VenueMapCanvas map={wideMap} />);
+    const viewport = container.querySelector<HTMLElement>('[data-map-scroll-viewport]')!;
+    const scrollBy = vi.fn();
+    Object.defineProperty(viewport, 'scrollBy', { configurable: true, value: scrollBy });
+
+    expect(viewport).toHaveAttribute('tabindex', '0');
+    expect(viewport).toHaveAttribute('aria-label', 'Scrollable venue map viewport');
+    expect(viewport).toHaveClass('max-h-[70vh]', 'overflow-auto');
+    expect(container.querySelector('svg')).toHaveStyle({ width: '6000px', maxWidth: 'none' });
+    expect(screen.getByText(/extra-wide or extra-tall layout/i)).toBeInTheDocument();
+
+    fireEvent.keyDown(viewport, { key: 'ArrowRight' });
+    expect(scrollBy).toHaveBeenCalledWith({ left: 64, top: 0, behavior: 'smooth' });
+
+    rerender(<VenueMapCanvas map={{ ...wideMap, width: 20, height: 500 }} />);
+    expect(container.querySelector('svg')).toHaveStyle({ width: '240px', marginInline: 'auto' });
+
+    rerender(<VenueMapCanvas map={emptyVenueMapConfig()} />);
+    const standardViewport = container.querySelector<HTMLElement>('[data-map-scroll-viewport]')!;
+    expect(standardViewport).not.toHaveAttribute('tabindex');
+    expect(container.querySelector('svg')).not.toHaveStyle({ width: '6000px' });
+  });
+
+  it('renders labels for supported legacy circles and lines', () => {
+    const map = {
+      ...emptyVenueMapConfig(),
+      drawings: [
+        { id: 'circle', type: 'circle', x: 20, y: 20, radius: 5, text: 'Round garden' },
+        { id: 'line', type: 'line', x: 0, y: 0, points: [{ x: 1, y: 1 }, { x: 10, y: 10 }], text: 'Fence line' },
+      ],
+    };
+    const { container } = render(<VenueMapCanvas map={map} />);
+
+    expect(container.querySelector('circle')).toBeInTheDocument();
+    expect(container.querySelector('polyline')).toBeInTheDocument();
+    const labels = [...container.querySelectorAll('svg text')].map((node) => node.textContent);
+    expect(labels).toContain('Round garden');
+    expect(labels).toContain('Fence line');
   });
 
   it('places the active palette kind at the clicked map coordinate', () => {
@@ -95,14 +142,76 @@ describe('VenueMapCanvas', () => {
     expect(onMovePoint).toHaveBeenLastCalledWith(map.points[0].id, 11, 10);
   });
 
+  it('provides large editor selection targets independent of map aspect ratio', () => {
+    let map = { ...emptyVenueMapConfig(), width: 500, height: 20 };
+    map = addMapPoint(map, {
+      label: 'Main Gate', kind: 'entry', x: 10, y: 10,
+    });
+    map = addMapPoint(map, {
+      label: 'Path Node 1', kind: 'path', x: 250, y: 10,
+    });
+    const onSelectPoint = vi.fn();
+    render(
+      <VenueMapCanvas
+        map={map}
+        editable
+        selectedPointId={map.points[0].id}
+        onSelectPoint={onSelectPoint}
+      />,
+    );
+
+    const summary = screen.getByText('Map points for editing').closest('summary')!;
+    fireEvent.click(summary);
+    const details = summary.closest('details')!;
+    const selectedAction = within(details).getByRole('button', { name: /Select Main Gate for editing/i });
+    const pathAction = within(details).getByRole('button', { name: /Select Path Node 1 for editing/i });
+    expect(selectedAction).toHaveAttribute('aria-pressed', 'true');
+    expect(pathAction).toHaveClass('min-h-11');
+    expect(pathAction).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(pathAction);
+    expect(onSelectPoint).toHaveBeenCalledWith(map.points[1].id);
+  });
+
   it('exposes read-only points as named keyboard actions', () => {
     const map = addMapPoint(emptyVenueMapConfig(), {
       label: 'Main Gate', kind: 'entry', x: 10, y: 10, lat: 35.2, lng: -80.8,
     });
     const onPointClick = vi.fn();
     render(<VenueMapCanvas map={map} onPointClick={onPointClick} />);
-    const point = screen.getByRole('button', { name: /Main Gate.*Open in maps available/i });
+    const point = document.querySelector(`[data-map-point="${map.points[0].id}"]`)!;
+    expect(point.getAttribute('aria-label')).toMatch(/Main Gate.*Open in maps\./i);
+    fireEvent.focus(point);
+    expect(document.querySelector(`[data-map-focus-ring="${map.points[0].id}"]`)).toBeInTheDocument();
     fireEvent.keyDown(point, { key: 'Enter' });
+    expect(onPointClick).toHaveBeenCalledWith(map.points[0]);
+    fireEvent.blur(point);
+    expect(document.querySelector('[data-map-focus-ring]')).not.toBeInTheDocument();
+  });
+
+  it('provides the same filtered read-only action in a large touch-target list', () => {
+    let map = addMapPoint(emptyVenueMapConfig(), {
+      label: 'Main Gate', kind: 'entry', x: 10, y: 10, lat: 35.2, lng: -80.8,
+    });
+    map = addMapPoint(map, {
+      label: 'No action', kind: 'amenity', x: 20, y: 20,
+    });
+    const onPointClick = vi.fn();
+    render(
+      <VenueMapCanvas
+        map={map}
+        onPointClick={onPointClick}
+        isPointInteractive={(point) => point.lat !== undefined && point.lng !== undefined}
+        pointActionLabel={() => 'Open directions.'}
+      />,
+    );
+
+    const summary = screen.getByText('Map location actions').closest('summary')!;
+    fireEvent.click(summary);
+    const details = summary.closest('details')!;
+    const action = within(details).getByRole('button', { name: /Main Gate.*Open directions/i });
+    expect(action).toHaveClass('min-h-11');
+    expect(within(details).queryByRole('button', { name: /No action/i })).not.toBeInTheDocument();
+    fireEvent.click(action);
     expect(onPointClick).toHaveBeenCalledWith(map.points[0]);
   });
 
@@ -123,8 +232,9 @@ describe('VenueMapCanvas', () => {
       />,
     );
 
-    expect(screen.getAllByRole('button')).toHaveLength(1);
-    const gate = screen.getByRole('button', { name: /Main Gate.*Open directions/i });
+    expect(container.querySelectorAll('[data-map-point][role="button"]')).toHaveLength(1);
+    const gate = container.querySelector(`[data-map-point="${map.points[0].id}"]`)!;
+    expect(gate.getAttribute('aria-label')).toMatch(/Main Gate.*Open directions/i);
     fireEvent.keyDown(gate, { key: 'Enter' });
     fireEvent.click(container.querySelector(`[data-map-point="${map.points[1].id}"]`)!);
     expect(onPointClick).toHaveBeenCalledTimes(1);
@@ -144,5 +254,29 @@ describe('VenueMapCanvas', () => {
     expect(text).toContain('Parking');
     expect(text).toContain('Entry / Exit');
     expect(text).not.toContain('Event Space');
+  });
+
+  it('visibly and accessibly identifies emergency-only walkways', () => {
+    const map: VenueMapConfig = {
+      ...emptyVenueMapConfig(),
+      points: [
+        { id: 'gate', label: 'Gate', kind: 'entry', x: 5, y: 5 },
+        { id: 'assembly', label: 'Assembly', kind: 'amenity', x: 30, y: 20 },
+      ],
+      routes: [{
+        id: 'emergency',
+        name: 'North Evacuation',
+        pointIds: ['gate', 'assembly'],
+        priority: 'emergency-only',
+      }],
+    };
+    const { container } = render(<VenueMapCanvas map={map} />);
+
+    expect(container.querySelector('polyline')).toHaveAttribute('stroke', '#b91c1c');
+    expect([...container.querySelectorAll('text')].some((node) =>
+      node.textContent?.includes('Emergency only: North Evacuation'))).toBe(true);
+    expect(container.querySelector('.sr-only')).toHaveTextContent(
+      /North Evacuation\. Routing priority: Emergency only\./i,
+    );
   });
 });

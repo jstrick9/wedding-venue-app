@@ -72,6 +72,8 @@ export interface BackupPayload {
   venueCalendarEvents?: unknown;
   vendorCategories?: unknown;
   venueMapConfigs?: unknown;
+  /** Admin-only, fingerprint-bound quarantine metadata; never a publishable map domain. */
+  venueMapStructuralRecovery?: unknown;
   venueRules?: unknown;
   venueWeather?: unknown;
   staffTasks?: unknown;

@@ -10,6 +10,7 @@ import {
   PortalScheduleItem,
   CoupleChecklistItem,
   VenueMapPoint,
+  VenueMapConfig,
   DEFAULT_MEAL_OPTIONS,
 } from '../types';
 import {
@@ -17,6 +18,7 @@ import {
   resolveCoupleInviteToken,
   acceptCoupleInvite,
   saveCoupleSession,
+  saveCoupleSessionForEvent,
   loadCoupleSession,
   clearCoupleSession,
   getCoupleTokenFromLocation,
@@ -41,6 +43,7 @@ import {
   importCoupleGuests,
   exportCoupleGuestsCsv,
   buildGuestInviteUrl,
+  buildDefaultCouplePortalConfig,
   getCouplePortalConfig,
   setCouplePortalConfig,
   rotateCoupleGuestToken,
@@ -62,15 +65,23 @@ import {
   removeCoupleGuestEvent,
   assignGuestToEvent,
   removeGuestFromEvent,
-  getAssignedGuestCount,
-  findCoupleGuestEvent,
   ensureDerivedGuestEvents,
   GUEST_EVENT_KIND_LABELS,
 } from '../services/couples/coupleGuestEventService';
 import { getVenues } from '../hooks/useLayoutState';
 import { getVenueVendors } from '../hooks/useVendors';
-import { getVenueMapConfig, findRainContingency, getVenueRules } from '../services/wayfinding/venueWayfindingService';
-import { getVenueWeather, eventDates } from '../services/weather/venueWeatherService';
+import {
+  getVenueMapConfigForPortal,
+  findRainContingency,
+  getVenueRules,
+  normalizeVenueMapConfigForPortal,
+  normalizeVenueRulesConfig,
+} from '../services/wayfinding/venueWayfindingService';
+import {
+  eventDates,
+  getVenueWeather,
+  normalizeVenueWeatherConfig,
+} from '../services/weather/venueWeatherService';
 import { useBrandingConfig } from '../config';
 import { applyDocumentBranding } from '../utils/documentBranding';
 import { getPublicVenueBranding } from '../services/platform/publicVenueService';
@@ -92,7 +103,7 @@ import { createSecretRecord } from '../utils/auth';
 import { sendCoupleEmail } from '../services/couples/coupleEmailService';
 import { CoupleLayoutEditor } from './CoupleLayoutEditor';
 import { VenueMapCanvas } from './VenueMapCanvas';
-import { projectVenueMap } from '../utils/venueMapDesigner';
+import { projectVenueMap, rainContingencyValidationIssue } from '../utils/venueMapDesigner';
 import { LodgingAssignmentsModal } from './LodgingAssignmentsModal';
 import { normalizeEmail, normalizeUsPhone } from '../utils/contactQuality';
 import { PortalInviteAccountSetup } from './PortalInviteAccountSetup';
@@ -115,6 +126,50 @@ function safeDateTime(value?: string): string {
 
 import { CoupleTimelineTab } from './couple/CoupleTimelineTab';
 
+function invitationCatalogArray<T>(
+  catalog: Record<string, unknown> | undefined,
+  key: string,
+  legacyRead: () => T[],
+): T[] {
+  if (catalog === undefined) return legacyRead();
+  return Array.isArray(catalog[key]) ? catalog[key] as T[] : [];
+}
+
+function resolveSnapshotInvite(
+  events: CoupleEvent[],
+  token: string,
+): { event: CoupleEvent; collaborator: CoupleCollaborator } | null {
+  for (const event of events) {
+    if (event.inviteToken === token && isPortalAccessActive(event.inviteExpiresAt)) {
+      const existing = event.collaborators.find((candidate) => (
+        candidate.inviteToken === token || candidate.id === `col-${event.id}-owner`
+      ));
+      const collaborator = existing || {
+        id: `col-${event.id}-owner`,
+        name: event.coupleName,
+        email: '',
+        role: 'couple' as const,
+        inviteToken: token,
+        inviteIssuedAt: event.inviteIssuedAt || event.createdAt,
+        inviteExpiresAt: event.inviteExpiresAt,
+        accepted: true,
+        invitedAt: event.createdAt,
+      };
+      return {
+        event: existing ? event : { ...event, collaborators: [...event.collaborators, collaborator] },
+        collaborator,
+      };
+    }
+    const collaborator = event.collaborators.find((candidate) => (
+      candidate.inviteToken === token
+      && !candidate.revokedAt
+      && isPortalAccessActive(candidate.inviteExpiresAt || event.inviteExpiresAt)
+    ));
+    if (collaborator) return { event, collaborator };
+  }
+  return null;
+}
+
 type TabId = 'overview' | 'package' | 'spaces' | 'questions' | 'design' | 'checklist' | 'timeline' | 'vendors' | 'guests' | 'portal' | 'chat' | 'collaborators';
 
 interface CouplesPortalProps {
@@ -130,7 +185,7 @@ interface CouplesPortalProps {
  * management (planner / parents / vendors). Space-driven questions,
  * layout design/approval, and a per-couple guest portal are layered on next.
  */
-export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: CouplesPortalProps) {
+function CouplesPortalSession({ coupleToken, venueSlug, onExitPortal }: CouplesPortalProps) {
   const localConfig = useBrandingConfig();
   const [publicVenueConfig, setPublicVenueConfig] = useState<typeof localConfig | null>(null);
   const config = publicVenueConfig || localConfig;
@@ -142,17 +197,48 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const [portalAccountAccess, setPortalAccountAccess] = useState<'pending' | 'ready' | 'legacy'>(
     () => cloudAccountInvite ? 'pending' : 'legacy',
   );
+  // Cloud map rendering must not depend on a successful browser-cache write.
+  // `undefined` selects the local/legacy cache; `null` is an authoritative or
+  // context-clearing absence; an object is the current invite-scoped map.
+  const [remoteVenueMap, setRemoteVenueMap] = useState<VenueMapConfig | null | undefined>();
+  const [venueMapRetryNonce, setVenueMapRetryNonce] = useState(0);
+  // Venue-authored catalogs are immutable from this portal. In cloud mode they
+  // render directly from the invitation-scoped snapshot; global browser storage
+  // remains a compatibility cache only.
+  const [remoteVenueCatalog, setRemoteVenueCatalog] = useState<Record<string, unknown> | undefined>(
+    () => cloudAccountInvite ? {} : undefined,
+  );
+  const [cloudReadOnlyFallback, setCloudReadOnlyFallback] = useState(false);
+  const cloudReadOnlyFallbackRef = useRef(false);
+  const [failedCacheDomains, setFailedCacheDomains] = useState<string[]>([]);
   const handlePortalAccountReady = useCallback((context: PortalInviteContext) => {
     if (context.organizationSlug) setActiveOrganizationSlug(context.organizationSlug);
+    setRemoteVenueMap(null);
+    setRemoteVenueCatalog({});
+    cloudReadOnlyFallbackRef.current = false;
+    setCloudReadOnlyFallback(false);
+    setFailedCacheDomains([]);
     setPortalAccountAccess('ready');
   }, []);
-  const handleLegacyPortalInvite = useCallback(() => setPortalAccountAccess('legacy'), []);
+  const handleLegacyPortalInvite = useCallback(() => {
+    setRemoteVenueMap(undefined);
+    setRemoteVenueCatalog(undefined);
+    cloudReadOnlyFallbackRef.current = false;
+    setCloudReadOnlyFallback(false);
+    setFailedCacheDomains([]);
+    setPortalAccountAccess('legacy');
+  }, []);
 
   useEffect(() => {
     if (coupleToken) setPersistedInviteToken(coupleToken);
   }, [coupleToken]);
 
   useEffect(() => {
+    setRemoteVenueMap(cloudAccountInvite ? null : undefined);
+    setRemoteVenueCatalog(cloudAccountInvite ? {} : undefined);
+    cloudReadOnlyFallbackRef.current = false;
+    setCloudReadOnlyFallback(false);
+    setFailedCacheDomains([]);
     setPortalAccountAccess(cloudAccountInvite ? 'pending' : 'legacy');
   }, [accountInviteToken, cloudAccountInvite]);
 
@@ -183,6 +269,19 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   // pulled snapshot; the server refuses a save with 'conflict' when the row
   // moved in between (e.g. a guest submitted after our pull).
   const cloudSyncedAtRef = useRef<string | undefined>(undefined);
+  const activeVenueMap = remoteVenueMap !== undefined
+    ? remoteVenueMap
+    : getVenueMapConfigForPortal();
+  const activeVenueRules = useMemo(() => (
+    remoteVenueCatalog === undefined
+      ? getVenueRules()
+      : normalizeVenueRulesConfig(remoteVenueCatalog.venueRules)
+  ), [remoteVenueCatalog]);
+  const activeVenueWeather = useMemo(() => (
+    remoteVenueCatalog === undefined
+      ? getVenueWeather()
+      : normalizeVenueWeatherConfig(remoteVenueCatalog.venueWeather)
+  ), [remoteVenueCatalog]);
 
   const event = useMemo(
     () => events.find((e) => e.id === session?.eventId) || null,
@@ -208,12 +307,12 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   // A venue-marked "completed" event is locked for planning: everything is
   // view-only (the couple can still read and chat).
   const isComplete = event?.status === 'completed';
-  const canEditSpaces = !isComplete && (myRole === 'couple' || myRole === 'planner');
-  const canEditDesign = !isComplete && (myRole === 'couple' || myRole === 'planner');
-  const canManageGuests = !isComplete && (myRole === 'couple' || myRole === 'planner');
-  const canAnswerQuestions = !isComplete && myRole !== 'vendor';
-  const canManagePortal = !isComplete && myRole === 'couple';
-  const canManageCollaborators = !isComplete && myRole === 'couple';
+  const canEditSpaces = !cloudReadOnlyFallback && !isComplete && (myRole === 'couple' || myRole === 'planner');
+  const canEditDesign = !cloudReadOnlyFallback && !isComplete && (myRole === 'couple' || myRole === 'planner');
+  const canManageGuests = !cloudReadOnlyFallback && !isComplete && (myRole === 'couple' || myRole === 'planner');
+  const canAnswerQuestions = !cloudReadOnlyFallback && !isComplete && myRole !== 'vendor';
+  const canManagePortal = !cloudReadOnlyFallback && !isComplete && myRole === 'couple';
+  const canManageCollaborators = !cloudReadOnlyFallback && !isComplete && myRole === 'couple';
 
   // Token-based entry: whenever coupleToken is provided (or in window.location),
   // resolve it and sign in. Importantly, if there is an existing session from a
@@ -273,30 +372,62 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
         cloudSyncedAtRef.current = pulled.updatedAt;
         const snapshot = pulled.payload;
         cloudHydratingRef.current = true;
-        hydrateCouplePortalSnapshot(snapshot);
-        // F-265-1 (Review #265): freshly parsed events/session objects get new
-        // identities on every poll even when their content is identical. That
-        // identity churn cascaded through the `event` → `portalConfig` memos
-        // into the portal-settings draft effect, silently wiping unsaved draft
-        // edits every 5 seconds while cloud sync was enabled. Swap state in
-        // only when the content actually changed (React keeps the old reference
-        // and skips the re-render when we return `prev`).
-        const latestEvents = getCoupleEvents();
-        setEvents((prev) => (JSON.stringify(prev) === JSON.stringify(latestEvents) ? prev : latestEvents));
-        const resolved = resolveCoupleInviteToken(cloudToken);
+        setRemoteVenueCatalog((previous) => (
+          JSON.stringify(previous) === JSON.stringify(snapshot) ? previous : snapshot
+        ));
+        if (Object.prototype.hasOwnProperty.call(snapshot, 'venueMapConfigs')) {
+          const nextVenueMap = normalizeVenueMapConfigForPortal(
+            snapshot.venueMapConfigs,
+            { preservePortalStatus: true, preserveDuplicateIds: true },
+          );
+          setRemoteVenueMap((previous) => (
+            JSON.stringify(previous) === JSON.stringify(nextVenueMap)
+              ? previous
+              : nextVenueMap
+          ));
+        }
+        const hydration = hydrateCouplePortalSnapshot(snapshot);
+        const snapshotEvents = Array.isArray(snapshot.coupleEvents)
+          ? snapshot.coupleEvents as CoupleEvent[]
+          : [];
+        // The server response, not a global browser cache, owns this invitation.
+        // Keep its exact scoped event set available even when localStorage rejects
+        // one or every hydration write.
+        const resolved = resolveSnapshotInvite(snapshotEvents, cloudToken);
+        const visibleEvents = resolved
+          ? snapshotEvents.map((candidate) => candidate.id === resolved.event.id ? resolved.event : candidate)
+          : snapshotEvents;
+        setEvents((previous) => (
+          JSON.stringify(previous) === JSON.stringify(visibleEvents) ? previous : visibleEvents
+        ));
         if (resolved) {
-          saveCoupleSession(resolved.event.id, resolved.collaborator.id);
-          // Compare semantic fields only: saveCoupleSession rewrites the
-          // rolling 30-day expiresAt on every call, so it always "changes".
-          const latestSession = loadCoupleSession();
-          setSession((prev) => (
-            prev && latestSession
-              && prev.eventId === latestSession.eventId
-              && prev.collaboratorId === latestSession.collaboratorId
-              && prev.role === latestSession.role
-              && prev.coupleName === latestSession.coupleName
-                ? prev
-                : latestSession
+          const memorySession = saveCoupleSessionForEvent(
+            resolved.event,
+            resolved.collaborator.id,
+          );
+          const persistedSession = loadCoupleSession();
+          const sessionPersisted = Boolean(
+            persistedSession
+            && persistedSession.eventId === memorySession.eventId
+            && persistedSession.collaboratorId === memorySession.collaboratorId,
+          );
+          const failures = [
+            ...hydration.failedDomains,
+            ...(!sessionPersisted ? ['coupleSession'] : []),
+          ];
+          setFailedCacheDomains(failures);
+          cloudReadOnlyFallbackRef.current = failures.length > 0;
+          setCloudReadOnlyFallback(failures.length > 0);
+          // Compare semantic fields only: persistence refreshes the rolling
+          // expiry on every poll even when the authenticated identity is stable.
+          setSession((previous) => (
+            previous
+              && previous.eventId === memorySession.eventId
+              && previous.collaboratorId === memorySession.collaboratorId
+              && previous.role === memorySession.role
+              && previous.coupleName === memorySession.coupleName
+                ? previous
+                : memorySession
           ));
           setInvalidInvite(false);
         }
@@ -312,6 +443,11 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
           cloudSyncedAtRef.current = undefined;
           clearCoupleSession();
           setSession(null);
+          setRemoteVenueMap(null);
+          setRemoteVenueCatalog({});
+          cloudReadOnlyFallbackRef.current = false;
+          setCloudReadOnlyFallback(false);
+          setFailedCacheDomains([]);
           setInvalidInvite(false);
           setPortalAccountAccess('pending');
         } else if (!cancelled) {
@@ -328,7 +464,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
     };
 
     const pushLocalSnapshot = async () => {
-      if (cloudHydratingRef.current) return;
+      if (cloudHydratingRef.current || cloudReadOnlyFallbackRef.current) return;
       const activeEventId = event?.id || session?.eventId;
       if (!activeEventId) return;
       try {
@@ -360,7 +496,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
     void hydrateRemote();
     const off = on('spm_data_changed', (detail) => {
-      if (cloudHydratingRef.current || detail?.source === 'backend') return;
+      if (cloudHydratingRef.current || cloudReadOnlyFallbackRef.current || detail?.source === 'backend') return;
       const type = detail?.type || '';
       if (type !== 'all' && !type.includes('couple') && !type.includes('guest') && !type.includes('package')) return;
       if (cloudSaveTimerRef.current) clearTimeout(cloudSaveTimerRef.current);
@@ -382,7 +518,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       }
       cloudSaveTimerRef.current = null;
     };
-  }, [cloudAccountInvite, cloudToken, event?.id, portalAccountAccess, session?.eventId, venueSlug]);
+  }, [cloudAccountInvite, cloudToken, event?.id, portalAccountAccess, session?.eventId, venueMapRetryNonce, venueSlug]);
 
   const handleManualLaunch = (tokenInput: string) => {
     const token = tokenInput.trim();
@@ -419,29 +555,38 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
     showToast(`Welcome to the Couples Portal, ${resolved.event.coupleName}!`, 'success');
   };
 
-  const venues = useMemo(() => getVenues(), []);
+  const venues = useMemo(
+    () => invitationCatalogArray(remoteVenueCatalog, 'venues', getVenues),
+    [remoteVenueCatalog],
+  );
 
   const refresh = () => setEvents(getCoupleEvents());
 
   // ── Questions (reuse venue's Event Questions, scoped per couple event) ──────
-  const eventQuestions = useMemo<EventQuestion[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.EVENT_QUESTIONS);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as EventQuestion[];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }, []);
+  const eventQuestions = useMemo<EventQuestion[]>(() => invitationCatalogArray(
+    remoteVenueCatalog,
+    'eventQuestions',
+    () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.EVENT_QUESTIONS);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw) as EventQuestion[];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    },
+  ), [remoteVenueCatalog]);
 
-  const coupleAnswers = useMemo<EventAnswer[]>(
-    () => (event ? getCoupleAnswers(event.id) : []),
-    [event],
-  );
+  const coupleAnswers = useMemo<EventAnswer[]>(() => {
+    if (!event) return [];
+    return cloudReadOnlyFallback
+      ? invitationCatalogArray<EventAnswer>(remoteVenueCatalog, 'coupleAnswers', () => [])
+      : getCoupleAnswers(event.id);
+  }, [cloudReadOnlyFallback, event, remoteVenueCatalog]);
 
   const handleSaveAnswers = (answers: EventAnswer[]) => {
-    if (!event) return;
+    if (cloudReadOnlyFallback || !event) return;
     saveCoupleAnswers(event.id, answers);
     // Derive recommended venue categories from answers and narrow availableSpaces
     // to the venues whose category was selected by the couple's answers.
@@ -465,30 +610,41 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const [chatDraft, setChatDraft] = useState('');
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const [msgTick, setMsgTick] = useState(0);
-  const messages = useMemo(
-    () => (event ? getCoupleMessages(event.id) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [event, msgTick],
-  );
-  // Unread venue→couple messages shown as a badge on the Chat tab.
+  const messages = useMemo(() => {
+    if (!event) return [];
+    return cloudReadOnlyFallback
+      ? invitationCatalogArray<ReturnType<typeof getCoupleMessages>[number]>(
+          remoteVenueCatalog,
+          'coupleMessages',
+          () => [],
+        )
+      : getCoupleMessages(event.id);
+  }, [cloudReadOnlyFallback, event, msgTick, remoteVenueCatalog]);
+  // Unread venue→couple messages shown as a badge on the Chat tab. In degraded
+  // mode avoid reading another invitation's global read cursor.
   const unreadVenueChat = useMemo(
-    () => (event ? (getUnreadCoupleMessageCounts([event.id], 'couple')[event.id] || 0) : 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [event, msgTick],
+    () => (event && !cloudReadOnlyFallback
+      ? (getUnreadCoupleMessageCounts([event.id], 'couple')[event.id] || 0)
+      : 0),
+    [cloudReadOnlyFallback, event, msgTick],
   );
 
   // Refresh the chat periodically (and when the tab is opened) so the couple sees new
   // venue messages without having to send one themselves. While the Chat tab is open
   // the couple side is marked as "read" so the venue's unread badge stays accurate.
   useEffect(() => {
-    if (activeTab === 'chat' && event) markCoupleChatRead(event.id, 'couple');
+    if (!cloudReadOnlyFallback && activeTab === 'chat' && event) {
+      markCoupleChatRead(event.id, 'couple');
+    }
     setMsgTick((t) => t + 1);
     const id = setInterval(() => {
-      if (activeTab === 'chat' && event) markCoupleChatRead(event.id, 'couple');
+      if (!cloudReadOnlyFallback && activeTab === 'chat' && event) {
+        markCoupleChatRead(event.id, 'couple');
+      }
       setMsgTick((t) => t + 1);
     }, 5000);
     return () => clearInterval(id);
-  }, [activeTab === 'chat', event?.id]);
+  }, [activeTab === 'chat', cloudReadOnlyFallback, event?.id]);
 
   // Auto-scroll the couple chat to the newest message when it updates.
   useEffect(() => {
@@ -499,7 +655,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   }, [activeTab, msgTick]);
 
   const handleSendMessage = () => {
-    if (!event || !chatDraft.trim()) return;
+    if (cloudReadOnlyFallback || !event || !chatDraft.trim()) return;
     sendCoupleMessage({
       coupleEventId: event.id,
       senderId: me?.id || 'couple',
@@ -515,6 +671,11 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
     clearCoupleSession();
     setSession(null);
     if (cloudAccountInvite) {
+      setRemoteVenueMap(null);
+      setRemoteVenueCatalog({});
+      cloudReadOnlyFallbackRef.current = false;
+      setCloudReadOnlyFallback(false);
+      setFailedCacheDomains([]);
       setActiveOrganizationSlug(null);
       // Do not remount the account lookup until local Supabase sign-out has
       // finished, or it can observe the still-valid JWT and reopen the portal.
@@ -540,16 +701,26 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
     const id = setInterval(() => setGuestTick((t) => t + 1), 10000);
     return () => clearInterval(id);
   }, []);
-  const coupleGuests = useMemo(
-    () => (event ? getCoupleGuests(event.id) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [event, guestTick],
-  );
-  const coupleRsvps = useMemo(
-    () => (event ? getCoupleRsvpSubmissions(event.id) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [event, guestTick],
-  );
+  const coupleGuests = useMemo(() => {
+    if (!event) return [];
+    return cloudReadOnlyFallback
+      ? invitationCatalogArray<ReturnType<typeof getCoupleGuests>[number]>(
+          remoteVenueCatalog,
+          'coupleGuests',
+          () => [],
+        )
+      : getCoupleGuests(event.id);
+  }, [cloudReadOnlyFallback, event, guestTick, remoteVenueCatalog]);
+  const coupleRsvps = useMemo(() => {
+    if (!event) return [];
+    return cloudReadOnlyFallback
+      ? invitationCatalogArray<ReturnType<typeof getCoupleRsvpSubmissions>[number]>(
+          remoteVenueCatalog,
+          'coupleSubmissions',
+          () => [],
+        )
+      : getCoupleRsvpSubmissions(event.id);
+  }, [cloudReadOnlyFallback, event, guestTick, remoteVenueCatalog]);
   const [guestForm, setGuestForm] = useState({ name: '', email: '', phone: '' });
   const [expandedGuestRsvp, setExpandedGuestRsvp] = useState<string | null>(null);
   const [guestError, setGuestError] = useState('');
@@ -563,13 +734,19 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
   // ── Checklist (couple's own prep checklist) ───────────────────────────────
   const [checklistTick, setChecklistTick] = useState(0);
-  const coupleChecklist = useMemo(
-    () => (event ? getCoupleChecklist(event.id) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [event, checklistTick],
-  );
+  const coupleChecklist = useMemo(() => {
+    if (!event) return [];
+    return cloudReadOnlyFallback
+      ? invitationCatalogArray<ReturnType<typeof getCoupleChecklist>[number]>(
+          remoteVenueCatalog,
+          'coupleChecklists',
+          () => [],
+        )
+      : getCoupleChecklist(event.id);
+  }, [checklistTick, cloudReadOnlyFallback, event, remoteVenueCatalog]);
   const [newCheckItem, setNewCheckItem] = useState({ title: '', phase: '', dueDate: '' });
   const addCheckItem = () => {
+    if (cloudReadOnlyFallback) return;
     if (!event || !newCheckItem.title.trim()) {
       showToast('Enter a checklist item.', 'warning');
       return;
@@ -586,14 +763,27 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
   // ── Vendors (couple's vendors; pick from venue preferred or add custom) ───
   const [vendorTick, setVendorTick] = useState(0);
-  const coupleVendors = useMemo(
-    () => (event ? getCoupleVendors(event.id) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [event, vendorTick],
-  );
-  const preferredVendors = useMemo(() => getVenuePreferredVendors(getVenueVendors()), []);
+  const coupleVendors = useMemo(() => {
+    if (!event) return [];
+    return cloudReadOnlyFallback
+      ? invitationCatalogArray<ReturnType<typeof getCoupleVendors>[number]>(
+          remoteVenueCatalog,
+          'coupleVendors',
+          () => [],
+        )
+      : getCoupleVendors(event.id);
+  }, [cloudReadOnlyFallback, event, remoteVenueCatalog, vendorTick]);
+  const preferredVendors = useMemo(() => getVenuePreferredVendors(
+    invitationCatalogArray(remoteVenueCatalog, 'vendors', getVenueVendors),
+  ), [remoteVenueCatalog]);
+  const vendorCategories = useMemo(() => invitationCatalogArray(
+    remoteVenueCatalog,
+    'vendorCategories',
+    getVendorCategories,
+  ), [remoteVenueCatalog]);
   const [customVendor, setCustomVendor] = useState({ name: '', category: 'other', contactName: '', email: '', phone: '', notes: '' });
   const addCustomVendor = () => {
+    if (cloudReadOnlyFallback) return;
     if (!event || !customVendor.name.trim()) {
       showToast('Enter a vendor name.', 'warning');
       return;
@@ -636,7 +826,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
     showToast(added ? `${v.name} added to your vendors.` : `${v.name} is already on your list.`, added ? 'success' : 'info');
   };
   const setVendorStatus = (vendorId: string, status: CoupleVendor['status']) => {
-    if (!event) return;
+    if (cloudReadOnlyFallback || !event) return;
     updateCoupleVendor(event.id, vendorId, { status });
     setVendorTick((t) => t + 1);
   };
@@ -646,19 +836,48 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   // Layout editor modal state.
   const [layoutEditorSpace, setLayoutEditorSpace] = useState<string | null>(null);
   const [lodgingAssignVenue, setLodgingAssignVenue] = useState<string | null>(null);
-  const bookedPackage = useMemo(() => (event ? findWeddingPackage(event.packageId) : undefined), [event, pkgTick]);
-  const addOnCatalog = useMemo(() => getActivePackageAddOns(), []);
+  useEffect(() => {
+    if (!cloudReadOnlyFallback) return;
+    setLayoutEditorSpace(null);
+    setLodgingAssignVenue(null);
+    setEditingGuest(null);
+    setRsvpGuestId(null);
+  }, [cloudReadOnlyFallback]);
+  const bookedPackage = useMemo(() => {
+    if (!event) return undefined;
+    if (remoteVenueCatalog === undefined) return findWeddingPackage(event.packageId);
+    const catalog = Array.isArray(remoteVenueCatalog.weddingPackages)
+      ? remoteVenueCatalog.weddingPackages
+      : [];
+    return catalog.find((item) => (
+      item && typeof item === 'object' && 'id' in item && item.id === event.packageId
+    )) as NonNullable<ReturnType<typeof findWeddingPackage>> | undefined;
+  }, [event, pkgTick, remoteVenueCatalog]);
+  const addOnCatalog = useMemo(() => invitationCatalogArray(
+    remoteVenueCatalog,
+    'packageAddOns',
+    getActivePackageAddOns,
+  ).filter((addOn) => addOn.active), [remoteVenueCatalog]);
   const coupleAddOns = useMemo(() => event?.addOns || [], [event, pkgTick]);
 
   // ── Guest events (itinerary) ───────────────────────────────────────────────
   const [guestEventTick, setGuestEventTick] = useState(0);
-  const coupleGuestEvents = useMemo(
-    () => (event ? getCoupleGuestEvents(event.id) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [event, guestEventTick],
-  );
+  const coupleGuestEvents = useMemo(() => {
+    if (!event) return [];
+    return cloudReadOnlyFallback
+      ? invitationCatalogArray<ReturnType<typeof getCoupleGuestEvents>[number]>(
+          remoteVenueCatalog,
+          'coupleGuestEvents',
+          () => [],
+        )
+      : getCoupleGuestEvents(event.id);
+  }, [cloudReadOnlyFallback, event, guestEventTick, remoteVenueCatalog]);
+  const assignedGuestCount = (guestEventId: string) => coupleGuests.filter((guest) =>
+    guest.guestEventIds?.includes(guestEventId),
+  ).length;
   const [newGuestEvent, setNewGuestEvent] = useState({ title: '', capacity: '25', location: '' });
   const addGuestEvent = () => {
+    if (cloudReadOnlyFallback) return;
     if (!event || !newGuestEvent.title.trim()) {
       showToast('Enter an event name.', 'warning');
       return;
@@ -676,8 +895,10 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
   // Resolve the couple's selected add-ons to their catalog entries.
   const resolvedAddOns = useMemo(
-    () => coupleAddOns.map((a) => findPackageAddOn(a.addOnId)).filter((x): x is NonNullable<typeof x> => !!x),
-    [coupleAddOns],
+    () => coupleAddOns
+      .map((selection) => addOnCatalog.find((addOn) => addOn.id === selection.addOnId))
+      .filter((addOn): addOn is NonNullable<typeof addOn> => Boolean(addOn)),
+    [addOnCatalog, coupleAddOns],
   );
   // Auto-derive default guest events from the package + the couple's add-ons.
   // Keys on the set of add-on ids (not just their count) so adding a new add-on
@@ -685,14 +906,14 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   // duplicating core events.
   const resolvedAddOnKey = resolvedAddOns.map((a) => a.id).sort().join('|');
   useEffect(() => {
-    if (!event) return;
+    if (!event || cloudReadOnlyFallback) return;
     ensureDerivedGuestEvents(event.id, bookedPackage, resolvedAddOns);
     setGuestEventTick((t) => t + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event?.id, bookedPackage?.id, resolvedAddOnKey]);
+  }, [cloudReadOnlyFallback, event?.id, bookedPackage?.id, resolvedAddOnKey]);
   const hasAddOn = (id: string) => coupleAddOns.some((a) => a.addOnId === id);
   const toggleAddOn = (addOnId: string) => {
-    if (!event) return;
+    if (cloudReadOnlyFallback || !event) return;
     const current = event.addOns || [];
     const wasAdded = hasAddOn(addOnId);
     const next = wasAdded
@@ -727,6 +948,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const handleAddGuest = () => {
+    if (cloudReadOnlyFallback) return;
     if (!event || !guestForm.name.trim()) {
       setGuestError('Please enter the guest’s name.');
       return;
@@ -752,7 +974,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const handleSaveGuestEdit = () => {
-    if (!event || !editingGuest) return;
+    if (cloudReadOnlyFallback || !event || !editingGuest) return;
     if (!editingGuest.name.trim()) {
       showToast('Please enter the guest’s name.', 'warning');
       return;
@@ -779,7 +1001,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const saveRecordedRsvp = () => {
-    if (!event || !rsvpGuestId) return;
+    if (cloudReadOnlyFallback || !event || !rsvpGuestId) return;
     const guest = coupleGuests.find((g) => g.id === rsvpGuestId);
     if (!guest) return;
     const existing = coupleRsvps.find((r) => r.guestId === guest.id);
@@ -823,7 +1045,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const handleRotateGuestLink = (guestId: string, guestName: string) => {
-    if (!event) return;
+    if (cloudReadOnlyFallback || !event) return;
     const guest = coupleGuests.find((candidate) => candidate.id === guestId);
     const email = normalizeEmail(guest?.email, { required: true });
     if (!email.ok) {
@@ -841,7 +1063,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const handleImportGuests = (content: string) => {
-    if (!event) return;
+    if (cloudReadOnlyFallback || !event) return;
     // Use the robust shared CSV parser (quoted fields, header detection) for consistency
     // with the venue's guest import.
     const result = parseGuestCsv(content, getCoupleGuests(event.id));
@@ -857,22 +1079,41 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
   // ── Portal settings (per-couple guest portal customization) ────────────────
   const [portalConfigTick, setPortalConfigTick] = useState(0);
+  const venueGuestPortalConfig = useMemo<GuestPortalConfig | null>(() => {
+    if (remoteVenueCatalog === undefined) return getGuestPortalConfig();
+    const value = remoteVenueCatalog.portalConfig;
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as GuestPortalConfig
+      : null;
+  }, [remoteVenueCatalog]);
   const portalConfig = useMemo<GuestPortalConfig | null>(() => {
     if (!event) return null;
-    const venueCfg = getGuestPortalConfig();
-    return getCouplePortalConfig(event.id, venueCfg, {
+    if (cloudReadOnlyFallback) {
+      const configs = remoteVenueCatalog?.couplePortalConfigs;
+      if (configs && typeof configs === 'object' && !Array.isArray(configs)) {
+        const direct = (configs as Record<string, unknown>)[event.id];
+        if (direct && typeof direct === 'object' && !Array.isArray(direct)) {
+          return direct as GuestPortalConfig;
+        }
+      }
+      return buildDefaultCouplePortalConfig(venueGuestPortalConfig, {
+        coupleName: event.coupleName,
+        eventDate: event.eventDate,
+        eventEndDate: event.eventEndDate,
+      });
+    }
+    return getCouplePortalConfig(event.id, venueGuestPortalConfig, {
       coupleName: event.coupleName,
       eventDate: event.eventDate,
       eventEndDate: event.eventEndDate,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event, portalConfigTick]);
+  }, [cloudReadOnlyFallback, event, portalConfigTick, remoteVenueCatalog, venueGuestPortalConfig]);
 
   // True only when the couple has actually personalized their guest portal beyond
   // the seeded defaults (hero image set, or welcome/meal options/deadline changed).
   const portalPersonalized = useMemo(() => {
     if (!portalConfig) return false;
-    const venueCfg = getGuestPortalConfig();
+    const venueCfg = venueGuestPortalConfig;
     const hasHero = !!portalConfig.heroImageUrl;
     const welcomeChanged = !!portalConfig.welcomeMessage && portalConfig.welcomeMessage !== venueCfg?.welcomeMessage;
     const deadlineSet = !!portalConfig.rsvpDeadlineDate;
@@ -883,7 +1124,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       (portalConfig.mealOptions.length !== (venueCfg?.mealOptions?.length ?? 0) ||
         portalConfig.mealOptions.some((o, i) => o.value !== venueCfg?.mealOptions?.[i]?.value));
     return hasHero || welcomeChanged || deadlineSet || themeSet || mealsChanged;
-  }, [portalConfig]);
+  }, [portalConfig, venueGuestPortalConfig]);
 
   const [portalDraft, setPortalDraft] = useState<GuestPortalConfig | null>(null);
   const [newMealOption, setNewMealOption] = useState('');
@@ -898,7 +1139,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   }, [portalConfig]);
 
   const savePortalSettings = async () => {
-    if (!event || !portalDraft) return;
+    if (cloudReadOnlyFallback || !event || !portalDraft) return;
     let next = portalDraft;
     // Handle the portal password: set a new one (hashed), or clear it.
     const pw = portalPasswordDraft.trim();
@@ -925,6 +1166,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const handleInvite = () => {
+    if (cloudReadOnlyFallback) return;
     if (!event || !inviteForm.name.trim() || !inviteForm.email.trim()) {
       setInviteError('Please provide a name and email.');
       return;
@@ -956,6 +1198,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   const orgId = (config as any)?.organizationId || '';
 
   const handleEmailCollaborator = (email: string, name: string, token: string) => {
+    if (cloudReadOnlyFallback) return;
     const url = buildCoupleInviteUrl(token, linkVenueSlug);
     const subject = 'Join our wedding planning portal';
     const body = `Hi ${name},\n\nYou've been invited! Open this private link to create your own Wedding VIP password and join our planning portal:\n\n${url}\n\nThis invitation is fixed to ${email}; please do not forward it.\n\n— ${coupleName}`;
@@ -974,6 +1217,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const handleEmailGuest = (email: string, name: string, token: string) => {
+    if (cloudReadOnlyFallback) return;
     const url = buildGuestInviteUrl(token, event?.id, linkVenueSlug);
     const subject = `RSVP for ${coupleName}`;
     const body = `Hi ${name},\n\nYou've been invited! Open this private link to create your own Wedding VIP password and RSVP:\n\n${url}\n\nThis invitation is fixed to ${email}; please do not forward it.\n\n— ${coupleName}`;
@@ -993,6 +1237,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
   /** Send a gentle RSVP reminder to a guest who hasn't responded yet. */
   const handleRemindGuest = (email: string, name: string, token: string) => {
+    if (cloudReadOnlyFallback) return;
     const url = buildGuestInviteUrl(token, event?.id, linkVenueSlug);
     const subject = `Friendly reminder: RSVP for ${coupleName}`;
     const body =
@@ -1037,7 +1282,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const handleRotateCoupleLink = () => {
-    if (!event) return;
+    if (cloudReadOnlyFallback || !event) return;
     const ownerEmail = event.primaryEmail || event.collaborators.find((collaborator) => (
       collaborator.id === `col-${event.id}-owner`
       || collaborator.inviteToken === event.inviteToken
@@ -1057,7 +1302,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
   };
 
   const handleRotateCollaboratorLink = (collaboratorId: string, collaboratorName: string) => {
-    if (!event) return;
+    if (cloudReadOnlyFallback || !event) return;
     const collaborator = event.collaborators.find((candidate) => candidate.id === collaboratorId);
     if (!normalizeEmail(collaborator?.email, { required: true }).ok) {
       showToast('Add a valid collaborator email before reissuing a personal account invite.', 'warning');
@@ -1284,6 +1529,19 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
           </button>
         </div>
       </header>
+
+      {cloudReadOnlyFallback && (
+        <div
+          role="alert"
+          className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm sm:mx-6"
+        >
+          <p className="font-bold">Secure read-only mode</p>
+          <p className="mt-1 text-xs">
+            This browser cannot currently preserve planning changes. You can safely review the latest venue snapshot, but editing is paused to prevent lost or conflicting updates. We’ll retry automatically.
+          </p>
+          <p className="sr-only">{failedCacheDomains.length} browser persistence domain{failedCacheDomains.length === 1 ? '' : 's'} unavailable.</p>
+        </div>
+      )}
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Full-Width Executive Hero Header Card */}
@@ -1641,7 +1899,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                   {(() => {
                     const dates = eventDates(event.eventDate, event.eventEndDate);
                     const forecasts = dates
-                      .map((d) => ({ d, f: getVenueWeather().forecasts[d] }))
+                      .map((d) => ({ d, f: activeVenueWeather.forecasts[d] }))
                       .filter((x) => x.f);
                     if (forecasts.length === 0) return null;
                     return (
@@ -1944,12 +2202,21 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
 
               {/* Interactive venue map — drill into spaces/lodging */}
               {(() => {
-                const sourceMap = getVenueMapConfig();
+                const sourceMap = activeVenueMap;
                 if (!sourceMap) return null;
-                const coupleMap = projectVenueMap(sourceMap, 'couple');
+                const coupleMap = projectVenueMap(
+                  sourceMap,
+                  'couple',
+                  undefined,
+                  {
+                    managedBaseImageOnly: isCoupleCloudEnabled(),
+                    venues: isCoupleCloudEnabled() ? undefined : venues,
+                  },
+                );
                 if (coupleMap.points.length === 0) return null;
                 const canOpenMapPoint = (point: VenueMapPoint) =>
-                  point.kind === 'space'
+                  !cloudReadOnlyFallback
+                  && point.kind === 'space'
                   && Boolean(point.venueId)
                   && (
                     eligibleSpaces.some((venue) => venue.id === point.venueId)
@@ -1963,6 +2230,8 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                       editable={false}
                       isPointInteractive={canOpenMapPoint}
                       pointActionLabel={() => 'Open this space.'}
+                      hideMapWhenBackgroundUnavailable
+                      onRetryBackgroundImage={() => setVenueMapRetryNonce((nonce) => nonce + 1)}
                       onPointClick={(p) => {
                         if (p.kind === 'space' && p.venueId) {
                           // Drill into the space: if it's an available event space, open
@@ -1977,7 +2246,9 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                       }}
                     />
                     <p className="text-[11px] text-gray-400 mt-1">
-                      Tap a space pin to design its layout, or a lodging pin to assign guests &amp; rooms.
+                      {cloudReadOnlyFallback
+                        ? 'Space layouts and lodging assignments are view-only while browser persistence is unavailable.'
+                        : 'Tap a pin—or use the Map location actions list—to open a space layout or lodging assignment.'}
                     </p>
                   </div>
                 );
@@ -2041,8 +2312,11 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                           );
                         })()}
                         {(() => {
-                          const backup = findRainContingency(getVenueMapConfig(), space.id);
-                          if (backup) {
+                          const backup = findRainContingency(activeVenueMap, space.id);
+                          if (backup && (
+                            isCoupleCloudEnabled()
+                            || rainContingencyValidationIssue(backup, venues) === null
+                          )) {
                             const backupVenue = venues.find((v) => v.id === backup.indoorVenueId);
                             return (
                               <div className="mt-2 text-[11px] text-blue-700 bg-blue-50 rounded px-2 py-1 font-medium">
@@ -2403,11 +2677,11 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                   </div>
                 </div>
 
-                {getVenueRules().rules.length > 0 && (
+                {activeVenueRules.rules.length > 0 && (
                   <div className="rounded-xl bg-white border border-gray-200 p-5 shadow-sm">
                     <h3 className="font-bold text-sm text-gray-900 mb-2">📜 Venue Rules to Keep in Mind</h3>
                     <ul className="space-y-1.5 text-xs text-gray-600 list-disc list-inside">
-                      {getVenueRules().rules.map((r, i) => (
+                      {activeVenueRules.rules.map((r, i) => (
                         <li key={i}>{r}</li>
                       ))}
                     </ul>
@@ -2727,7 +3001,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
                       aria-label="Custom vendor category"
                     >
-                      {getVendorCategories().map((c) => (
+                      {vendorCategories.map((c) => (
                         <option key={c.id} value={c.id}>{c.label}</option>
                       ))}
                     </select>
@@ -2963,7 +3237,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                         // Per-event headcount = attending guests (+ their plus-ones).
                         const eventAttending = attending.filter((r) => (r.attendingEvents || []).includes(ge.id));
                         const count = eventAttending.length + eventAttending.filter((r) => !!r.plusOneName).length;
-                        const assigned = getAssignedGuestCount(event!.id, ge.id);
+                        const assigned = assignedGuestCount(ge.id);
                         const overCap = !!ge.capacity && count > ge.capacity;
                         return (
                           <div key={ge.id} className="flex items-center justify-between gap-3 text-sm">
@@ -2994,7 +3268,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                 <div className="space-y-2">
                   {coupleGuestEvents.length === 0 && <p className="text-xs text-gray-400">No guest events yet. Assign a package to auto-create them.</p>}
                   {coupleGuestEvents.map((ge) => {
-                    const assigned = getAssignedGuestCount(event!.id, ge.id);
+                    const assigned = assignedGuestCount(ge.id);
                     const over = assigned > ge.capacity;
                     return (
                       <div key={ge.id} className="rounded-lg border border-gray-200 p-3">
@@ -3526,7 +3800,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                                 <p className="text-gray-400">No meal/dietary details provided.</p>
                               )}
                               {rsvp.attendingEvents && rsvp.attendingEvents.length > 0 && (
-                                <p>📅 Attending: {rsvp.attendingEvents.map((id) => findCoupleGuestEvent(id)?.title || id).join(', ')}</p>
+                                <p>📅 Attending: {rsvp.attendingEvents.map((id) => coupleGuestEvents.find((guestEvent) => guestEvent.id === id)?.title || id).join(', ')}</p>
                               )}
                             </div>
                           )}
@@ -3539,7 +3813,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                               <div className="flex flex-wrap gap-1.5">
                                 {coupleGuestEvents.map((ge) => {
                                   const checked = (g.guestEventIds || []).includes(ge.id);
-                                  const atCap = !checked && getAssignedGuestCount(event!.id, ge.id) >= ge.capacity;
+                                  const atCap = !checked && assignedGuestCount(ge.id) >= ge.capacity;
                                   return (
                                     <button
                                       key={ge.id}
@@ -4040,6 +4314,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                 <input
                   type="text"
                   value={chatDraft}
+                  disabled={cloudReadOnlyFallback}
                   onChange={(e) => setChatDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSendMessage();
@@ -4050,8 +4325,9 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
                 />
                 <button
                   type="button"
+                  disabled={cloudReadOnlyFallback || !chatDraft.trim()}
                   onClick={handleSendMessage}
-                  className="btn-primary px-6 py-2.5 rounded-xl bg-[#4A1942] text-white text-sm font-bold hover:bg-[#3b1435] shadow-sm transition-colors"
+                  className="btn-primary px-6 py-2.5 rounded-xl bg-[#4A1942] text-white text-sm font-bold hover:bg-[#3b1435] shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Send →
                 </button>
@@ -4076,6 +4352,7 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
             initial={sl?.layout || null}
             guestCount={event.guestCount || bookedPackage?.maxGuests || undefined}
             onSave={(layout) => {
+              if (cloudReadOnlyFallback) return;
               saveCoupleSpaceLayout(event.id, layoutEditorSpace, layout);
               refresh();
               showToast(`${venue.name} layout saved.`, 'success');
@@ -4094,11 +4371,13 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
             venue={venue}
             guests={coupleGuests}
             onAssign={(guestId, room) => {
+              if (cloudReadOnlyFallback) return;
               updateCoupleGuest(event.id, guestId, { roomId: room });
               setGuestTick((t) => t + 1);
               showToast('Guest assigned to a room.', 'success');
             }}
             onUnassign={(guestId) => {
+              if (cloudReadOnlyFallback) return;
               updateCoupleGuest(event.id, guestId, { roomId: undefined });
               setGuestTick((t) => t + 1);
             }}
@@ -4108,4 +4387,13 @@ export default function CouplesPortal({ coupleToken, venueSlug, onExitPortal }: 
       })()}
     </div>
   );
+}
+
+/** Keep React state isolated to one URL-provided couple invitation context. */
+export default function CouplesPortal(props: CouplesPortalProps) {
+  const contextKey = JSON.stringify([
+    props.coupleToken || '',
+    props.venueSlug || '',
+  ]);
+  return <CouplesPortalSession key={contextKey} {...props} />;
 }

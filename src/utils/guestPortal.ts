@@ -342,14 +342,24 @@ export function saveGuestPortalSession(
   guestId?: string,
   coupleEventId?: string,
 ): void {
-  sessionStorage.setItem(
-    GUEST_PORTAL_STORAGE_KEYS.AUTH,
-    JSON.stringify(createGuestPortalSession(config, guestToken, eventName, guestId, coupleEventId)),
-  );
+  try {
+    sessionStorage.setItem(
+      GUEST_PORTAL_STORAGE_KEYS.AUTH,
+      JSON.stringify(createGuestPortalSession(config, guestToken, eventName, guestId, coupleEventId)),
+    );
+  } catch {
+    // Personal-account authorization remains server-backed. Session storage is
+    // only a same-tab convenience and may be unavailable in privacy modes.
+  }
 }
 
 export function clearGuestPortalSession(): void {
-  sessionStorage.removeItem(GUEST_PORTAL_STORAGE_KEYS.AUTH);
+  try {
+    sessionStorage.removeItem(GUEST_PORTAL_STORAGE_KEYS.AUTH);
+  } catch {
+    // A denied or signed-out portal must still clear its in-memory state when
+    // the browser refuses storage access.
+  }
 }
 
 export function loadGuestPortalSession(
@@ -357,7 +367,12 @@ export function loadGuestPortalSession(
   eventName?: string,
   coupleEventId?: string,
 ): GuestPortalSession | null {
-  const raw = sessionStorage.getItem(GUEST_PORTAL_STORAGE_KEYS.AUTH);
+  let raw: string | null;
+  try {
+    raw = sessionStorage.getItem(GUEST_PORTAL_STORAGE_KEYS.AUTH);
+  } catch {
+    return null;
+  }
   if (!raw) return null;
 
   try {

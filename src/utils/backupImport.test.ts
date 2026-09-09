@@ -133,13 +133,30 @@ vi.mock('./guestPortal', () => ({
   getPortalRSVPSubmissions: () => [],
 }));
 
-import { buildBackupBundle } from './backupExport';
+import { buildBackupBundle, buildRedactedExportBundle } from './backupExport';
+import {
+  cacheVenueMapConfigFromServer,
+  emptyVenueMapConfig,
+  getQuarantinedVenueMapForRecovery,
+  getVenueMapConfig,
+  getVenueMapStructuralRecoveryArtifacts,
+  saveVenueMapConfig,
+  venueMapRecoverySourceIsRedacted,
+} from '../services/wayfinding/venueWayfindingService';
 import {
   applyBackupPayload,
   getRollbackBackup,
   preflightBackupImport,
   snapshotCurrentProjectForRollback,
 } from './backupImport';
+
+async function refreshChecksum(bundle: Awaited<ReturnType<typeof buildBackupBundle>>): Promise<void> {
+  const bytes = new TextEncoder().encode(JSON.stringify(bundle.payload));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  bundle.checksums.payloadHash = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 describe('backup import', () => {
   beforeEach(() => {
@@ -152,6 +169,33 @@ describe('backup import', () => {
 
     expect(report.valid).toBe(true);
     expect(report.errors).toEqual([]);
+  });
+
+  it('keeps legacy version-1 backups compatible while disclosing missing quarantine metadata', async () => {
+    const bundle = await buildBackupBundle();
+    bundle.manifest.bundleVersion = 1;
+    delete bundle.payload.venueMapStructuralRecovery;
+    await refreshChecksum(bundle);
+
+    const report = await preflightBackupImport(bundle);
+
+    expect(report.valid).toBe(true);
+    expect(report.warnings).toEqual(expect.arrayContaining([
+      expect.stringMatching(/legacy backup predates portable Venue Map recovery metadata/i),
+    ]));
+  });
+
+  it('rejects version-2 backups that omit required map quarantine metadata', async () => {
+    const bundle = await buildBackupBundle();
+    delete bundle.payload.venueMapStructuralRecovery;
+    await refreshChecksum(bundle);
+
+    const report = await preflightBackupImport(bundle);
+
+    expect(report.valid).toBe(false);
+    expect(report.errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/missing required Venue Map structural recovery metadata/i),
+    ]));
   });
 
   it('fails preflight when checksum is wrong', async () => {
@@ -183,6 +227,132 @@ describe('backup import', () => {
     expect(event).toHaveBeenCalled();
 
     off();
+  });
+
+  it('restores map quarantine after its matching canonical map and rejects mismatches before mutation', async () => {
+    cacheVenueMapConfigFromServer({
+      ...emptyVenueMapConfig(),
+      points: [{ label: 'Missing identity', kind: 'entry', x: 1, y: 1 }],
+    });
+    const bundle = await buildBackupBundle();
+    const backedUpMap = bundle.payload.venueMapConfigs;
+
+    saveVenueMapConfig(getVenueMapConfig()!);
+    expect(getVenueMapStructuralRecoveryArtifacts(getVenueMapConfig())).toEqual([]);
+    applyBackupPayload(bundle.payload, 'replace');
+    expect(getVenueMapConfig()).toEqual(backedUpMap);
+    expect(getVenueMapStructuralRecoveryArtifacts(getVenueMapConfig())).toHaveLength(1);
+
+    const mismatched = structuredClone(bundle.payload) as any;
+    mismatched.venueMapStructuralRecovery.mapFingerprint = 'map-v1:0:00000000000000000000000000000000';
+    const before = getVenueMapConfig();
+    expect(() => applyBackupPayload(mismatched, 'replace')).toThrow(/does not match/i);
+    expect(getVenueMapConfig()).toEqual(before);
+  });
+
+  it('restores an out-of-frame point candidate against its matching wide map', async () => {
+    cacheVenueMapConfigFromServer({
+      ...emptyVenueMapConfig(),
+      width: 500,
+      height: 400,
+      points: [
+        { id: 'outside', label: 'Wrong gate', kind: 'entry', x: 600, y: 450 },
+        { id: 'inside', label: 'Ballroom', kind: 'amenity', x: 250, y: 200 },
+      ],
+      routes: [{ id: 'dependent', name: 'Arrival path', pointIds: ['outside', 'inside'] }],
+    });
+    const bundle = await buildBackupBundle();
+
+    localStorage.clear();
+    applyBackupPayload(bundle.payload, 'replace');
+
+    expect(getVenueMapConfig()).toMatchObject({
+      width: 500,
+      height: 400,
+      points: [expect.objectContaining({ id: 'inside' })],
+      routes: [expect.objectContaining({ id: 'dependent', pointIds: ['outside', 'inside'] })],
+    });
+    expect(getVenueMapStructuralRecoveryArtifacts(getVenueMapConfig())).toEqual([
+      expect.objectContaining({
+        family: 'point',
+        candidate: expect.objectContaining({ id: 'outside', x: 500, y: 400 }),
+      }),
+    ]);
+  });
+
+  it('restores a fingerprint-bound whole-map complexity recovery source after its safe map', async () => {
+    const oversizedMap = {
+      ...emptyVenueMapConfig(),
+      points: Array.from({ length: 501 }, (_, index) => ({
+        id: `point-${index}`,
+        label: `Point ${index}`,
+        kind: 'entry' as const,
+        x: index % 100,
+        y: index % 80,
+      })),
+    };
+    cacheVenueMapConfigFromServer(oversizedMap);
+    const bundle = await buildBackupBundle();
+
+    localStorage.clear();
+    applyBackupPayload(bundle.payload, 'replace');
+
+    expect(getVenueMapConfig()?.points).toEqual([]);
+    expect(getVenueMapStructuralRecoveryArtifacts(getVenueMapConfig())).toEqual([
+      expect.objectContaining({ family: 'map', mapComplexityExceeded: true }),
+    ]);
+    expect(getQuarantinedVenueMapForRecovery()).toEqual(oversizedMap);
+  });
+
+  it('restores an importable secret-redacted oversized recovery source', async () => {
+    const oversizedMap = {
+      ...emptyVenueMapConfig(),
+      token: 'do-not-export',
+      access_token: 'also-do-not-export',
+      points: Array.from({ length: 501 }, (_, index) => ({
+        id: `redacted-point-${index}`,
+        label: `Point ${index}`,
+        kind: 'entry' as const,
+        x: index % 100,
+        y: index % 80,
+      })),
+    };
+    cacheVenueMapConfigFromServer(oversizedMap);
+    const bundle = await buildRedactedExportBundle();
+
+    localStorage.clear();
+    applyBackupPayload(bundle.payload, 'replace');
+
+    expect(getVenueMapStructuralRecoveryArtifacts(getVenueMapConfig())).toEqual([
+      expect.objectContaining({ family: 'map', mapComplexityExceeded: true }),
+    ]);
+    const recovered = getQuarantinedVenueMapForRecovery() as {
+      token?: string;
+      access_token?: string;
+      points: unknown[];
+    };
+    expect(recovered).not.toHaveProperty('token');
+    expect(recovered).not.toHaveProperty('access_token');
+    expect(recovered.points).toHaveLength(501);
+    expect(venueMapRecoverySourceIsRedacted()).toBe(true);
+  });
+
+  it('restores invalid-frame recovery only after its matching normalized map', async () => {
+    cacheVenueMapConfigFromServer({
+      ...emptyVenueMapConfig(),
+      height: '80',
+    });
+    const bundle = await buildBackupBundle();
+    const backedUpMap = bundle.payload.venueMapConfigs;
+
+    saveVenueMapConfig(getVenueMapConfig()!);
+    expect(getVenueMapStructuralRecoveryArtifacts(getVenueMapConfig())).toEqual([]);
+    applyBackupPayload(bundle.payload, 'replace');
+
+    expect(getVenueMapConfig()).toEqual(backedUpMap);
+    expect(getVenueMapStructuralRecoveryArtifacts(getVenueMapConfig())).toEqual([
+      expect.objectContaining({ family: 'map', mapFrameMalformed: true }),
+    ]);
   });
 
   it('restores previously-dropped design domains on replace', () => {
@@ -245,6 +415,8 @@ describe('backup import', () => {
     );
 
     expect(uncovered).toEqual([]);
+    expect(BACKUP_DOMAINS.findIndex((domain) => domain.key === 'venueMapStructuralRecovery'))
+      .toBe(BACKUP_DOMAINS.findIndex((domain) => domain.key === 'venueMapConfigs') + 1);
   });
 
   it('flags dangling cross-references (template -> missing venue)', async () => {

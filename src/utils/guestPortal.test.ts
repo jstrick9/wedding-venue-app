@@ -342,7 +342,32 @@ describe('guest portal helpers', () => {
     expect(sessionStorage.getItem('spm_portal_auth')).toBeNull();
   });
 
-  describe('celebrationStatusDays', () => {
+  it('treats unavailable session storage as an optional browser convenience', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Blocked', 'SecurityError');
+    });
+    expect(() => saveGuestPortalSession(
+      sampleConfig as any,
+      'guest-token-5',
+      'Smith Wedding',
+      'g1',
+    )).not.toThrow();
+    setItem.mockRestore();
+
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Blocked', 'SecurityError');
+    });
+    expect(loadGuestPortalSession(sampleConfig as any, 'Smith Wedding')).toBeNull();
+    getItem.mockRestore();
+
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('Blocked', 'SecurityError');
+    });
+    expect(() => clearGuestPortalSession()).not.toThrow();
+    removeItem.mockRestore();
+  });
+
+  describe('celebrationStatusDays',  () => {
     const FIXED_NOW = new Date('2026-08-05T12:00:00Z');
 
     it('returns null without a start date', () => {

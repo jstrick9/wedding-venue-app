@@ -7,6 +7,7 @@ import {
   countRedactedFields,
   REDACTION_MARKER,
   redactValue,
+  redactValueByOmittingSecrets,
 } from './backupSecrets';
 import { getUsers } from '../hooks/useLayoutState';
 
@@ -45,6 +46,41 @@ describe('backup secrets redaction', () => {
     expect(redacted.venues![0].websiteUrl).toBe('https://example.com');
     expect(redacted.coupleEvents![0].inviteToken).toBe(REDACTION_MARKER);
     expect(redacted.coupleEvents![0].coupleName).toBe('Sam & Alex');
+  });
+
+  it('normalizes camelCase, snake_case, and hyphenated secret-key variants', () => {
+    const input = {
+      accessToken: 'camel-secret',
+      access_token: { value: 'structured-snake-secret' },
+      'refresh-token': 'hyphen-secret',
+      githubToken: 'future-token-alias',
+      client_secret: 'future-secret-alias',
+      'maps-api-key': 'future-key-alias',
+      signing_private_key: 'future-private-key-alias',
+      nested: {
+        portal_token_hash: 'portal-secret',
+        coupleTokenHash: 'couple-secret',
+        publicLabel: 'keep this',
+      },
+    };
+
+    expect(redactValue(input)).toEqual({
+      accessToken: REDACTION_MARKER,
+      access_token: REDACTION_MARKER,
+      'refresh-token': REDACTION_MARKER,
+      githubToken: REDACTION_MARKER,
+      client_secret: REDACTION_MARKER,
+      'maps-api-key': REDACTION_MARKER,
+      signing_private_key: REDACTION_MARKER,
+      nested: {
+        portal_token_hash: REDACTION_MARKER,
+        coupleTokenHash: REDACTION_MARKER,
+        publicLabel: 'keep this',
+      },
+    });
+    expect(redactValueByOmittingSecrets(input)).toEqual({
+      nested: { publicLabel: 'keep this' },
+    });
   });
 
   it('buildBackupBundle keeps the full payload (internal rollback), but the export bundle is redacted', async () => {

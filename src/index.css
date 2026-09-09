@@ -1197,12 +1197,39 @@ input[type="checkbox"] {
 
   /* When printing directly from Studio canvas or VenueMap canvas, allow flex/overflow containers to expand */
   .spm-print-canvas-container,
-  .spm-studio-root {
+  .spm-studio-root,
+  .spm-venue-map-shell,
+  .spm-venue-map-content {
     overflow: visible !important;
     position: static !important;
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
+  }
+
+  .spm-venue-map-shell,
+  .spm-venue-map-content {
+    display: block !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .spm-venue-map-print-grid {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* Interactive extreme-aspect maps pan on screen, but printed/exported views
+     must fit the full canonical map rather than clipping the scroll viewport. */
+  .spm-map-scroll-viewport {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .spm-map-scroll-viewport > svg {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
   }
   
   .page-break {

@@ -1,8 +1,12 @@
 import { BACKUP_DOMAINS } from './backupDomains';
-import { redactValue } from './backupSecrets';
+import {
+  rebindVenueMapRecoveryAfterRedaction,
+  venueMapStructuralRecoveryBackupIssue,
+} from '../services/wayfinding/venueWayfindingService';
+import { redactValue, redactValueByOmittingSecrets } from './backupSecrets';
 import type { BackupBundle, BackupBundleSummary, BackupPayload } from './backupTypes';
 
-const BUNDLE_VERSION = 1;
+export const BACKUP_BUNDLE_VERSION = 2;
 
 async function sha256(text: string): Promise<string> {
   const bytes = new TextEncoder().encode(text);
@@ -43,6 +47,14 @@ export async function buildBackupBundle(actor?: {
     }
   }
 
+  const recoveryIssue = venueMapStructuralRecoveryBackupIssue(
+    payload.venueMapStructuralRecovery,
+    payload.venueMapConfigs,
+  );
+  if (recoveryIssue) {
+    throw new Error(`Backup could not capture a consistent Venue Map recovery state: ${recoveryIssue}`);
+  }
+
   const summary = buildSummary(payload);
   const payloadJson = JSON.stringify(payload);
   const payloadHash = await sha256(payloadJson);
@@ -50,7 +62,7 @@ export async function buildBackupBundle(actor?: {
   return {
     manifest: {
       app: 'seven-paths-manor-layout-planner',
-      bundleVersion: BUNDLE_VERSION,
+      bundleVersion: BACKUP_BUNDLE_VERSION,
       exportedAt: new Date().toISOString(),
       exportedBy: actor,
       source: 'browser-local-storage',
@@ -74,6 +86,31 @@ export async function buildRedactedExportBundle(actor?: {
 }): Promise<BackupBundle> {
   const full = await buildBackupBundle(actor);
   const redactedPayload = redactValue(full.payload) as BackupPayload;
+  const fullRecovery = full.payload.venueMapStructuralRecovery;
+  const redactedRecovery = redactedPayload.venueMapStructuralRecovery;
+  if (
+    fullRecovery && typeof fullRecovery === 'object' && !Array.isArray(fullRecovery)
+    && redactedRecovery && typeof redactedRecovery === 'object' && !Array.isArray(redactedRecovery)
+    && Object.prototype.hasOwnProperty.call(fullRecovery, 'quarantinedMap')
+  ) {
+    redactedPayload.venueMapStructuralRecovery = {
+      ...redactedRecovery,
+      quarantinedMap: redactValueByOmittingSecrets(
+        (fullRecovery as Record<string, unknown>).quarantinedMap,
+      ),
+      quarantinedMapRedacted: true,
+    };
+  }
+  redactedPayload.venueMapStructuralRecovery = rebindVenueMapRecoveryAfterRedaction(
+    redactedPayload.venueMapStructuralRecovery,
+  );
+  const recoveryIssue = venueMapStructuralRecoveryBackupIssue(
+    redactedPayload.venueMapStructuralRecovery,
+    redactedPayload.venueMapConfigs,
+  );
+  if (recoveryIssue) {
+    throw new Error(`Backup redaction could not preserve Venue Map recovery integrity: ${recoveryIssue}`);
+  }
   const payloadHash = await sha256(JSON.stringify(redactedPayload));
   return {
     ...full,

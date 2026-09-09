@@ -29,16 +29,16 @@ describe('portal cloud polls do not churn state identities (F-265-1 / F-265-2)',
   it('CouplesPortal hydrate keeps unchanged events (no draft wipe via portalConfig)', () => {
     const src = read('src/components/CouplesPortal.tsx');
     expect(src).toMatch(
-      /setEvents\(\(prev\) => \(JSON\.stringify\(prev\) === JSON\.stringify\(latestEvents\) \? prev : latestEvents\)\)/,
+      /setEvents\(\(previous\) => \(\s*JSON\.stringify\(previous\) === JSON\.stringify\(visibleEvents\) \? previous : visibleEvents\s*\)\)/,
     );
   });
 
   it('CouplesPortal session compare is semantic (rolling expiresAt must not churn)', () => {
     const src = read('src/components/CouplesPortal.tsx');
-    const block = /setSession\(\(prev\) => \([\s\S]*?\? prev\s*: latestSession\s*\)\);/.exec(src)?.[0] ?? '';
+    const block = /setSession\(\(previous\) => \([\s\S]*?\? previous\s*: memorySession\s*\)\);/.exec(src)?.[0] ?? '';
     expect(block).not.toBe('');
-    expect(block).toMatch(/prev\.eventId === latestSession\.eventId/);
-    expect(block).toMatch(/prev\.collaboratorId === latestSession\.collaboratorId/);
+    expect(block).toMatch(/previous\.eventId === memorySession\.eventId/);
+    expect(block).toMatch(/previous\.collaboratorId === memorySession\.collaboratorId/);
     // saveCoupleSession rewrites expiresAt on every poll — it must NOT be part
     // of the comparison or the fix is defeated.
     expect(block).not.toMatch(/expiresAt/);

@@ -44,14 +44,16 @@ vi.mock('../services/couples/coupleGuestService', () => ({
   })),
 }));
 vi.mock('../services/wayfinding/venueWayfindingService', () => ({
-  getVenueMapConfig: vi.fn(() => null),
-  getVenueRules: vi.fn(() => ({ rules: [] })),
-  normalizeVenueMapConfig: vi.fn((value: unknown) => value),
+  getVenueMapConfigForPortal: vi.fn(() => null),
+  getVenueRules: vi.fn(() => ({ rules: [], updatedAt: '' })),
+  normalizeVenueMapConfigForPortal: vi.fn((value: unknown) => value),
+  normalizeVenueRulesConfig: vi.fn((value: unknown) => value || ({ rules: [], updatedAt: '' })),
   coupleWayfindingPoints: vi.fn(() => []),
   routePolyline: vi.fn(() => []),
 }));
 vi.mock('../services/weather/venueWeatherService', () => ({
-  getVenueWeather: vi.fn(() => ({ forecasts: {} })),
+  getVenueWeather: vi.fn(() => ({ forecasts: {}, updatedAt: '' })),
+  normalizeVenueWeatherConfig: vi.fn((value: unknown) => value || ({ forecasts: {}, updatedAt: '' })),
   eventDates: vi.fn(() => []),
 }));
 
@@ -160,6 +162,10 @@ describe('GuestPortal preview mode', () => {
   });
 
   it('scopes wayfinding to guest-visible event spaces and never invents a route', async () => {
+    vi.mocked(guestPortalHelpers.getPortalVenues).mockReturnValue([
+      { id: 'ceremony', name: 'Ceremony Garden' },
+      { id: 'reception', name: 'Reception Hall' },
+    ] as any);
     vi.mocked(coupleGuestService.getCouplePortalConfig).mockReturnValue({
       eventTitle: 'Smith & Johnson',
       eventStartDate: '2026-06-06',
@@ -169,7 +175,7 @@ describe('GuestPortal preview mode', () => {
       showRSVP: false,
       showLodging: false,
     } as any);
-    vi.mocked(wayfindingService.getVenueMapConfig).mockReturnValue({
+    vi.mocked(wayfindingService.getVenueMapConfigForPortal).mockReturnValue({
       width: 100,
       height: 80,
       points: [
@@ -184,6 +190,7 @@ describe('GuestPortal preview mode', () => {
         pointIds: ['gate', 'ceremony'],
         audience: 'public',
         accessibility: 'unknown',
+        priority: 'preferred',
         notes: 'Stay on the signed path.',
       }],
       rainContingencies: [],
@@ -203,7 +210,7 @@ describe('GuestPortal preview mode', () => {
 
     await user.selectOptions(screen.getByLabelText('Directions destination'), 'ceremony');
     await user.click(screen.getByRole('button', { name: 'Get Directions' }));
-    expect(screen.getByText(/Follow “Garden Walk”/)).toBeInTheDocument();
+    expect(screen.getByText(/Follow preferred route “Garden Walk”/)).toBeInTheDocument();
     expect(screen.getByText('Stay on the signed path.')).toBeInTheDocument();
     expect(screen.getByText('Enter beside the fountain.')).toBeInTheDocument();
 

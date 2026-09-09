@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { canSyncEntities, pullEntities, pushEntities, pushEntityDomain } from '../services/sync/entitySync';
+import {
+  canSyncEntities,
+  pullEntities,
+  pushEntities,
+  pushEntityDomain,
+  saveVenueMapEntity,
+} from '../services/sync/entitySync';
+import type { VenueMapSaveResult } from '../services/repository/entityRepository';
 import { subscribeToEntityChanges } from '../services/sync/entityRealtime';
 import { emit } from '../utils/appEvents';
 
@@ -9,6 +16,11 @@ export interface EntityBackendSyncOptions {
   /** Called after a successful pull so the UI can re-read entities. */
   onLoaded?: () => void;
 }
+
+export type VenueMapBackendSaveResult = VenueMapSaveResult | {
+  status: 'error';
+  error: string;
+};
 
 export interface EntityBackendSync {
   enabled: boolean;
@@ -20,6 +32,12 @@ export interface EntityBackendSync {
   saveToBackend: () => Promise<void>;
   /** Push a single domain to the backend (e.g. after an admin edit). */
   saveDomainToBackend: (domain: string) => Promise<void>;
+  /** Save canonical map geometry with an editor-loaded revision guard. */
+  saveVenueMapToBackend: (
+    payload: unknown,
+    expectedUpdatedAt: string | null | undefined,
+    force?: boolean,
+  ) => Promise<VenueMapBackendSaveResult>;
 }
 
 /**
@@ -116,6 +134,29 @@ export function useEntityBackendSync({
     [enabled, context, reportPushFailure],
   );
 
+  const saveVenueMapToBackend = useCallback(
+    async (
+      payload: unknown,
+      expectedUpdatedAt: string | null | undefined,
+      force = false,
+    ): Promise<VenueMapBackendSaveResult> => {
+      if (!enabled || !context) return { status: 'saved', updatedAt: null };
+      try {
+        return await saveVenueMapEntity(context, payload, expectedUpdatedAt, force);
+      } catch (err) {
+        console.error('Failed to push the venue map to backend:', err);
+        // Unlike generic entity saves, the revision-aware editor has not yet
+        // promoted this in-memory draft to the canonical browser cache. Let the
+        // editor say it remains open/unsaved instead of claiming it is persisted.
+        return {
+          status: 'error',
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    },
+    [enabled, context],
+  );
+
   // A context-key mismatch is treated as not hydrated synchronously during
   // render, before this effect runs. That prevents a one-frame exposure of the
   // previous organization's cached workspace during an account/venue switch.
@@ -146,6 +187,7 @@ export function useEntityBackendSync({
       loadFromBackend,
       saveToBackend,
       saveDomainToBackend,
+      saveVenueMapToBackend,
     }),
     [
       enabled,
@@ -155,6 +197,7 @@ export function useEntityBackendSync({
       loadFromBackend,
       saveToBackend,
       saveDomainToBackend,
+      saveVenueMapToBackend,
     ],
   );
 }

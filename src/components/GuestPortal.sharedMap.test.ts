@@ -21,6 +21,13 @@ describe('GuestPortal uses the shared VenueMapCanvas', () => {
     expect(source).toContain('isPointInteractive={hasValidMapGps}');
   });
 
+  it('quarantines colliding rain plans before expanding a guest venue scope', () => {
+    const source = readFileSync(PATH, 'utf8');
+    expect(source).toMatch(
+      /collisionSafeRainPlans = activeVenueMap[\s\S]*?partitionVenueMapRainContingencyCollisions\(activeVenueMap\)\.map\.rainContingencies[\s\S]*?const backupIds = collisionSafeRainPlans/,
+    );
+  });
+
   it('no longer contains the duplicated hand-rolled map SVG / routePolyline', () => {
     const source = readFileSync(PATH, 'utf8');
     expect(source).not.toContain('routePolyline');

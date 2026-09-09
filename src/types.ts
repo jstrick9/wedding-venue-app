@@ -1295,6 +1295,8 @@ export type VenueMapPointKind = 'space' | 'parking' | 'entry' | 'amenity' | 'pat
 export type VenueMapAudience = 'public' | 'couple' | 'staff';
 export type VenueMapViewer = 'guest' | 'couple' | 'staff';
 export type VenueMapRouteAccessibility = 'unknown' | 'step-free' | 'not-step-free';
+/** Venue-authored routing rank. Emergency-only routes are excluded from routine directions. */
+export type VenueMapRoutePriority = 'preferred' | 'standard' | 'secondary' | 'emergency-only';
 
 export interface VenueMapPoint {
   id: string;
@@ -1326,7 +1328,9 @@ export interface RainContingency {
 
 /** The whole-property SVG map the venue builds. */
 export interface VenueMapConfig {
+  /** Canonical coordinate-frame width, inclusive range 20–500. */
   width: number;
+  /** Canonical coordinate-frame height, inclusive range 20–500. */
   height: number;
   points: VenueMapPoint[];
   rainContingencies: RainContingency[];
@@ -1336,6 +1340,8 @@ export interface VenueMapConfig {
   backgroundImageUrl?: string;
   /** Opacity of the background image (0.1 to 1.0). */
   backgroundOpacity?: number;
+  /** Portal-only status: a configured published base image is not currently available. */
+  backgroundImageUnavailable?: boolean;
   /** Custom drawing shapes and property zone boxes/polylines. */
   drawings?: DrawingObject[];
   updatedAt: string;
@@ -1351,6 +1357,8 @@ export interface VenueMapRoute {
   eventSpaceIds?: string[];
   /** Verified mobility status; unknown routes must never be represented as step-free. */
   accessibility?: VenueMapRouteAccessibility;
+  /** Operational routing rank; legacy routes default to standard. */
+  priority?: VenueMapRoutePriority;
   /** Venue-authored route guidance or cautions shown with guest directions. */
   notes?: string;
   /** Ordered map-point ids the route connects (drawn in sequence). */

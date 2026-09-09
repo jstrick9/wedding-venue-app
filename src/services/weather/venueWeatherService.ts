@@ -6,13 +6,46 @@ import { loadVersionedStorage, saveVersionedStorage } from '../../utils/storage'
 const KEY = STORAGE_KEYS.VENUE_WEATHER;
 const VERSION = STORAGE_VERSIONS.VENUE_WEATHER;
 
+export function normalizeVenueWeatherConfig(value: unknown): VenueWeatherConfig {
+  const source = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const rawForecasts = source.forecasts && typeof source.forecasts === 'object' && !Array.isArray(source.forecasts)
+    ? source.forecasts as Record<string, unknown>
+    : {};
+  const forecasts: Record<string, DayWeatherForecast> = {};
+
+  Object.entries(rawForecasts).forEach(([date, rawForecast]) => {
+    if (!rawForecast || typeof rawForecast !== 'object' || Array.isArray(rawForecast)) return;
+    const candidate = rawForecast as Record<string, unknown>;
+    if (typeof candidate.condition !== 'string' || !candidate.condition.trim()) return;
+    const finiteNumber = (input: unknown) => (
+      typeof input === 'number' && Number.isFinite(input) ? input : undefined
+    );
+    forecasts[date] = {
+      condition: candidate.condition.trim(),
+      tempHigh: finiteNumber(candidate.tempHigh),
+      tempLow: finiteNumber(candidate.tempLow),
+      rainChance: finiteNumber(candidate.rainChance),
+    };
+  });
+
+  return {
+    ...(typeof source.location === 'string' && source.location.trim()
+      ? { location: source.location.trim() }
+      : {}),
+    forecasts,
+    updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : '',
+  };
+}
+
 export function getVenueWeather(): VenueWeatherConfig {
   return loadVersionedStorage<VenueWeatherConfig>({
     key: KEY,
-    defaultValue: { forecasts: {}, updatedAt: new Date().toISOString() },
+    defaultValue: normalizeVenueWeatherConfig(undefined),
     currentVersion: VERSION,
     validate: (v): v is VenueWeatherConfig => !!v && typeof v === 'object',
-    normalize: (v) => (v ? (v as VenueWeatherConfig) : { forecasts: {}, updatedAt: new Date().toISOString() }),
+    normalize: normalizeVenueWeatherConfig,
   });
 }
 

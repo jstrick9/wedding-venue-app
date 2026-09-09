@@ -60,11 +60,23 @@ function normalizeKey(key: string): string {
 }
 
 const NORMALIZED_SENSITIVE = new Set(
-  Array.from(SENSITIVE_KEYS).map((key) => key.toLowerCase()),
+  Array.from(SENSITIVE_KEYS).map((key) => normalizeKey(key)),
 );
 
 function isSensitiveKey(key: string): boolean {
-  return NORMALIZED_SENSITIVE.has(normalizeKey(key));
+  const normalized = normalizeKey(key);
+  return NORMALIZED_SENSITIVE.has(normalized)
+    || normalized.endsWith('password')
+    || normalized.endsWith('passwordhash')
+    || normalized.endsWith('passwordsalt')
+    || normalized.endsWith('token')
+    || normalized.endsWith('tokenhash')
+    || normalized.endsWith('tokensalt')
+    || normalized.endsWith('secret')
+    || normalized.endsWith('secretkey')
+    || normalized.endsWith('apikey')
+    || normalized.endsWith('privatekey')
+    || normalized.endsWith('authorization');
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -79,11 +91,31 @@ export function redactValue(value: unknown): unknown {
   if (isPlainObject(value)) {
     const next: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value)) {
-      if (isSensitiveKey(key) && (typeof child === 'string' || typeof child === 'number' || child == null)) {
+      if (isSensitiveKey(key)) {
         next[key] = REDACTION_MARKER;
       } else {
         next[key] = redactValue(child);
       }
+    }
+    return next;
+  }
+  return value;
+}
+
+/**
+ * Recovery JSON must remain importable as one fingerprinted document. Omit
+ * secret-bearing properties instead of inserting a marker that would make the
+ * entire recovery domain intentionally non-restorable.
+ */
+export function redactValueByOmittingSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => redactValueByOmittingSecrets(item));
+  }
+  if (isPlainObject(value)) {
+    const next: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (isSensitiveKey(key)) continue;
+      next[key] = redactValueByOmittingSecrets(child);
     }
     return next;
   }

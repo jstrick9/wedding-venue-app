@@ -20,11 +20,11 @@ describe('portal sync effects re-subscribe on venue changes (F-263-1)', () => {
 
   it('CouplesPortal cloud-sync effect includes venueSlug in its deps', () => {
     const src = read('src/components/CouplesPortal.tsx');
-    expect(src).toMatch(/\[cloudAccountInvite, cloudToken, event\?\.id, portalAccountAccess, session\?\.eventId, venueSlug\]/);
+    expect(src).toMatch(/\[cloudAccountInvite, cloudToken, event\?\.id, portalAccountAccess, session\?\.eventId,[^\]]*venueSlug\]/);
   });
 
   it('GuestPortal hydration effect includes venueSlug in its deps', () => {
     const src = read('src/components/GuestPortal.tsx');
-    expect(src).toMatch(/\[accountInviteToken, cloudAccountInvite, coupleEventId, isCouplePortal, portalAccountAccess, venueSlug\]/);
+    expect(src).toMatch(/\[accountInviteToken, cloudAccountInvite, coupleEventId, isCouplePortal, portalAccountAccess,[^\]]*venueSlug\]/);
   });
 });

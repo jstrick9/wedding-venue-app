@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildPdfFromJpeg, cloneAndNormalizeSvg, inlineSvgImages } from './layoutExport';
+import {
+  buildPdfFromJpeg,
+  cloneAndNormalizeSvg,
+  inlineSvgImages,
+  renderSvgToCanvas,
+} from './layoutExport';
 
 /** Minimal JPEG-ish byte blob (content doesn't matter for structure tests). */
 function jpegBytes(len: number): Uint8Array {
@@ -9,6 +14,7 @@ function jpegBytes(len: number): Uint8Array {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -28,6 +34,52 @@ describe('SVG export preparation', () => {
     expect(clone.getAttribute('height')).toBe('240');
     expect(clone.getAttribute('style')).toBeNull();
     expect(clone.querySelector('circle')).toHaveAttribute('cx', '50');
+  });
+
+  it('renders an optional classification footer outside the authored map area', async () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 100 80');
+    const context = {
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
+      font: '',
+      textBaseline: '',
+      fillRect: vi.fn(),
+      drawImage: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+    };
+    const contextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(context as unknown as CanvasRenderingContext2D);
+    class LoadedImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal('Image', LoadedImage);
+
+    const result = await renderSvgToCanvas(svg, {
+      scale: 1,
+      padding: 10,
+      footerText: 'STAFF MASTER | Exported 9/7/2026',
+    });
+
+    expect(result.width).toBe(120);
+    expect(result.height).toBe(132);
+    expect(context.drawImage).toHaveBeenCalledWith(expect.anything(), 10, 10, 100, 80);
+    expect(context.fillText).toHaveBeenCalledWith(
+      'STAFF MASTER | Exported 9/7/2026',
+      10,
+      expect.any(Number),
+      100,
+    );
+    contextSpy.mockRestore();
   });
 
   it('embeds a remote raster image instead of silently deleting it', async () => {

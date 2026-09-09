@@ -26,9 +26,60 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('closes on Escape', () => {
+  it('supports a distinct alternate conflict-resolution action', () => {
+    const onAlternate = vi.fn();
+    render(
+      <ConfirmDialog
+        open
+        title="Conflict"
+        message="Choose"
+        alternateLabel="Reload shared map"
+        onAlternate={onAlternate}
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Reload shared map' }));
+    expect(onAlternate).toHaveBeenCalledTimes(1);
+  });
+
+  it('can fail-close only the confirm action while safer conflict exits remain available', () => {
+    const onConfirm = vi.fn();
+    const onAlternate = vi.fn();
     const onCancel = vi.fn();
-    render(<ConfirmDialog open title="T" message="M" onConfirm={() => {}} onCancel={onCancel} />);
+    render(
+      <ConfirmDialog
+        open
+        confirmDisabled
+        title="Conflict"
+        message="Apply edits first"
+        confirmLabel="Overwrite shared map"
+        alternateLabel="Reload shared map"
+        onConfirm={onConfirm}
+        onAlternate={onAlternate}
+        onCancel={onCancel}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Overwrite shared map' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reload shared map' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onAlternate).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on Escape unless a resolution is in progress', () => {
+    const onCancel = vi.fn();
+    const { rerender } = render(
+      <ConfirmDialog open title="T" message="M" onConfirm={() => {}} onCancel={onCancel} />,
+    );
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <ConfirmDialog open busy title="T" message="M" onConfirm={() => {}} onCancel={onCancel} />,
+    );
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledTimes(1);
   });

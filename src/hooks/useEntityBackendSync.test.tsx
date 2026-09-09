@@ -7,6 +7,7 @@ const syncMocks = vi.hoisted(() => ({
   pullEntities: vi.fn(),
   pushEntities: vi.fn(),
   pushEntityDomain: vi.fn(),
+  saveVenueMapEntity: vi.fn(),
 }));
 
 vi.mock('../services/sync/entitySync', () => syncMocks);

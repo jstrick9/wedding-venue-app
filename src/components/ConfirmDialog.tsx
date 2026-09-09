@@ -8,8 +8,13 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  alternateLabel?: string;
   tone?: 'danger' | 'default';
+  busy?: boolean;
+  /** Disable only the destructive/primary action while leaving safer exits available. */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
+  onAlternate?: () => void;
   onCancel: () => void;
 }
 
@@ -24,8 +29,12 @@ export function ConfirmDialog({
   message,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
+  alternateLabel,
   tone = 'default',
+  busy = false,
+  confirmDisabled = false,
   onConfirm,
+  onAlternate,
   onCancel,
 }: ConfirmDialogProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
@@ -41,7 +50,7 @@ export function ConfirmDialog({
     confirmRef.current?.focus();
     openConfirmDialog();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !busy) {
         event.preventDefault();
         onCancel();
       }
@@ -51,7 +60,7 @@ export function ConfirmDialog({
       closeConfirmDialog();
       window.removeEventListener('keydown', onKey);
     };
-  }, [open, onCancel]);
+  }, [busy, open, onCancel]);
 
   if (!open) return null;
 
@@ -59,7 +68,7 @@ export function ConfirmDialog({
     <div
       className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/50 p-4"
       role="presentation"
-      onClick={onCancel}
+      onClick={() => { if (!busy) onCancel(); }}
     >
       <div
         ref={dialogRef}
@@ -77,6 +86,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
+            disabled={busy}
             aria-label="Close"
             className="text-gray-400 hover:text-gray-700 text-xl leading-none"
           >
@@ -84,23 +94,35 @@ export function ConfirmDialog({
           </button>
         </div>
         <p className="text-sm text-gray-600">{message}</p>
-        <div className="mt-6 flex gap-3">
+        <div className={`mt-6 flex gap-3 ${alternateLabel ? 'flex-col' : ''}`}>
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            disabled={busy}
+            className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-wait disabled:opacity-50"
           >
             {cancelLabel}
           </button>
+          {alternateLabel && onAlternate && (
+            <button
+              type="button"
+              onClick={onAlternate}
+              disabled={busy}
+              className="flex-1 px-4 py-2.5 rounded-lg border border-[#4A1942]/30 text-sm font-medium text-[#4A1942] hover:bg-[#4A1942]/5 disabled:cursor-wait disabled:opacity-50"
+            >
+              {alternateLabel}
+            </button>
+          )}
           <button
             type="button"
             ref={confirmRef}
             onClick={onConfirm}
-            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors ${
+            disabled={busy || confirmDisabled}
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors disabled:cursor-wait disabled:opacity-50 ${
               tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#4A1942] hover:bg-[#3b1435]'
             }`}
           >
-            {confirmLabel}
+            {busy ? 'Saving…' : confirmLabel}
           </button>
         </div>
       </div>

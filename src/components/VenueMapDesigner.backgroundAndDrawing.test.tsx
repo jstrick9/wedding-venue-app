@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VenueMapDesigner } from './VenueMapDesigner';
 import { emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
@@ -19,7 +19,7 @@ describe('VenueMapDesigner base image and map-native zones', () => {
     const { container } = render(<VenueMapDesigner map={map} venues={mockVenues} onSave={() => {}} />);
 
     expect(screen.getByText('🖼️ Base Map Image')).toBeInTheDocument();
-    expect(screen.getByText('🎨 Property zones')).toBeInTheDocument();
+    expect(screen.getByText('🎨 Property shapes')).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('https://example.com/property-aerial.png'), {
       target: { value: 'https://example.com/map.png' },
@@ -37,14 +37,22 @@ describe('VenueMapDesigner base image and map-native zones', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add editable zone/i }));
     expect(screen.getByDisplayValue('New map zone')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Zone label'), { target: { value: 'Ceremony Lawn' } });
+    fireEvent.change(screen.getByLabelText('Shape label'), { target: { value: 'Ceremony Lawn' } });
+    const xControl = screen.getByLabelText('X');
+    expect(xControl).toHaveAttribute('max', '76');
+    fireEvent.change(xControl, { target: { value: '99' } });
+    expect(xControl).toHaveValue(76);
     const audienceControls = screen.getAllByLabelText('Audience');
     fireEvent.change(audienceControls[audienceControls.length - 1], { target: { value: 'couple' } });
     expect(screen.getAllByText('Ceremony Lawn').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Couples only').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Event-space scope: All wedding events/).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: /Clear zones/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Clear all shapes/i }));
+    const dialog = screen.getByRole('dialog', { name: /Clear all property shapes/i });
+    expect(dialog).toHaveTextContent(/1 shape.*1 couples only/i);
+    expect(screen.getByDisplayValue('Ceremony Lawn')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Clear all shapes' }));
     expect(screen.queryByDisplayValue('Ceremony Lawn')).not.toBeInTheDocument();
   });
 
@@ -70,7 +78,7 @@ describe('VenueMapDesigner base image and map-native zones', () => {
     });
 
     expect(container.querySelector('image')).not.toBeInTheDocument();
-    expect(screen.getByText(/Venue map is saved/)).toBeInTheDocument();
+    expect(screen.getByText(/Canonical venue map is saved/)).toBeInTheDocument();
   });
 
   it('keeps the base image separate when zones are edited and saves only through the explicit map action', () => {
@@ -85,7 +93,7 @@ describe('VenueMapDesigner base image and map-native zones', () => {
     fireEvent.click(screen.getByRole('button', { name: /Add editable zone/i }));
     expect(onSave).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: /Save Venue Map/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Save & publish Venue Map/i }));
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0][0].backgroundImageUrl).toBe('data:image/png;base64,public-safe-map');
     expect(onSave.mock.calls[0][0].drawings).toHaveLength(1);

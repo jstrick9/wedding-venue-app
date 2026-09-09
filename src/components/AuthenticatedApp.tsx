@@ -3,7 +3,7 @@ import { useLayoutState, getSavedLayouts, setSavedLayouts, getTemplates, getTabl
 import { scrubArrangementRefs } from '../utils/decorCleanup';
 import { useLayoutBackendSync } from '../hooks/useLayoutBackendSync';
 import { useEntityBackendSync } from '../hooks/useEntityBackendSync';
-import { EventAnswer, EventQuestion, LayoutTemplate } from '../types';
+import { EventAnswer, EventQuestion, LayoutTemplate, VenueMapConfig } from '../types';
 import { layoutCategories } from '../data/venueData';
 import { useAuth } from '../contexts/AuthContext';
 import { Header } from './Header';
@@ -40,7 +40,18 @@ import { UndoRedoToolbar } from './UndoRedoToolbar';
 import { VenueDashboard } from './VenueDashboard';
 import { StudioLayoutsHome } from './StudioLayoutsHome';
 import { VenueMapDesigner } from './VenueMapDesigner';
-import { getVenueMapConfig, saveVenueMapConfig, emptyVenueMapConfig } from '../services/wayfinding/venueWayfindingService';
+import {
+  cacheVenueMapConfigFromServer,
+  emptyVenueMapConfig,
+  getVenueMapConfig,
+  getVenueMapStructuralRecoveryArtifacts,
+  saveVenueMapConfig,
+} from '../services/wayfinding/venueWayfindingService';
+import { coordinateVenueMapSave } from '../services/wayfinding/venueMapSaveCoordinator';
+import {
+  acceptEntityDomainRevision,
+  getEntityDomainRevision,
+} from '../services/repository/entityRepository';
 import { getCoupleEvents } from '../services/couples/coupleService';
 import { computeSpaceSeating } from '../utils/spaceSeating';
 import { emit, emitDataChanged, on, type UndoSnapshot } from '../utils/appEvents';
@@ -63,6 +74,13 @@ const TimelinePanel = lazy(() => import('./TimelinePanel').then((m) => ({ defaul
 
 interface Position { x: number; y: number; }
 interface DragItem { type: 'table' | 'fixture' | 'arrangement'; specId: string; isExterior?: boolean; }
+interface VenueMapConflictState {
+  localMap: VenueMapConfig;
+  currentPayload: unknown;
+  currentUpdatedAt: string | null;
+  /** Fail closed until the mounted editor confirms overwrite cannot drop staged form edits. */
+  overwriteBlocked: boolean;
+}
 
 export default function AuthenticatedApp() {
   const { user: authUser, organizationId, isAdmin, isGuest, logout, getAllUsers } = useAuth();
@@ -73,6 +91,16 @@ export default function AuthenticatedApp() {
 
   const [view, setView] = useState<'dashboard' | 'studio' | 'admin' | 'venuemap'>('dashboard');
   const [venueMapDirty, setVenueMapDirty] = useState(false);
+  const [venueMapConflict, setVenueMapConflict] = useState<VenueMapConflictState | null>(null);
+  const [resolvingVenueMapConflict, setResolvingVenueMapConflict] = useState(false);
+  const [venueMapEditorKey, setVenueMapEditorKey] = useState(0);
+  // An accepted server write remains authoritative even when browser storage is
+  // unavailable. Keep a tenant-scoped in-memory seed so a later editor remount
+  // cannot resurrect an older cache and label it saved.
+  const [venueMapEditorSeed, setVenueMapEditorSeed] = useState<{
+    organizationId: string | null;
+    map: VenueMapConfig;
+  } | null>(null);
   const venueMapDirtyRef = useRef(false);
   const viewRef = useRef<'dashboard' | 'studio' | 'admin' | 'venuemap'>('dashboard');
   const [confirmVenueMapLeave, setConfirmVenueMapLeave] = useState(false);
@@ -432,6 +460,12 @@ export default function AuthenticatedApp() {
   }, [view, fitAndCenterVenue]);
 
   const refreshSavedLayouts = useCallback(() => setSavedLayoutsState(getSavedLayouts()), []);
+  const handleEntitiesLoaded = useCallback(() => {
+    refreshSavedLayouts();
+    // pullEntities has just refreshed the canonical browser domains. It is now
+    // safe to retire an accepted-write seed that existed only as cache fallback.
+    setVenueMapEditorSeed(null);
+  }, [refreshSavedLayouts]);
 
   // Platform layout sync: pulls shared layouts on load and exposes a push for
   // the save/delete handlers (no-op in local mode).
@@ -446,8 +480,64 @@ export default function AuthenticatedApp() {
   const entityBackendSync = useEntityBackendSync({
     userId: user.id,
     organizationId,
-    onLoaded: refreshSavedLayouts,
+    onLoaded: handleEntitiesLoaded,
   });
+
+  const keepVenueMapConflictDraft = useCallback(() => {
+    setVenueMapConflict(null);
+    setVenueMapDirty(true);
+  }, []);
+
+  const reloadVenueMapConflict = useCallback(() => {
+    if (!venueMapConflict || !organizationId) return;
+    try {
+      cacheVenueMapConfigFromServer(venueMapConflict.currentPayload);
+      acceptEntityDomainRevision(
+        organizationId,
+        'venueMapConfigs',
+        venueMapConflict.currentUpdatedAt,
+      );
+      // The authoritative value is now in the canonical cache, so any older
+      // accepted-write fallback must not override this explicit reload.
+      setVenueMapEditorSeed(null);
+      setVenueMapConflict(null);
+      setVenueMapDirty(false);
+      setVenueMapEditorKey((key) => key + 1);
+      showToast('Loaded the shared venue map. Your conflicting draft was discarded.', 'info');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'The shared venue map could not be loaded.', 'warning');
+    }
+  }, [organizationId, venueMapConflict]);
+
+  const overwriteVenueMapConflict = useCallback(async () => {
+    if (!venueMapConflict || venueMapConflict.overwriteBlocked) return;
+    setResolvingVenueMapConflict(true);
+    try {
+      const result = await entityBackendSync.saveVenueMapToBackend(
+        venueMapConflict.localMap,
+        venueMapConflict.currentUpdatedAt,
+        true,
+      );
+      if (result.status !== 'saved') return;
+      try {
+        saveVenueMapConfig(venueMapConflict.localMap, { emitChange: false });
+      } catch {
+        // Server save succeeded; the storage layer already surfaced its warning.
+      }
+      // Seed the forced-save remount from the accepted payload, not from a cache
+      // write that may have failed. A later successful backend pull clears this.
+      setVenueMapEditorSeed({
+        organizationId,
+        map: venueMapConflict.localMap,
+      });
+      setVenueMapConflict(null);
+      setVenueMapDirty(false);
+      setVenueMapEditorKey((key) => key + 1);
+      showToast('Your draft replaced the shared venue map.', 'success');
+    } finally {
+      setResolvingVenueMapConflict(false);
+    }
+  }, [entityBackendSync, organizationId, venueMapConflict]);
 
   // Keep the saved-layouts list in sync with storage on same-tab data changes
   // (e.g. an admin "Reset to defaults" clears saved layouts; without this the
@@ -957,8 +1047,8 @@ export default function AuthenticatedApp() {
 
   if (view === 'venuemap') {
     return (
-      <div className="h-screen flex flex-col" style={{ backgroundColor: '#f3f4f6' }}>
-        <header className="h-14 px-4 flex items-center justify-between bg-white border-b border-gray-200">
+      <div className="spm-venue-map-shell h-screen flex flex-col" style={{ backgroundColor: '#f3f4f6' }}>
+        <header className="h-14 px-4 flex items-center justify-between bg-white border-b border-gray-200 no-print spm-studio-chrome">
           <button
             type="button"
             onClick={leaveVenueMap}
@@ -972,14 +1062,50 @@ export default function AuthenticatedApp() {
           </span>
           <div className="w-24" />
         </header>
-        <div className="flex-1 overflow-auto p-4">
+        <div className="spm-venue-map-content flex-1 overflow-auto p-4">
           {canOpenAdminPanel ? (
             <VenueMapDesigner
-              map={getVenueMapConfig() || emptyVenueMapConfig()}
+              key={`${organizationId || 'local'}:${venueMapEditorKey}`}
+              map={venueMapEditorSeed?.organizationId === organizationId
+                ? venueMapEditorSeed.map
+                : getVenueMapConfig() || emptyVenueMapConfig()}
+              structuralRecoveryArtifacts={venueMapEditorSeed?.organizationId === organizationId
+                ? []
+                : getVenueMapStructuralRecoveryArtifacts(getVenueMapConfig())}
               venues={layoutState.venues}
               mapTitle={brandingConfig.venueName || 'Venue Map'}
               organizationId={organizationId || undefined}
-              onSave={(next) => { saveVenueMapConfig(next); }}
+              baseUpdatedAt={organizationId
+                ? getEntityDomainRevision(organizationId, 'venueMapConfigs')
+                : undefined}
+              onSave={async (next, expectedUpdatedAt) => {
+                const outcome = await coordinateVenueMapSave({
+                  cloudEnabled: entityBackendSync.enabled,
+                  map: next,
+                  expectedUpdatedAt,
+                  saveToCloud: entityBackendSync.saveVenueMapToBackend,
+                  saveToCanonicalCache: (mapToCache, emitChange) => {
+                    saveVenueMapConfig(mapToCache, { emitChange });
+                  },
+                  onConflict: (conflict) => {
+                    setVenueMapConflict({ ...conflict, overwriteBlocked: true });
+                    setVenueMapDirty(true);
+                  },
+                });
+                if (outcome.status === 'saved') {
+                  setVenueMapEditorSeed({ organizationId, map: next });
+                }
+                return outcome;
+              }}
+              onConflictDraftChange={(latestDraft, hasUnappliedEdits) => {
+                setVenueMapConflict((conflict) => conflict
+                  ? {
+                      ...conflict,
+                      localMap: latestDraft,
+                      overwriteBlocked: hasUnappliedEdits,
+                    }
+                  : conflict);
+              }}
               onClose={leaveVenueMap}
               onDirtyChange={setVenueMapDirty}
             />
@@ -1006,6 +1132,22 @@ export default function AuthenticatedApp() {
             closeAll();
           }}
           onCancel={() => { setConfirmVenueMapLeave(false); setPendingVenueMapHash(null); window.history.replaceState(window.history.state, '', '#/venuemap'); }}
+        />
+        <ConfirmDialog
+          open={venueMapConflict !== null}
+          title="Venue map changed elsewhere"
+          message={venueMapConflict?.overwriteBlocked
+            ? 'Another administrator saved this map while you were working, and you also have unapplied edits. Keep your draft, then apply or cancel those edits and save again before choosing an explicit overwrite. Reloading will discard the entire local draft.'
+            : 'Another tab or venue administrator saved this map after you opened it. Your latest draft is still here and has not replaced their work. Keep editing, reload the shared map, or explicitly overwrite it with your draft.'}
+          cancelLabel="Keep my draft"
+          alternateLabel="Reload shared map"
+          confirmLabel="Overwrite shared map"
+          tone="danger"
+          busy={resolvingVenueMapConflict}
+          confirmDisabled={venueMapConflict?.overwriteBlocked ?? true}
+          onCancel={keepVenueMapConflictDraft}
+          onAlternate={reloadVenueMapConflict}
+          onConfirm={() => { void overwriteVenueMapConflict(); }}
         />
       </div>
     );

@@ -66,7 +66,7 @@ describe('CouplesPortal', () => {
 
     // The map section renders.
     expect(screen.getByRole('heading', { name: /Venue map/ })).toBeTruthy();
-    expect(screen.getByText(/Tap a space pin to design its layout/)).toBeTruthy();
+    expect(screen.getByText(/Tap a pin.*Map location actions list.*open a space layout/i)).toBeTruthy();
     expect(screen.getAllByText(/Private Planning Suite/).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /Private Planning Suite/ })).toBeNull();
     expect(screen.queryByText(/Service Yard/)).toBeNull();

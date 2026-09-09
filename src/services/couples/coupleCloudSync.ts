@@ -1,4 +1,4 @@
-import type { CoupleEvent, GuestPortalConfig, RSVPSubmission, VenueMapConfig } from '../../types';
+import type { CoupleEvent, GuestPortalConfig, RSVPSubmission, Venue, VenueMapConfig } from '../../types';
 import { getPlatformProvider } from '../platform';
 import { getSupabaseClient, isSupabaseConfigured } from '../backend/supabaseClient';
 import { BACKUP_DOMAINS } from '../../utils/backupDomains';
@@ -7,7 +7,13 @@ import { sha256Hex } from '../../utils/hash';
 import { findCoupleEventById, getCoupleEvents } from './coupleService';
 import { getCouplePortalExpiry } from './accessLifecycle';
 import { getCoupleGuests } from './coupleGuestService';
-import { projectVenueMap } from '../../utils/venueMapDesigner';
+import { projectVenueMap, venueMapExceedsComplexityBudget } from '../../utils/venueMapDesigner';
+import {
+  getVenueMapStructuralRecoveryArtifacts,
+  LEGACY_VENUE_MAP_HEIGHT,
+  LEGACY_VENUE_MAP_WIDTH,
+  venueMapFrameIssue,
+} from '../wayfinding/venueWayfindingService';
 
 export interface CoupleCloudContext {
   organizationId: string;
@@ -15,6 +21,11 @@ export interface CoupleCloudContext {
 }
 
 export type CouplePortalSnapshot = Record<string, unknown>;
+
+export interface CoupleSnapshotBuildOverrides {
+  /** Invocation-time map payload, retained even if realtime refreshes local storage. */
+  venueMapConfig?: unknown;
+}
 
 const COUPLE_SCOPED_ARRAYS = new Set([
   'coupleAnswers',
@@ -100,7 +111,10 @@ function scopeDomain(key: string, value: unknown, coupleEventId: string): unknow
 }
 
 /** Build the server snapshot for one couple without including another couple's records. */
-export async function buildCouplePortalSnapshot(coupleEventId: string): Promise<CouplePortalSnapshot | null> {
+export async function buildCouplePortalSnapshot(
+  coupleEventId: string,
+  overrides: CoupleSnapshotBuildOverrides = {},
+): Promise<CouplePortalSnapshot | null> {
   const event = findCoupleEventById(coupleEventId);
   if (!event) return null;
 
@@ -119,13 +133,46 @@ export async function buildCouplePortalSnapshot(coupleEventId: string): Promise<
   // Never place staff-only map objects in a portal snapshot. Keep a couple-safe
   // projection for the couple UI and a separately event-scoped guest projection
   // that the guest RPC returns instead of the broader couple map.
-  const sourceMap = snapshot.venueMapConfigs as VenueMapConfig | null | undefined;
-  if (sourceMap && Array.isArray(sourceMap.points)) {
-    snapshot.venueMapConfigs = projectVenueMap(sourceMap, 'couple');
+  const hasVenueMapOverride = Object.prototype.hasOwnProperty.call(overrides, 'venueMapConfig');
+  const sourceMap = (hasVenueMapOverride
+    ? overrides.venueMapConfig
+    : snapshot.venueMapConfigs) as VenueMapConfig | null | undefined;
+  const mapRecoveryPending = !hasVenueMapOverride
+    && !!sourceMap
+    && getVenueMapStructuralRecoveryArtifacts(sourceMap).some(
+      (artifact) => artifact.family === 'map'
+        && (artifact.mapFrameMalformed === true || artifact.mapComplexityExceeded === true),
+    );
+  const sourceFrameInvalid = venueMapFrameIssue(sourceMap) !== null;
+  const sourceComplexityExceeded = venueMapExceedsComplexityBudget(sourceMap);
+  if (
+    sourceMap
+    && Array.isArray(sourceMap.points)
+    && !mapRecoveryPending
+    && !sourceFrameInvalid
+    && !sourceComplexityExceeded
+  ) {
+    const portalSourceMap = {
+      ...sourceMap,
+      width: Object.prototype.hasOwnProperty.call(sourceMap, 'width')
+        ? sourceMap.width
+        : LEGACY_VENUE_MAP_WIDTH,
+      height: Object.prototype.hasOwnProperty.call(sourceMap, 'height')
+        ? sourceMap.height
+        : LEGACY_VENUE_MAP_HEIGHT,
+    };
+    const snapshotVenues = Array.isArray(snapshot.venues) ? snapshot.venues as Venue[] : [];
+    snapshot.venueMapConfigs = projectVenueMap(
+      portalSourceMap,
+      'couple',
+      undefined,
+      { managedBaseImageOnly: true, venues: snapshotVenues },
+    );
     snapshot.guestVenueMap = projectVenueMap(
-      sourceMap,
+      portalSourceMap,
       'guest',
       event.selectedSpaces || [],
+      { managedBaseImageOnly: true, venues: snapshotVenues },
     );
   } else {
     snapshot.venueMapConfigs = null;
@@ -158,10 +205,11 @@ export async function buildCouplePortalSnapshot(coupleEventId: string): Promise<
 export async function syncCouplePortalSnapshotForVenue(
   context: CoupleCloudContext,
   coupleEventId: string,
+  overrides: CoupleSnapshotBuildOverrides = {},
 ): Promise<boolean> {
   if (!isCoupleCloudEnabled()) return false;
   const event = findCoupleEventById(coupleEventId);
-  const payload = await buildCouplePortalSnapshot(coupleEventId);
+  const payload = await buildCouplePortalSnapshot(coupleEventId, overrides);
   if (!event || !payload) return false;
 
   const collaboratorTokens = (event.collaborators || [])
@@ -178,11 +226,14 @@ export async function syncCouplePortalSnapshotForVenue(
   return true;
 }
 
-export async function syncAllCouplePortalSnapshots(context: CoupleCloudContext): Promise<void> {
+export async function syncAllCouplePortalSnapshots(
+  context: CoupleCloudContext,
+  overrides: CoupleSnapshotBuildOverrides = {},
+): Promise<void> {
   if (!isCoupleCloudEnabled()) return;
   const events = getCoupleEvents();
   for (const event of events) {
-    await syncCouplePortalSnapshotForVenue(context, event.id);
+    await syncCouplePortalSnapshotForVenue(context, event.id, overrides);
   }
 
   // Remove cloud snapshots for couple events deleted in the venue workspace so
@@ -287,6 +338,11 @@ export interface HydrateCouplePortalSnapshotOptions {
   includeGlobalDomains?: boolean;
 }
 
+export interface CouplePortalHydrationReport {
+  /** Domains whose optional browser-cache write was rejected. */
+  failedDomains: string[];
+}
+
 /** Merge one event's remote data into the local one-venue browser cache. */
 export function hydrateCouplePortalSnapshot(
   snapshot: CouplePortalSnapshot,
@@ -294,36 +350,65 @@ export function hydrateCouplePortalSnapshot(
     notify = true,
     includeGlobalDomains = true,
   }: HydrateCouplePortalSnapshotOptions = {},
-): void {
+): CouplePortalHydrationReport {
+  const failedDomains: string[] = [];
+  const snapshotCoupleEvent = Array.isArray(snapshot.coupleEvents)
+    ? (snapshot.coupleEvents as Array<{ id?: unknown }>).find((item) => typeof item?.id === 'string')
+    : undefined;
+  const snapshotCoupleId = typeof snapshotCoupleEvent?.id === 'string'
+    ? snapshotCoupleEvent.id
+    : undefined;
+
   for (const domain of BACKUP_DOMAINS) {
+    // Structural recovery is admin-only backup metadata, never a portal
+    // snapshot input—even if an untrusted/stale snapshot injects the key.
+    if (domain.key === 'venueMapStructuralRecovery') continue;
     if (!(domain.key in snapshot)) continue;
     const incoming = snapshot[domain.key];
-    if (domain.key === 'coupleEvents') {
-      const current = Array.isArray(domain.read()) ? domain.read() as Array<{ id?: string }> : [];
-      const remote = Array.isArray(incoming) ? incoming as Array<{ id?: string }> : [];
-      domain.write([...current.filter((item) => !remote.some((next) => next.id === item.id)), ...remote]);
-      continue;
+    try {
+      if (domain.key === 'coupleEvents') {
+        const stored = domain.read();
+        const current = Array.isArray(stored) ? stored as Array<{ id?: string }> : [];
+        const remote = Array.isArray(incoming) ? incoming as Array<{ id?: string }> : [];
+        domain.write([...current.filter((item) => !remote.some((next) => next.id === item.id)), ...remote]);
+        continue;
+      }
+      if (domain.key === 'couplePortalConfigs') {
+        const stored = domain.read();
+        const current = stored && typeof stored === 'object' ? stored as Record<string, unknown> : {};
+        const remote = incoming && typeof incoming === 'object' ? incoming as Record<string, unknown> : {};
+        domain.write({ ...current, ...remote });
+        continue;
+      }
+      if (COUPLE_SCOPED_ARRAYS.has(domain.key)) {
+        const stored = domain.read();
+        const current = Array.isArray(stored) ? stored as Array<Record<string, unknown>> : [];
+        const remote = Array.isArray(incoming) ? incoming as Array<Record<string, unknown>> : [];
+        const coupleId = remote[0]?.coupleEventId
+          || remote[0]?.eventId
+          || remote[0]?.eventKey
+          || remote[0]?.eventName
+          || snapshotCoupleId;
+        if (!coupleId) continue;
+        const belongs = (item: Record<string, unknown>) =>
+          domain.key === 'coupleGuests'
+            ? item.eventName === coupleId || item.eventKey === coupleId
+            : item.coupleEventId === coupleId || item.eventId === coupleId || item.eventKey === coupleId;
+        domain.write([...current.filter((item) => !belongs(item)), ...remote]);
+        continue;
+      }
+      if (includeGlobalDomains && GLOBAL_DOMAINS.has(domain.key)) {
+        domain.write(incoming);
+      }
+    } catch {
+      // The authenticated snapshot remains available in memory. Record every
+      // rejected compatibility-cache domain so the portal can enter an explicit
+      // read-only fallback instead of silently mixing old data with new edits.
+      failedDomains.push(String(domain.key));
     }
-    if (domain.key === 'couplePortalConfigs') {
-      const current = domain.read() && typeof domain.read() === 'object' ? domain.read() as Record<string, unknown> : {};
-      domain.write({ ...current, ...(incoming as Record<string, unknown>) });
-      continue;
-    }
-    if (COUPLE_SCOPED_ARRAYS.has(domain.key)) {
-      const current = Array.isArray(domain.read()) ? domain.read() as Array<Record<string, unknown>> : [];
-      const remote = Array.isArray(incoming) ? incoming as Array<Record<string, unknown>> : [];
-      const coupleId = remote[0]?.coupleEventId || remote[0]?.eventId || remote[0]?.eventKey || remote[0]?.eventName;
-      if (!coupleId) continue;
-      const belongs = (item: Record<string, unknown>) =>
-        domain.key === 'coupleGuests'
-          ? item.eventName === coupleId || item.eventKey === coupleId
-          : item.coupleEventId === coupleId || item.eventId === coupleId || item.eventKey === coupleId;
-      domain.write([...current.filter((item) => !belongs(item)), ...remote]);
-      continue;
-    }
-    if (includeGlobalDomains && GLOBAL_DOMAINS.has(domain.key)) domain.write(incoming);
   }
   if (notify) emitDataChanged('all', 'backend');
+  return { failedDomains };
 }
 
 /** Hydrate all couple snapshots visible to an authenticated venue member. */

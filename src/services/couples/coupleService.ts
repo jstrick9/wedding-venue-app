@@ -442,13 +442,14 @@ export function removeCoupleCollaborator(eventId: string, collaboratorId: string
 }
 
 // ── Couple session ──────────────────────────────────────────────────────────
-export function saveCoupleSession(eventId: string, collaboratorId: string): void {
-  const event = findCoupleEventById(eventId);
-  if (!event) return;
-  const collaborator = event.collaborators.find((c) => c.id === collaboratorId);
+export function saveCoupleSessionForEvent(
+  event: CoupleEvent,
+  collaboratorId: string,
+): CoupleSession {
+  const collaborator = event.collaborators.find((candidate) => candidate.id === collaboratorId);
   const session: CoupleSession = {
     v: 1,
-    eventId,
+    eventId: event.id,
     collaboratorId,
     role: collaborator?.role || 'couple',
     coupleName: event.coupleName,
@@ -457,8 +458,16 @@ export function saveCoupleSession(eventId: string, collaboratorId: string): void
   try {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   } catch {
-    // ignore storage failures
+    // The authenticated cloud portal can retain this returned session in memory
+    // and switch to explicit read-only mode when persistence is unavailable.
   }
+  return session;
+}
+
+export function saveCoupleSession(eventId: string, collaboratorId: string): CoupleSession | null {
+  const event = findCoupleEventById(eventId);
+  if (!event) return null;
+  return saveCoupleSessionForEvent(event, collaboratorId);
 }
 
 export function loadCoupleSession(): CoupleSession | null {

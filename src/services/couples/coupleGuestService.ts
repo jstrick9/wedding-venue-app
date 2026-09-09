@@ -256,16 +256,12 @@ function writeConfigs(configs: Record<string, GuestPortalConfig>): void {
   saveVersionedStorage(CONFIG_KEY, CONFIG_VERSION, configs);
 }
 
-/** Default per-couple portal config, pre-seeded from the venue's shared config when available. */
-export function getCouplePortalConfig(
-  coupleEventId: string,
+/** Build a default per-couple portal config without performing browser I/O. */
+export function buildDefaultCouplePortalConfig(
   venueConfig: GuestPortalConfig | null,
   couple: { coupleName: string; eventDate?: string; eventEndDate?: string },
 ): GuestPortalConfig {
-  const configs = readConfigs();
-  if (configs[coupleEventId]) return configs[coupleEventId];
-
-  const base: GuestPortalConfig = {
+  return {
     eventTitle: couple.coupleName,
     eventStartDate: couple.eventDate || '',
     eventEndDate: couple.eventEndDate || '',
@@ -287,6 +283,17 @@ export function getCouplePortalConfig(
     wayfindingPoints: venueConfig?.wayfindingPoints || [],
     accessGracePeriodHours: venueConfig?.accessGracePeriodHours ?? 24,
   };
+}
+
+/** Default per-couple portal config, pre-seeded from the venue's shared config when available. */
+export function getCouplePortalConfig(
+  coupleEventId: string,
+  venueConfig: GuestPortalConfig | null,
+  couple: { coupleName: string; eventDate?: string; eventEndDate?: string },
+): GuestPortalConfig {
+  const configs = readConfigs();
+  if (configs[coupleEventId]) return configs[coupleEventId];
+  const base = buildDefaultCouplePortalConfig(venueConfig, couple);
   writeConfigs({ ...configs, [coupleEventId]: base });
   return base;
 }

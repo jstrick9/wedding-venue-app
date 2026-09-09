@@ -63,7 +63,12 @@ vi.mock('./guestPortal', () => ({
   getPortalRSVPSubmissions: () => [{ id: 'r1' }],
 }));
 
-import { buildBackupBundle } from './backupExport';
+import { buildBackupBundle, buildRedactedExportBundle } from './backupExport';
+import {
+  cacheVenueMapConfigFromServer,
+  emptyVenueMapConfig,
+  venueMapStructuralRecoveryBackupIssue,
+} from '../services/wayfinding/venueWayfindingService';
 
 describe('backup export', () => {
   beforeEach(() => {
@@ -77,7 +82,7 @@ describe('backup export', () => {
 
     expect(bundle.manifest.app).toBe('seven-paths-manor-layout-planner');
     expect(bundle.manifest.exportedBy?.name).toBe('Jane');
-    expect(bundle.manifest.bundleVersion).toBe(1);
+    expect(bundle.manifest.bundleVersion).toBe(2);
     expect(bundle.summary.venueCount).toBe(1);
     expect(bundle.summary.templateCount).toBe(1);
     expect(bundle.summary.userCount).toBe(1);
@@ -95,6 +100,104 @@ describe('backup export', () => {
     expect(bundle.payload.portalConfig).toEqual({ eventTitle: 'RSVP' });
     expect(bundle.payload.portalGuests).toEqual([{ id: 'g1', name: 'Guest' }]);
     expect(bundle.payload.rsvpSubmissions).toEqual([{ id: 'r1' }]);
+  });
+
+  it('exports map quarantine metadata separately from the canonical map', async () => {
+    cacheVenueMapConfigFromServer({
+      ...emptyVenueMapConfig(),
+      points: [{ label: 'Missing identity', kind: 'entry', x: 1, y: 1 }],
+    });
+
+    const bundle = await buildBackupBundle();
+
+    expect(bundle.payload.venueMapConfigs).toEqual(expect.objectContaining({ points: [] }));
+    expect(bundle.payload.venueMapStructuralRecovery).toEqual(expect.objectContaining({
+      mapFingerprint: expect.stringMatching(/^map-v1:/),
+      artifacts: [expect.objectContaining({ family: 'point' })],
+    }));
+  });
+
+  it('exports out-of-frame point recovery separately from its safe canonical map', async () => {
+    cacheVenueMapConfigFromServer({
+      ...emptyVenueMapConfig(),
+      points: [
+        { id: 'outside', label: 'Wrong gate', kind: 'entry', x: 120, y: 20 },
+        { id: 'inside', label: 'Ballroom', kind: 'amenity', x: 60, y: 20 },
+      ],
+      routes: [{ id: 'dependent', name: 'Arrival path', pointIds: ['outside', 'inside'] }],
+    });
+
+    const bundle = await buildBackupBundle();
+    expect(bundle.payload.venueMapConfigs).toEqual(expect.objectContaining({
+      points: [expect.objectContaining({ id: 'inside' })],
+      routes: [expect.objectContaining({ id: 'dependent', pointIds: ['outside', 'inside'] })],
+    }));
+    expect(bundle.payload.venueMapStructuralRecovery).toEqual(expect.objectContaining({
+      artifacts: [expect.objectContaining({
+        family: 'point',
+        candidate: expect.objectContaining({ id: 'outside', x: 100, y: 20 }),
+      })],
+    }));
+  });
+
+  it('checksum-covers the exact source of a whole-map complexity quarantine', async () => {
+    const oversizedMap = {
+      ...emptyVenueMapConfig(),
+      token: 'admin-only-recovery-secret',
+      access_token: 'snake-case-recovery-secret',
+      nested: { 'refresh-token': 'hyphenated-recovery-secret', safeLabel: 'retain me' },
+      points: Array.from({ length: 501 }, (_, index) => ({
+        id: `point-${index}`,
+        label: `Point ${index}`,
+        kind: 'entry' as const,
+        x: index % 100,
+        y: index % 80,
+      })),
+    };
+    cacheVenueMapConfigFromServer(oversizedMap);
+
+    const bundle = await buildBackupBundle();
+    expect(bundle.payload.venueMapConfigs).toEqual(expect.objectContaining({ points: [] }));
+    expect(bundle.payload.venueMapStructuralRecovery).toEqual(expect.objectContaining({
+      artifacts: [expect.objectContaining({ mapComplexityExceeded: true })],
+      quarantinedMap: oversizedMap,
+      quarantinedMapFingerprint: expect.stringMatching(/^map-v1:/),
+    }));
+    expect(bundle.checksums.payloadHash).toMatch(/^[a-f0-9]{64}$/);
+
+    const redacted = await buildRedactedExportBundle();
+    const recovery = redacted.payload.venueMapStructuralRecovery as {
+      quarantinedMap: {
+        token?: string;
+        access_token?: string;
+        nested?: { 'refresh-token'?: string; safeLabel?: string };
+      };
+      quarantinedMapRedacted?: boolean;
+    };
+    expect(recovery.quarantinedMap.token).toBeUndefined();
+    expect(recovery.quarantinedMap.access_token).toBeUndefined();
+    expect(recovery.quarantinedMap.nested).toEqual({ safeLabel: 'retain me' });
+    expect(recovery.quarantinedMapRedacted).toBe(true);
+    expect(venueMapStructuralRecoveryBackupIssue(
+      redacted.payload.venueMapStructuralRecovery,
+      redacted.payload.venueMapConfigs,
+    )).toBeNull();
+  });
+
+  it('exports an invalid-frame quarantine marker with its normalized recovery map', async () => {
+    cacheVenueMapConfigFromServer({
+      ...emptyVenueMapConfig(),
+      width: 900,
+    });
+
+    const bundle = await buildBackupBundle();
+    expect(bundle.payload.venueMapConfigs).toEqual(expect.objectContaining({ width: 500 }));
+    expect(bundle.payload.venueMapStructuralRecovery).toEqual(expect.objectContaining({
+      artifacts: [expect.objectContaining({
+        family: 'map',
+        mapFrameMalformed: true,
+      })],
+    }));
   });
 
   it('exports the full set of design domains', async () => {

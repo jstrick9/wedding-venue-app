@@ -42,6 +42,44 @@ describe('AuthenticatedApp full-venue map module route', () => {
     expect(source).toContain("window.location.hash = '#/venuemap';");
   });
 
+  it('uses revision-aware saves and offers explicit conflict resolution', () => {
+    const source = readFileSync(APP_PATH, 'utf8');
+    expect(source).toContain('baseUpdatedAt={organizationId');
+    expect(source).toContain('coordinateVenueMapSave({');
+    expect(source).toContain('saveToCloud: entityBackendSync.saveVenueMapToBackend');
+    expect(source).toContain('Keep my draft');
+    expect(source).toContain('Reload shared map');
+    expect(source).toContain('Overwrite shared map');
+    expect(source).toContain('cacheVenueMapConfigFromServer');
+    expect(source).toContain('onConflictDraftChange={(latestDraft, hasUnappliedEdits) =>');
+    expect(source).toContain('localMap: latestDraft');
+    expect(source).toContain('overwriteBlocked: hasUnappliedEdits');
+    expect(source).toContain('setVenueMapConflict({ ...conflict, overwriteBlocked: true })');
+    expect(source).toContain('confirmDisabled={venueMapConflict?.overwriteBlocked ?? true}');
+    expect(source).toContain('if (!venueMapConflict || venueMapConflict.overwriteBlocked) return;');
+  });
+
+  it('remounts accepted saves from a tenant-scoped in-memory seed if cache storage fails', () => {
+    const source = readFileSync(APP_PATH, 'utf8');
+    expect(source).toContain('const [venueMapEditorSeed, setVenueMapEditorSeed]');
+    expect(source).toContain('venueMapEditorSeed?.organizationId === organizationId');
+    expect(source).toContain('setVenueMapEditorSeed({ organizationId, map: next })');
+    expect(source).toMatch(
+      /saveVenueMapConfig\(venueMapConflict\.localMap[\s\S]*?setVenueMapEditorSeed\(\{[\s\S]*?map: venueMapConflict\.localMap/,
+    );
+    expect(source).toMatch(
+      /cacheVenueMapConfigFromServer\(venueMapConflict\.currentPayload\)[\s\S]*?setVenueMapEditorSeed\(null\)/,
+    );
+    expect(source).toContain('onLoaded: handleEntitiesLoaded');
+  });
+
+  it('hides the map shell header and expands the dedicated print surface', () => {
+    const source = readFileSync(APP_PATH, 'utf8');
+    expect(source).toContain('spm-venue-map-shell h-screen');
+    expect(source).toContain('spm-venue-map-content flex-1');
+    expect(source).toMatch(/<header className="[^"]*no-print spm-studio-chrome/);
+  });
+
   it('guards hash/back navigation and browser unload while the map draft is dirty', () => {
     const source = readFileSync(APP_PATH, 'utf8');
     expect(source).toContain("viewRef.current === 'venuemap' && venueMapDirtyRef.current");

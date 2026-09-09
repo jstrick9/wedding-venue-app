@@ -18,9 +18,11 @@ import {
   getCouplePortalConfigsForBackup,
 } from '../services/couples/coupleGuestService';
 import {
+  cacheVenueMapConfigFromServer,
   getVenueMapConfig,
+  getVenueMapStructuralRecoveryForBackup,
   getVenueRules,
-  normalizeVenueMapConfig,
+  restoreVenueMapStructuralRecoveryFromBackup,
 } from '../services/wayfinding/venueWayfindingService';
 import { getVenueWeather } from '../services/weather/venueWeatherService';
 import { getCoupleChecklistsForBackup } from '../services/couples/coupleChecklistService';
@@ -454,11 +456,21 @@ export const BACKUP_DOMAINS: BackupDomain[] = [
     recovery: true,
     version: STORAGE_VERSIONS.VENUE_MAP_CONFIGS,
     read: () => getVenueMapConfig(),
-    write: (v) => writeVersioned(
-      STORAGE_KEYS.VENUE_MAP_CONFIGS,
-      STORAGE_VERSIONS.VENUE_MAP_CONFIGS,
-      normalizeVenueMapConfig(v),
-    ),
+    write: (value) => {
+      cacheVenueMapConfigFromServer(value);
+    },
+  },
+  {
+    // Keep immediately after venueMapConfigs: restore must establish the safe
+    // canonical map before binding its separate admin-only quarantine envelope.
+    key: 'venueMapStructuralRecovery',
+    storageKey: STORAGE_KEYS.VENUE_MAP_STRUCTURAL_RECOVERY,
+    label: 'Venue Map Structural Recovery',
+    defaultValue: null,
+    recovery: true,
+    version: STORAGE_VERSIONS.VENUE_MAP_STRUCTURAL_RECOVERY,
+    read: () => getVenueMapStructuralRecoveryForBackup(),
+    write: (value) => restoreVenueMapStructuralRecoveryFromBackup(value),
   },
   {
     key: 'venueRules',

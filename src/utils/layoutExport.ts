@@ -17,6 +17,8 @@ export interface ExportOptions {
   scale?: number;
   /** White padding around the plan, in export pixels (default 24). */
   padding?: number;
+  /** Optional classification/provenance line rendered into the raster itself. */
+  footerText?: string;
 }
 
 const ENCODED_HEADER = '%PDF-1.4\n';
@@ -103,8 +105,10 @@ export async function renderSvgToCanvas(
 
   const contentWidth = Math.max(1, Math.round(rawW * scale));
   const contentHeight = Math.max(1, Math.round(rawH * scale));
+  const footerText = options.footerText?.trim() || '';
+  const footerHeight = footerText ? 32 : 0;
   const width = contentWidth + padding * 2;
-  const height = contentHeight + padding * 2;
+  const height = contentHeight + padding * 2 + footerHeight;
 
   const clone = cloneAndNormalizeSvg(svg, contentWidth, contentHeight, `0 0 ${rawW} ${rawH}`);
   await inlineSvgImages(clone);
@@ -124,7 +128,20 @@ export async function renderSvgToCanvas(
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      ctx.drawImage(img, padding, padding, width - padding * 2, height - padding * 2);
+      ctx.drawImage(img, padding, padding, contentWidth, contentHeight);
+      if (footerText) {
+        const footerTop = padding + contentHeight + Math.max(8, Math.round(padding / 2));
+        ctx.strokeStyle = '#d1d5db';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, footerTop);
+        ctx.lineTo(width - padding, footerTop);
+        ctx.stroke();
+        ctx.fillStyle = '#374151';
+        ctx.font = '600 13px sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(footerText, padding, footerTop + footerHeight / 2, contentWidth);
+      }
       resolve({ canvas, width, height });
     };
     img.onerror = () => reject(new Error('Could not render the layout image.'));
